@@ -10,7 +10,6 @@
 
  * POSIX_FADV_NORMAL, POSIX_FADV_RANDOM, POSIX_FADV_SEQUENTIAL
    * backing_dev_info の ra_pages (readahed) の数値をいじってる
-
  * POSIX_FADV_DONTNEED
    * [filemap_flush](http://lxr.free-electrons.com/source/mm/filemap.c?v=2.6.32#L256])
    * [invalidate_mapping_pages](http://lxr.free-electrons.com/source/mm/truncate.c?v=2.6.32#L319)
