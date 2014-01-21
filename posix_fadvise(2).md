@@ -7,6 +7,7 @@
    * [filemap_flush](http://lxr.free-electrons.com/source/mm/filemap.c?v=2.6.32#L256])
    * [invalidate_mapping_pages](http://lxr.free-electrons.com/source/mm/truncate.c?v=2.6.32#306)
      * `unlocked pages` を破棄する。 `truncate_inode_pages` だと locked な ページも破棄できると※
+     * trylock_page でロックの有無を見てるのかな?
    * read(2) -> ページキャッシュ埋まる -> POSIX_FADV_DONTNEED でページキャッシュを破棄
  * POSIX_FADV_NOREUSE はどう動くのかが分からん
 
