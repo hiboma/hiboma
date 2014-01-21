@@ -1,5 +1,7 @@
 # proftpd
 
+## fadvise ???
+
  * サーバからクライアントにファイルを転送するのは RETRコマンド
  * modules/mod_xfer.c の `MODRET xfer_retr(cmd_rec *cmd)` で実装されている
  * fadvise(2) できる?
@@ -8,6 +10,7 @@
 
  * `pr_fh_t *pr_fsio_open(const char *name, int flags)`
    * open(2) のラッパー
+   * fh_fd がファイルデスクリプタかな?
 
 ```c
 typedef struct fh_rec pr_fh_t;
@@ -33,4 +36,3 @@ struct fh_rec {
 };
 ```
 
- * fh_fd がファイルデスクリプタかな?
