@@ -2,8 +2,9 @@
 
  * POSIX_FADV_NORMAL, POSIX_FADV_RANDOM, POSIX_FADV_SEQUENTIAL
    * backing_dev_info の ra_pages (readahed) の数値をいじってる
-   * force_page_cache_readahead
+   * force_page_cache_readahead ???
  * POSIX_FADV_DONTNEED
+   * bdi_write_congested ???
    * [filemap_flush](http://lxr.free-electrons.com/source/mm/filemap.c?v=2.6.32#L256])
    * [invalidate_mapping_pages](http://lxr.free-electrons.com/source/mm/truncate.c?v=2.6.32#306)
      * `unlocked pages` を破棄する。 `truncate_inode_pages` だと locked な ページも破棄できると※
@@ -79,6 +80,7 @@ asmlinkage long sys_fadvise64_64(int fd, loff_t offset, loff_t len, int advice)
 			ret = 0;
 		break;
 	case POSIX_FADV_DONTNEED:
+        
 		if (!bdi_write_congested(mapping->backing_dev_info))
 			filemap_flush(mapping);
 
@@ -119,6 +121,7 @@ SYSCALL_DEFINE(fadvise64_64)(int fd, loff_t offset, loff_t len, int advice)
 	if (!file)
 		return -EBADF;
 
+    // FIFO には使えない
 	if (S_ISFIFO(file->f_path.dentry->d_inode->i_mode)) {
 		ret = -ESPIPE;
 		goto out;
@@ -164,11 +167,11 @@ SYSCALL_DEFINE(fadvise64_64)(int fd, loff_t offset, loff_t len, int advice)
 		break;
 	case POSIX_FADV_RANDOM:
 		spin_lock(&file->f_lock);
-		file->f_mode |= FMODE_RANDOM;
+		file->f_mode |= FMODE_RANDOM;            // 0 にはしないのかな?
 		spin_unlock(&file->f_lock);
 		break;
-	case POSIX_FADV_SEQUENTIAL:
-		file->f_ra.ra_pages = bdi->ra_pages * 2;
+	case POSIX_FADV_SEQUENTIAL: 
+		file->f_ra.ra_pages = bdi->ra_pages * 2; // 2倍
 		spin_lock(&file->f_lock);
 		file->f_mode &= ~FMODE_RANDOM;
 		spin_unlock(&file->f_lock);
@@ -195,6 +198,7 @@ SYSCALL_DEFINE(fadvise64_64)(int fd, loff_t offset, loff_t len, int advice)
 			ret = 0;
 		break;
 	case POSIX_FADV_NOREUSE:
+         // なんもしてないぞ
 		break;
 	case POSIX_FADV_DONTNEED:
 		if (!bdi_write_congested(mapping->backing_dev_info))
