@@ -50,10 +50,10 @@ asmlinkage long sys_fadvise64_64(int fd, loff_t offset, loff_t len, int advice)
 		file->f_ra.ra_pages = bdi->ra_pages;
 		break;
 	case POSIX_FADV_RANDOM:
-		file->f_ra.ra_pages = 0;
+		file->f_ra.ra_pages = 0; // 先読みしない
 		break;
 	case POSIX_FADV_SEQUENTIAL:
-		file->f_ra.ra_pages = bdi->ra_pages * 2;
+		file->f_ra.ra_pages = bdi->ra_pages * 2; // 2倍 !!!
 		break;
 	case POSIX_FADV_WILLNEED:
 	case POSIX_FADV_NOREUSE:
@@ -70,7 +70,8 @@ asmlinkage long sys_fadvise64_64(int fd, loff_t offset, loff_t len, int advice)
 		nrpages = end_index - start_index + 1;
 		if (!nrpages)
 			nrpages = ~0UL;
-		
+
+        // なんか強制的に先読みできるぽい
 		ret = force_page_cache_readahead(mapping, file,
 				start_index,
 				max_sane_readahead(nrpages));
