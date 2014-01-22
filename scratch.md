@@ -22,4 +22,5 @@ end
 
  * remount とブロック
    * lock_kernel();
+   * sb_down
  
