@@ -21,4 +21,5 @@ end
 ### todo
 
  * remount とブロック
+   * lock_kernel();
  
