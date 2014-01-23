@@ -73,7 +73,6 @@ Linux では CONFIG_PREEMPT を有効にすると kernel mode で running な場
  * ?: bufferのサイズはブート時に固定なのだろうか?
  * ___The buffer is the in-memory copy of the disk block___
    * バッファはディスクブロックと一対一で対応する。デバイス番号とブロック番号で一意
-
  * バッファの状態
    * locked, busy, free, unlocked
    * バッファを再利用する際にはバッファの内容をディスクに書き出す必要がある ___delayed-write___
