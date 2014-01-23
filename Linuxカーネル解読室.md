@@ -16,7 +16,7 @@
        * The BSD Layer (FreeBSD由来)
        * libKern
        * I/O Kit
- *
+ * マイクロカーネルの実例は???
 
 #### System V の本
 
