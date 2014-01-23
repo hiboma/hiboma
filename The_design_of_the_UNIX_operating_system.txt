@@ -1,4 +1,4 @@
-* [c][kernel][本] The design of the UNIX operating system
+# The design of the UNIX operating system
 
  * 1986年
  * based on UNIX System V Release 2 supported by AT&T, with some features from Release 3.
@@ -141,13 +141,9 @@ UNIXに限定した話でないと前置き。ページでメモリ管理する�
     * 2**32 の物理メモリがあった場合 => 2**22 のページ番号と 10bitのバイトオフセットでアドレッシングできる
     * ブロックデバイスの ブロック番号 + オフセットのアナロジと説明
 
-----
-
  * ページでのメモリ管理の利点
    * 物理メモリを連続して割当る必要がない / また順番も考慮しなくてよい
    * フラグメント化を減らせる
-
-----
 
  * page table で 論理ページ番号 => 物理ページ番号の管理をする
    * page table のエントリは 読み書き可能かといった情報をもつ (マシン?アーキテクチャ依存)

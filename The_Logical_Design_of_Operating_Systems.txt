@@ -102,8 +102,8 @@
    * acyclic graph
 
 ```
-    S(a, b) serial connection 
-    P(a, b) parallel connection
+S(a, b) serial connection 
+P(a, b) parallel connection
 ```
 
  * ネストする flow graph
@@ -129,24 +129,26 @@
  * Dijkstra 1968
 
 ```
-    cobegin C1|C2|...|Cn coend
+cobegin C1|C2|...|Cn coend
 ```
 
  * Ci  autonomous segument of code (独立したプログラムでプロセスとして起動する
    * C1...Cn が並行して実行されることを示す記法
  * cobegin/coend 式は S, P に変換して記述することができる
- 
-     P(C1, P(C2, .... P(...,Cn) ...))
 
-     # ここで code segument Ci は Pi1, Pi2 ... Pim のシーケンスに分解できる
-     
-     S(Pi1, S(Pi2, .... S( ...., pim) ... ))
+```
+P(C1, P(C2, .... P(...,Cn) ...))
+
+# ここで code segument Ci は Pi1, Pi2 ... Pim のシーケンスに分解できる
+
+S(Pi1, S(Pi2, .... S( ...., pim) ... ))
+```     
 
  * P/S式, cobegin/coend式 ともに nested flow graphs を記述するにとどまる
 
 2-1d のフローは P6 を遅延させて wait させてよいのであれば、 nested flow graphs に変換することもできる
 
-* 2.2.3 THE FORK, JOIN, AND QUIT PRIMITIVES
+### 2.2.3 THE FORK, JOIN, AND QUIT PRIMITIVES
 
  * Conway 1963, Deniis and Van Horn 1966
    * http://www.princeton.edu/~rblee/ELE572Papers/Fall04Readings/ProgramSemantics_DennisvanHorn.pdf
@@ -156,31 +158,33 @@
      * http://en.wikipedia.org/wiki/Mesa_(programming_language)
      * プロセスをオブジェクトとして扱う。変数として受け渡しできたり。
 
-* 2.2.4 EXPLICIT PROCESS DECLARATIONS
+### 2.2.4 EXPLICIT PROCESS DECLARATIONS
 
  * Ada 言語 http://ja.wikipedia.org/wiki/Ada
 
-    process p
-      # 静的に宣言されるプロセス    
-      process p1
-        declarations for p1
-      begin
-       ...
-      end
-      # 動的に生成できるプロセス
-      process type p2
-        declarations for p2
-      begin
-       ...
-      end
-    begin
-    
-      ...
-      q := new p2 # 任意のタイミングでのスレッド生成、もしくはプロセスのfork
-      ...
-    end
+```
+process p
+  # 静的に宣言されるプロセス
+  process p1
+    declarations for p1
+  begin
+   ...
+  end
+  # 動的に生成できるプロセス
+  process type p2
+    declarations for p2
+  begin
+   ...
+  end
+begin
 
-* 2.3 THE CRITICAL SECTION PROBLEM
+  ...
+  q := new p2 # 任意のタイミングでのスレッド生成、もしくはプロセスのfork
+  ...
+end
+```
+
+### 2.3 THE CRITICAL SECTION PROBLEM
 
  * クリティカルセクション
   * 共有するデータの扱い方
@@ -193,62 +197,64 @@
     * 一方のスレッドがロックを占有することもある
     * ビジーウェイト中にシステムコール読んだりすると均一っぽくなる, けど目的と違う
 
-    // file://_/c/pthread-mutex.c
+```
+// file://_/c/pthread-mutex.c
 
-    #include <stdio.h>
-    #include <stdlib.h>
-    #include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
 
-    static bool c1 = true;
-    static bool c2 = true;
-    static int turn  = 1;
-    static int count = 100000;
-    static int count_a_called = 0;
-    static int count_b_called = 0;
+static bool c1 = true;
+static bool c2 = true;
+static int turn  = 1;
+static int count = 100000;
+static int count_a_called = 0;
+static int count_b_called = 0;
 
-    void * handle_thread_c1(void *arg)
-    {
-      while(count > 0) {
-        c1 = false;
-        turn = 1;
-        while(c2^turn != 1) { asm("nop;"); }
-        c1 = true;
-        if(count <= 0)
-          break;
-        count--;
-        count_a_called++;
-        asm("nop;");
-      }
-    }
+void * handle_thread_c1(void *arg)
+{
+  while(count > 0) {
+    c1 = false;
+    turn = 1;
+    while(c2^turn != 1) { asm("nop;"); }
+    c1 = true;
+    if(count <= 0)
+      break;
+    count--;
+    count_a_called++;
+    asm("nop;");
+  }
+}
 
-    void * handle_thread_c2(void *arg)
-    {
-      while(count > 0) {
-        c2 = false;
-        turn = 2;
-        while(c1^turn != 2) { asm("nop;"); }
-        c2 = true;
-        if(count <= 0)
-          break;
-        count--;
-        count_b_called++;
-        asm("nop;");
-      }
-    }
+void * handle_thread_c2(void *arg)
+{
+  while(count > 0) {
+    c2 = false;
+    turn = 2;
+    while(c1^turn != 2) { asm("nop;"); }
+    c2 = true;
+    if(count <= 0)
+      break;
+    count--;
+    count_b_called++;
+    asm("nop;");
+  }
+}
 
-    /* here come the code */
-    int main(int argc, char *argv[]){
+/* here come the code */
+int main(int argc, char *argv[]){
 
-      pthread_t thread_c1, thread_c2;
-      pthread_create(&thread_c1, NULL, handle_thread_c1, NULL);
-      pthread_create(&thread_c2, NULL, handle_thread_c2, NULL);
-      sleep(5);
-      printf("count: %d %d %d \n", count, count_a_called, count_b_called);
-      abort();
-      exit(0);
-    }
+  pthread_t thread_c1, thread_c2;
+  pthread_create(&thread_c1, NULL, handle_thread_c1, NULL);
+  pthread_create(&thread_c2, NULL, handle_thread_c2, NULL);
+  sleep(5);
+  printf("count: %d %d %d \n", count, count_a_called, count_b_called);
+  abort();
+  exit(0);
+}
+```
 
-* 2.3.2 COOPERATING SYSTEM
+### 2.3.2 COOPERATING SYSTEM
 
  * クリティカルセクションの問題は、リソースの奪い合い(compete) の問題
  * compete しないで cooperating する
@@ -256,8 +262,8 @@
    * [ Prodcuer ] -----> [ shared buffer ] ----> [ Consumer ]
    * producer, consumer が並行して動作できる。共有のデータを上書きしない
    * producer, consumer が同期、通信、シグナリングできる仕組みが必要 
-   
-* 2.4 SEMAPHORE PRIMITIVES
+
+### 2.4 SEMAPHORE PRIMITIVES
 
  * セマフォ (Dijkstra 1965)
   * P(s)
@@ -274,7 +280,7 @@
  * `binary semaphore` = `mutex`
   * mutex はサンプルコードの変数名として出るだけで、そういう primitives があるという説明ではない
   
-* 2.4.4 IMPREMENTING SEMAPHORE OPERATIONS
+### 2.4.4 IMPREMENTING SEMAPHORE OPERATIONS
 
  * セマフォを使った同期の仕組み
    * クリティカルセクションのロックの話とは別
@@ -316,7 +322,7 @@
    * process を suspension (`blocking`)
    * Linux の セマフォが プロセスをsleepさせてブロッキング
    
-* 2.6.32 Linux のセマフォの実装 P(s) = down(struct semaphore * ), V(s) = up(struct semaphore *)
+### 2.6.32 Linux のセマフォの実装 P(s) = down(struct semaphore * ), V(s) = up(struct semaphore *)
 
  * struct semaphore
    * wait_list で待ちプロセスの管理 => FIFO キュー
@@ -447,7 +453,7 @@
  * wake_up_process => try_to_wake_up でプロセスを起床、run queue に繋ぐ
    * @ CPUのマイグレーション ?
 
-* 2.6 CONDITIONAL CRITICAL REGION
+### 2.6 CONDITIONAL CRITICAL REGION
 
  * セマフォの P,V 操作のミス
   * P, V の操作を 一対にして配置しないといけない
@@ -466,7 +472,7 @@
  * 実装例が少ない
    * ローカル変数
 
-* 3. Proces and Resource Control
+## 3. Proces and Resource Control
 
  * kernel, nucleus
    * primitive operations and process
@@ -485,7 +491,7 @@
    * 状態、一意性、アカウティングの情報
    * `control blocks` `descriptors` と呼ばれる data structures
 
-* 3.2.1 PROCESS DESCRIPTORS
+### 3.2.1 PROCESS DESCRIPTORS
 
 task_struct 的なデータ構造の説明
 
@@ -507,7 +513,7 @@ task_struct 的なデータ構造の説明
 
 uid,gid に相当するデータについての記述が無い
 
-* 3.2.2 RESOURCES DESCRIPTORS
+### 3.2.2 RESOURCES DESCRIPTORS
 
  * `resource` リソース とは ? by Weiderman(1971)
    * resusable by process during their activity
@@ -555,7 +561,7 @@ uid,gid に相当するデータについての記述が無い
 
  * r->waiters の queue からリクエストを取り除く
 
-* 3.2.3 The processor resource
+### 3.2.3 The processor resource
 
  * CPUは他のリソースとは区別して扱う
     * CPU割当待ちを `logically blocked` と見なさない
@@ -565,7 +571,7 @@ uid,gid に相当するデータについての記述が無い
         * プライオリティつくことで、FIFOで割当される訳じゃない
         * 単純なリンクリストでは実装できない
 
-* 3.2.4 Implementation of queues
+### 3.2.4 Implementation of queues
 
 runqueue のこと
 
@@ -574,16 +580,15 @@ runqueue のこと
    * Insert(), Remove() の操作が発生する
      * => Linux だと 2重リンクリストで ok
 
-* 3.3 BASIC OPERATIONS ON PROCESSES AND RESOURCES
+### 3.3 BASIC OPERATIONS ON PROCESSES AND RESOURCES
 
-* 3.3.1 process Control
-
+### 3.3.1 process Control
  * プロセスの管理方法
    * Create, Destroy, Suspend (sleep), Activate(wakeup), Change_Priority
 
-* 3.5 SCHEDULING METHODS
+### 3.5 SCHEDULING METHODS
 
-* 4 The Deadlock Problem
+## 4 The Deadlock Problem
 
 > Finally, deadlock studies attempt to partially answer one of the fundamental questions
 > in computer schience: Can a process progress to completion ?
@@ -592,6 +597,7 @@ runqueue のこと
 
  * 表記
 
+```
      i
    S -> T                       # プロセス pi が system state を S から T にする
 
@@ -601,23 +607,22 @@ runqueue のこと
 
    p1                           # partial function 部分関数
    pi : ρ -> {ρ}              # from systems states info nonempty subsets of system states
+```
 
  * process が request, acquite, release resouce などで systable state を変えられない場合 `blocked` である
-    i 
-   S->T で T が存在しない場合、 pi は 状態S でブロックされる
+   * S->T で T が存在しない場合、 pi は 状態S でブロックされる
+ * process S でブロックし続けまた将来的に何の操作も発生しない場合、デッドロックしている。
+ * pi が S でデッドロックしている場合 S は deadlock state と呼ばれる。
+ * 取りうる state が deadlock satte でないように制限することで、デッドロックは防げる
+   * S->T で T が deadlock state でない場合 は safe state
 
-  * process S でブロックし続けまた将来的に何の操作も発生しない場合、デッドロックしている。
-  * pi が S でデッドロックしている場合 S は deadlock state と呼ばれる。
-  * 取りうる state が deadlock satte でないように制限することで、デッドロックは防げる
-       *
-    * S->T で T が deadlock state でない場合 は safe state
-
-* 4.3.1 Reusable REsource Graphs
+## 4.3.1 Reusable REsource Graphs
 
  * プロセスリソース graph
   * serially reusable resource (SR) をグラフ化する
   * 図示すると単純だけど、graph として式化すると大分ややこしい印象
 
+```
     <N, E>
     N                           # N は nodes を示す
     E                           # E は edges を示す
@@ -628,17 +633,23 @@ runqueue のこと
     # プロセス同士、またはリソース同士のグラフは形成されない
 
     Rj = { .... }               # Resource node は tj の要素を持つ
+```    
 
-   # エッジの向きでリクエストか割当かを表記する
+ * エッジの向きでリクエストか割当かを表記する
+ 
+``` 
     e = (Pi, Rj)                # Request edge を示す    Pi->Rj
     e = (Rj, Pi)                # Assignment edge を示す Rj->pi
                                 # Request edge, Assignment edge 共に E の中に含まれる
+```
 
  * |(a,b)| ノードa から ノードb へのエッジを考える
    * Rj は tj 以上の assignment をしない (Rj が tj の要素しか持たないので)
 
+```
     Σi |(Rj, pi)| ≦ tj          # 任意の pi へ割り当てた Rj の和は tj 以下
     |(Rj, pi)|+|(pi, Rj)| ≦ tj   # Request edges + Allocation edges の和は units の数を超えない
+```
 
  * Request => Acquisition => Release
 
@@ -647,7 +658,7 @@ runqueue のこと
 
 プロセスの(挙動は) 比決定的
 
-* 4.3.2 Deadlock Detection
+### 4.3.2 Deadlock Detection
 
 > Theoram 1. The Deadlock Theoram
 > S is a deadlokc state if and only if the reusable resource graph of S is not completely reducible
@@ -682,7 +693,7 @@ CPUが該当する。リソース獲得の競合が発生した場合でも、�
 ただし preemption のコストが高くスラッシングが発生するような状況ではデッドロック状態に近似する
 
 
-* 4.3.4 Recovery from Deadlock
+### 4.3.4 Recovery from Deadlock
 
  * 1. process terminations
    * デッドロックになった最初のプロセスを強制終了。最悪全てのプロセスを止める必要。
@@ -705,7 +716,7 @@ CPUが該当する。リソース獲得の競合が発生した場合でも、�
    
 用語 outstanding requests 未処理のリクエスト
 
-* 5. Main Storage Management
+## 5. Main Storage Management
 
  * fixed partition
  * variable partition
