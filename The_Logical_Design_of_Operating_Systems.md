@@ -10,6 +10,7 @@
 
  * 割り込みハンドラの擬似コード
 
+``` 
     loop
         w  := Memory[ic]  # Fetch next instruction
         ic := ic + 1      # Increment instruction counter
@@ -25,6 +26,7 @@
             end {case}
         end
     end {loop}
+```
 
  * 同期I/O, ポーリング, 割り込み の図解がよく出来ている
  * Direct Memory Access
@@ -197,7 +199,7 @@ end
     * 一方のスレッドがロックを占有することもある
     * ビジーウェイト中にシステムコール読んだりすると均一っぽくなる, けど目的と違う
 
-```
+```c
 // file://_/c/pthread-mutex.c
 
 #include <stdio.h>
@@ -285,6 +287,7 @@ int main(int argc, char *argv[]){
  * セマフォを使った同期の仕組み
    * クリティカルセクションのロックの話とは別
 
+```c   
     var s: semaphore
     s: = 0;   # 最初からゼロなので P(s) がブロックする 
     cobegin
@@ -306,12 +309,15 @@ int main(int argc, char *argv[]){
       TS := X:
       X := false
     end {TS}
+```
 
  * ビジーループでの実装
 
+```
     # sb は セマフォ
     Pb ... while !TS(sb) do; { wait loop }
     Vb ... sb = True
+```    
 
  * 割り込みの禁止
    * セマフォ獲得中に割り込みハンドラを実行することでのデッドロック防止
@@ -337,38 +343,42 @@ int main(int argc, char *argv[]){
  * P(s)
   * down(struct semaphore *sem) で呼び出しできる
 
-    /**
-     * down - acquire the semaphore
-     * @sem: the semaphore to be acquired
-     *
-     * Acquires the semaphore.  If no more tasks are allowed to acquire the
-     * semaphore, calling this function will put the task to sleep until the
-     * semaphore is released.
-     *
-     * Use of this function is deprecated, please use down_interruptible() or
-     * down_killable() instead.
-     */
-    void down(struct semaphore *sem)
-    {
-    	unsigned long flags;
-    
-    	spin_lock_irqsave(&sem->lock, flags);
+``` c
+/**
+ * down - acquire the semaphore
+ * @sem: the semaphore to be acquired
+ *
+ * Acquires the semaphore.  If no more tasks are allowed to acquire the
+ * semaphore, calling this function will put the task to sleep until the
+ * semaphore is released.
+ *
+ * Use of this function is deprecated, please use down_interruptible() or
+ * down_killable() instead.
+ */
+void down(struct semaphore *sem)
+{
+	unsigned long flags;
 
-    	if (likely(sem->count > 0))
-    		sem->count--;
-    	else
-           // sem->count が 0 以下だと待つ
-    		__down(sem);
-    	spin_unlock_irqrestore(&sem->lock, flags);
-    }
-    EXPORT_SYMBOL(down);
+	spin_lock_irqsave(&sem->lock, flags);
+
+	if (likely(sem->count > 0))
+		sem->count--;
+	else
+       // sem->count が 0 以下だと待つ
+		__down(sem);
+	spin_unlock_irqrestore(&sem->lock, flags);
+}
+EXPORT_SYMBOL(down);
+   
 
  * セマフォ獲得を試みみる間は TASK_UNINTERRUPTIBLE にされる
 
-    static noinline void __sched __down(struct semaphore *sem)
-    {
-    	__down_common(sem, TASK_UNINTERRUPTIBLE, MAX_SCHEDULE_TIMEOUT);
-    }
+```c 
+static noinline void __sched __down(struct semaphore *sem)
+{
+	__down_common(sem, TASK_UNINTERRUPTIBLE, MAX_SCHEDULE_TIMEOUT);
+}
+```    
 
  * @ セマフォごとに待ち行列を持つ
    * => semaphore_waiter を sem->wait_lit に繋げてセマフォ獲得でブロックしているプロセスを管理する実装

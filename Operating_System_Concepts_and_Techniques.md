@@ -4,7 +4,6 @@
  * Affinity
  * Gang Scheduling Co-Scheduling
  * Rate-Monotonic Scheduling、RMS
-
  * http://ja.wikipedia.org/wiki/レートモノトニックスケジューリング
  * リアルタイムOS向けのアルゴリズム
 
@@ -13,9 +12,9 @@
  * C の ++ インクリメントを命令レベルで見る
 
 ```
-    1 load  r1, value
-    2 inc   r1
-    3 store r1, value
+1 load  r1, value
+2 inc   r1
+3 store r1, value
 ```
 
  * 共有されたデータで複数のプロセスの命令が interleave する
@@ -25,8 +24,8 @@
    * メモリ間でデータをコピーするmove命令のように例外はある
 
 ```
-    # = が instruction 実行中
-    ----===---===---===---===---
+# = が instruction 実行中
+----===---===---===---===---
 ```
 
 ## 9.1.1 Deadloack Conditions adn Modeling
@@ -59,7 +58,6 @@
    * パフォマンスに大きく影響する
     * ok) シングルプログラミングな環境。
     * ok) メモリの書き込みは
-    
  * Removing the hold-and-wait condtion
    * 例) 必要なリソースをプロセス起動後に確保、以後リソース確保のリクエストをださない
    * 前もって知る必要がある
@@ -77,7 +75,6 @@
    * circular wait が発生している状態 = デッドロックの十分条件 なので
  * Deadlock Recvery
    * kill process, トランザクションのロールバック
-
  * process table
    * "waiting for (resource)" なフィールドを設ける
  * resource table
