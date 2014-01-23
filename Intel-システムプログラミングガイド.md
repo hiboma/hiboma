@@ -1,4 +1,3 @@
-
 # IA-32 インテル アーキテクチャ ソフトウェア デベロッパーズ マニュアル 下巻-システムプログラミングガイド.pdf
 
  * "CPL" Current Privieage Level
@@ -15,12 +14,12 @@
 /_/howm/images/-20130203213546.png
 
  * "CR0 ~ CR"4 Control register 制御レジスタ
-  * CR0 PG(Paging 31bit) ... ページングの enable / disable
-  * CR0 PE(Protection Enabled?) ... 保護機能
-  * CR4 PSE(Paging Size Extenston 4bit)   ... ON にすると 4MBのページ、clear すると 4KB のページ
-  * CR4 PAE(Physical Page Extenston 5bit) ... 物理アドレス拡張 36bit (64GB) の物理アドレスでページングできる
-    * 他にも PSE-36機能というのが Pentium3 から導入されてて使える
-    * CPUID命令 で確認できる
+   * CR0 PG(Paging 31bit) ... ページングの enable / disable
+   * CR0 PE(Protection Enabled?) ... 保護機能
+   * CR4 PSE(Paging Size Extenston 4bit)   ... ON にすると 4MBのページ、clear すると 4KB のページ
+   * CR4 PAE(Physical Page Extenston 5bit) ... 物理アドレス拡張 36bit (64GB) の物理アドレスでページングできる
+      * 他にも PSE-36機能というのが Pentium3 から導入されてて使える
+      * CPUID命令 で確認できる
  * "RPL" Required Privilege Level
  * "TLB" Translation Lookaside Buffer (プロセッサ内のデバイス)
    * ページディレクトリ, ページエントリのキャッシュ
@@ -29,7 +28,7 @@
  * "IF"フラグ STI(割り込みイネーブルフラグセット), CLI(割り込みイネーブルフラグクリア)
  * PUSHF, POPF フラグをpush/pop
 
-### TSS Task State Segment
+## TSS Task State Segment
 
 タスクの実行環境を退避/復帰させるのに使う
 
@@ -41,7 +40,7 @@
  * LDTのセグメントセレクタ
  * ページテーブルのベースアドレス
 
-### ページング
+## ページング
 
 ページングできるセグメント,テーブル
 
@@ -62,7 +61,6 @@
 
 [[/_/howm/images/Intel.txt-20130203134733.png]]
 
- 
  * フラットモデル => Linux
  
 [[/_/howm/images/Intel.txt-20130203135416.png]]
@@ -71,13 +69,9 @@
  * マルチセグメントモデル
    * ハードウェア依存レベルが高い感
 
-セグメントとページングは独立して扱える
-
-論理アドレス => リニアドレス = ( ページング ) => 物理アドレス
-
-セグメントセレクタ => セグメントディスクリプタ
-
-IA32アーキテクチャのスタックは常に下方に伸張する
-
+ * セグメントとページングは独立して扱える
+ * 論理アドレス => リニアドレス = ( ページング ) => 物理アドレス
+ * セグメントセレクタ => セグメントディスクリプタ
+ * IA32アーキテクチャのスタックは常に下方に伸張する
  * ブレークポイント
   * INT 3 を埋め込み、例外を発生させる

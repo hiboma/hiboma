@@ -1,6 +1,6 @@
-* [本] Linux Kernel Architecture
+# Linux Kernel Architecture
 
-* 1. Introduction and Overview
+## 1. Introduction and Overview
 
 * Virtual and Physical Address Spaces
 
@@ -11,7 +11,7 @@
    * user space, kernel space ... アプリケーションに加えて仮想アドレス空間なども一緒に指す用語
    * user mode,  kernel mode  ... 特権レベル
    
-* Page Tables
+## Page Tables
  
   * 32bit ... 2レベル
   * 64bit ... 4レベル
@@ -20,9 +20,9 @@
     * Page Table  Entry
     * offset
     
-* 2. Process Management and Scheduling
+## 2. Process Management and Scheduling
 
-* 2.5.2 Data Structures
+### 2.5.2 Data Structures
 
  * `Generic Schedluer`
    * テンプレートメソッド的な役割で Scheduling Class に委譲する
@@ -37,9 +37,9 @@
      * タイムスライスがプロセスではなく、エンティティ(プロセスのグループ) に対して充てられる
      * cgroup cpu
 
-* 3. Memory Management
+## 3. Memory Management
 
-* 3.1 Overview
+### 3.1 Overview
 
  * アドレス空間は kernel : user = 1 : 3 = 0x000000 ~ 0xbfffffff : 0xc000000 0xffffff で分割される
  * カーネルアドレス空間は物理メモリに直接マッピングされる
@@ -56,15 +56,12 @@
 PTEを経由してアクセスする物理メモリ領域を一般的に `High Memory` と呼ぶ様子
 refs http://en.wikipedia.org/wiki/High_memory
 
-----
-
  * UMA Uniform memory access
   * contigunous
  * NUMA Non unicorm memory access
    * nodes
    * CONFIG_NUMA
    * NUMA_EMU というオプションが AMD64にまる。NUMAのエミュレーション
-
  * FLATMEM
    * メモリ空間が全て連続しているモデル。馴染みの深いモデル
  * DISCONTIGMEM
@@ -77,7 +74,7 @@ refs http://en.wikipedia.org/wiki/High_memory
        * http://osdn.jp/event/kernel2004/pdf/C06.pdf
      * メモリ空間を意図的に穴だらけにして、独立して外したり追加できたりする仕組みなのかな
 
-* 3. NUMAな環境でMySQLやらMongoDBがswap起こす件
+### 3. NUMAな環境でMySQLやらMongoDBがswap起こす件
 
 http://osdn.jp/event/kernel2004/pdf/C06.pdf を参照した
 
@@ -120,7 +117,7 @@ node = pg_data_t ごとに kswapd スレッドがいる、ということの印
 
  * numactl は /sys/devices/system/node/, /sys/devices/system/cpu 以下をさらっている
 
-* 3.2 Organization in the (N)UMA Model
+## 3.2 Organization in the (N)UMA Model
 
  * NUMAのノードが一つになったモデルを UMA と考えてよい
  * RAM は `nodes = pg_data_t` に分割される
@@ -131,8 +128,7 @@ node = pg_data_t ごとに kswapd スレッドがいる、ということの印
    * ZONE_MOVABLE
      * 各 zone は `page frames = struct page` と結びついている
      
-* kswapd スレッド生成のコードから swap の実装を追う (3.0.4)
-
+ * kswapd スレッド生成のコードから swap の実装を追う (3.0.4)
  * kthread_run で起動して、ポインタを pg_data_t->kswapd に入れておく
 
     /*
@@ -163,7 +159,7 @@ node = pg_data_t ごとに kswapd スレッドがいる、ということの印
    * http://za.toypark.in/html/2010/06-17.html
    * ネットワークカードからの割り込みコンテキストでページ割当ができなくて死ぬ => min_free_kbytes を大きく取る事で空きページを取る事で余裕を持たせる、という?
  
-* 3.2.2 Data Structures - pg_data_t
+ * 3.2.2 Data Structures - pg_data_t
 
   * ノードのオブジェクト
   　* メモリ使用量の統計, ページ置換はゾーンごとに管理される
@@ -218,10 +214,9 @@ node = pg_data_t ごとに kswapd スレッドがいる、ということの印
     	enum zone_type classzone_idx;
     } pg_data_t;
     
-* 3.2.2 Data Structures - zone
+### 3.2.2 Data Structures - zone
 
  * ゾーン
-
    * ZONE_PADDING でパディング => lock, lru_lock が CPUキャッシュに載せるための工夫
    * ゾーンごとにメモリ使用量の `watermakrs` が定められている。enum
      * pages_high ----- 安定
@@ -401,7 +396,7 @@ node = pg_data_t ごとに kswapd スレッドがいる、ということの印
     	const char		*name;
     } ____cacheline_internodealigned_in_smp;
 
-* 3.2.2 Data Structures - Hot-N-Cold Pages
+### 3.2.2 Data Structures - Hot-N-Cold Pages
 
  * CPU キャッシュに載る様に調整された `Hot Pages` を扱う
    * struct zone -> pageset
@@ -440,7 +435,7 @@ node = pg_data_t ごとに kswapd スレッドがいる、ということの印
 
 lists にページフレームが連結して繋がってる、のかな
 
-* Page frames
+### Page frames
 
     /*
      * Each physical page in the system has a struct page associated with
@@ -524,7 +519,7 @@ lists にページフレームが連結して繋がってる、のかな
     #endif
     };
 
-* page frames の操作関数
+### page frames の操作関数
 
  * wait_on_page_locked(struct page), wait_on_page_writeback(struc page)
    * 共に指定したページが利用可能になるまで TASK_UNINTERRUPTIBLE で待つ操作
