@@ -474,47 +474,51 @@ return __res;
    * 元のページの参照カウントをデクリメントする
      * 新しいページを使うようにする
 
-    /*
-     * This routine handles present pages, when users try to write
-     * to a shared page. It is done by copying the page to a new address
-     * and decrementing the shared-page counter for the old page.
-     */
-    void do_wp_page(unsigned long error_code,unsigned long address)
-    {
-        /* ページを管理しているテーブルを探すためのロジックなんだろうけど、分からない */
-    	un_wp_page((unsigned long *)
-    		(((address>>10) & 0xffc) + (0xfffff000 &
-    		*((unsigned long *) ((address>>20) &0xffc)))));
-    
-    }
+```c
+/*
+ * This routine handles present pages, when users try to write
+ * to a shared page. It is done by copying the page to a new address
+ * and decrementing the shared-page counter for the old page.
+ */
+void do_wp_page(unsigned long error_code,unsigned long address)
+{
+    /* ページを管理しているテーブルを探すためのロジックなんだろうけど、分からない */
+	un_wp_page((unsigned long *)
+		(((address>>10) & 0xffc) + (0xfffff000 &
+		*((unsigned long *) ((address>>20) &0xffc)))));
+
+}
+```
 
  * 新しいページを探して、ページの内容をコピーする
    * ページが足らんかったら SIGSEGV で exit
  * 新しいページが プロセス private なページとして管理されることになる
 
-    void un_wp_page(unsigned long * table_entry)
-    {
-    	unsigned long old_page,new_page;
+ ```c
+void un_wp_page(unsigned long * table_entry)
+{
+	unsigned long old_page,new_page;
 
-    	old_page = 0xfffff000 & *table_entry;
-    	if (old_page >= LOW_MEM && mem_map[MAP_NR(old_page)]==1) {
-    		*table_entry |= 2;
-    		return;
-    	}
-        /* 新しいページを見つけられない (ENOMEMじゃないのか) */
-    	if (!(new_page=get_free_page()))
-    		do_exit(SIGSEGV);
-    	if (old_page >= LOW_MEM)
-    		mem_map[MAP_NR(old_page)]--;
-         // ? 
-    	*table_entry = new_page | 7;
-    	copy_page(old_page,new_page);
-    }	
+	old_page = 0xfffff000 & *table_entry;
+	if (old_page >= LOW_MEM && mem_map[MAP_NR(old_page)]==1) {
+		*table_entry |= 2;
+		return;
+	}
+    /* 新しいページを見つけられない (ENOMEMじゃないのか) */
+	if (!(new_page=get_free_page()))
+		do_exit(SIGSEGV);
+	if (old_page >= LOW_MEM)
+		mem_map[MAP_NR(old_page)]--;
+     // ? 
+	*table_entry = new_page | 7;
+	copy_page(old_page,new_page);
+}	
 
 
-    // 1024 x 1ワード (4バイト) ずつメモリコピーする命令かな?
-    #define copy_page(from,to) \
-    __asm__("cld ; rep ; movsl"::"S" (from),"D" (to),"c" (1024):"cx","di","si")
+// 1024 x 1ワード (4バイト) ずつメモリコピーする命令かな?
+#define copy_page(from,to) \
+__asm__("cld ; rep ; movsl"::"S" (from),"D" (to),"c" (1024):"cx","di","si")
+```
 
 ### タイマ割り込みハンドラ
 
@@ -523,65 +527,73 @@ return __res;
 
  * set_intr_gate で割り込みゲートの登録。32番目
 
-    set_intr_gate(0x20,&timer_interrupt);
-    
-    #define set_intr_gate(n,addr) \
-	_set_gate(&idt[n],14,0,addr) // gate_addr, type = 14, dpl = 0 (Ring0 特権), addr
+``` 
+set_intr_gate(0x20,&timer_interrupt);
+```
 
-    #define _set_gate(gate_addr,type,dpl,addr) 
-    __asm__ (
-        movw %%dx,%%ax
-    	movw %0,%%dx 
-    	movl %%eax,%1 
-    	movl %%edx,%2
-    	: 
-    	: "i" ((short) (0x8000+(dpl<<13)+(type<<8))), 
-    	"o" (*((char *) (gate_addr))), 
-    	"o" (*(4+(char *) (gate_addr))), 
-    	"d" ((char *) (addr)),"a" (0x00080000))
+```c
+#define set_intr_gate(n,addr) \
+_set_gate(&idt[n],14,0,addr) // gate_addr, type = 14, dpl = 0 (Ring0 特権), addr
 
-  * タイマ割り込みのハンドラ。割り込みコンテキストなので、sleepせずなるたけ速く返らないといけない
-        
-    _timer_interrupt:
-            push %ds                # save ds,es and put kernel data space
-            push %es                # into them. %fs is used by _system_call
-            push %fs 
-            pushl %edx              # we save %eax,%ecx,%edx as gcc doesn't
-            pushl %ecx              # save those across function calls. %ebx
-            pushl %ebx              # is saved as we use that in ret_sys_call
-            pushl %eax              # コンテキストを退避
-            -----------------------------------------------------------------
-            movl $0x10,%eax
-            mov %ax,%ds
-            mov %ax,%es
-            movl $0x17,%eax
-            mov %ax,%fs
-            incl _jiffies           # jiffie の繰り上げ => 現在時刻が更新される、はず ( sys_times で参照している )
-            movb $0x20,%al          # EOI to interrupt controller #1
-            outb %al,$0x20
-            movl CS(%esp),%eax
-            andl $3,%eax            # %eax is CPL (0 or 3, 0=supervisor)
-            pushl %eax              # eaxの値次第で do_timer の中で schedule() するかどうか決まるのかな
-            call _do_timer          # 'do_timer(long CPL)' does everything from
-            addl $4,%esp            # task switching to accounting ...
-            -----------------------------------------------------------------
-            jmp ret_from_sys_call   # システムコールから戻るサブルーチンで戻る。豪快
+#define _set_gate(gate_addr,type,dpl,addr) 
+__asm__ (
+    movw %%dx,%%ax
+	movw %0,%%dx 
+	movl %%eax,%1 
+	movl %%edx,%2
+	: 
+	: "i" ((short) (0x8000+(dpl<<13)+(type<<8))), 
+	"o" (*((char *) (gate_addr))), 
+	"o" (*(4+(char *) (gate_addr))), 
+	"d" ((char *) (addr)),"a" (0x00080000))
+```
+
+ * タイマ割り込みのハンドラ。割り込みコンテキストなので、sleepせずなるたけ速く返らないといけない
+
+```  
+ _timer_interrupt:
+         push %ds                # save ds,es and put kernel data space
+         push %es                # into them. %fs is used by _system_call
+         push %fs 
+         pushl %edx              # we save %eax,%ecx,%edx as gcc doesn't
+         pushl %ecx              # save those across function calls. %ebx
+         pushl %ebx              # is saved as we use that in ret_sys_call
+         pushl %eax              # コンテキストを退避
+         -----------------------------------------------------------------
+         movl $0x10,%eax
+         mov %ax,%ds
+         mov %ax,%es
+         movl $0x17,%eax
+         mov %ax,%fs
+         incl _jiffies           # jiffie の繰り上げ => 現在時刻が更新される、はず ( sys_times で参照している )
+         movb $0x20,%al          # EOI to interrupt controller #1
+         outb %al,$0x20
+         movl CS(%esp),%eax
+         andl $3,%eax            # %eax is CPL (0 or 3, 0=supervisor)
+         pushl %eax              # eaxの値次第で do_timer の中で schedule() するかどうか決まるのかな
+         call _do_timer          # 'do_timer(long CPL)' does everything from
+         addl $4,%esp            # task switching to accounting ...
+         -----------------------------------------------------------------
+         jmp ret_from_sys_call   # システムコールから戻るサブルーチンで戻る。豪快
+            
 
             
  * currentプロセスの ユーザー時間とシステム時間を加算
  * current->counter の値は time slice / time quantum
 
-    void do_timer(long cpl)
-    {
-    	if (cpl)
-    		current->utime++;
-    	else
-    		current->stime++;
-    	if ((--current->counter)>0) return;
-    	current->counter=0;
-    	if (!cpl) return;
-    	schedule();
-    }
+```c 
+void do_timer(long cpl)
+{
+	if (cpl)
+		current->utime++;
+	else
+		current->stime++;
+	if ((--current->counter)>0) return;
+	current->counter=0;
+	if (!cpl) return;
+	schedule();
+}
+   
  
  * ロードアベレージの計算がない!!!
    * 2.6.35 は do_timer の中で calc_global_load(); を読んで ロードアベレージを計算している
@@ -590,25 +602,27 @@ return __res;
 
  * struct exec は a.out 形式で、4.3BSDと同じ。ELFではない
 
-    truct exec {
-     unsigned long a_magic;	/* Use macros N_MAGIC, etc for access */
-     unsigned a_text;		/* length of text, in bytes */
-     unsigned a_data;		/* length of data, in bytes */
-     unsigned a_bss;		/* length of uninitialized data area for file, in bytes */
-     unsigned a_syms;		/* length of symbol table data in file, in bytes */
-     unsigned a_entry;		/* start address */
-     unsigned a_trsize;		/* length of relocation info for text, in bytes */
-     unsigned a_drsize;		/* length of relocation info for data, in bytes */
-    ;
+```c 
+truct exec {
+ unsigned long a_magic;	/* Use macros N_MAGIC, etc for access */
+ unsigned a_text;		/* length of text, in bytes */
+ unsigned a_data;		/* length of data, in bytes */
+ unsigned a_bss;		/* length of uninitialized data area for file, in bytes */
+ unsigned a_syms;		/* length of symbol table data in file, in bytes */
+ unsigned a_entry;		/* start address */
+ unsigned a_trsize;		/* length of relocation info for text, in bytes */
+ unsigned a_drsize;		/* length of relocation info for data, in bytes */
+;
 
-    /* Code indicating object file or impure executable.  */
-    #define OMAGIC 0407
+/* Code indicating object file or impure executable.  */
+#define OMAGIC 0407
 
-    /* Code indicating pure executable.  */
-    #define NMAGIC 0410
+/* Code indicating pure executable.  */
+#define NMAGIC 0410
 
-    /* Code indicating demand-paged executable.  */
-    #define ZMAGIC 0413
+/* Code indicating demand-paged executable.  */
+#define ZMAGIC 0413
+```
 
   * shebang は使えなかったのかな?
   * namei, iput, bread, brelse のAPIも一緒
@@ -616,8 +630,10 @@ return __res;
   * close_on_exec ならファイルテーブルを閉じる
   * ユーザランドから 引数コピる
 
-    p = copy_strings(envc,envp,page,PAGE_SIZE*MAX_ARG_PAGES-4);
-    p = copy_strings(argc,argv,page,p);
+```
+p = copy_strings(envc,envp,page,PAGE_SIZE*MAX_ARG_PAGES-4);
+p = copy_strings(argc,argv,page,p);
+```
 
   * linux は BSDみたいに `u.u_error = ENOEXEC;` のようなエラーコードの持ち方をしないで、return で直返しする
     * why ? 

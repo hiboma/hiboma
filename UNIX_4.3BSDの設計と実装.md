@@ -50,39 +50,43 @@ Bach本 6.4.2 に書かれている記述/擬似コードと合致する部分�
   * 割り込みベクタの初期化 (machine/scb.s)
   * 4byteごとにならんどる?
 
-    /* 000 */       STRAY;          IS(machcheck);  IS(kspnotval);  STOP(powfail);
-    /* 010 */       KS(privinflt);  KS(xfcflt);     KS(resopflt);   KS(resadflt);
-    /* 020 */       KS(protflt);    KS(transflt);   KS(tracep);     KS(bptflt);
-    /* 030 */       KS(compatflt);  KS(arithtrap);  STRAY;          STRAY;
-    /* 040 */       KS(syscall);    KS(chme);       KS(chms);       KS(chmu);
-    /* 050 */       STRAY;          IS(cmrd);       STRAY;          STRAY;
-    /* 060 */       IS(wtime);      STRAY;          STRAY;          STRAY;
-    /* 070 */       STRAY;          STRAY;          STRAY;          STRAY;
-    /* 080 */       STRAY;          STRAY;          KS(astflt);     STRAY;
-    /* 090 */       STRAY;          STRAY;          STRAY;          STRAY;
-    /* 0a0 */       IS(softclock);  STRAY;          STRAY;          STRAY;
-    /* 0b0 */       IS(netintr);    STRAY;          STRAY;          STRAY;
-    /* 0c0 */       IS(hardclock);  STRAY;          KS(emulate);    KS(emulateFPD);
-    /* 0d0 */       STRAY;          STRAY;          STRAY;          STRAY;
-    /* 0e0 */       STRAY;          STRAY;          STRAY;          STRAY;
-    /* 0f0 */       IS(consdin);    IS(consdout);   IS(cnrint);     IS(cnxint);
-    /* 100 */       IS(nexzvec); STRAY15;           /* ipl 0x14, nexus 0-15 */
-    /* 140 */       IS(nexzvec); STRAY15;           /* ipl 0x15, nexus 0-15 */
-    /* 180 */       IS(nexzvec); STRAY15;           /* ipl 0x16, nexus 0-15 */
-    /* 1c0 */       IS(nexzvec); STRAY15;           /* ipl 0x17, nexus 0-15 */
+```c  
+/* 000 */       STRAY;          IS(machcheck);  IS(kspnotval);  STOP(powfail);
+/* 010 */       KS(privinflt);  KS(xfcflt);     KS(resopflt);   KS(resadflt);
+/* 020 */       KS(protflt);    KS(transflt);   KS(tracep);     KS(bptflt);
+/* 030 */       KS(compatflt);  KS(arithtrap);  STRAY;          STRAY;
+/* 040 */       KS(syscall);    KS(chme);       KS(chms);       KS(chmu);
+/* 050 */       STRAY;          IS(cmrd);       STRAY;          STRAY;
+/* 060 */       IS(wtime);      STRAY;          STRAY;          STRAY;
+/* 070 */       STRAY;          STRAY;          STRAY;          STRAY;
+/* 080 */       STRAY;          STRAY;          KS(astflt);     STRAY;
+/* 090 */       STRAY;          STRAY;          STRAY;          STRAY;
+/* 0a0 */       IS(softclock);  STRAY;          STRAY;          STRAY;
+/* 0b0 */       IS(netintr);    STRAY;          STRAY;          STRAY;
+/* 0c0 */       IS(hardclock);  STRAY;          KS(emulate);    KS(emulateFPD);
+/* 0d0 */       STRAY;          STRAY;          STRAY;          STRAY;
+/* 0e0 */       STRAY;          STRAY;          STRAY;          STRAY;
+/* 0f0 */       IS(consdin);    IS(consdout);   IS(cnrint);     IS(cnxint);
+/* 100 */       IS(nexzvec); STRAY15;           /* ipl 0x14, nexus 0-15 */
+/* 140 */       IS(nexzvec); STRAY15;           /* ipl 0x15, nexus 0-15 */
+/* 180 */       IS(nexzvec); STRAY15;           /* ipl 0x16, nexus 0-15 */
+/* 1c0 */       IS(nexzvec); STRAY15;           /* ipl 0x17, nexus 0-15 */
+```
 
  * 割り込みハンドラの実装 (machine/locore.s)
  * chmk (CHange Mode to Kernel ) 
 
-    SCBVEC(syscall):
-            pushl   $T_SYSCALL 
-            mfpr    $USP,-(sp);   
-                    calls $0,_syscall;
-                    mtpr (sp)+,$USP
-            incl    _cnt+V_SYSCALL      // システムコールを呼び出した回数を ++ かな
-            addl2   $8,sp                   # pop type, code
-            mtpr    $HIGH,$IPL              ## dont go to a higher IPL (GROT)
-            rei
+ ```
+SCBVEC(syscall):
+        pushl   $T_SYSCALL 
+        mfpr    $USP,-(sp);   
+                calls $0,_syscall;
+                mtpr (sp)+,$USP
+        incl    _cnt+V_SYSCALL      // システムコールを呼び出した回数を ++ かな
+        addl2   $8,sp                   # pop type, code
+        mtpr    $HIGH,$IPL              ## dont go to a higher IPL (GROT)
+        rei
+```
 
  * C実装の syscall が呼び出される。( trap.c )
    * trap(sp, type, code, pc, psl) はページフォルトとかをハンドリングする用
@@ -90,7 +94,8 @@ Bach本 6.4.2 に書かれている記述/擬似コードと合致する部分�
 
  * syscall は システムコールテーブルの番号をみて関数ポインタでディスパッチする役割
    * ユーザ空間から引数をコピーする、レジスタでエラー通知 などが肝
- 
+
+```c   
     syscall(sp, type, code, pc, psl)
 
     // システムコールへの引き数の確認
@@ -116,6 +121,7 @@ Bach本 6.4.2 に書かれている記述/擬似コードと合致する部分�
       } else if (u.u_eosys == RESTARTSYS)
           pc = opc;                               // プログラムカウンタを戻す?
                                                   // SA_RESTARTでシグナル割り込みされた際の処理ぽいんだけど謎
+```
 
   * runrun(reschedule)のフラグがたってたら swtch() して優先度高いプロセスに変える
 
@@ -125,57 +131,61 @@ http://193.166.3.2/pub/unix/4.3bsd/net2/lib/ から拾った
 
  * VAX
 
-    #ifdef PROF
-    #define	ENTRY(x)	.globl _/**/x; .align 2; _/**/x: .word 0; \
-    			.data; 1:; .long 0; .text; moval 1b,r0; jsb mcount
-    #else
-    #define	ENTRY(x)	.globl _/**/x; .align 2; _/**/x: .word 0
-    #endif PROF
-    #define	SYSCALL(x)	err: jmp cerror; ENTRY(x); chmk $SYS_/**/x; jcs err
-    #define	RSYSCALL(x)	SYSCALL(x); ret
-    #define	PSEUDO(x,y)	ENTRY(x); chmk $SYS_/**/y; ret
-    #define	CALL(x,y)	calls $x, _/**/y
-    
-    #define	ASMSTR		.asciz
+``` 
+#ifdef PROF
+#define	ENTRY(x)	.globl _/**/x; .align 2; _/**/x: .word 0; \
+			.data; 1:; .long 0; .text; moval 1b,r0; jsb mcount
+#else
+#define	ENTRY(x)	.globl _/**/x; .align 2; _/**/x: .word 0
+#endif PROF
+#define	SYSCALL(x)	err: jmp cerror; ENTRY(x); chmk $SYS_/**/x; jcs err
+#define	RSYSCALL(x)	SYSCALL(x); ret
+#define	PSEUDO(x,y)	ENTRY(x); chmk $SYS_/**/y; ret
+#define	CALL(x,y)	calls $x, _/**/y
 
-    ENTRY(syscall)
-    	movl	4(ap),r0	    # syscall number
-    	subl3	$1,(ap)+,(ap)	# one fewer arguments
-    	chmk	r0              # CHange Mode to Kernel (カーネルモードに移行する命令らしい
-    	jcs	1f
-    	ret
-    1:
-    	jmp	cerror
+#define	ASMSTR		.asciz
+
+ENTRY(syscall)
+	movl	4(ap),r0	    # syscall number
+	subl3	$1,(ap)+,(ap)	# one fewer arguments
+	chmk	r0              # CHange Mode to Kernel (カーネルモードに移行する命令らしい
+	jcs	1f
+	ret
+1:
+	jmp	cerror
+```
 
  * i386
 
-    #include "SYS.h"
+```c
+#include "SYS.h"
 
-    #ifdef PROF
-    #define	ENTRY(x)	.globl _/**/x; \
-    			.data; 1:; .long 0; .text; .align 2; _/**/x: \
-    			movl $1b,%eax; call mcount
-    #else
-    #define	ENTRY(x)	.globl _/**/x; .text; .align 2; _/**/x: 
-    #endif PROF
-    #define	SYSCALL(x)	2: jmp cerror; ENTRY(x); lea SYS_/**/x,%eax; LCALL(7,0); jb 2b
-    #define	RSYSCALL(x)	SYSCALL(x); ret
-    #define	PSEUDO(x,y)	ENTRY(x); lea SYS_/**/y, %eax; ; LCALL(7,0); ret
-    #define	CALL(x,y)	call _/**/y; addl $4*x,%esp
-    /* gas fucks up offset -- although we don't currently need it, do for BCS */
-    #define	LCALL(x,y)	.byte 0x9a ; .long y; .word x
+#ifdef PROF
+#define	ENTRY(x)	.globl _/**/x; \
+			.data; 1:; .long 0; .text; .align 2; _/**/x: \
+			movl $1b,%eax; call mcount
+#else
+#define	ENTRY(x)	.globl _/**/x; .text; .align 2; _/**/x: 
+#endif PROF
+#define	SYSCALL(x)	2: jmp cerror; ENTRY(x); lea SYS_/**/x,%eax; LCALL(7,0); jb 2b
+#define	RSYSCALL(x)	SYSCALL(x); ret
+#define	PSEUDO(x,y)	ENTRY(x); lea SYS_/**/y, %eax; ; LCALL(7,0); ret
+#define	CALL(x,y)	call _/**/y; addl $4*x,%esp
+/* gas fucks up offset -- although we don't currently need it, do for BCS */
+#define	LCALL(x,y)	.byte 0x9a ; .long y; .word x
+
+#define	ASMSTR		.asciz
     
-    #define	ASMSTR		.asciz
-        
-    ENTRY(syscall)
-    	pop	%ecx	/* rta */
-    	pop	%eax	/* syscall number */
-    	push	%ecx
-    	LCALL(7,0)  // 特別な命令で呼び出さないで、サブルーチン呼び出し???
-    	jb	1f
-    	ret
-    1:
-    	jmp	cerror 
+ENTRY(syscall)
+	pop	%ecx	/* rta */
+	pop	%eax	/* syscall number */
+	push	%ecx
+	LCALL(7,0)  // 特別な命令で呼び出さないで、サブルーチン呼び出し???
+	jb	1f
+	ret
+1:
+	jmp	cerror
+```    
         
 ## 3.4 Clock Interrupts
 
@@ -184,41 +194,43 @@ srcsys/sys/kern_clock.c
  * タイマ割り込み
    * hardclock() で ハードウェアのタイマ割り込みを処理
 
-    SCBVEC(hardclock):
-            PUSHR
-            mtpr $ICCS_RUN|ICCS_IE|ICCS_INT|ICCS_ERR,$ICCS // hardclock の優先度をあげてる?
-            pushl 4+6*4(sp); pushl 4+6*4(sp);
-            calls $2,_hardclock                     # hardclock(pc,psl)
-            POPR;
-            incl    _cnt+V_INTR
-            incl    _intrcnt+I_CLOCK
-            rei  
-    SCBVEC(softclock):
-            PUSHR
-            pushl   4+6*4(sp); pushl 4+6*4(sp);
-            calls   $2,_softclock                   # softclock(pc,psl)
-            POPR; 
-            incl    _cnt+V_SOFT
-            rei     
+```
+SCBVEC(hardclock):
+        PUSHR
+        mtpr $ICCS_RUN|ICCS_IE|ICCS_INT|ICCS_ERR,$ICCS // hardclock の優先度をあげてる?
+        pushl 4+6*4(sp); pushl 4+6*4(sp);
+        calls $2,_hardclock                     # hardclock(pc,psl)
+        POPR;
+        incl    _cnt+V_INTR
+        incl    _intrcnt+I_CLOCK
+        rei  
+SCBVEC(softclock):
+        PUSHR
+        pushl   4+6*4(sp); pushl 4+6*4(sp);
+        calls   $2,_softclock                   # softclock(pc,psl)
+        POPR; 
+        incl    _cnt+V_SOFT
+        rei
+```
 
-   * 時間のかかる処理は ソフトウェア割り込み ( software interruputs) を起こして softclock() に委譲する
-     * VAX の場合 100HZ なので、実時間 "0.01 秒内" にタイマ割り込みを処理しないと、次の割り込みを取りこぼす
-     * CPU優先度の高い hardclock() で ソフトウェア割り込み => 優先度下げると softclock() を処理できる
-     * 割り込みのコストが高い( VAX だと 100HZ ) ので hardclock() が softclock() を直接呼び出す場合もある
-       * needsoft = 1 の時に softclock()
-       * needsoft = 0 の時に setsoftclock() で割り込みする
+ * 時間のかかる処理は ソフトウェア割り込み ( software interruputs) を起こして softclock() に委譲する
+   * VAX の場合 100HZ なので、実時間 "0.01 秒内" にタイマ割り込みを処理しないと、次の割り込みを取りこぼす
+   * CPU優先度の高い hardclock() で ソフトウェア割り込み => 優先度下げると softclock() を処理できる
+   * 割り込みのコストが高い( VAX だと 100HZ ) ので hardclock() が softclock() を直接呼び出す場合もある
+     * needsoft = 1 の時に softclock()
+     * needsoft = 0 の時に setsoftclock() で割り込みする
 
   * http://www.cs.auckland.ac.nz/references/macvax/op-codes/Instructions/mtpr.html
     * mtpr命令でソフトウェア割りこみ? レジスタに何か書いてる
 
+```    
               { 0, "_setsoftclock\n",
       "       mtpr    $0x8,$0x14\n" },
+```
 
  * hardclock() の 優先度は非常に高いので、他のほとんどの処理はブロックされる
    * ネットワークパケットのロス、ディスクヘッドのセクタ転送? を取りこぼしたりする可能性。"重要"
-
  * 4.3BSD では setrlimit, SIGXCPU が実装済み
- 
  * softclock()
    * calltodo のリストを線形にさらって、関数ポインタで `struct callout` を実行
    * プロファイリング TODO:
@@ -234,16 +246,18 @@ ondeman paging, magic number の処理方法と、セグメントサイズの指
  * a.out フォーマットは 6th とだいたい同じ
  * execve に指定されたファイルの最初の sizeof(exec) 分を読んで、フォーマットを解析する
 
-    struct exec {
-    	long	        a_magic;	/* magic number */
-        unsigned long	a_text;		/* size of text segment */
-        unsigned long	a_data;		/* size of initialized data */
-        unsigned long	a_bss;		/* size of uninitialized data */
-        unsigned long	a_syms;		/* size of symbol table */
-        unsigned long	a_entry;	/* entry point */
-        unsigned long	a_trsize;	/* size of text relocation */
-        unsigned long	a_drsize;	/* size of data relocation */
-    };
+``` 
+struct exec {
+	long	        a_magic;	/* magic number */
+    unsigned long	a_text;		/* size of text segment */
+    unsigned long	a_data;		/* size of initialized data */
+    unsigned long	a_bss;		/* size of uninitialized data */
+    unsigned long	a_syms;		/* size of symbol table */
+    unsigned long	a_entry;	/* entry point */
+    unsigned long	a_trsize;	/* size of text relocation */
+    unsigned long	a_drsize;	/* size of data relocation */
+};
+```
 
   * ex_shell[SHSIZE] にインタプリタの名前を格納する。
     * データが # と ! で始まるかどうかを見て判断
@@ -251,10 +265,12 @@ ondeman paging, magic number の処理方法と、セグメントサイズの指
       * ( 改めてインタプリタを execve() する感じ )
   * plain executable ( インタプリタで読むファイル ) の場合は text セグメントのサイズを data セグメントに加算して、テキストセグメントのサイズを 0 とする
 
+```  
     	case 0407:
     		exdata.ex_exec.a_data += exdata.ex_exec.a_text;
     		exdata.ex_exec.a_text = 0;
     		break;
+```            
 
   * インタプリタの名前は SHSIZE = 32文字 まで
 
@@ -269,23 +285,19 @@ ondeman paging, magic number の処理方法と、セグメントサイズの指
  * プロセスの state と flags は別
   * state SIDL ----> SRUN <==> SSLEEP <==> SSTOP ---> SZOMB の遷移だけ
   * flags は context switch の中間状態を記述するためのフラグ
-
  * プロセス管理のリストは 3つある
    * allproc
    * freeproc
    * zombproc
-
  * スケジューリング用のキュー
    * run queue
      * setrq() で 繋ぐ
      * VAX では insque, remque 命令でキューを管理することができる
    * sleep queue (ハッシュ管理)
      * どちらも p_link と p_rlink で管理される
-
  * `struct proc` の p_pgrp, p_pptr, p_ctpr, p_osptr, p_ysptr でプロセスグループの管理
    * 親子関係、兄弟関係を指す。killpg(2) の実装
    * killpg(2) は 4.0 BSD から登場
-
  * プロセスの優先度は二つ
   * p_userpri　ユーザーモードの優先度
   * p_pri      カーネルモードの優先度
@@ -301,47 +313,49 @@ ondeman paging, magic number の処理方法と、セグメントサイズの指
  * VAXアーキテクチャのPCB(Process Control Block)
    * ユーザーモードで、固定した仮想アドレスにおかれる。ハードウェアの仕様が濃い
 
-    struct pcb
-    {
-    	int	pcb_ksp; 	/* kernel stack pointer */
-    	int	pcb_esp; 	/* exec stack pointer */
-    	int	pcb_ssp; 	/* supervisor stack pointer */
-    	int	pcb_usp; 	/* user stack pointer */
-        // 汎用レジスタ
-    	int	pcb_r0; 
-    	int	pcb_r1; 
-    	int	pcb_r2; 
-    	int	pcb_r3; 
-    	int	pcb_r4; 
-    	int	pcb_r5; 
-    	int	pcb_r6; 
-    	int	pcb_r7; 
-    	int	pcb_r8; 
-    	int	pcb_r9; 
-    	int	pcb_r10; 
-    	int	pcb_r11; 
-    	int	pcb_r12; 
-    #define	pcb_ap pcb_r12
-    	int	pcb_r13; 
-    #define	pcb_fp pcb_r13
-    	int	pcb_pc; 	/* program counter */
-    	int	pcb_psl; 	/* program status longword */
+```c   
+struct pcb
+{
+	int	pcb_ksp; 	/* kernel stack pointer */
+	int	pcb_esp; 	/* exec stack pointer */
+	int	pcb_ssp; 	/* supervisor stack pointer */
+	int	pcb_usp; 	/* user stack pointer */
+    // 汎用レジスタ
+	int	pcb_r0; 
+	int	pcb_r1; 
+	int	pcb_r2; 
+	int	pcb_r3; 
+	int	pcb_r4; 
+	int	pcb_r5; 
+	int	pcb_r6; 
+	int	pcb_r7; 
+	int	pcb_r8; 
+	int	pcb_r9; 
+	int	pcb_r10; 
+	int	pcb_r11; 
+	int	pcb_r12; 
+#define	pcb_ap pcb_r12
+	int	pcb_r13; 
+#define	pcb_fp pcb_r13
+	int	pcb_pc; 	/* program counter */
+	int	pcb_psl; 	/* program status longword */
 
-        // p0空間
-    	struct  pte *pcb_p0br; 	/* seg 0 base register */
-    	int	pcb_p0lr; 	/* seg 0 length register and astlevel */
-        
-        // p1空間
-    	struct  pte *pcb_p1br; 	/* seg 1 base register */
-    	int	pcb_p1lr; 	/* seg 1 length register and pme */
-    /*
-     * Software pcb (extension)
-     */
-    	int	pcb_szpt; 	/* number of pages of user page table */
-    	int	pcb_cmap2;
-    	int	*pcb_sswap;
-    	int	pcb_sigc[5];
-    };
+    // p0空間
+	struct  pte *pcb_p0br; 	/* seg 0 base register */
+	int	pcb_p0lr; 	/* seg 0 length register and astlevel */
+    
+    // p1空間
+	struct  pte *pcb_p1br; 	/* seg 1 base register */
+	int	pcb_p1lr; 	/* seg 1 length register and pme */
+/*
+ * Software pcb (extension)
+ */
+	int	pcb_szpt; 	/* number of pages of user page table */
+	int	pcb_cmap2;
+	int	*pcb_sswap;
+	int	pcb_sigc[5];
+};
+```
 
 ## 4.2 Context Swtiching
 
@@ -359,13 +373,15 @@ ondeman paging, magic number の処理方法と、セグメントサイズの指
    * Cのレイヤでは ↓ な感じで定義されている。32個のキューがある
    * p_pri を 4で割ってキュー割り当てする
 
-    #define	NQS	32		/* 32 run queues */
-    struct	prochd {
-    	struct	proc *ph_link;	/* linked list of running processes */
-    	struct	proc *ph_rlink;
-    } qs[NQS];
-    int	whichqs;		/* bit mask summarizing non-empty qs's */
-    #endif
+```c   
+#define	NQS	32		/* 32 run queues */
+struct	prochd {
+	struct	proc *ph_link;	/* linked list of running processes */
+	struct	proc *ph_rlink;
+} qs[NQS];
+int	whichqs;		/* bit mask summarizing non-empty qs's */
+#endif
+```
 
 ### コンテキストスイッチ (swtch, resume, idle)
  
