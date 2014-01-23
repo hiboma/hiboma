@@ -388,134 +388,140 @@ int	whichqs;		/* bit mask summarizing non-empty qs's */
  * swtch()  ... run queue から高優先度のプロセスを探す
  * resume() ... PCBB を切り替えてコンテキストスイッチする
 
-    Idle: idle:
-        mtpr    $0,$IPL         # must allow interrupts here
-        tstl    _whichqs        # look for non-empty queue
-        bneq    sw1
-        brb idle
-    
-    /*
-     * Swtch(), using fancy VAX instructions
-     */
-        .align  1
-    JSBENTRY(Swtch, 0)
-        movl    $1,_noproc
-        incl    _cnt+V_SWTCH        # コンテキストスイッチの回数インクリメント 統計データ
-    sw1:ffs $0,$32,_whichqs,r0  # look for non-empty queue 
-                                    # find first bit 命令。最初にビットが立っている位置を探す
-                                    # _whichqs の 0 からはじめて ~ 32 bit まで確認する
-                                    # 0 に近いと優先度高いプロセス?
-        mtpr    $0x18,$IPL          # lock out all so _whichqs==_qs // 優先度上げる
-        bbcc    r0,_whichqs,sw1     # proc moved via lbolt interrupt
-        movaq   _qs[r0],r1          # r1 にキューのアドレス? 
-        remque  *(r1),r2            # r2 = p = highest pri process // キューから外す
-        bvs badsw           # make sure something was there
-    sw2:beql    sw3
-        insv    $1,r0,$1,_whichqs   # still more procs in this queue
-    sw3:
-        clrl    _noproc
-        clrl    _runrun
-        tstl    P_WCHAN(r2)         ## firewalls // r2->p_wchan のポインタを test
-        bneq    badsw               ## => パニック
-        cmpb    P_STAT(r2),$SRUN    ##       // r2->p_stat == SRUN の test
-        bneq    badsw               ## => パニック
-        clrl    P_RLINK(r2)         ## // r2->r_link
-        movl    *P_ADDR(r2),r0         // r2->r_addr を r0 にセット
-        movl    r0,_masterpaddr        
-        ashl    $PGSHIFT,r0,r0      # r0 = pcbb(p) ? // PCBのアドレスを r0 にセット
-        　　　　　　　　　　　　　　　　　　　　　　 // resume で使う ?
-    /* fall into... */
-    
-    /*
-     * Resume(pf)
-     */
-    JSBENTRY(Resume, R0)
-            mtpr    $HIGH,$IPL              # no interrupts, please 割り込み不可
-            movl    _CMAP2,_u+PCB_CMAP2     # yech 
-            svpctx                          # ハードウェアコンテキストの保存 (PCBに保存)
-                                            # svpctx を呼び出すと割り込みスタックに切り替わるらしい
-            mtpr    r0,$PCBB                # Process Control Block Base レジスタに、別のPCBのアドレスをセット
-                                            # mtpr は "内部特権レジスタ" のロードをする命令。カーネルモードでのみ実行可能な特権命令
-                                            # movl とかでいじれんということなのか
-            ldpctx                          # ハードウェアコンテキストの読み込み
-                                            # ldpctx を呼び出すとカーネルスタックに切り替わる
-            movl    _u+PCB_CMAP2,_CMAP2     # yech 
-            mtpr    $_CADDR2,$TBIS
-    res0:
-            tstl    _u+PCB_SSWAP
-            bneq    res1 
-            rei  
-    res1:
-            movl    _u+PCB_SSWAP,r0                 # longjmp to saved context
-            clrl    _u+PCB_SSWAP
-            movq    (r0)+,r6
-            movq    (r0)+,r8
-            movq    (r0)+,r10
-            movq    (r0)+,r12
-            movl    (r0)+,r1
-            cmpl    r1,sp                           # must be a pop
-            bgequ   1f   
-            pushab  2f
-            calls   $1,_panic
-            /* NOTREACHED */
-    1:
-            movl    r1,sp
-            movl    (r0),(sp)                       # address to return to
-            movl    $PSL_PRVMOD,4(sp)               # ``cheating'' (jfr)
-            rei
+```c 
+Idle: idle:
+    mtpr    $0,$IPL         # must allow interrupts here
+    tstl    _whichqs        # look for non-empty queue
+    bneq    sw1
+    brb idle
+
+/*
+ * Swtch(), using fancy VAX instructions
+ */
+    .align  1
+JSBENTRY(Swtch, 0)
+    movl    $1,_noproc
+    incl    _cnt+V_SWTCH        # コンテキストスイッチの回数インクリメント 統計データ
+sw1:ffs $0,$32,_whichqs,r0  # look for non-empty queue 
+                                # find first bit 命令。最初にビットが立っている位置を探す
+                                # _whichqs の 0 からはじめて ~ 32 bit まで確認する
+                                # 0 に近いと優先度高いプロセス?
+    mtpr    $0x18,$IPL          # lock out all so _whichqs==_qs // 優先度上げる
+    bbcc    r0,_whichqs,sw1     # proc moved via lbolt interrupt
+    movaq   _qs[r0],r1          # r1 にキューのアドレス? 
+    remque  *(r1),r2            # r2 = p = highest pri process // キューから外す
+    bvs badsw           # make sure something was there
+sw2:beql    sw3
+    insv    $1,r0,$1,_whichqs   # still more procs in this queue
+sw3:
+    clrl    _noproc
+    clrl    _runrun
+    tstl    P_WCHAN(r2)         ## firewalls // r2->p_wchan のポインタを test
+    bneq    badsw               ## => パニック
+    cmpb    P_STAT(r2),$SRUN    ##       // r2->p_stat == SRUN の test
+    bneq    badsw               ## => パニック
+    clrl    P_RLINK(r2)         ## // r2->r_link
+    movl    *P_ADDR(r2),r0         // r2->r_addr を r0 にセット
+    movl    r0,_masterpaddr        
+    ashl    $PGSHIFT,r0,r0      # r0 = pcbb(p) ? // PCBのアドレスを r0 にセット
+    　　　　　　　　　　　　　　　　　　　　　　 // resume で使う ?
+/* fall into... */
+
+/*
+ * Resume(pf)
+ */
+JSBENTRY(Resume, R0)
+        mtpr    $HIGH,$IPL              # no interrupts, please 割り込み不可
+        movl    _CMAP2,_u+PCB_CMAP2     # yech 
+        svpctx                          # ハードウェアコンテキストの保存 (PCBに保存)
+                                        # svpctx を呼び出すと割り込みスタックに切り替わるらしい
+        mtpr    r0,$PCBB                # Process Control Block Base レジスタに、別のPCBのアドレスをセット
+                                        # mtpr は "内部特権レジスタ" のロードをする命令。カーネルモードでのみ実行可能な特権命令
+                                        # movl とかでいじれんということなのか
+        ldpctx                          # ハードウェアコンテキストの読み込み
+                                        # ldpctx を呼び出すとカーネルスタックに切り替わる
+        movl    _u+PCB_CMAP2,_CMAP2     # yech 
+        mtpr    $_CADDR2,$TBIS
+res0:
+        tstl    _u+PCB_SSWAP
+        bneq    res1 
+        rei  
+res1:
+        movl    _u+PCB_SSWAP,r0                 # longjmp to saved context
+        clrl    _u+PCB_SSWAP
+        movq    (r0)+,r6
+        movq    (r0)+,r8
+        movq    (r0)+,r10
+        movq    (r0)+,r12
+        movl    (r0)+,r1
+        cmpl    r1,sp                           # must be a pop
+        bgequ   1f   
+        pushab  2f
+        calls   $1,_panic
+        /* NOTREACHED */
+1:
+        movl    r1,sp
+        movl    (r0),(sp)                       # address to return to
+        movl    $PSL_PRVMOD,4(sp)               # ``cheating'' (jfr)
+        rei
+```
 
 ### run queue の操作 (setrq , remrq)
-    
+
  * run queue の操作は Setrq()
  * VAXの命令でキュー操作される
-    
-    /*
-     * Setrq(p), using fancy VAX instructions.
-     *
-     * Call should be made at splclock(), and p->p_stat should be SRUN
-     */
-        .align  1
-     JSBENTRY(Setrq, R0)
-        tstl    P_RLINK(r0)     ## firewall: p->p_rlink must be 0
-        beql    set1            ##
-        pushab  set3            ##
-        calls   $1,_panic       ## パニック
-    set1:
-        movzbl  P_PRI(r0),r1     # put on queue which is p->p_pri / 4
-                                 # p->p_pri / 4 で繋げるキューを決める様子
-                                 # 結果 32 個のキューになる
-        ashl    $-2,r1,r1
-        movaq   _qs[r1],r2
-        insque  (r0),*4(r2)      # at end of queue      // キューの末尾に insert
-        bbss    r1,_whichqs,set2 # mark queue non-empty // bit をセット。 Swtch の ffs 命令で確認される
-    set2:
-        rsb
-    
-    set3:   .asciz  "setrq"
-    
+
+```c 
+/*
+ * Setrq(p), using fancy VAX instructions.
+ *
+ * Call should be made at splclock(), and p->p_stat should be SRUN
+ */
+    .align  1
+ JSBENTRY(Setrq, R0)
+    tstl    P_RLINK(r0)     ## firewall: p->p_rlink must be 0
+    beql    set1            ##
+    pushab  set3            ##
+    calls   $1,_panic       ## パニック
+set1:
+    movzbl  P_PRI(r0),r1     # put on queue which is p->p_pri / 4
+                             # p->p_pri / 4 で繋げるキューを決める様子
+                             # 結果 32 個のキューになる
+    ashl    $-2,r1,r1
+    movaq   _qs[r1],r2
+    insque  (r0),*4(r2)      # at end of queue      // キューの末尾に insert
+    bbss    r1,_whichqs,set2 # mark queue non-empty // bit をセット。 Swtch の ffs 命令で確認される
+set2:
+    rsb
+
+set3:   .asciz  "setrq"
+```
+
  * Remrq で run queue から外す
 
-    /*
-     * Remrq(p), using fancy VAX instructions
-     *
-     * Call should be made at splclock().
-     */
-        .align  1
-     JSBENTRY(Remrq, R0)
-        movzbl  P_PRI(r0),r1
-        ashl    $-2,r1,r1
-        bbsc    r1,_whichqs,rem1
-        pushab  rem3            # it wasn't recorded to be on its q
-        calls   $1,_panic
-    rem1:
-        remque  (r0),r2
-        beql    rem2
-        bbss    r1,_whichqs,rem2
-    rem2:
-        clrl    P_RLINK(r0)     ## for firewall checking
-        rsb
-    
-    rem3:   .asciz  "remrq"
+```c 
+/*
+ * Remrq(p), using fancy VAX instructions
+ *
+ * Call should be made at splclock().
+ */
+    .align  1
+ JSBENTRY(Remrq, R0)
+    movzbl  P_PRI(r0),r1
+    ashl    $-2,r1,r1
+    bbsc    r1,_whichqs,rem1
+    pushab  rem3            # it wasn't recorded to be on its q
+    calls   $1,_panic
+rem1:
+    remque  (r0),r2
+    beql    rem2
+    bbss    r1,_whichqs,rem2
+rem2:
+    clrl    P_RLINK(r0)     ## for firewall checking
+    rsb
+
+rem3:   .asciz  "remrq"
+```
 
 ## Caculations of Process Priority
 
@@ -525,65 +531,69 @@ int	whichqs;		/* bit mask summarizing non-empty qs's */
  * /procやシステムコールインタフェースで参照する仕組みは無い様子
    * 計算式が分からん
 
-    double  avenrun[3];             /* load average, of runnable procs */
+```c   
+double  avenrun[3];             /* load average, of runnable procs */
 
-    /*
-     * Constants for averages over 1, 5, and 15 minutes
-     * when sampling at 5 second intervals.
-     */
-    double	cexp[3] = {
-    	0.9200444146293232,	/* exp(-1/12) */
-    	0.9834714538216174,	/* exp(-1/60) */
-    	0.9944598480048967,	/* exp(-1/180) */
-    };
+/*
+ * Constants for averages over 1, 5, and 15 minutes
+ * when sampling at 5 second intervals.
+ */
+double	cexp[3] = {
+	0.9200444146293232,	/* exp(-1/12) */
+	0.9834714538216174,	/* exp(-1/60) */
+	0.9944598480048967,	/* exp(-1/180) */
+};
 
-    /*
-     * Compute a tenex style load average of a quantity on
-     * 1, 5 and 15 minute intervals.
-     */
-    loadav(avg, n)
-    	register double *avg;
-    	int n;
-    {
-    	register int i;
-    
-    	for (i = 0; i < 3; i++)
-    		avg[i] = cexp[i] * avg[i] + n * (1.0 - cexp[i]);
-    }
+/*
+ * Compute a tenex style load average of a quantity on
+ * 1, 5 and 15 minute intervals.
+ */
+loadav(avg, n)
+	register double *avg;
+	int n;
+{
+	register int i;
 
-    /* fraction for digital decay to forget 90% of usage in 5*loadav sec */
-    #define	filter(loadav) ((2 * (loadav)) / (2 * (loadav) + 1))
+	for (i = 0; i < 3; i++)
+		avg[i] = cexp[i] * avg[i] + n * (1.0 - cexp[i]);
+}
 
-  * setpri でプライオリティを再計算 (フィードバック) する
+/* fraction for digital decay to forget 90% of usage in 5*loadav sec */
+#define	filter(loadav) ((2 * (loadav)) / (2 * (loadav) + 1))
+```
 
-    /*
-     * Set user priority.
-     * The rescheduling flag (runrun)
-     * is set if the priority is better
-     * than the currently running process.
-     */
-    // ユーザーモードのプライオリティを決定する
-    setpri(pp)
-    	register struct proc *pp;
-    {
-    	register int p;
-        // 0377 = 255
-        // PUSER + CPU使用時間の1/4 + 2 * p_nice
-    	p = (pp->p_cpu & 0377)/4;
-    	p += PUSER + 2 * pp->p_nice;
-        //メモリ食ってると優先度下がる?
-    	if (pp->p_rssize > pp->p_maxrss && freemem < desfree)
-    		p += 2*4;	/* effectively, nice(4) */
-        //127がmax
-    	if (p > 127)
-    		p = 127;
-    	if (p < curpri) {
-    		runrun++;
-    		aston();
-    	}
-    	pp->p_usrpri = p;
-    	return (p);
-    }
+ * setpri でプライオリティを再計算 (フィードバック) する
+
+```c
+/*
+ * Set user priority.
+ * The rescheduling flag (runrun)
+ * is set if the priority is better
+ * than the currently running process.
+ */
+// ユーザーモードのプライオリティを決定する
+setpri(pp)
+	register struct proc *pp;
+{
+	register int p;
+    // 0377 = 255
+    // PUSER + CPU使用時間の1/4 + 2 * p_nice
+	p = (pp->p_cpu & 0377)/4;
+	p += PUSER + 2 * pp->p_nice;
+    //メモリ食ってると優先度下がる?
+	if (pp->p_rssize > pp->p_maxrss && freemem < desfree)
+		p += 2*4;	/* effectively, nice(4) */
+    //127がmax
+	if (p > 127)
+		p = 127;
+	if (p < curpri) {
+		runrun++;
+		aston();
+	}
+	pp->p_usrpri = p;
+	return (p);
+}
+```
 
 ## 5.4 Management of Main Memory
 
@@ -592,17 +602,14 @@ int	whichqs;		/* bit mask summarizing non-empty qs's */
  * CLSIZE とは?
    * ハードウェアのページサイズが小さい場合に複数ページをクラスタリングして、1ページとして扱う
    * その際のサイズが CLSIZE
-
  * ここで言う `memory allocation` の定義は?
    * vm_mem.c 当たりにルーチンまとまってる
-
  * core map とは?
    * ページクラスタ管理用の配列, 構造体
    * PTEはハードウェアレイヤのページ管理用のオブジェクト
      * ハードウェアレイヤの仕様がOSレイヤの仕様に出過ぎてる感
    * OS(ソフトウェア)レイヤでのメタデータ,フラグを管理するオブジェクトとして core map
    * => PTEを一体一で結びついている
-
  * core map 役割は?
     * 物理アドレスから仮想アドレスへの逆マッピング (PTEの動作と逆)
     * ページクラスタの管理??? ( ページフレーム?)
@@ -610,9 +617,9 @@ int	whichqs;		/* bit mask summarizing non-empty qs's */
     * 同期機構
       * c_lock, c_want
     * テキストページのキャッシュ
-
   * core map が管理対象は User memory の区間の物理メモリのページ
 
+```  
     +--------+--------------------------------------------------------+-------+
     | kernel |                        User memory                     | msgs  |
     +--------+--------------------------------------------------------+-------+
@@ -620,57 +627,62 @@ int	whichqs;		/* bit mask summarizing non-empty qs's */
              |                                                        |
           firstfree <~~~~~~~~~~~~~~~~~ freemem ~~~~~~~~~~~~~~~~~~> maxfree
                          [freemem / CLSIZE] = page clustersの数
+```
 
   * core map の初期化
     * vax/machdep.c で呼び出されている
 
-    /*
-     * Initialize core map
-     */
-    meminit(first, last)
-    	int first, last;
-    {
-    	register int i;
-    	register struct cmap *c;
-    
-    	firstfree = clrnd(first);
-    	maxfree = clrnd(last - (CLSIZE - 1));
-    	freemem = maxfree - firstfree;
-    	ecmx = ecmap - cmap;
-    	if (ecmx < freemem / CLSIZE)
-    		freemem = ecmx * CLSIZE;
+```c    
+/*
+ * Initialize core map
+ */
+meminit(first, last)
+	int first, last;
+{
+	register int i;
+	register struct cmap *c;
 
-        // freemem / CLSIZE => ページクラスタの数
-        // リンクリストの初期化
-    	for (i = 1; i <= freemem / CLSIZE; i++) {
-    		cmap[i-1].c_next = i;
-    		c = &cmap[i];
-    		c->c_prev = i-1;
-    		c->c_free = 1;
-    		c->c_gone = 1;
-    		c->c_type = CSYS;
-    		c->c_mdev = 0;
-    		c->c_blkno = 0;
-    	}
-        
-    	cmap[freemem / CLSIZE].c_next = CMHEAD;
-    	for (i = 0; i < CMHSIZ; i++)
-    		cmhash[i] = ecmx;
-    	cmap[CMHEAD].c_prev = freemem / CLSIZE;
-    	cmap[CMHEAD].c_type = CSYS;
-    	avefree = freemem;
-    }
+	firstfree = clrnd(first);
+	maxfree = clrnd(last - (CLSIZE - 1));
+	freemem = maxfree - firstfree;
+	ecmx = ecmap - cmap;
+	if (ecmx < freemem / CLSIZE)
+		freemem = ecmx * CLSIZE;
+
+    // freemem / CLSIZE => ページクラスタの数
+    // リンクリストの初期化
+	for (i = 1; i <= freemem / CLSIZE; i++) {
+		cmap[i-1].c_next = i;
+		c = &cmap[i];
+		c->c_prev = i-1;
+		c->c_free = 1;
+		c->c_gone = 1;
+		c->c_type = CSYS;
+		c->c_mdev = 0;
+		c->c_blkno = 0;
+	}
+    
+	cmap[freemem / CLSIZE].c_next = CMHEAD;
+	for (i = 0; i < CMHSIZ; i++)
+		cmhash[i] = ecmx;
+	cmap[CMHEAD].c_prev = freemem / CLSIZE;
+	cmap[CMHEAD].c_type = CSYS;
+	avefree = freemem;
+}
+```
 
  * ページングの閾値が定義されている
    * freemem 空きメモリ
- 
-    /*
-     * Paging thresholds (see vm_sched.c).
-     * Strategy of 1/19/85:
-     *      lotsfree is 512k bytes, but at most 1/4 of memory
-     *      desfree is 200k bytes, but at most 1/8 of memory
-     *      minfree is 64k bytes, but at most 1/2 of desfree
-     */
+
+```c   
+*
+* Paging thresholds (see vm_sched.c).
+* Strategy of 1/19/85:
+*      lotsfree is 512k bytes, but at most 1/4 of memory
+*      desfree is 200k bytes, but at most 1/8 of memory
+*      minfree is 64k bytes, but at most 1/2 of desfree
+*/
+```
 
  * memall(),memfree()
    * メモリが足らない場合 失敗する
@@ -678,21 +690,23 @@ int	whichqs;		/* bit mask summarizing non-empty qs's */
      * kmalloc に相当するのは rmalloc ?
    * memall() は cmap ( core map ) に繋がってるリストを走査して、空きを探す。最初に見つけた core map を利用する
 
-    //テキストセグメント
-    #define	tptopte(p, i)		((p)->p_p0br + (i))
-    //データセグメント( テキストセグメントをオフセットにした数値
-    #define	dptopte(p, i)		((p)->p_p0br + ((p)->p_tsize + (i)))
-    //スタックセグメント system セグメントから減算した場所
-    #define	sptopte(p, i)		((p)->p_addr - (1 + (i)))
+```c
+//テキストセグメント
+#define	tptopte(p, i)		((p)->p_p0br + (i))
+//データセグメント( テキストセグメントをオフセットにした数値
+#define	dptopte(p, i)		((p)->p_p0br + ((p)->p_tsize + (i)))
+//スタックセグメント system セグメントから減算した場所
+#define	sptopte(p, i)		((p)->p_addr - (1 + (i)))
 
-    //仮想ページ番号を 各セグメントのページ番号に変換する, もしくはその逆
-    /* Virtual page numbers to text|data|stack segment page numbers and back */
-    #define	vtotp(p, v)	((int)(v))
-    #define	vtodp(p, v)	((int)((v) - stoc(ctos((p)->p_tsize))))
-    #define	vtosp(p, v)	((int)(BTOPUSRSTACK - 1 - (v)))
-    #define	tptov(p, i)	((unsigned)(i))
-    #define	dptov(p, i)	((unsigned)(stoc(ctos((p)->p_tsize)) + (i)))
-    #define	sptov(p, i)	((unsigned)(BTOPUSRSTACK - 1 - (i)))
+//仮想ページ番号を 各セグメントのページ番号に変換する, もしくはその逆
+/* Virtual page numbers to text|data|stack segment page numbers and back */
+#define	vtotp(p, v)	((int)(v))
+#define	vtodp(p, v)	((int)((v) - stoc(ctos((p)->p_tsize))))
+#define	vtosp(p, v)	((int)(BTOPUSRSTACK - 1 - (v)))
+#define	tptov(p, i)	((unsigned)(i))
+#define	dptov(p, i)	((unsigned)(stoc(ctos((p)->p_tsize)) + (i)))
+#define	sptov(p, i)	((unsigned)(BTOPUSRSTACK - 1 - (i)))
+```
 
    * memfree(pte, size, detach)
      * PTE ~ PTE + size 分のページフレームをフリーリストに繋ぐ
@@ -739,11 +753,9 @@ int	whichqs;		/* bit mask summarizing non-empty qs's */
    * ブロックに割り当てられるバッファを獲得する
      * 獲得したいバッファが他のプロセスが使用中 (B_BUSY) であれば 待つ
      * バッファが無い場合も待つ
-
  * bfreelist
    * 複数アルゴリズムで bfreelist を持つ
    * unix 6th だと一個だけ (LRU?
-
  * bread(dev, blkno, size)
    * 現行の linux だと `struct buffer_head * __bread(struct block_device *bdev, sector_t block, unsigned size)`
    * デバイスドライバを呼び出してバッファを埋める、という意味合いでこの名前を使う
@@ -758,35 +770,34 @@ int	whichqs;		/* bit mask summarizing non-empty qs's */
    * バッファが変更されている状態に対して `dirty` と呼ぶ記述がある
    * bfreelist に B_WANTED を立てておくと wakeup を読んでバッファ解放待ちのプロセスを解放してくれるイベントを立てる
 
+```c   
 	if (bp->b_flags&B_WANTED)
 		wakeup((caddr_t)bp);
 	if (bfreelist[0].b_flags&B_WANTED) {
 		bfreelist[0].b_flags &= ~B_WANTED;
 		wakeup((caddr_t)bfreelist);
 	}
-
+```
      * 6th では 単純に bfreelist の末尾にバッファを戻す
      * 4.3BSDだと b_flags に応じた bfreelist を選択して末尾に戻す
    * linux だと __brelse 参照カウントをatomicに下げるだけ
      * 参照カウントで locked / unlocked を決めている
-
  * bdwrite ... diry の印をつけるけど、呼び出し時点ではI/Oを発行しない。(`delayed write` の略
    * 遅延書き込み
    * バッファが近い時間のうちに再変更される可能性がある場合、すぐにI/Oを発行しておかないで「溜めて」置いたが効率が良い
    * 実装は B_DELWRI (delay write, B_DONE) フラグたてて brelse 呼んでいるだけ
-
  * bawrite ... 非同期書き込み
  　* 実装は B_ASYNC をたてて bwrite 呼んでいるだけ
-
  * bwrite  ... 同期書き込み
    * fdatasync, fsync, O_SYNC ?
-   * ブロックデバイスに対して I/O を発行している 
+   * ブロックデバイスに対して I/O を発行している
 
+```
     bdevsw[major(bp->b_dev)].d_strategy)(bp);`
-   
+```
+
    * biowait で sleep する
      * ドライバからの割り込みで wakeup が呼び出されるはず
-
  * bflush  遅延書き込みバッファをディスクに書き出し
    * 6th だと /etc/update デーモンが 30秒ごとに bflush を呼び出す
    * 遅延書き込みバッファをほったらかしておくと、電源断などで不整合が生じる (要ジャーナリング?)
@@ -797,66 +808,72 @@ int	whichqs;		/* bit mask summarizing non-empty qs's */
     * 一個目の I/Oを発行、二個目のI/Oは B_ASYNC、一個目の I/O を sleep して待つ
     * ブロックデバイスから割り込みコンテキストで wakeup が実行されたらバッファを呼び出し元に返す
 
-    /*
-     * Wait for I/O completion on the buffer; return errors
-     * to the user.
-     */
-    iowait(bp)
-    struct buf *bp;
-    {
-    	register struct buf *rbp;
+```c
+/*
+ * Wait for I/O completion on the buffer; return errors
+ * to the user.
+ */
+iowait(bp)
+struct buf *bp;
+{
+	register struct buf *rbp;
 
-    	rbp = bp;
-    	spl6();
-    	while ((rbp->b_flags&B_DONE)==0)
-    		sleep(rbp, PRIBIO);
-    	spl0();
-    	geterror(rbp);
-    }
+	rbp = bp;
+	spl6();
+	while ((rbp->b_flags&B_DONE)==0)
+		sleep(rbp, PRIBIO);
+	spl0();
+	geterror(rbp);
+}
+```
 
 これらを区分すると ↓ の感じ。遅延(delayed) と 非同期(async) 意味分けに注意
 
+```
     brelse  I/O 発行無し
     bdwrite I/O 発行無し、遅延
     bawrite I/O 発行、非同期
     bwrite  I/O 発行、同期
+```
 
 ## ページフォルト (vm_page.c)
 
-    /*
-     * Handle a page fault.
-     *
-     * Basic outline
-     *	If page is allocated, but just not valid:
-     *		Wait if intransit, else just revalidate
-     *		Done
-     *	Compute <dev,bn> from which page operation would take place
-     *	If page is text page, and filling from file system or swap space:
-     *		If in free list cache, reattach it and then done
-     *	Allocate memory for page in
-     *		If block here, restart because we could have swapped, etc.
-     *	Lock process from swapping for duration
-     *	Update pte's to reflect that page is intransit.
-     *	If page is zero fill on demand:
-     *		Clear pages and flush free list cache of stale cacheing
-     *		for this swap page (e.g. before initializing again due
-     *		to 407/410 exec).
-     *	If page is fill from file and in buffer cache:
-     *		Copy the page from the buffer cache.
-     *	If not a fill on demand:
-     *		Determine swap address and cluster to page in
-     *	Do the swap to bring the page in
-     *	Instrument the pagein
-     *	After swap validate the required new page
-     *	Leave prepaged pages reclaimable (not valid)
-     *	Update shared copies of text page tables
-     *	Complete bookkeeping on pages brought in:
-     *		No longer intransit
-     *		Hash text pages into core hash structure
-     *		Unlock pages (modulo raw i/o requirements)
-     *		Flush translation buffer
-     *	Process pagein is done
-     */
+```c
+*
+* Handle a page fault.
+*
+* Basic outline
+*	If page is allocated, but just not valid:
+*		Wait if intransit, else just revalidate
+*		Done
+*	Compute <dev,bn> from which page operation would take place
+*	If page is text page, and filling from file system or swap space:
+*		If in free list cache, reattach it and then done
+*	Allocate memory for page in
+*		If block here, restart because we could have swapped, etc.
+*	Lock process from swapping for duration
+*	Update pte's to reflect that page is intransit.
+*	If page is zero fill on demand:
+*		Clear pages and flush free list cache of stale cacheing
+*		for this swap page (e.g. before initializing again due
+*		to 407/410 exec).
+*	If page is fill from file and in buffer cache:
+*		Copy the page from the buffer cache.
+*	If not a fill on demand:
+*		Determine swap address and cluster to page in
+*	Do the swap to bring the page in
+*	Instrument the pagein
+*	After swap validate the required new page
+*	Leave prepaged pages reclaimable (not valid)
+*	Update shared copies of text page tables
+*	Complete bookkeeping on pages brought in:
+*		No longer intransit
+*		Hash text pages into core hash structure
+*		Unlock pages (modulo raw i/o requirements)
+*		Flush translation buffer
+*	Process pagein is done
+*/
+```
 
 ## vfork
 
@@ -865,8 +882,9 @@ int	whichqs;		/* bit mask summarizing non-empty qs's */
   * 4.4BSD では copy on write が実装された
  * sys/init_sysent.c 
 
+``` 
     int     vfork();                /* awaiting fork w/ copy on write */
-    
+```    
 
  * vfork と CoW について 哲学の違いと、 Bach 本では説明している
    * システムの特性をユーザーに対してふせておくか、優れた開発者が効率よく実装できるか
@@ -881,7 +899,6 @@ int	whichqs;		/* bit mask summarizing non-empty qs's */
   * システム管理領域
   * P1
   * P0
-
  * システム管理領域の仮想アドレスは、ユーザープロセスからもアクセスできる
   * CALL命令でカーネルの手続きを呼び出せる
   * システムコールを呼ぶ際に割り込みを使ったりしない??

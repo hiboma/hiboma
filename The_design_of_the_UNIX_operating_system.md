@@ -17,7 +17,6 @@
    * モダンUNIXではCPU割当のスケジューリングを担うものとして意味になる
      * swapper は、文字通り プロセスの swap を担うもの
      * `preeempts` `quantum` という単語がでてくる
-
  * 割り込みが `special functions in the kernel` と表現されている
  * カーネル実行パス、といった表現はまだ無い
 
@@ -29,7 +28,6 @@
 
  * `a process on a UNIX system is the entity that is created by the fork system call`
    * プロセスは fork した実体である、という捉え方
-
  * `region` `region table`
    * `A region is contiguous area of a process's address`
    * `address space`
@@ -39,12 +37,9 @@
       * textか、data か (実行可能か、読み取り可能、書き込み可能か )
    * forkした際に region を share することで Copy on Write 的なことができると書いてある
       * Copy On Write 的な手法に言及している ( CoW の名前はでてきていない )
-
  * u 変数 => Linuxの `current` と一緒の使い方ができる
    * 6thと同じで struct user を指してるはず
-
  * bss とは? => `block started by symbol` IBM 7079 というのが由来らしい
-
  * システムコールのスタックは、必ずスタック最上位に位置する
    * システムコールの引き数をスタックに積むから当たり前か
  * ユーザーモードの時は カーネルスタックは NULL
@@ -127,7 +122,6 @@ LRUの逆でMRU Most Recently Used というアルゴリズムもある。
    * Linux の mm_struct かな
    * pregion の各エントリは read-only, read-write, read-execute などの属性を持つ
    * ファイルテーブル(デスクリプタのテーブル) = private と inode = shared とのアナロジーだという説明がある
-
  * regsion の考え方は ハードウェアでのメモリ管理の実装とは独立している
    * メモリが `page` に分割されるか `segment` に分割されるか
 
@@ -140,14 +134,11 @@ UNIXに限定した話でないと前置き。ページでメモリ管理する�
    * メモリのアドレスは "ページ番号 + バイトオフセット" で特定できる
      * 2**32 の物理メモリがあった場合 => 2**22 のページ番号と 10bitのバイトオフセットでアドレッシングできる
      * ブロックデバイスの ブロック番号 + オフセットのアナロジと説明
-
  * ページでのメモリ管理の利点
    * 物理メモリを連続して割当る必要がない / また順番も考慮しなくてよい
    * フラグメント化を減らせる
-
  * page table で 論理ページ番号 => 物理ページ番号の管理をする
    * page table のエントリは 読み書き可能かといった情報をもつ (マシン?アーキテクチャ依存)
-
  * プロセスが仮想アドレス空間を外れたアドレスを指すとハードウェアが exception を出す
    * machine/trap.c の T_SEGFLT か? ( プロセスには SIGSEGV を飛ばす )
  * write-protected text region (読み取り専用メモリリージョン) に書き込もうとすると exception を出す
@@ -167,7 +158,6 @@ segmentation fault, page fault かな?
  * `interruput vector` 割り込みベクタの説明
  * 割り込みハンドラのスタックをカーネルスタックで扱う実装と、グローバルな割り込み用スタックを用意する実装とがある
    * グローバルな割り込みスタックを使うと context switch の必要せず戻れる???
-   
  * システムコールの呼び出し中にディスクからの割り込みがあってタイマ割り込みがさらに入る、というスタックの図がある
    * 三段組になる
    
@@ -176,7 +166,6 @@ segmentation fault, page fault かな?
 > a special case of an interruput handler
 
  * 擬似コードの内容が4.3BSDと大体一緒なので、実装は4.3BSDを読んでおけばよい
-
  * MS-DOSは ファンクションリクエスト と呼ぶようですな
  * システムコールへの引き数の渡し方
    * パラメータ渡し
@@ -199,16 +188,13 @@ segmentation fault, page fault かな?
  * UNIX のスケジューラは `round robin with multilevel feedback`
    * ラウンドロビン + 多段フィードバック のアルゴリズム で実装されている
    * UNIX とあるけど、ここでは System V だけ?
-   
  * user proirities, kernel priorities とに分けられる
    * kernel priorities は、sleep 状態から wakeup した際の優先度を指す
      * user-level prioritiy のプロセスは カーネルモードからユーザーモードに戻る際に preempt される
      * kernel-level prioritiy のプロセスは sleep する際に preempt される
-
    * I/O処理待ちのキューは高い優先度が当てられている
      * すでにバッファを獲得している。
      * リソース(バッファ等)を早く解放することで、他プロセスをブロックさせることが少なくなり、 context switch も減ってスループットを向上できる
-
   * タイマ割り込みのハンドラでユーザーモードの優先度が再計算される
     * 一つのプロセスがCPUを占有 ( 他のプロセスを starvation させない )させないように。
    
@@ -223,7 +209,6 @@ segmentation fault, page fault かな?
    * コンテキストスイッチの原因になる
    * ボトルネックになってしまうので、高い優先度をあててリソースの解放を促し スループットの向上を図る
    * 優先度はユーザーモードに戻る際に再調整される ( 高い優先度のまま戻る分けにいかん )
-   
  * タイマ割り込みハンドラは 1秒ごとに優先度調整をする
    * 優先度調整されることでスケジューリングを起こす状態を作る
 
@@ -233,7 +218,6 @@ segmentation fault, page fault かな?
 
  * `restartable instructions` と `pages` の組み合わせ = page fault (demand paging) の仕組み
    * やり直しできる命令セット
-
  * `locality`
  * `working set`
    * 最後に参照した n 個のページ群
@@ -248,7 +232,6 @@ segmentation fault, page fault かな?
  * Validity Fault Hnadler, Protection Fault Hahndler 二つのページフォルトハンドラを実装する
    * VAX では Validity Fault と Protection Fault はそれぞれ別のベクタで管理されている
    * x86ではベクタは一緒で、スタックに載った error code の内容で判別する
-   
  * Protection Fault Hahndler
    * 4.3BSD, 4.4BSD では Protection Fault は SIGBUS 呼び出して終了。CoWが無いので
 
