@@ -10,36 +10,36 @@
 
 ## 2.1 ARCHITECURRE OF THE UNIX OPERATING SYSTEM
 
- * `trap` によって kernel level (カーネルモード) に移行している
+ * ___trap___ によって kernel level (カーネルモード) に移行している
  * swapper プロセス
    * 古典UNIXでは「スケジューリング」は、プロセスのメモリをメインメモリ/スワップメモリで交換することを指していた様子
      * 6th の sched
    * モダンUNIXではCPU割当のスケジューリングを担うものとして意味になる
      * swapper は、文字通り プロセスの swap を担うもの
-     * `preeempts` `quantum` という単語がでてくる
- * 割り込みが `special functions in the kernel` と表現されている
+     * ___preeempts___ ___quantum___ という単語がでてくる
+ * 割り込みが ___special functions in the kernel___ と表現されている
  * カーネル実行パス、といった表現はまだ無い
 
 ## 2.2.1 An Overview of the File Subsystem
 
- * `index node` => inode だという説明がでてくる
+ * ___index node___ => inode だという説明がでてくる
 
 ## 2.2.2 Processes
 
- * `a process on a UNIX system is the entity that is created by the fork system call`
+ * ___a process on a UNIX system is the entity that is created by the fork system call___
    * プロセスは fork した実体である、という捉え方
- * `region` `region table`
-   * `A region is contiguous area of a process's address`
-   * `address space`
+ * ___region___ ___region table___
+   * ___A region is contiguous area of a process's address___
+   * ___address space___
    * linuxでいうところのmm_struct 的な物?
      * 属性の管理
       * shared か private の属性をもつ
       * textか、data か (実行可能か、読み取り可能、書き込み可能か )
    * forkした際に region を share することで Copy on Write 的なことができると書いてある
       * Copy On Write 的な手法に言及している ( CoW の名前はでてきていない )
- * u 変数 => Linuxの `current` と一緒の使い方ができる
+ * u 変数 => Linuxの ___current___ と一緒の使い方ができる
    * 6thと同じで struct user を指してるはず
- * bss とは? => `block started by symbol` IBM 7079 というのが由来らしい
+ * bss とは? => ___block started by symbol___ IBM 7079 というのが由来らしい
  * システムコールのスタックは、必ずスタック最上位に位置する
    * システムコールの引き数をスタックに積むから当たり前か
  * ユーザーモードの時は カーネルスタックは NULL
@@ -60,7 +60,7 @@
 ## 2.2.2.3 State transitions
 
  * kernel mode で running なプロセスは他のプロセスから preempt されない
-  * 特定の状態で `non-preemptive` ではある
+  * 特定の状態で ___non-preemptive___ ではある
   * kernel mode を non-preemptive にすることでデータの一貫性を保ち、排他制御の問題を解決する
  * user mode のプロセスは preempt される
  * kernel running => sleep になる際に context switch 可能になる
@@ -71,12 +71,12 @@ Linux では CONFIG_PREEMPT を有効にすると kernel mode で running な場
 ## 3.1 BUFFER HEADERS
 
  * ?: bufferのサイズはブート時に固定なのだろうか?
- * `The buffer is the in-memory copy of the disk block`
+ * ___The buffer is the in-memory copy of the disk block___
    * バッファはディスクブロックと一対一で対応する。デバイス番号とブロック番号で一意
 
  * バッファの状態
    * locked, busy, free, unlocked
-   * バッファを再利用する際にはバッファの内容をディスクに書き出す必要がある `delayed-write`
+   * バッファを再利用する際にはバッファの内容をディスクに書き出す必要がある ___delayed-write___
      * dirty なバッファですな
 
 ## 3.2 STRUCTURE OF THE BUFFER POOL
@@ -93,7 +93,7 @@ LRUの逆でMRU Most Recently Used というアルゴリズムもある。
  
 ## 3.5
 
- * buffer の仕組みがあることで、ファイルシステムの一貫性( `file system integrity` ) を保ちやすくなる
+ * buffer の仕組みがあることで、ファイルシステムの一貫性( ___file system integrity___ ) を保ちやすくなる
    * ディスクのブロックがメモリ上にただ一つ存在してかつ排他的に管理されているため。
    * はじOS にも同じ記述
 
@@ -115,15 +115,15 @@ LRUの逆でMRU Most Recently Used というアルゴリズムもある。
 
 ## 6.2.1 Regions
 
- * System V は 仮想アドレス空間を `region` に分割する
-   * Linux は `memory region` と呼んでる。 vm_area_struct と同義
- * `pregion`
+ * System V は 仮想アドレス空間を ___region___ に分割する
+   * Linux は ___memory region___ と呼んでる。 vm_area_struct と同義
+ * ___pregion___
    * a private process region table
    * Linux の mm_struct かな
    * pregion の各エントリは read-only, read-write, read-execute などの属性を持つ
    * ファイルテーブル(デスクリプタのテーブル) = private と inode = shared とのアナロジーだという説明がある
  * regsion の考え方は ハードウェアでのメモリ管理の実装とは独立している
-   * メモリが `page` に分割されるか `segment` に分割されるか
+   * メモリが ___page___ に分割されるか ___segment___ に分割されるか
 
 ## 6.2.2. Pages and Page Tables
 
@@ -155,7 +155,7 @@ segmentation fault, page fault かな?
 
 ## 6.4.1 Interrupts and Exceptions
 
- * `interruput vector` 割り込みベクタの説明
+ * ___interruput vector___ 割り込みベクタの説明
  * 割り込みハンドラのスタックをカーネルスタックで扱う実装と、グローバルな割り込み用スタックを用意する実装とがある
    * グローバルな割り込みスタックを使うと context switch の必要せず戻れる???
  * システムコールの呼び出し中にディスクからの割り込みがあってタイマ割り込みがさらに入る、というスタックの図がある
@@ -185,7 +185,7 @@ segmentation fault, page fault かな?
  
 ### 8.1 PROCESS SCHEDULING
 
- * UNIX のスケジューラは `round robin with multilevel feedback`
+ * UNIX のスケジューラは ___round robin with multilevel feedback___
    * ラウンドロビン + 多段フィードバック のアルゴリズム で実装されている
    * UNIX とあるけど、ここでは System V だけ?
  * user proirities, kernel priorities とに分けられる
@@ -200,7 +200,7 @@ segmentation fault, page fault かな?
    
 ### 8.1.1 Algorithm
 
- * 最も優先度の高い `ready to run and loaded in memory` なプロセスが preempt される
+ * 最も優先度の高い ___ready to run and loaded in memory___ なプロセスが preempt される
  * 優先度の高いプロセスが複数ある場合は、 round robin 方式で、キューでの待ち時間が一番長いプロセスに preempt される
  
 ### 8.1.2 Scheduling Parameters
@@ -212,16 +212,16 @@ segmentation fault, page fault かな?
  * タイマ割り込みハンドラは 1秒ごとに優先度調整をする
    * 優先度調整されることでスケジューリングを起こす状態を作る
 
-4.3BSD では `hardclock(), softclock()` が用意されている
+4.3BSD では ___hardclock(), softclock()___ が用意されている
 
 ## 9.2 DEMAND PAGING
 
- * `restartable instructions` と `pages` の組み合わせ = page fault (demand paging) の仕組み
+ * ___restartable instructions___ と ___pages___ の組み合わせ = page fault (demand paging) の仕組み
    * やり直しできる命令セット
- * `locality`
- * `working set`
+ * ___locality___
+ * ___working set___
    * 最後に参照した n 個のページ群
- * `window of the working set`
+ * ___window of the working set___
    * n を指す
    * working set に含まれていないページを参照 => ページフォルトする、という考え方
   
