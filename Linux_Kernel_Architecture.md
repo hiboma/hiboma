@@ -26,10 +26,8 @@
 
  * `Generic Schedluer`
    * テンプレートメソッド的な役割で Scheduling Class に委譲する
-
  * `Scheduling Classes`
   * CFS, real-time scheduling, scheduling of the idle task
-
  * `schedulable entities`
    * プロセス単位でのスケジューリングより大きい単位でスケジューリング 
    * "struct sched_entity" のインスタンス
@@ -43,7 +41,6 @@
 
  * アドレス空間は kernel : user = 1 : 3 = 0x000000 ~ 0xbfffffff : 0xc000000 0xffffff で分割される
  * カーネルアドレス空間は物理メモリに直接マッピングされる
-
  * Linux の物理メモリの区分 (ZONEと呼ばれる
  *  0    - 16MB  DMA
  * 16MB  - 896MB NORMAL  ... 物理メモリに直マップできる。PTEを経由せずアクセスできる。カーネルが使用
@@ -826,4 +823,3 @@ schedule を呼び出しているので、ページが利用可能になるま�
   
   * シグナルを受けて TASK_INTERRUPTIBLE からの起床 => spurious wake up 見せかけの起床 と呼ぶらしい
     * マルチスレッド周りの用語でもあるぽい
-

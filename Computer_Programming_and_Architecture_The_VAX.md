@@ -1,4 +1,4 @@
-* Computer_Programming_and_Architecture_The_VAX.txt
+# Computer_Programming_and_Architecture_The_VAX.txt
 
  * `zero-address instructions` ... stack マシン
 
@@ -23,7 +23,7 @@
  
     ADD A, B, C  # C = A + B
     
-* 2. PMS notation
+## 2. PMS notation
 
 システムの物理構造をテキスト化
 分かりやすいのか分かりにくいのか いささか微妙な抽象化感

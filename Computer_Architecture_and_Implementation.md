@@ -1,6 +1,6 @@
-* Computer Architecture and Implementation
+# Computer Architecture and Implementation
 
-* 1.
+## 1.
 
  * von Neumann model 1946
   * Princetonアーキテクチャ
@@ -23,9 +23,9 @@
  * 命令の実行は3つのステップのサイクル
   * fetch => decode => execute
   
-* 1.2.2 INSTRUCTION INTERPRETATION CYCLE
+## 1.2.2 INSTRUCTION INTERPRETATION CYCLE
 
-* 1.2.3 LIMITATIONS OF THE VON NEUMANN INSTRUCTION SET ARCHITECTURE  
+### 1.2.3 LIMITATIONS OF THE VON NEUMANN INSTRUCTION SET ARCHITECTURE  
   
  * self-modifying code
    * 配列のインデクシング?
@@ -57,9 +57,9 @@
      * `programm counter became architeced, permitting its contents to be saved and restored`
      * von Neumann ISA ではプログラムカウンタを操作できない(単純にインクリメントするだけ) サブルーチンを実行できない
      
-* 3. INSTRUCTION SET ARCHITECTURE
+## 3. INSTRUCTION SET ARCHITECTURE
 
-* 3.0 INTRODUCTION
+### 3.0 INTRODUCTION
 
 > Functions and data that are provided in the ISA called "architected"
 > Functions and data that are provided by programming "programmed"
@@ -118,24 +118,27 @@
  * マスカブル
  * ノンマスカブル
 
-* 4. MEMORY SYSTEMS
+## 4. MEMORY SYSTEMS
 
-* 4.2 PGED VIRTUAL MEMORY
+### 4.2 PGED VIRTUAL MEMORY
 
  * http://www.cs.utexas.edu/~witchel/372/lectures/15.VirtualMemory.pdf
- 
  * page fault rate
   * ページフォルトを起こす割合 (ランダムに分配 = distribution した場合)
 
+```
         size of real memory
   1 - ----------------------
       size of virtual memory
+```      
 
   * 実際には局所性が作用するので、より小さい値を取る (≒キャッシュヒット率)
 
+```  
         number of references found in real memory
   1 - ------------------------------------------
             total number of references
+```            
 
   * Spartial Locality 空間局所性
     * instruction-address stream
@@ -145,7 +148,6 @@
     * data-address stream 
     * 一度利用したデータは再利用される可能性が高い。ループの中など。
     * `look behind`
-
   * Direct Translation
     * Page Table によるアドレス変換。
     * アドレスサイズが大きくなるとページテーブルのサイズも大きくなるので効率が悪い
@@ -154,10 +156,8 @@
   * Inverted Translation 逆引きページテーブル
     * Hash を使う, corrision
     * page name (仮想アドレスの上位ビット) をハッシュ化して、ページテーブルのインデックス番号にする
-      * 
     * ハッシュが衝突するので linked list
       * linked list を辿って一致するエントリが見つからない場合、ページフォルト
       * PowerPC 32bit http://www.freescale.co.jp/doc/MPCFPE32BJ_R1a.pdf
-
     
 displacement ... 変位。オフセットと同じ意味で使われている
