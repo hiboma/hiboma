@@ -1,4 +1,4 @@
-* [本] Operating System Conectps
+# Operating System Conectps
 
 ## 5. THREADS
 
@@ -29,7 +29,8 @@ parallel, concurrency
  * Many-To-One モデル ... `Green threads`
    * Solaris 2
    * parallel++ , concurrency--
-
+   
+```
      USER      KERNEL
    ---------+---------
     ~~~~~~> |
@@ -38,11 +39,13 @@ parallel, concurrency
     ~~~~~~> |
     ~~~~~~> |
    ---------+---------
+```   
 
  * One-To-One モデル
    * Windows NT, Windows 2000 OS/2
    * parallel++, concurrency++
 
+```
      USER      KERNEL
    ---------+---------
     ~~~~~~> + ~~~~~~>
@@ -51,12 +54,14 @@ parallel, concurrency
             |
     ~~~~~~> | ~~~~~~>
    ---------+---------
+```   
 
  * Many-To-Many モデル
    * parallel++, concurrency++,
    * mu
    * Solaris 2, IRIX, HP-UX, Tru64 UNIX
 
+```
      USER      KERNEL
    ---------+---------
     ~~~~~~> |
@@ -65,6 +70,7 @@ parallel, concurrency
     ~~~~~~> + ~~~~~~>
     ~~~~~~> |
    ---------+---------
+```
 
 ### misc
 
@@ -86,7 +92,7 @@ parallel, concurrency
    * 仕様 である。実装 ではない。
  * Mach C-threads
  * Solaris 2 UI-threads
-   
+
  * いろんなプラットフォームのスレッド実装
   * Solaris 2
   * Windows 2000
