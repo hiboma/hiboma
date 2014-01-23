@@ -127,7 +127,7 @@ LRUの逆でMRU Most Recently Used というアルゴリズムもある。
    * Linux の mm_struct かな
    * pregion の各エントリは read-only, read-write, read-execute などの属性を持つ
    * ファイルテーブル(デスクリプタのテーブル) = private と inode = shared とのアナロジーだという説明がある
-   
+
  * regsion の考え方は ハードウェアでのメモリ管理の実装とは独立している
    * メモリが `page` に分割されるか `segment` に分割されるか
 
@@ -136,10 +136,10 @@ LRUの逆でMRU Most Recently Used というアルゴリズムもある。
 UNIXに限定した話でないと前置き。ページでメモリ管理するハードウェアのお話。
 
  * 物理メモリをページに分割して管理する
-  * ページサイズは 512 ~ 4096 bytes
-  * メモリのアドレスは "ページ番号 + バイトオフセット" で特定できる
-    * 2**32 の物理メモリがあった場合 => 2**22 のページ番号と 10bitのバイトオフセットでアドレッシングできる
-    * ブロックデバイスの ブロック番号 + オフセットのアナロジと説明
+   * ページサイズは 512 ~ 4096 bytes
+   * メモリのアドレスは "ページ番号 + バイトオフセット" で特定できる
+     * 2**32 の物理メモリがあった場合 => 2**22 のページ番号と 10bitのバイトオフセットでアドレッシングできる
+     * ブロックデバイスの ブロック番号 + オフセットのアナロジと説明
 
  * ページでのメモリ管理の利点
    * 物理メモリを連続して割当る必要がない / また順番も考慮しなくてよい
@@ -149,9 +149,9 @@ UNIXに限定した話でないと前置き。ページでメモリ管理する�
    * page table のエントリは 読み書き可能かといった情報をもつ (マシン?アーキテクチャ依存)
 
  * プロセスが仮想アドレス空間を外れたアドレスを指すとハードウェアが exception を出す
-  * machine/trap.c の T_SEGFLT か? ( プロセスには SIGSEGV を飛ばす )
+   * machine/trap.c の T_SEGFLT か? ( プロセスには SIGSEGV を飛ばす )
  * write-protected text region (読み取り専用メモリリージョン) に書き込もうとすると exception を出す
-  * machine/trap.c の T_PROTFLT か? ( プロセスには SIGBUS を飛ばす )
+   * machine/trap.c の T_PROTFLT か? ( プロセスには SIGBUS を飛ばす )
 
 segmentation fault, page fault かな?
 
@@ -188,7 +188,7 @@ segmentation fault, page fault かな?
    * 失敗時
      * PS レジスタの carry bit を立てる
      * レジスタ0 に errno を入れる
-     
+
 ## 8 PROCESS SCHEDULING AND TIME
 
  * カーネルモードからユーザーモードに戻る時に優先度を再計算する
@@ -232,14 +232,14 @@ segmentation fault, page fault かな?
 ## 9.2 DEMAND PAGING
 
  * `restartable instructions` と `pages` の組み合わせ = page fault (demand paging) の仕組み
-  * やり直しできる命令セット
+   * やり直しできる命令セット
 
  * `locality`
  * `working set`
-  * 最後に参照した n 個のページ群
+   * 最後に参照した n 個のページ群
  * `window of the working set`
-  * n を指す
-  * working set に含まれていないページを参照 => ページフォルトする、という考え方
+   * n を指す
+   * working set に含まれていないページを参照 => ページフォルトする、という考え方
   
 オペシス本 6.6.5章あたりに にも書かれていること
 
