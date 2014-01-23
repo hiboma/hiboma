@@ -86,10 +86,11 @@ http://osdn.jp/event/kernel2004/pdf/C06.pdf を参照した
  * 3. どれか特定のノードのゾーンでswapの閾値を超える
    * 他ノードでもメモリが余っているにも関わらず swap が発生という仕組み
    
-* 3. dev002.tokyo.pb の numactl でノード数と kswapd スレッドの数を確かめる
+* 3. dev002 の numactl でノード数と kswapd スレッドの数を確かめる
 
  * numactl で見ると 2ノード
 
+``` 
     [hiroya@dev002]~% numactl --hardware
     available: 2 nodes (0-1)
     node 0 cpus: 0 1 2 3 4 5 12 13 14 15 16 17
@@ -101,7 +102,8 @@ http://osdn.jp/event/kernel2004/pdf/C06.pdf を参照した
     node distances:
     node   0   1 
       0:  10  15 
-      1:  15  10 
+      1:  15  10
+```
 
  * 2ノード分のkswapd カーネルスレッドが生えている
 
@@ -434,87 +436,89 @@ lists にページフレームが連結して繋がってる、のかな
 
 ### Page frames
 
-    /*
-     * Each physical page in the system has a struct page associated with
-     * it to keep track of whatever it is we are using the page for at the
-     * moment. Note that we have no way to track which tasks are using
-     * a page, though if it is a pagecache page, rmap structures can tell us
-     * who is mapping it.
-     */
-    struct page {
-        // プラットフォームに依存しない
-        // PG_locked とか PG_dirty などのフラグ
-    	unsigned long flags;		/* Atomic flags, some possibly updated asynchronously */
-    	atomic_t _count;		    /* Usage count, see below. */
-    	union {
-    		atomic_t _mapcount;	/* Count of ptes mapped in mms,
-    					 * to show when page is mapped
-    					 * & limit reverse map searches.
-    					 */
-    		struct {		/* SLUB */
-    			u16 inuse;
-    			u16 objects;
-    		};
-    	};
-    	union {
-    	    struct {
-            // bufferヘッドにつかったり
-    		unsigned long private;
-                            /* Mapping-private opaque data:
-    					 	 * usually used for buffer_heads
-    						 * if PagePrivate set; used for
-    						 * swp_entry_t if PageSwapCache;
-    						 * indicates order in the buddy
-    						 * system if PG_buddy is set.
-            // inode の address_space もしくは 無名アドレス空間オブジェクト指したり
-    		struct address_space *mapping;
-                            /* If low bit clear, points to
-    						 * inode address_space, or NULL.
-    						 * If page mapped as anonymous
-    						 * memory, low bit is set, and
-    						 * it points to anon_vma object:
-    						 * see PAGE_MAPPING_ANON below.
-    						 */
-    	    };
-    #if USE_SPLIT_PTLOCKS
-    	    spinlock_t ptl;
-    #endif
-    	    struct kmem_cache *slab;	/* SLUB: Pointer to slab */
-    	    struct page *first_page;	/* Compound tail pages */
-    	};
-    	union {
-    		pgoff_t index;		/* Our offset within mapping. */
-    		void *freelist;		/* SLUB: freelist req. slab lock */
-    	};
-    	struct list_head lru;		/* Pageout list, eg. active_list
-    					 * protected by zone->lru_lock !
-    					 */
-    	/*
-    	 * On machines where all RAM is mapped into kernel address space,
-    	 * we can simply calculate the virtual address. On machines with
-    	 * highmem some memory is mapped into kernel virtual memory
-    	 * dynamically, so we need a place to store that address.
-    	 * Note that this field could be 16 bits on x86 ... ;)
-    	 *
-    	 * Architectures with slow multiplication can define
-    	 * WANT_PAGE_VIRTUAL in asm/page.h
-    	 */
-    #if defined(WANT_PAGE_VIRTUAL)
-    	void *virtual;			/* Kernel virtual address (NULL if
-    					   not kmapped, ie. highmem) */
-    #endif /* WANT_PAGE_VIRTUAL */
-    #ifdef CONFIG_WANT_PAGE_DEBUG_FLAGS
-    	unsigned long debug_flags;	/* Use atomic bitops on this */
-    #endif
-    
-    #ifdef CONFIG_KMEMCHECK
-    	/*
-    	 * kmemcheck wants to track the status of each byte in a page; this
-    	 * is a pointer to such a status block. NULL if not tracked.
-    	 */
-    	void *shadow;
-    #endif
-    };
+```c
+/*
+ * Each physical page in the system has a struct page associated with
+ * it to keep track of whatever it is we are using the page for at the
+ * moment. Note that we have no way to track which tasks are using
+ * a page, though if it is a pagecache page, rmap structures can tell us
+ * who is mapping it.
+ */
+struct page {
+    // プラットフォームに依存しない
+    // PG_locked とか PG_dirty などのフラグ
+	unsigned long flags;		/* Atomic flags, some possibly updated asynchronously */
+	atomic_t _count;		    /* Usage count, see below. */
+	union {
+		atomic_t _mapcount;	/* Count of ptes mapped in mms,
+					 * to show when page is mapped
+					 * & limit reverse map searches.
+					 */
+		struct {		/* SLUB */
+			u16 inuse;
+			u16 objects;
+		};
+	};
+	union {
+	    struct {
+        // bufferヘッドにつかったり
+		unsigned long private;
+                        /* Mapping-private opaque data:
+					 	 * usually used for buffer_heads
+						 * if PagePrivate set; used for
+						 * swp_entry_t if PageSwapCache;
+						 * indicates order in the buddy
+						 * system if PG_buddy is set.
+        // inode の address_space もしくは 無名アドレス空間オブジェクト指したり
+		struct address_space *mapping;
+                        /* If low bit clear, points to
+						 * inode address_space, or NULL.
+						 * If page mapped as anonymous
+						 * memory, low bit is set, and
+						 * it points to anon_vma object:
+						 * see PAGE_MAPPING_ANON below.
+						 */
+	    };
+#if USE_SPLIT_PTLOCKS
+	    spinlock_t ptl;
+#endif
+	    struct kmem_cache *slab;	/* SLUB: Pointer to slab */
+	    struct page *first_page;	/* Compound tail pages */
+	};
+	union {
+		pgoff_t index;		/* Our offset within mapping. */
+		void *freelist;		/* SLUB: freelist req. slab lock */
+	};
+	struct list_head lru;		/* Pageout list, eg. active_list
+					 * protected by zone->lru_lock !
+					 */
+	/*
+	 * On machines where all RAM is mapped into kernel address space,
+	 * we can simply calculate the virtual address. On machines with
+	 * highmem some memory is mapped into kernel virtual memory
+	 * dynamically, so we need a place to store that address.
+	 * Note that this field could be 16 bits on x86 ... ;)
+	 *
+	 * Architectures with slow multiplication can define
+	 * WANT_PAGE_VIRTUAL in asm/page.h
+	 */
+#if defined(WANT_PAGE_VIRTUAL)
+	void *virtual;			/* Kernel virtual address (NULL if
+					   not kmapped, ie. highmem) */
+#endif /* WANT_PAGE_VIRTUAL */
+#ifdef CONFIG_WANT_PAGE_DEBUG_FLAGS
+	unsigned long debug_flags;	/* Use atomic bitops on this */
+#endif
+
+#ifdef CONFIG_KMEMCHECK
+	/*
+	 * kmemcheck wants to track the status of each byte in a page; this
+	 * is a pointer to such a status block. NULL if not tracked.
+	 */
+	void *shadow;
+#endif
+};
+```    
 
 ### page frames の操作関数
 
@@ -531,18 +535,20 @@ lists にページフレームが連結して繋がってる、のかな
    * ページがロックされていたら (struct page の status が PG_locked) 待ちにはいる
    * ページ操作の一貫性
 
-    /* 
-     * Wait for a page to be unlocked.
-     *
-     * This must be called with the caller "holding" the page,
-     * ie with increased "page->count" so that the page won't
-     * go away during the wait..
-     */
-    static inline void wait_on_page_locked(struct page *page)
-    {
-    	if (PageLocked(page))
-    		wait_on_page_bit(page, PG_locked);
-    }
+```c
+ /* 
+  * Wait for a page to be unlocked.
+  *
+  * This must be called with the caller "holding" the page,
+  * ie with increased "page->count" so that the page won't
+  * go away during the wait..
+  */
+ static inline void wait_on_page_locked(struct page *page)
+ {
+ 	if (PageLocked(page))
+ 		wait_on_page_bit(page, PG_locked);
+ }
+``` 
 
  * wait_on_page_bit の実装
    * TASK_UNINTERRUPTIBLE を指定して待ちに入っている
@@ -551,213 +557,227 @@ lists にページフレームが連結して繋がってる、のかな
      * sync_page を呼び出すと io_schedule を呼び出してコンテキストスイッチする
        * 割り込みコンテンキストでページ操作をするので TASK_UNINTERRUPTIBLE をセットで渡しておく、という使い方か?
      * コールバックに対して TASK_UNINTERRUPTIBLE, TASK_INTERRUPTIBLE どちらを選ぶかは 呼び出し側の責任になる
-    
-    void wait_on_page_bit(struct page *page, int bit_nr)
-    {
-    	DEFINE_WAIT_BIT(wait, &page->flags, bit_nr);
-    
-    	if (test_bit(bit_nr, &page->flags))
-    		__wait_on_bit(page_waitqueue(page), &wait, sync_page,
-    							TASK_UNINTERRUPTIBLE);
-    }
+
+```c     
+void wait_on_page_bit(struct page *page, int bit_nr)
+{
+	DEFINE_WAIT_BIT(wait, &page->flags, bit_nr);
+
+	if (test_bit(bit_nr, &page->flags))
+		__wait_on_bit(page_waitqueue(page), &wait, sync_page,
+							TASK_UNINTERRUPTIBLE);
+}
+```    
 
  * page_waitqueue の実装
    * キュー は ゾーンごとに用意されているので、ゾーンを逆引きする
    * キュー はリスト管理 + 効率あげるためにハッシュテーブルでの管理
    * 全部のページ待ちを管理している
    * 起床させる際には適宜選ぶ => "thundering herd" のコストを抑える
-    
-    /*
-     * In order to wait for pages to become available there must be
-     * waitqueues associated with pages. By using a hash table of
-     * waitqueues where the bucket discipline is to maintain all
-     * waiters on the same queue and wake all when any of the pages
-     * become available, and for the woken contexts to check to be
-     * sure the appropriate page became available, this saves space
-     * at a cost of "thundering herd" phenomena during rare hash
-     * collisions.
-     */
-    static wait_queue_head_t *page_waitqueue(struct page *page)
-    {
-    	const struct zone *zone = page_zone(page);
-    
-    	return &zone->wait_table[hash_ptr(page, zone->wait_table_bits)];
-    }
+
+```c   
+ /*
+  * In order to wait for pages to become available there must be
+  * waitqueues associated with pages. By using a hash table of
+  * waitqueues where the bucket discipline is to maintain all
+  * waiters on the same queue and wake all when any of the pages
+  * become available, and for the woken contexts to check to be
+  * sure the appropriate page became available, this saves space
+  * at a cost of "thundering herd" phenomena during rare hash
+  * collisions.
+  */
+ static wait_queue_head_t *page_waitqueue(struct page *page)
+ {
+ 	const struct zone *zone = page_zone(page);
+ 
+ 	return &zone->wait_table[hash_ptr(page, zone->wait_table_bits)];
+ }
+``` 
     
   * __wait_on_bit の実装
     * 指定のビットが立つ + コールバック呼び出しが成功までループする?
     * コールバックの中で sleep に入る
 
-    /*
-     * To allow interruptible waiting and asynchronous (i.e. nonblocking)
-     * waiting, the actions of __wait_on_bit() and __wait_on_bit_lock() are
-     * permitted return codes. Nonzero return codes halt waiting and return.
-     */
-    int __sched
-    __wait_on_bit(wait_queue_head_t *wq, struct wait_bit_queue *q,
-    			int (*action)(void *), unsigned mode)
-    {
-    	int ret = 0;
-    
-    	do {
-            // 内部でスピンロックしてキューに繋ぐだけ
-    		prepare_to_wait(wq, &q->wait, mode);
-    		if (test_bit(q->key.bit_nr, q->key.flags))
-                // コールバックの中で schedule() を呼び出してコンテキストスイッチ
-                // sync_page の中で io_schedule => schedule という呼び出しになっている
-    			ret = (*action)(q->key.flags);
-    	} while (test_bit(q->key.bit_nr, q->key.flags) && !ret);
-    	finish_wait(wq, &q->wait); // ページを確保できたら finish_wait を呼び出して TASK_RUNNING になる
-    	return ret;
-    }
+```c    
+/*
+ * To allow interruptible waiting and asynchronous (i.e. nonblocking)
+ * waiting, the actions of __wait_on_bit() and __wait_on_bit_lock() are
+ * permitted return codes. Nonzero return codes halt waiting and return.
+ */
+int __sched
+__wait_on_bit(wait_queue_head_t *wq, struct wait_bit_queue *q,
+			int (*action)(void *), unsigned mode)
+{
+	int ret = 0;
+
+	do {
+        // 内部でスピンロックしてキューに繋ぐだけ
+		prepare_to_wait(wq, &q->wait, mode);
+		if (test_bit(q->key.bit_nr, q->key.flags))
+            // コールバックの中で schedule() を呼び出してコンテキストスイッチ
+            // sync_page の中で io_schedule => schedule という呼び出しになっている
+			ret = (*action)(q->key.flags);
+	} while (test_bit(q->key.bit_nr, q->key.flags) && !ret);
+	finish_wait(wq, &q->wait); // ページを確保できたら finish_wait を呼び出して TASK_RUNNING になる
+	return ret;
+}
+```
 
 wait_on_page_bit はコールバックとして sync_page を扱う。これがどのように呼び出されるかを追う
  
   * sync_page の実装
     * address_space が肝
 
-    static int sync_page(void *word)
-    {
-    	struct address_space *mapping;
-    	struct page *page;
-    
-    	page = container_of((unsigned long *)word, struct page, flags);
-    
-    	/*
-    	 * page_mapping() is being called without PG_locked held.
-    	 * Some knowledge of the state and use of the page is used to
-    	 * reduce the requirements down to a memory barrier.
-    	 * The danger here is of a stale page_mapping() return value
-    	 * indicating a struct address_space different from the one it's
-    	 * associated with when it is associated with one.
-    	 * After smp_mb(), it's either the correct page_mapping() for
-    	 * the page, or an old page_mapping() and the page's own
-    	 * page_mapping() has gone NULL.
-    	 * The ->sync_page() address_space operation must tolerate
-    	 * page_mapping() going NULL. By an amazing coincidence,
-    	 * this comes about because none of the users of the page
-    	 * in the ->sync_page() methods make essential use of the
-    	 * page_mapping(), merely passing the page down to the backing
-    	 * device's unplug functions when it's non-NULL, which in turn
-    	 * ignore it for all cases but swap, where only page_private(page) is
-    	 * of interest. When page_mapping() does go NULL, the entire
-    	 * call stack gracefully ignores the page and returns.
-    	 * -- wli
-    	 */
-    	smp_mb();
-        // ページから address_space を逆引きする
-    	mapping = page_mapping(page);
+```c    
+static int sync_page(void *word)
+{
+	struct address_space *mapping;
+	struct page *page;
 
-        // ページがマッピングされているアドレス空間オブジェクトのメソッドで sync_page する
-    	if (mapping && mapping->a_ops && mapping->a_ops->sync_page)
-    		mapping->a_ops->sync_page(page);
-    	io_schedule();
-    	return 0;
-    }
+	page = container_of((unsigned long *)word, struct page, flags);
+
+	/*
+	 * page_mapping() is being called without PG_locked held.
+	 * Some knowledge of the state and use of the page is used to
+	 * reduce the requirements down to a memory barrier.
+	 * The danger here is of a stale page_mapping() return value
+	 * indicating a struct address_space different from the one it's
+	 * associated with when it is associated with one.
+	 * After smp_mb(), it's either the correct page_mapping() for
+	 * the page, or an old page_mapping() and the page's own
+	 * page_mapping() has gone NULL.
+	 * The ->sync_page() address_space operation must tolerate
+	 * page_mapping() going NULL. By an amazing coincidence,
+	 * this comes about because none of the users of the page
+	 * in the ->sync_page() methods make essential use of the
+	 * page_mapping(), merely passing the page down to the backing
+	 * device's unplug functions when it's non-NULL, which in turn
+	 * ignore it for all cases but swap, where only page_private(page) is
+	 * of interest. When page_mapping() does go NULL, the entire
+	 * call stack gracefully ignores the page and returns.
+	 * -- wli
+	 */
+	smp_mb();
+    // ページから address_space を逆引きする
+	mapping = page_mapping(page);
+
+    // ページがマッピングされているアドレス空間オブジェクトのメソッドで sync_page する
+	if (mapping && mapping->a_ops && mapping->a_ops->sync_page)
+		mapping->a_ops->sync_page(page);
+	io_schedule();
+	return 0;
+}
+```
 
  * io_schedule の実装
    * スケジューラを呼び出す。とても重要
    * I/O accounting もちゃっかり実行する
-    
-    /*
-     * This task is about to go to sleep on IO. Increment rq->nr_iowait so
-     * that process accounting knows that this is a task in IO wait state.
-     */
-    void __sched io_schedule(void)
-    {
-    	struct rq *rq = raw_rq();
-    
-    	delayacct_blkio_start();   // CONFIG_TASK_DELAY_ACCT I/O aaccounting
-                                   // リソース確保待ちで遅延した時間の statics らしい
-    	atomic_inc(&rq->nr_iowait);
-    	current->in_iowait = 1;
-    	schedule();                // コンテキストスイッチ。
-    	current->in_iowait = 0;
-    	atomic_dec(&rq->nr_iowait);
-    	delayacct_blkio_end();
-    }
-    EXPORT_SYMBOL(io_schedule);
+
+```c   
+/*
+ * This task is about to go to sleep on IO. Increment rq->nr_iowait so
+ * that process accounting knows that this is a task in IO wait state.
+ */
+void __sched io_schedule(void)
+{
+	struct rq *rq = raw_rq();
+
+	delayacct_blkio_start();   // CONFIG_TASK_DELAY_ACCT I/O aaccounting
+                               // リソース確保待ちで遅延した時間の statics らしい
+	atomic_inc(&rq->nr_iowait);
+	current->in_iowait = 1;
+	schedule();                // コンテキストスイッチ。
+	current->in_iowait = 0;
+	atomic_dec(&rq->nr_iowait);
+	delayacct_blkio_end();
+}
+EXPORT_SYMBOL(io_schedule);
+```
 
 schedule を呼び出しているので、ページが利用可能になるまで TASK_UNINTERRUPTIBLEで待つ
 
   * finish_wait の実装
     * 待っていたイベントが完了して起床したプロセスを TASK_RUNNING にして waitキューから取り除く
 
-    /*
-     * finish_wait - clean up after waiting in a queue
-     * @q: waitqueue waited on
-     * @wait: wait descriptor
-     *
-     * Sets current thread back to running state and removes
-     * the wait descriptor from the given waitqueue if still
-     * queued.
-     */
-    void finish_wait(wait_queue_head_t *q, wait_queue_t *wait)
-    {
-    	unsigned long flags;
-    
-    	__set_current_state(TASK_RUNNING);
-    	/*
-    	 * We can check for list emptiness outside the lock
-    	 * IFF:
-    	 *  - we use the "careful" check that verifies both
-    	 *    the next and prev pointers, so that there cannot
-    	 *    be any half-pending updates in progress on other
-    	 *    CPU's that we haven't seen yet (and that might
-    	 *    still change the stack area.
-    	 * and
-    	 *  - all other users take the lock (ie we can only
-    	 *    have _one_ other CPU that looks at or modifies
-    	 *    the list).
-    	 */
-    	if (!list_empty_careful(&wait->task_list)) {
-    		spin_lock_irqsave(&q->lock, flags);
-    		list_del_init(&wait->task_list);
-    		spin_unlock_irqrestore(&q->lock, flags);
-    	}
-    }
+```c    
+/*
+ * finish_wait - clean up after waiting in a queue
+ * @q: waitqueue waited on
+ * @wait: wait descriptor
+ *
+ * Sets current thread back to running state and removes
+ * the wait descriptor from the given waitqueue if still
+ * queued.
+ */
+void finish_wait(wait_queue_head_t *q, wait_queue_t *wait)
+{
+	unsigned long flags;
+
+	__set_current_state(TASK_RUNNING);
+	/*
+	 * We can check for list emptiness outside the lock
+	 * IFF:
+	 *  - we use the "careful" check that verifies both
+	 *    the next and prev pointers, so that there cannot
+	 *    be any half-pending updates in progress on other
+	 *    CPU's that we haven't seen yet (and that might
+	 *    still change the stack area.
+	 * and
+	 *  - all other users take the lock (ie we can only
+	 *    have _one_ other CPU that looks at or modifies
+	 *    the list).
+	 */
+	if (!list_empty_careful(&wait->task_list)) {
+		spin_lock_irqsave(&q->lock, flags);
+		list_del_init(&wait->task_list);
+		spin_unlock_irqrestore(&q->lock, flags);
+	}
+}
+```
 
   * struct zone
     * ゾーンごとに wait_table を用意している
     * ページ利用の キューを管理する
-    
-    	/*
-    	 * wait_table		-- the array holding the hash table
-    	 * wait_table_hash_nr_entries	-- the size of the hash table array
-    	 * wait_table_bits	-- wait_table_size == (1 << wait_table_bits)
-    	 *
-    	 * The purpose of all these is to keep track of the people
-    	 * waiting for a page to become available and make them
-    	 * runnable again when possible. The trouble is that this
-    	 * consumes a lot of space, especially when so few things
-    	 * wait on pages at a given time. So instead of using
-    	 * per-page waitqueues, we use a waitqueue hash table.
 
-         > リスト管理だけだとコストがかさむので ハッシュテーブルの waitqueue を用意する
-    	 
-    	 * The bucket discipline is to sleep on the same queue when
-    	 * colliding and wake all in that wait queue when removing.
+```c    
+/*
+ * wait_table		-- the array holding the hash table
+ * wait_table_hash_nr_entries	-- the size of the hash table array
+ * wait_table_bits	-- wait_table_size == (1 << wait_table_bits)
+ *
+ * The purpose of all these is to keep track of the people
+ * waiting for a page to become available and make them
+ * runnable again when possible. The trouble is that this
+ * consumes a lot of space, especially when so few things
+ * wait on pages at a given time. So instead of using
+ * per-page waitqueues, we use a waitqueue hash table.
 
-         > キューから取り除き起床する際に衝突する
+ > リスト管理だけだとコストがかさむので ハッシュテーブルの waitqueue を用意する
+ 
+ * The bucket discipline is to sleep on the same queue when
+ * colliding and wake all in that wait queue when removing.
 
-    	 * When something wakes, it must check to be sure its page is
-    	 * truly available, a la thundering herd.
+ > キューから取り除き起床する際に衝突する
 
-         > 起床する際にはページが本当に利用可能かどうかを確認しないといけない => thundering herd
-         
-         * The cost of a
-    	 * collision is great, but given the expected load of the
-    	 * table, they should be so rare as to be outweighed by the
-    	 * benefits from the saved space.
-         
-         > 衝突のコストは高いけど、そうそう起こらないので抑えようとする効果を上回る
+ * When something wakes, it must check to be sure its page is
+ * truly available, a la thundering herd.
 
-    	 *
-    	 * __wait_on_page_locked() and unlock_page() in mm/filemap.c, are the
-    	 * primary users of these fields, and in mm/page_alloc.c
-    	 * free_area_init_core() performs the initialization of them.
-    	 */
-    	wait_queue_head_t	* wait_table;
+ > 起床する際にはページが本当に利用可能かどうかを確認しないといけない => thundering herd
+ 
+ * The cost of a
+ * collision is great, but given the expected load of the
+ * table, they should be so rare as to be outweighed by the
+ * benefits from the saved space.
+ 
+ > 衝突のコストは高いけど、そうそう起こらないので抑えようとする効果を上回る
+
+ *
+ * __wait_on_page_locked() and unlock_page() in mm/filemap.c, are the
+ * primary users of these fields, and in mm/page_alloc.c
+ * free_area_init_core() performs the initialization of them.
+ */
+wait_queue_head_t	* wait_table;
+```
 
 上記は ページ利用可能になるまで TASK_UNINTERRUPTIBLE で待つパスである
 
@@ -768,58 +788,64 @@ schedule を呼び出しているので、ページが利用可能になるま�
  * wake_up の実装
    * 指定したキューで待っている"全ての"プロセスを起床させる
 
+```   
     #define wake_up(x)			__wake_up(x, TASK_NORMAL, 1, NULL)
+```    
 
  * __wake_up の実装
 
-    /**
-     * __wake_up - wake up threads blocked on a waitqueue.
-     * @q: the waitqueue
-     * @mode: which threads
-     * @nr_exclusive: how many wake-one or wake-many threads to wake up
-     * @key: is directly passed to the wakeup function
-     *
-     * It may be assumed that this function implies a write memory barrier before
-     * changing the task state if and only if any tasks are woken up.
-     */
-    void __wake_up(wait_queue_head_t *q, unsigned int mode,
-    			int nr_exclusive, void *key)
-    {
-    	unsigned long flags;
-    
-    	spin_lock_irqsave(&q->lock, flags);
-    	__wake_up_common(q, mode, nr_exclusive, 0, key);
-    	spin_unlock_irqrestore(&q->lock, flags);
-    }
-    EXPORT_SYMBOL(__wake_up);
+```c 
+/**
+ * __wake_up - wake up threads blocked on a waitqueue.
+ * @q: the waitqueue
+ * @mode: which threads
+ * @nr_exclusive: how many wake-one or wake-many threads to wake up
+ * @key: is directly passed to the wakeup function
+ *
+ * It may be assumed that this function implies a write memory barrier before
+ * changing the task state if and only if any tasks are woken up.
+ */
+void __wake_up(wait_queue_head_t *q, unsigned int mode,
+			int nr_exclusive, void *key)
+{
+	unsigned long flags;
+
+	spin_lock_irqsave(&q->lock, flags);
+	__wake_up_common(q, mode, nr_exclusive, 0, key);
+	spin_unlock_irqrestore(&q->lock, flags);
+}
+EXPORT_SYMBOL(__wake_up);
+```
 
   * __wake_up_common の実装
     * 指定したキューに繋がっているプロセスを逐一起床させていく
     * 全て起床させるかどうかは、上位のメソッドのパラメータ (nr_exclusive) で決定する 
-        
-    /*
-     * The core wakeup function. Non-exclusive wakeups (nr_exclusive == 0) just
-     * wake everything up. If it's an exclusive wakeup (nr_exclusive == small +ve
-     * number) then we wake all the non-exclusive tasks and one exclusive task.
-     *
-     * There are circumstances in which we can try to wake a task which has already
-     * started to run but is not in state TASK_RUNNING. try_to_wake_up() returns
-     * zero in this (rare) case, and we handle it by continuing to scan the queue.
-     */
-    static void __wake_up_common(wait_queue_head_t *q, unsigned int mode,
-    			int nr_exclusive, int wake_flags, void *key)
-    {
-    	wait_queue_t *curr, *next;
 
-        // キューにぶら下がってるプロセスを起床 (全部起床させるかどうかは nr_exclusive の値で調整 )
-    	list_for_each_entry_safe(curr, next, &q->task_list, task_list) {
-    		unsigned flags = curr->flags;
-    
-    		if (curr->func(curr, mode, wake_flags, key) &&
-    				(flags & WQ_FLAG_EXCLUSIVE) && !--nr_exclusive)
-    			break;
-    	}
-    }
+```c    
+/*
+ * The core wakeup function. Non-exclusive wakeups (nr_exclusive == 0) just
+ * wake everything up. If it's an exclusive wakeup (nr_exclusive == small +ve
+ * number) then we wake all the non-exclusive tasks and one exclusive task.
+ *
+ * There are circumstances in which we can try to wake a task which has already
+ * started to run but is not in state TASK_RUNNING. try_to_wake_up() returns
+ * zero in this (rare) case, and we handle it by continuing to scan the queue.
+ */
+static void __wake_up_common(wait_queue_head_t *q, unsigned int mode,
+			int nr_exclusive, int wake_flags, void *key)
+{
+	wait_queue_t *curr, *next;
+
+    // キューにぶら下がってるプロセスを起床 (全部起床させるかどうかは nr_exclusive の値で調整 )
+	list_for_each_entry_safe(curr, next, &q->task_list, task_list) {
+		unsigned flags = curr->flags;
+
+		if (curr->func(curr, mode, wake_flags, key) &&
+				(flags & WQ_FLAG_EXCLUSIVE) && !--nr_exclusive)
+			break;
+	}
+}
+```
   
   * シグナルを受けて TASK_INTERRUPTIBLE からの起床 => spurious wake up 見せかけの起床 と呼ぶらしい
     * マルチスレッド周りの用語でもあるぽい
