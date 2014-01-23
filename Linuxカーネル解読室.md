@@ -6,6 +6,16 @@
    * システムコール
    * 割り込み
 
+## 0.1.1 UNIX の互換実装
+
+ * __マイクロカーネル__
+   * OSX
+     * XNU Kernel ___XNU's Not UNIX___
+       * Mach microkernel
+       * The BSD Layer (FreeBSD由来)
+       * libKern
+       * I/O Kit
+
 ## 予習
 
 #### ソースの取得
