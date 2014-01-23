@@ -16,6 +16,12 @@
        * libKern
        * I/O Kit
 
+ * System V の本
+
+![71k140k5bfl _ss500_ gif](https://f.cloud.github.com/assets/172456/1985620/2e21f650-8441-11e3-9865-62d7b7871f15.jpeg)
+
+ * 
+
 ## 予習
 
 #### ソースの取得
