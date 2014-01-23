@@ -20,7 +20,8 @@
    set_system_gate(0x80,&system_call);
 
  * 呼び出しのアセンブラ部分
- 
+
+```
     bad_sys_call:
     	movl $-1,%eax  // -ENOSYS
     	iret
@@ -53,10 +54,12 @@
     	jne reschedule                // 0 = runnable でなければ reschedule
     	cmpl $0,counter(%eax)		  // task_struct->counter == 0 なら
     	je reschedule                 // 再スケジューリング
+```        
 
  * システムコールから復帰の部分 
    * int 0x80 で割り込んでいるので、割り込みからの復帰 iret が必要
 
+```
     ret_from_sys_call:
     	movl _current,%eax		# task[0] cannot have signals
     	cmpl _task,%eax         // task[0] -> init ? カーネルスレッド ? 
@@ -113,7 +116,7 @@
     	pop %es
     	pop %ds
     	iret                       // 割り込みからの復帰
-
+```
 
 ## buffer
 
@@ -162,75 +165,77 @@ Intel のドキュメントによる区分
  * スケジューラ
    * priority, single-level queue, round-robin
 
-    void schedule(void)
-    {
-    	int i,next,c;
-    	struct task_struct ** p;
-    
-    /* check alarm, wake up any interruptible tasks that have got a signal */
+```c   
+void schedule(void)
+{
+	int i,next,c;
+	struct task_struct ** p;
 
-        // 全プロセス線形サーチ。64プロセスが上限だったらしい
-    	for(p = &LAST_TASK ; p > &FIRST_TASK ; --p)
-    		if (*p) {
-                // alarm(2) の時間超えたかどうかの判定
-    			if ((*p)->alarm && (*p)->alarm < jiffies) {
-    					(*p)->signal |= (1<<(SIGALRM-1));
-    					(*p)->alarm = 0;
-    				}
-                // シグナル受けた場合。 TASK_RUNNING になるのね。
-    			if ((*p)->signal && (*p)->state==TASK_INTERRUPTIBLE)
-    				(*p)->state=TASK_RUNNING;
-    		}
+/* check alarm, wake up any interruptible tasks that have got a signal */
 
-    /* this is the scheduler proper: */
+    // 全プロセス線形サーチ。64プロセスが上限だったらしい
+	for(p = &LAST_TASK ; p > &FIRST_TASK ; --p)
+		if (*p) {
+            // alarm(2) の時間超えたかどうかの判定
+			if ((*p)->alarm && (*p)->alarm < jiffies) {
+					(*p)->signal |= (1<<(SIGALRM-1));
+					(*p)->alarm = 0;
+				}
+            // シグナル受けた場合。 TASK_RUNNING になるのね。
+			if ((*p)->signal && (*p)->state==TASK_INTERRUPTIBLE)
+				(*p)->state=TASK_RUNNING;
+		}
 
-    	while (1) {
-    		c = -1;
-    		next = 0;
-    		i = NR_TASKS;
-    		p = &task[NR_TASKS];
-    		while (--i) {
-    			if (!*--p)
-    				continue;
-                // c が MAXのを探す => 次のプロセス
-    			if ((*p)->state == TASK_RUNNING && (*p)->counter > c)
-    				c = (*p)->counter, next = i;
-    		}
-    		if (c) break;
-            // ２回目サーチ
-    		for(p = &LAST_TASK ; p > &FIRST_TASK ; --p)
-    			if (*p)
-                    // counter を bitシフトで1/2
-                    // do_timer で減らされているのでタイムスライスなのかな
-    				(*p)->counter = ((*p)->counter >> 1) +
-    						(*p)->priority;
-    	}
-    	switch_to(next);
-    }
+/* this is the scheduler proper: */
+
+	while (1) {
+		c = -1;
+		next = 0;
+		i = NR_TASKS;
+		p = &task[NR_TASKS];
+		while (--i) {
+			if (!*--p)
+				continue;
+            // c が MAXのを探す => 次のプロセス
+			if ((*p)->state == TASK_RUNNING && (*p)->counter > c)
+				c = (*p)->counter, next = i;
+		}
+		if (c) break;
+        // ２回目サーチ
+		for(p = &LAST_TASK ; p > &FIRST_TASK ; --p)
+			if (*p)
+                // counter を bitシフトで1/2
+                // do_timer で減らされているのでタイムスライスなのかな
+				(*p)->counter = ((*p)->counter >> 1) +
+						(*p)->priority;
+	}
+	switch_to(next);
+}
 
 
-    /*
-     *  switch_to(n) should switch tasks to task nr n, first
-     * checking that n isn't the current task, in which case it does nothing.
-     * This also clears the TS-flag if the task we switched to has used
-     * tha math co-processor latest.
-     */
-    #define switch_to(n) {
-    struct {long a,b;} __tmp; 
-    __asm__(
-        cmpl %%ecx,_current   / switch_toに指定したプロセスと現在のプロセスが同じでないかを見る
-        je 1f 
-        xchgl %%ecx,_current  / タスクを切り替え ?
-                              / current で参照されるプロセスが n に変わっている
-        movw %%dx,%1 
-        ljmp %0 
-        cmpl %%ecx,%2 
-        jne 1f 
-        clts                  / http://www.ousob.com/ng/masm/ng7110.php
-        1:"
-        ::m" (*&__tmp.a),"m" (*&__tmp.b), 
-        m" (last_task_used_math),"d" _TSS(n),"c" ((long) task[n])); 
-    }
+/*
+ *  switch_to(n) should switch tasks to task nr n, first
+ * checking that n isn't the current task, in which case it does nothing.
+ * This also clears the TS-flag if the task we switched to has used
+ * tha math co-processor latest.
+ */
+#define switch_to(n) {
+struct {long a,b;} __tmp; 
+__asm__(
+    cmpl %%ecx,_current   / switch_toに指定したプロセスと現在のプロセスが同じでないかを見る
+    je 1f 
+    xchgl %%ecx,_current  / タスクを切り替え ?
+                          / current で参照されるプロセスが n に変わっている
+    movw %%dx,%1 
+    ljmp %0 
+    cmpl %%ecx,%2 
+    jne 1f 
+    clts                  / http://www.ousob.com/ng/masm/ng7110.php
+    1:
+    ::m" (*&__tmp.a),"m" (*&__tmp.b), 
+    m" (last_task_used_math),"d" _TSS(n),"c" ((long) task[n]));
+}
+```
 
 ## システムコール呼び出し
 
@@ -246,103 +251,108 @@ Intel のドキュメントによる区分
 
  * main -> sched_init() で int 0x80 を trap してシステムコール呼び出しに入る様に設定している
 
-   set_system_gate(0x80,&system_call);
+``` 
+set_system_gate(0x80,&system_call);
+```
 
  * 呼び出しのアセンブラ部分
- 
-    bad_sys_call:
-    	movl $-1,%eax  // -ENOSYS
-    	iret
-    .align 2
-    reschedule:
-    	pushl $ret_from_sys_call
-    	jmp _schedule
-    .align 2
-    
-    // kernel/system_call.s
-    _system_call:
-    	cmpl $nr_system_calls-1,%eax  // (eaxレジスタの番号 - システムコール番号の最大値) を比較
-    	ja bad_sys_call               // 実装されないシステムコール呼び出しだぞー
-    	push %ds       // データセグメントをスタックに退避
-    	push %es       //
-    	push %fs       //
-    	pushl %edx                                           // 引数 3 
-    	pushl %ecx		# push %ebx,%ecx,%edx as parameters  // 引数 2 
-    	pushl %ebx		# to the system call                 // 引数 1 
-    	movl $0x10,%edx		# set up ds,es to kernel space
-    	mov %dx,%ds
-    	mov %dx,%es
-    	movl $0x17,%edx		# fs points to local data space
-    	mov %dx,%fs
-    	call _sys_call_table(,%eax,4) // システムコールテーブルで%eax番目の関数にディスパッチする
 
-    	pushl %eax                    // 退避 ( rescheduleしたりするので、システムコール呼び出しの際のレジスタを一旦退避するのだろう)
-    	movl _current,%eax            // current = task struct ?
-    	cmpl $0,state(%eax)		      // task_struc->state をみてるのかな
-    	jne reschedule                // 0 = runnable でなければ reschedule
-    	cmpl $0,counter(%eax)		  // task_struct->counter == 0 なら
-    	je reschedule                 // 再スケジューリング
+``` 
+bad_sys_call:
+	movl $-1,%eax  // -ENOSYS
+	iret
+.align 2
+reschedule:
+	pushl $ret_from_sys_call
+	jmp _schedule
+.align 2
+
+// kernel/system_call.s
+_system_call:
+	cmpl $nr_system_calls-1,%eax  // (eaxレジスタの番号 - システムコール番号の最大値) を比較
+	ja bad_sys_call               // 実装されないシステムコール呼び出しだぞー
+	push %ds       // データセグメントをスタックに退避
+	push %es       //
+	push %fs       //
+	pushl %edx                                           // 引数 3 
+	pushl %ecx		# push %ebx,%ecx,%edx as parameters  // 引数 2 
+	pushl %ebx		# to the system call                 // 引数 1 
+	movl $0x10,%edx		# set up ds,es to kernel space
+	mov %dx,%ds
+	mov %dx,%es
+	movl $0x17,%edx		# fs points to local data space
+	mov %dx,%fs
+	call _sys_call_table(,%eax,4) // システムコールテーブルで%eax番目の関数にディスパッチする
+
+	pushl %eax                    // 退避 ( rescheduleしたりするので、システムコール呼び出しの際のレジスタを一旦退避するのだろう)
+	movl _current,%eax            // current = task struct ?
+	cmpl $0,state(%eax)		      // task_struc->state をみてるのかな
+	jne reschedule                // 0 = runnable でなければ reschedule
+	cmpl $0,counter(%eax)		  // task_struct->counter == 0 なら
+	je reschedule                 // 再スケジューリング
+```
 
  * システムコールから復帰の部分 
    * int 0x80 で割り込んでいるので、割り込みからの復帰 iret が必要
 
-    ret_from_sys_call:
-    	movl _current,%eax		# task[0] cannot have signals
-    	cmpl _task,%eax         // task[0] -> init ? カーネルスレッド ? 
-    	je 3f                   // シグナル処理をすっとばして 3 に行く
+```   
+ ret_from_sys_call:
+ 	movl _current,%eax		# task[0] cannot have signals
+ 	cmpl _task,%eax         // task[0] -> init ? カーネルスレッド ? 
+ 	je 3f                   // シグナル処理をすっとばして 3 に行く
 
-    	movl CS(%esp),%ebx		# was old code segment supervisor
-    	testl $3,%ebx			# mode? If so - don't check signals
-    	je 3f
-    	cmpw $0x17,OLDSS(%esp)		# was stack segment = 0x17 ?
-    	jne 3f
-    // シグナルハンドラの呼び出し
-    2:	movl signal(%eax),%ebx		# signals (bitmap, 32 signals)
-    	bsfl %ebx,%ecx			# %ecx is signal nr, return if none
-    	je 3f                   # シグナルを受信してなかったら 3 
+ 	movl CS(%esp),%ebx		# was old code segment supervisor
+ 	testl $3,%ebx			# mode? If so - don't check signals
+ 	je 3f
+ 	cmpw $0x17,OLDSS(%esp)		# was stack segment = 0x17 ?
+ 	jne 3f
+ // シグナルハンドラの呼び出し
+ 2:	movl signal(%eax),%ebx		# signals (bitmap, 32 signals)
+ 	bsfl %ebx,%ecx			# %ecx is signal nr, return if none
+ 	je 3f                   # シグナルを受信してなかったら 3 
 
-    	btrl %ecx,%ebx			# clear it
-    	movl %ebx,signal(%eax)
-    	movl sig_fn(%eax,%ecx,4),%ebx	# %ebx is signal handler address
-    	cmpl $1,%ebx
-    	jb default_signal		# 0 is default signal handler - exit
-    	je 2b				# 1 is ignore - find next signal
-    	movl $0,sig_fn(%eax,%ecx,4)	# reset signal handler address
-    	incl %ecx
-    	xchgl %ebx,EIP(%esp)		# put new return address on stack
-    	subl $28,OLDESP(%esp)
-    	movl OLDESP(%esp),%edx		# push old return address on stack
-    	pushl %eax			# but first check that it's ok.
-    	pushl %ecx
-    	pushl $28
-    	pushl %edx
-    	call _verify_area
-    	popl %edx
-    	addl $4,%esp
-    	popl %ecx
-    	popl %eax
-    	movl restorer(%eax),%eax
-    	movl %eax,%fs:(%edx)		# flag/reg restorer
-    	movl %ecx,%fs:4(%edx)		# signal nr
-    	movl EAX(%esp),%eax
-    	movl %eax,%fs:8(%edx)		# old eax
-    	movl ECX(%esp),%eax
-    	movl %eax,%fs:12(%edx)		# old ecx
-    	movl EDX(%esp),%eax
-    	movl %eax,%fs:16(%edx)		# old edx
-    	movl EFLAGS(%esp),%eax
-    	movl %eax,%fs:20(%edx)		# old eflags
-    	movl %ebx,%fs:24(%edx)		# old return addr
+ 	btrl %ecx,%ebx			# clear it
+ 	movl %ebx,signal(%eax)
+ 	movl sig_fn(%eax,%ecx,4),%ebx	# %ebx is signal handler address
+ 	cmpl $1,%ebx
+ 	jb default_signal		# 0 is default signal handler - exit
+ 	je 2b				# 1 is ignore - find next signal
+ 	movl $0,sig_fn(%eax,%ecx,4)	# reset signal handler address
+ 	incl %ecx
+ 	xchgl %ebx,EIP(%esp)		# put new return address on stack
+ 	subl $28,OLDESP(%esp)
+ 	movl OLDESP(%esp),%edx		# push old return address on stack
+ 	pushl %eax			# but first check that it's ok.
+ 	pushl %ecx
+ 	pushl $28
+ 	pushl %edx
+ 	call _verify_area
+ 	popl %edx
+ 	addl $4,%esp
+ 	popl %ecx
+ 	popl %eax
+ 	movl restorer(%eax),%eax
+ 	movl %eax,%fs:(%edx)		# flag/reg restorer
+ 	movl %ecx,%fs:4(%edx)		# signal nr
+ 	movl EAX(%esp),%eax
+ 	movl %eax,%fs:8(%edx)		# old eax
+ 	movl ECX(%esp),%eax
+ 	movl %eax,%fs:12(%edx)		# old ecx
+ 	movl EDX(%esp),%eax
+ 	movl %eax,%fs:16(%edx)		# old edx
+ 	movl EFLAGS(%esp),%eax
+ 	movl %eax,%fs:20(%edx)		# old eflags
+ 	movl %ebx,%fs:24(%edx)		# old return addr
 
-    3:	popl %eax                   // 退避してたレジスタを元に戻して、プロセス側のコンテキストに iret で戻る
-    	popl %ebx
-    	popl %ecx
-    	popl %edx
-    	pop %fs
-    	pop %es
-    	pop %ds
-    	iret                       // 割り込みからの復帰
-
+ 3:	popl %eax                   // 退避してたレジスタを元に戻して、プロセス側のコンテキストに iret で戻る
+ 	popl %ebx
+ 	popl %ecx
+ 	popl %edx
+ 	pop %fs
+ 	pop %es
+ 	pop %ds
+	iret                       // 割り込みからの復帰
+```
 
 ## ページフォルトハンドラ
 
@@ -364,92 +374,98 @@ Intel のドキュメントによる区分
  * トラップゲート?の14番目のエントリとしてセット。
  * ページフォルトした場合のハンドラ (mm/page.s)
 
-    /*
-     * page.s contains the low-level page-exception code.
-     * the real work is done in mm.c
-     */
-    
-    .globl _page_fault
-    
-    _page_fault:
-    	xchgl %eax,(%esp) // eax と (%esp) を入れ替える? TODO:
-                          // (%esp) にはフォールトを発生させたアドレス?
-    	pushl %ecx        // ユーザプロセスのレジスタを退避 
-    	pushl %edx        // 
-    	push %ds          // データセグメントの退避
-    	push %es          // エクストラセグメントの退避
-    	push %fs          // ??セグメント?? の退避
-    	movl $0x10,%edx   // 80 ?
-    	mov %dx,%ds       //
-    	mov %dx,%es
-    	mov %dx,%fs
-    	movl %cr2,%edx
-    	pushl %edx       // 退避
-    	pushl %eax       // 退避
-        -------------------------------------------------------------------
+``` 
+/*
+ * page.s contains the low-level page-exception code.
+ * the real work is done in mm.c
+ */
 
-    	testl $1,%eax    // ページが割り当てられているかどうかのテスト?
-      	  jne 1f           // ページが割り当てられていたら do_wp_page に飛ぶ
-    	call _do_no_page // ページが割当られていないので確保する
-    	jmp 2f
+.globl _page_fault
 
-    1:	call _do_wp_page // ページ書き込みの処理 
-    2:	addl $8,%esp
+_page_fault:
+	xchgl %eax,(%esp) // eax と (%esp) を入れ替える? TODO:
+                      // (%esp) にはフォールトを発生させたアドレス?
+	pushl %ecx        // ユーザプロセスのレジスタを退避 
+	pushl %edx        // 
+	push %ds          // データセグメントの退避
+	push %es          // エクストラセグメントの退避
+	push %fs          // ??セグメント?? の退避
+	movl $0x10,%edx   // 80 ?
+	mov %dx,%ds       //
+	mov %dx,%es
+	mov %dx,%fs
+	movl %cr2,%edx
+	pushl %edx       // 退避
+	pushl %eax       // 退避
+    -------------------------------------------------------------------
 
-       -------------------------------------------------------------------
-     	pop %fs          // スタックを復帰させる
-    	pop %es
-    	pop %ds
-    	popl %edx
-    	popl %ecx
-    	popl %eax
-    	iret             // ユーザープロセスコンテキストに戻る
+	testl $1,%eax    // ページが割り当てられているかどうかのテスト?
+  	  jne 1f           // ページが割り当てられていたら do_wp_page に飛ぶ
+	call _do_no_page // ページが割当られていないので確保する
+	jmp 2f
+
+1:	call _do_wp_page // ページ書き込みの処理 
+2:	addl $8,%esp
+
+   -------------------------------------------------------------------
+ 	pop %fs          // スタックを復帰させる
+	pop %es
+	pop %ds
+	popl %edx
+	popl %ecx
+	popl %eax
+	iret             // ユーザープロセスコンテキストに戻る
+```
 
 ### 割当ページが存在しない場合
 
-    void do_no_page(unsigned long error_code,unsigned long address)
-    {
-    	unsigned long tmp;
+```c
+void do_no_page(unsigned long error_code,unsigned long address)
+{
+	unsigned long tmp;
 
-    	if (tmp=get_free_page())
-    		if (put_page(tmp,address))
-    			return;
-    	do_exit(SIGSEGV);
-    }
+	if (tmp=get_free_page())
+		if (put_page(tmp,address))
+			return;
+	do_exit(SIGSEGV);
+}
+```    
 
  * get_free_page は x86 の命令直呼び出ししてページを確保する。
  * 物理メモリを操作して used bit ? の立っていないページを探す命令ぽい
    * TODO: x86の命令が分からない http://asm.inightmare.org/opcodelst/
 
-    /*
-     * Get physical address of first (actually last :-) free page, and mark it
-     * used. If no free pages left, return 0.
-     */
-    unsigned long get_free_page(void)
-    {
-    register unsigned long __res asm("ax");
-    
-    __asm__(
-        std ;                  / DF(ディレクションフラグを1にする
-        repne ; scasw          / ecxの値と等しくない間はリピート
-                               / scasw ... Compare AX with word at ES:(E)DI and set status flags
-    	jne 1f                 / 1に飛ぶ (ページが見つからない?
+```c   
+/*
+ * Get physical address of first (actually last :-) free page, and mark it
+ * used. If no free pages left, return 0.
+ */
+unsigned long get_free_page(void)
+{
+register unsigned long __res asm("ax");
 
-    	movw $1,2(%%edi)       / 
-    	sall $12,%%ecx         / 12bit 左シフト (4096)
-    	movl %%ecx,%%edx       /
-    	addl %2,%%edx          / 
-    	movl $1024,%%ecx
-    	leal 4092(%%edx),%%edi / %edxの値に4092 足して %edi に格納
-    	rep ; stosl            / リピート => 0 でクリアするぽい
-    	movl %%edx,%%eax\n     / %eax がページの物理アドレス?
-    	1:
-    	:=a" (__res)
-    	:"0" (0),"i" (LOW_MEM),"c" (PAGING_PAGES),
-    	"D" (mem_map+PAGING_PAGES-1)
-    	:"di","cx","dx");
-    return __res;
-    }
+__asm__(
+    std ;                  / DF(ディレクションフラグを1にする
+    repne ; scasw          / ecxの値と等しくない間はリピート
+                           / scasw ... Compare AX with word at ES:(E)DI and set status flags
+	jne 1f                 / 1に飛ぶ (ページが見つからない?
+
+	movw $1,2(%%edi)       / 
+	sall $12,%%ecx         / 12bit 左シフト (4096)
+	movl %%ecx,%%edx       /
+	addl %2,%%edx          / 
+	movl $1024,%%ecx
+	leal 4092(%%edx),%%edi / %edxの値に4092 足して %edi に格納
+	rep ; stosl            / リピート => 0 でクリアするぽい
+	movl %%edx,%%eax\n     / %eax がページの物理アドレス?
+	1:
+	:=a (__res)
+	:"0" (0),"i" (LOW_MEM),"c" (PAGING_PAGES),
+	"D" (mem_map+PAGING_PAGES-1)
+	:"di","cx","dx");
+return __res;
+}
+```
 
 ### 割当ページが存在する場合
 

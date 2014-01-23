@@ -268,19 +268,18 @@ int main(int argc, char *argv[]){
 ### 2.4 SEMAPHORE PRIMITIVES
 
  * セマフォ (Dijkstra 1965)
-  * P(s)
-   * 下げる
-   * negative でもよい
+   * P(s)
+     * 下げる
+     * negative でもよい
   * V(s) 上げる
-   * fetch && incremnt && store
-   * indivisible action ( atomic な操作?)
-   
+    * fetch && incremnt && store
+    * indivisible action ( atomic な操作?)
   * critical section 用のロック、同期機構として使う
    
 複数プロセスがセマフォを同時に獲得する場合順番は保証されない
 
  * `binary semaphore` = `mutex`
-  * mutex はサンプルコードの変数名として出るだけで、そういう primitives があるという説明ではない
+   * mutex はサンプルコードの変数名として出るだけで、そういう primitives があるという説明ではない
   
 ### 2.4.4 IMPREMENTING SEMAPHORE OPERATIONS
 
@@ -387,78 +386,84 @@ static noinline void __sched __down(struct semaphore *sem)
  * @ 割り込みを禁止する
    * => spin_lock_irqsave で実装
 
-    /*
-     * Because this function is inlined, the 'state' parameter will be
-     * constant, and thus optimised away by the compiler.  Likewise the
-     * 'timeout' parameter for the cases without timeouts.
-     */
-    static inline int __sched __down_common(struct semaphore *sem, long state,
-    								long timeout)
-    {
-    	struct task_struct *task = current;
-    	struct semaphore_waiter waiter;
-    
-    	list_add_tail(&waiter.list, &sem->wait_list);
-    	waiter.task = task;
-    	waiter.up = 0;
-    
-    	for (;;) {
-    		if (signal_pending_state(state, task))
-    			goto interrupted;
-    		if (timeout <= 0)
-    			goto timed_out;
-    		__set_task_state(task, state);
-    		spin_unlock_irq(&sem->lock);
-    		timeout = schedule_timeout(timeout);
-    		spin_lock_irq(&sem->lock);
-            // 別の場所で起床?
-    		if (waiter.up)
-    			return 0;
-    	}
-    
-     timed_out:
-    	list_del(&waiter.list);
-    	return -ETIME;
-    
-     interrupted:
-    	list_del(&waiter.list);
-    	return -EINTR;
-    }
+```c   
+/*
+ * Because this function is inlined, the 'state' parameter will be
+ * constant, and thus optimised away by the compiler.  Likewise the
+ * 'timeout' parameter for the cases without timeouts.
+ */
+static inline int __sched __down_common(struct semaphore *sem, long state,
+								long timeout)
+{
+	struct task_struct *task = current;
+	struct semaphore_waiter waiter;
+
+	list_add_tail(&waiter.list, &sem->wait_list);
+	waiter.task = task;
+	waiter.up = 0;
+
+	for (;;) {
+		if (signal_pending_state(state, task))
+			goto interrupted;
+		if (timeout <= 0)
+			goto timed_out;
+		__set_task_state(task, state);
+		spin_unlock_irq(&sem->lock);
+		timeout = schedule_timeout(timeout);
+		spin_lock_irq(&sem->lock);
+        // 別の場所で起床?
+		if (waiter.up)
+			return 0;
+	}
+
+ timed_out:
+	list_del(&waiter.list);
+	return -ETIME;
+
+ interrupted:
+	list_del(&waiter.list);
+	return -EINTR;
+}
+```
 
  * V(s)
    * up(struct semaphore *sem)
 
-    /**
-     * up - release the semaphore
-     * @sem: the semaphore to release
-     *
-     * Release the semaphore.  Unlike mutexes, up() may be called from any
-     * context and even by tasks which have never called down().
-     */
-    void up(struct semaphore *sem)
-    {
-    	unsigned long flags;
+```c   
+/**
+ * up - release the semaphore
+ * @sem: the semaphore to release
+ *
+ * Release the semaphore.  Unlike mutexes, up() may be called from any
+ * context and even by tasks which have never called down().
+ */
+void up(struct semaphore *sem)
+{
+	unsigned long flags;
 
-    	spin_lock_irqsave(&sem->lock, flags);
-    	if (likely(list_empty(&sem->wait_list)))
-    		sem->count++;
-    	else
-    		__up(sem);
-    	spin_unlock_irqrestore(&sem->lock, flags);
-    }
-    EXPORT_SYMBOL(up);
+	spin_lock_irqsave(&sem->lock, flags);
+	if (likely(list_empty(&sem->wait_list)))
+		sem->count++;
+	else
+		__up(sem);
+	spin_unlock_irqrestore(&sem->lock, flags);
+}
+EXPORT_SYMBOL(up);
+```
 
  * P(s) = down() で ブロックしているプロセスが起床するように waiter->up = 1
    * list_add_tail => list_first_entry で管理しているので、キューとして扱われている
 
-    static noinline void __sched __up(struct semaphore *sem)
-    {
-    	struct semaphore_waiter *waiter = list_first_entry(&sem->wait_list,
-    						struct semaphore_waiter, list);
-    	list_del(&waiter->list);
-    	waiter->up = 1;
-    	wake_up_process(waiter->task);
-    }
+```c
+static noinline void __sched __up(struct semaphore *sem)
+{
+	struct semaphore_waiter *waiter = list_first_entry(&sem->wait_list,
+						struct semaphore_waiter, list);
+	list_del(&waiter->list);
+	waiter->up = 1;
+	wake_up_process(waiter->task);
+}
+```
 
  * wake_up_process => try_to_wake_up でプロセスを起床、run queue に繋ぐ
    * @ CPUのマイグレーション ?
@@ -475,9 +480,11 @@ static noinline void __sched __down(struct semaphore *sem)
  * CCR Conditional Critical Region
    * ブロック記法でクリティカルリージョンであることの可読性が高い
 
+```   
     region B do 
       S
     end
+```
 
  * 実装例が少ない
    * ローカル変数
@@ -486,16 +493,14 @@ static noinline void __sched __down(struct semaphore *sem)
 
  * kernel, nucleus
    * primitive operations and process
-
  * kernel operations
    * prcess creation, destruction, IPC
    * resource allocating, releasing
    * I/O
    * interruputs
-
  * プロセスツリーの形成
 
-* 3.2 DATA STRUCTURES FOR PROCESSES AND RESOURCES
+###3.2 DATA STRUCTURES FOR PROCESSES AND RESOURCES
 
  * プロセスやリソースの表現 
    * 状態、一意性、アカウティングの情報
@@ -608,15 +613,15 @@ runqueue のこと
  * 表記
 
 ```
-     i
-   S -> T                       # プロセス pi が system state を S から T にする
+  i
+S -> T                       # プロセス pi が system state を S から T にする
 
-   <ρ, π>                     # system は二つのペアからなる
-   ρ は {S, T, U, V ... }      # ρ は system states の集合
-   π    {p1, p2, p  ... }      # π は process の集合
+<ρ, π>                     # system は二つのペアからなる
+ρ は {S, T, U, V ... }      # ρ は system states の集合
+π    {p1, p2, p  ... }      # π は process の集合
 
-   p1                           # partial function 部分関数
-   pi : ρ -> {ρ}              # from systems states info nonempty subsets of system states
+p1                           # partial function 部分関数
+pi : ρ -> {ρ}              # from systems states info nonempty subsets of system states
 ```
 
  * process が request, acquite, release resouce などで systable state を変えられない場合 `blocked` である
@@ -633,32 +638,32 @@ runqueue のこと
   * 図示すると単純だけど、graph として式化すると大分ややこしい印象
 
 ```
-    <N, E>
-    N                           # N は nodes を示す
-    E                           # E は edges を示す
+<N, E>
+N                           # N は nodes を示す
+E                           # E は edges を示す
 
-    π = { p1, p2, p3 ... pn }  # π は Processs nodes の集合
-    ρ = { R1, R2, R3 ... Rm }  # ρ は Resource nodes の集合
+π = { p1, p2, p3 ... pn }  # π は Processs nodes の集合
+ρ = { R1, R2, R3 ... Rm }  # ρ は Resource nodes の集合
 
-    # プロセス同士、またはリソース同士のグラフは形成されない
+# プロセス同士、またはリソース同士のグラフは形成されない
 
-    Rj = { .... }               # Resource node は tj の要素を持つ
+Rj = { .... }               # Resource node は tj の要素を持つ
 ```    
 
  * エッジの向きでリクエストか割当かを表記する
  
 ``` 
-    e = (Pi, Rj)                # Request edge を示す    Pi->Rj
-    e = (Rj, Pi)                # Assignment edge を示す Rj->pi
-                                # Request edge, Assignment edge 共に E の中に含まれる
+e = (Pi, Rj)                # Request edge を示す    Pi->Rj
+e = (Rj, Pi)                # Assignment edge を示す Rj->pi
+                            # Request edge, Assignment edge 共に E の中に含まれる
 ```
 
  * |(a,b)| ノードa から ノードb へのエッジを考える
    * Rj は tj 以上の assignment をしない (Rj が tj の要素しか持たないので)
 
 ```
-    Σi |(Rj, pi)| ≦ tj          # 任意の pi へ割り当てた Rj の和は tj 以下
-    |(Rj, pi)|+|(pi, Rj)| ≦ tj   # Request edges + Allocation edges の和は units の数を超えない
+Σi |(Rj, pi)| ≦ tj          # 任意の pi へ割り当てた Rj の和は tj 以下
+|(Rj, pi)|+|(pi, Rj)| ≦ tj   # Request edges + Allocation edges の和は units の数を超えない
 ```
 
  * Request => Acquisition => Release
@@ -702,23 +707,19 @@ pi がリクエストを出していて、T でデッロックしているのと
 CPUが該当する。リソース獲得の競合が発生した場合でも、リソースの解放(preemption)を任意に起こせるので。
 ただし preemption のコストが高くスラッシングが発生するような状況ではデッドロック状態に近似する
 
-
 ### 4.3.4 Recovery from Deadlock
 
  * 1. process terminations
    * デッドロックになった最初のプロセスを強制終了。最悪全てのプロセスを止める必要。
  * 2. resource preemption
    * デッドロックしたプロセスにリソースをpreemption する
-   
  * プロセス停止のコストが低いものを止めるのが実践的な方針
    * プロセスの優先度
    * プロセスをやり直しして、現在の状態になるまでのコスト (rollback)
    * 外的なコスト (誰が利用しているジョブなのか)
-   
  * terminate process
   * => release resoufce
   * => reduce graph
-  
  * デッドロック状態S から復帰するためのコストは
    * pi を destroy するコスト
    * pi を 止めて、その状態から復帰するためのコスト
