@@ -8,21 +8,27 @@
 
 ## 0.1.1 UNIX の互換実装
 
+ * __モノリシックカーネル__
  * __マイクロカーネル__
-   * OSX
+   * Mac OSX もだよ
      * XNU Kernel ___XNU's Not UNIX___
        * Mach microkernel
        * The BSD Layer (FreeBSD由来)
        * libKern
        * I/O Kit
+ *
 
- * System V の本
+#### System V の本
 
 ![71k140k5bfl _ss500_ gif](https://f.cloud.github.com/assets/172456/1985620/2e21f650-8441-11e3-9865-62d7b7871f15.jpeg)
 
- * 
+#### Solaris Internals
 
-## 予習
+![51jyl26gg-l](https://f.cloud.github.com/assets/172456/1985642/8275fcd8-8441-11e3-8eea-1f6a901dc27b.jpg)
+
+#### 4.3BSD
+
+![41okjaranfl _sl500_aa300_](https://f.cloud.github.com/assets/172456/1985643/84f1a764-8441-11e3-8a4a-521bbbf57f22.jpg)
 
 #### ソースの取得
 
