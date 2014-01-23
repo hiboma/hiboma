@@ -1,4 +1,4 @@
-* [c][kernel][本] UNIX 4.3BSDの設計と実装
+# UNIX 4.3BSDの設計と実装
 
 ## VAX
 
@@ -505,9 +505,9 @@ ondeman paging, magic number の処理方法と、セグメントサイズの指
 
  * `decay filter` => 減衰フィルタ
  * ロードアベレージが計算されている。
-  * tenex とかいうのが起源らしい http://ja.wikipedia.org/wiki/TOPS-20
+   * tenex とかいうのが起源らしい http://ja.wikipedia.org/wiki/TOPS-20
  * /procやシステムコールインタフェースで参照する仕組みは無い様子
-  * 計算式が分からん
+   * 計算式が分からん
 
     double  avenrun[3];             /* load average, of runnable procs */
 
@@ -857,8 +857,7 @@ ondeman paging, magic number の処理方法と、セグメントサイズの指
    * vfork はアプリケーション開発者が注意深く扱う必要がある
 
  * VAXアーキテクチャの制約が copy on write の実装を遠ざけ vfork の仕組みにいたったとか何とか。
-
-* VAXアーキテクチャハンドブック
+ * VAXアーキテクチャハンドブック
 
 ## 7章メモリ管理
 
