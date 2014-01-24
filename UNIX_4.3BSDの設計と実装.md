@@ -13,7 +13,7 @@
    * 非同期
    * スケジュールされない
 
-### カーネル入り口
+### カーネルの入り口
 
 OS,アーキテクチャによる違いはあるが 設計の骨組みとして共通するのは
 
@@ -26,7 +26,8 @@ OS,アーキテクチャによる違いはあるが 設計の骨組みとして�
 ## システムプロセス
 
  * swapperプロセス
-   * PID = 0 Bach本とだいたい同じ記述
+   * PID = 0
+   * Bach本とだいたい同じ記述
 
 ## 3.2 システムコール
 
@@ -34,12 +35,10 @@ Bach本 6.4.2 に書かれている記述/擬似コードと合致する部分�
 
  * システムコールの一覧
   * /_/c/4.3BSD/srcsys/sys/syscalls.c
-
  * `return from iterruput` で変える
  * VAX 0番目の汎用レジスタに返り値がはいる。Linuxのx86系と同じ (eax)
  * Cライブラリが errno を操作してエラーを指し示す
    * PDP-11 由来の歴史的な作法らしい。
-
  * システムコールのシグナル割り込み EINTER について触れられてる
    * setjmp, プログラムカウンタを保存して使っているあたり?
  
@@ -49,8 +48,7 @@ Bach本 6.4.2 に書かれている記述/擬似コードと合致する部分�
  
   * 割り込みベクタの初期化 (machine/scb.s)
   * 4byteごとにならんどる?
-
-```c  
+ ```c
 /* 000 */       STRAY;          IS(machcheck);  IS(kspnotval);  STOP(powfail);
 /* 010 */       KS(privinflt);  KS(xfcflt);     KS(resopflt);   KS(resadflt);
 /* 020 */       KS(protflt);    KS(transflt);   KS(tracep);     KS(bptflt);
@@ -74,9 +72,8 @@ Bach本 6.4.2 に書かれている記述/擬似コードと合致する部分�
 ```
 
  * 割り込みハンドラの実装 (machine/locore.s)
- * chmk (CHange Mode to Kernel ) 
-
- ```
+ * chmk (CHange Mode to Kernel )
+```
 SCBVEC(syscall):
         pushl   $T_SYSCALL 
         mfpr    $USP,-(sp);   
@@ -91,11 +88,9 @@ SCBVEC(syscall):
  * C実装の syscall が呼び出される。( trap.c )
    * trap(sp, type, code, pc, psl) はページフォルトとかをハンドリングする用
      * 6th では trap で システムコールのディスパッチをしていたけど、4.3BSDでは syscall に移動している
-
  * syscall は システムコールテーブルの番号をみて関数ポインタでディスパッチする役割
    * ユーザ空間から引数をコピーする、レジスタでエラー通知 などが肝
-
-```c   
+ ```c   
     syscall(sp, type, code, pc, psl)
 
     // システムコールへの引き数の確認
@@ -123,7 +118,7 @@ SCBVEC(syscall):
                                                   // SA_RESTARTでシグナル割り込みされた際の処理ぽいんだけど謎
 ```
 
-  * runrun(reschedule)のフラグがたってたら swtch() して優先度高いプロセスに変える
+ * runrun(reschedule)のフラグがたってたら swtch() して優先度高いプロセスに変える
 
 ### ユーザランド側の システムコール呼び出し
 
