@@ -56,7 +56,7 @@
 > instrution being executed at the same time, such as in a multiprocessing system
 
 CPUの命令レベルで見ると複数の命令が同時に実行されうること == paralell
-その条件としてマルチプロセッサ、マルチコアなシステムが必要
+その条件としてマルチプロセッサ(マルチコア)なシステムが必要
 
 ## multiprocessing ?
 
@@ -64,10 +64,14 @@ CPUの命令レベルで見ると複数の命令が同時に実行されうる�
 > on 2 to n central processors in a single computing system
 > P.53
 
+ * multiprocessing を 1台の計算機で 2-N の命令が 並列に 2-N の CPUで実行されること と定義する
+
 ## mutiprogramming ?
 
 > mutiprogramming is the concurrent interleaved execution of programs in a single
 > central processor
+
+ * multiprocessing を プログラムが 1CPUで 並行/interleaved して実行される と定義する
 
 ## interrupt ?
 
