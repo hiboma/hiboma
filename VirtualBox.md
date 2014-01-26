@@ -2,6 +2,10 @@
 
 ## Shared Folders
 
+ * vboxCallWrite (Additions/common/VBoxGuestLib/VBoxGuestR0LibSharedFolders.c)
+
+### HostServices
+
  * src/VBox/HostServices/SharedFolders/vbsf.h に APIが定義されている
  * ホストOSの VirtualBoxVMプロセスが呼び出すシステムコールの抽象化ラッパー
    * ホストOSのプラットフォームによって呼び出すべきシステムコールが違うので抽象化をかます必要がある
