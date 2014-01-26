@@ -34,4 +34,6 @@ int vbsfSymlink(SHFLCLIENTDATA *pClient, SHFLROOT root, SHFLSTRING *pNewPath, SH
 
 ### vbsfCreate
 
- * ホストOSがUNIX系Oなら open(2) を呼び出すはず (ディレクトリも含む)
+ * ホストOSがUNIX系Oなら open(2) を呼び出す。 vbfsOpenFile か vbsfOpenDir に続く
+ * vbsfOpenFile から RTFileOpen を呼び出す
+ 
