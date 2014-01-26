@@ -2,7 +2,162 @@
 
 ## Shared Folders
 
- * vboxCallWrite (Additions/common/VBoxGuestLib/VBoxGuestR0LibSharedFolders.c)
+### sf_write_end -> sf_reg_write_aux -> vboxCallWrite を追ってみる
+
+ * vboxCallWrite 
+   * Additions/common/VBoxGuestLib/VBoxGuestR0LibSharedFolders.c
+ 
+```c 
+DECLVBGL(int) vboxCallWrite(PVBSFCLIENT pClient, PVBSFMAP pMap, SHFLHANDLE hFile,
+                            uint64_t offset, uint32_t *pcbBuffer, uint8_t *pBuffer, bool fLocked)
+{
+    int rc = VINF_SUCCESS;
+
+    VBoxSFWrite data;
+
+    VBOX_INIT_CALL(&data.callInfo, WRITE, pClient);
+
+    data.root.type                      = VMMDevHGCMParmType_32bit;
+    data.root.u.value32                 = pMap->root;
+
+    data.handle.type                    = VMMDevHGCMParmType_64bit;
+    data.handle.u.value64               = hFile;
+    data.offset.type                    = VMMDevHGCMParmType_64bit;
+    data.offset.u.value64               = offset;
+    data.cb.type                        = VMMDevHGCMParmType_32bit;
+    data.cb.u.value32                   = *pcbBuffer;
+    data.buffer.type                    = (fLocked) ? VMMDevHGCMParmType_LinAddr_Locked_In : VMMDevHGCMParmType_LinAddr_In;
+    data.buffer.u.Pointer.size          = *pcbBuffer;
+    data.buffer.u.Pointer.u.linearAddr  = (uintptr_t)pBuffer;
+
+    rc = VbglHGCMCall (pClient->handle, &data.callInfo, sizeof (data));
+
+/*    Log(("VBOXSF: VBoxSF::vboxCallWrite: "
+         "VbglHGCMCall rc = %#x, result = %#x\n", rc, data.callInfo.result));
+*/
+    if (RT_SUCCESS (rc))
+    {   
+        rc = data.callInfo.result;
+        *pcbBuffer = data.cb.u.value32;
+    }   
+    return rc; 
+}
+```
+
+ * VbglHGCMCall
+   * src/VBox/Additions/common/VBoxGuestLib/HGCM.cpp
+     * ___HGCM___ = ___Host-Guest Communication Manager___
+     * ___Vbgl___ = ___Virtual Box Guest Lib___
+
+```c
+DECLVBGL(int) VbglHGCMCall (VBGLHGCMHANDLE handle, VBoxGuestHGCMCallInfo *pData, uint32_t cbData)
+{
+    int rc = VINF_SUCCESS;
+
+    VBGL_HGCM_ASSERTMsg(cbData >= sizeof (VBoxGuestHGCMCallInfo) + pData->cParms * sizeof (HGCMFunctionParameter),
+                        ("cbData = %d, cParms = %d (calculated size %d)\n", cbData, pData->cParms, sizeof (VBoxGuestHGCMCallInfo) + pData->cParms * sizeof (VBoxGuestHGCMCallInfo)));
+
+    rc = vbglDriverIOCtl (&handle->driver, VBOXGUEST_IOCTL_HGCM_CALL(cbData), pData, cbData);
+
+    return rc; 
+}
+```
+
+ * vbglDriverIOCtl
+   * src/VBox/Additions/common/VBoxGuestLib/SysHlp.cpp
+   
+```c
+int vbglDriverIOCtl (VBGLDRIVER *pDriver, uint32_t u32Function, void *pvData, uint32_t cbData)
+{
+    Log(("vbglDriverIOCtl: pDriver: %p, Func: %x, pvData: %p, cbData: %d\n", pDriver, u32Function, pvData, cbData));
+
+# ifdef RT_OS_WINDOWS
+    KEVENT Event;
+
+    KeInitializeEvent (&Event, NotificationEvent, FALSE);
+
+    /* Have to use the IoAllocateIRP method because this code is generic and
+     * must work in any thread context.
+     * The IoBuildDeviceIoControlRequest, which was used here, does not work
+     * when APCs are disabled, for example.
+     */
+    PIRP irp = IoAllocateIrp (pDriver->pDeviceObject->StackSize, FALSE);
+
+    Log(("vbglDriverIOCtl: irp %p, IRQL = %d\n", irp, KeGetCurrentIrql()));
+
+    if (irp == NULL)
+    {
+        Log(("vbglDriverIOCtl: IRP allocation failed!\n"));
+        return VERR_NO_MEMORY;
+    }
+
+    /*
+     * Setup the IRP_MJ_DEVICE_CONTROL IRP.
+     */
+
+    PIO_STACK_LOCATION nextStack = IoGetNextIrpStackLocation (irp);
+
+    nextStack->MajorFunction = IRP_MJ_DEVICE_CONTROL;
+    nextStack->MinorFunction = 0;
+    nextStack->DeviceObject = pDriver->pDeviceObject;
+    nextStack->Parameters.DeviceIoControl.OutputBufferLength = cbData;
+    nextStack->Parameters.DeviceIoControl.InputBufferLength = cbData;
+    nextStack->Parameters.DeviceIoControl.IoControlCode = u32Function;
+    nextStack->Parameters.DeviceIoControl.Type3InputBuffer = pvData;
+
+    irp->AssociatedIrp.SystemBuffer = pvData; /* Output buffer. */
+    irp->MdlAddress = NULL;
+
+    /* A completion routine is required to signal the Event. */
+    IoSetCompletionRoutine (irp, vbglDriverIOCtlCompletion, &Event, TRUE, TRUE, TRUE);
+
+    NTSTATUS rc = IoCallDriver (pDriver->pDeviceObject, irp);
+
+    if (NT_SUCCESS (rc))
+    {
+        /* Wait the event to be signalled by the completion routine. */
+        KeWaitForSingleObject (&Event,
+                               Executive,
+                               KernelMode,
+                               FALSE,
+                               NULL);
+
+        rc = irp->IoStatus.Status;
+
+        Log(("vbglDriverIOCtl: wait completed IRQL = %d\n", KeGetCurrentIrql()));
+    }
+
+    IoFreeIrp (irp);
+
+    if (rc != STATUS_SUCCESS)
+        Log(("vbglDriverIOCtl: ntstatus=%x\n", rc));
+
+    if (NT_SUCCESS(rc))
+        return VINF_SUCCESS;
+    if (rc == STATUS_INVALID_PARAMETER)
+        return VERR_INVALID_PARAMETER;
+    if (rc == STATUS_INVALID_BUFFER_SIZE)
+        return VERR_OUT_OF_RANGE;
+    return VERR_VBGL_IOCTL_FAILED;
+
+# elif defined (RT_OS_OS2)
+    if (    pDriver->u32Session
+        &&  pDriver->u32Session == g_VBoxGuestIDC.u32Session)
+        return g_VBoxGuestIDC.pfnServiceEP(pDriver->u32Session, u32Function, pvData, cbData, NULL);
+
+    Log(("vbglDriverIOCtl: No connection\n"));
+    return VERR_WRONG_ORDER;
+
+# else
+    return VBoxGuestIDCCall(pDriver->pvOpaque, u32Function, pvData, cbData, NULL);
+# endif
+}
+```
+
+ * VBoxGuestIDCCall
+   * src/VBox/Additions/common/VBoxGuest/VBoxGuest-unix.c.h
+     * VBoxGuest-linux.c が #include してる
+   * ___IDC___ = ___Inter Driver Communication___
 
 ### HostServices
 
