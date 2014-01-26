@@ -31,3 +31,7 @@ int vbsfSymlink(SHFLCLIENTDATA *pClient, SHFLROOT root, SHFLSTRING *pNewPath, SH
 
 #endif /* __VBSF__H */
 ```
+
+### vbsfCreate
+
+ * ホストOSがUNIX系Oなら open(2) を呼び出すはず (ディレクトリも含む)
