@@ -34,10 +34,11 @@ int vbsfSymlink(SHFLCLIENTDATA *pClient, SHFLROOT root, SHFLSTRING *pNewPath, SH
 
 ### vbsfCreate
 
- * ホストOSがUNIX系Oなら open(2) を呼び出す。 vbfsOpenFile か vbsfOpenDir に続く
- * vbsfOpenFile から RTFileOpen を呼び出す
-   * ___RT___ = RunTime ?
-   * src/VBox/Runtime 以下にプラットフォームごとのディレクトリが見つかる
+ホストOSがUNIX系OSなら、最終的に open(2) を呼び出すはず
+
+ * vbfsOpenFile か vbsfOpenDir に続く
+   * vbsfOpenFile から RTFileOpen を呼び出す
+     * ___RT___ = RunTime ?
   
 ```c
 // include/iprt/mangling.h
@@ -51,6 +52,29 @@ int vbsfSymlink(SHFLCLIENTDATA *pClient, SHFLROOT root, SHFLSTRING *pNewPath, SH
 
 // 最終的に VBoxGuest_RTFileOpen, VBoxHOST_RTFileOpen のシンボルに変換される?
 ```
+
+ * src/VBox/Runtime 以下にプラットフォームごとのディレクトリが見つかる
+   * src/VBox/Runtime/r3/posix/fileio-posix.cpp に POSIX な RTFileOpen実装がある
+   * (ホストOSのプロセスとして) open(2) を呼び出している
+
+```c
+RTR3DECL(int) RTFileOpen(PRTFILE pFile, const char *pszFilename, uint64_t fOpen)
+{
+    // ....
+
+    /*
+     * Open/create the file.
+     */
+    char const *pszNativeFilename;
+    rc = rtPathToNative(&pszNativeFilename, pszFilename, NULL);
+    if (RT_FAILURE(rc))
+        return (rc);
+
+    int fh = open(pszNativeFilename, fOpenMode, fMode);
+    int iErr = errno;
+```    
+
+ということで RT_MANGLER を見つけたら src/VBox/Runtime/ 以下の実装を追えばおk
 
 #### IPRT って何?
 
