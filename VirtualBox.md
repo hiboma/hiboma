@@ -15,6 +15,15 @@ DECLVBGL(int) vboxCallWrite(PVBSFCLIENT pClient, PVBSFMAP pMap, SHFLHANDLE hFile
 
     VBoxSFWrite data;
 
+    //#define VBOX_INIT_CALL(a, b, c)          \
+    //    LogFunc(("%s, u32ClientID=%d\n", "SHFL_FN_" # b, \
+    //            (c)->ulClientID)); \
+    //    (a)->result      = VINF_SUCCESS;     \
+    //    (a)->u32ClientID = (c)->ulClientID;  \
+    //    (a)->u32Function = SHFL_FN_##b;      \
+    //    (a)->cParms      = SHFL_CPARMS_##b
+    //
+    // SHFL_FN_WRITE (SharedFolder_Function_Write) を呼ぶ
     VBOX_INIT_CALL(&data.callInfo, WRITE, pClient);
 
     data.root.type                      = VMMDevHGCMParmType_32bit;
@@ -155,9 +164,58 @@ int vbglDriverIOCtl (VBGLDRIVER *pDriver, uint32_t u32Function, void *pvData, ui
 ```
 
  * VBoxGuestIDCCall
-   * src/VBox/Additions/common/VBoxGuest/VBoxGuest-unix.c.h
+   * src/VBox/Additions/common/VBoxGuest/VBoxGuestID-unix.c.h
      * VBoxGuest-linux.c が #include してる
    * ___IDC___ = ___Inter Driver Communication___
+   
+```c
+/**
+ * Perform an IDC call.
+ *
+ * @returns VBox error code.
+ * @param   pvSession           Opaque pointer to the session.
+ * @param   iCmd                Requested function.
+ * @param   pvData              IO data buffer.
+ * @param   cbData              Size of the data buffer.
+ * @param   pcbDataReturned     Where to store the amount of returned data.
+ */
+DECLEXPORT(int) VBOXCALL VBoxGuestIDCCall(void *pvSession, unsigned iCmd, void *pvData, size_t cbData, size_t *pcbDataReturned)
+{
+    PVBOXGUESTSESSION pSession = (PVBOXGUESTSESSION)pvSession;
+    LogFlow(("VBoxGuestIDCCall: %pvSession=%p Cmd=%u pvData=%p cbData=%d\n", pvSession, iCmd, pvData, cbData));
+    AssertPtrReturn(pSession, VERR_INVALID_POINTER);
+    AssertMsgReturn(pSession->pDevExt == &g_DevExt,
+                    ("SC: %p != %p\n", pSession->pDevExt, &g_DevExt), VERR_INVALID_HANDLE);
+
+    return VBoxGuestCommonIOCtl(iCmd, &g_DevExt, pSession, pvData, cbData, pcbDataReturned);
+}
+```
+
+ * VBoxGuestCommonIOCtl
+   * src/VBox/Additions/common/VBoxGuest/VBoxGuest.cpp
+   * ioctl で ゲストOSからホストOS との通信をする関数
+   * iFunction ででかい分岐が連なる
+
+```c
+/**
+ * Common IOCtl for user to kernel and kernel to kernel communication.
+ *
+ * This function only does the basic validation and then invokes
+ * worker functions that takes care of each specific function.
+ *
+ * @returns VBox status code.
+ *
+ * @param   iFunction           The requested function.
+ * @param   pDevExt             The device extension.
+ * @param   pSession            The client session.
+ * @param   pvData              The input/output data buffer. Can be NULL depending on the function.
+ * @param   cbData              The max size of the data buffer.
+ * @param   pcbDataReturned     Where to store the amount of returned data. Can be NULL.
+ */
+int VBoxGuestCommonIOCtl(unsigned iFunction, PVBOXGUESTDEVEXT pDevExt, PVBOXGUESTSESSION pSession,
+                         void *pvData, size_t cbData, size_t *pcbDataReturned)
+{
+```
 
 ### HostServices
 
