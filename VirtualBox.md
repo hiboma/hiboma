@@ -4,9 +4,17 @@
 
 ### sf_write_end -> sf_reg_write_aux -> vboxCallWrite を追ってみる
 
+TODO: ioctl から HostServices に繋げるコードがよくわからない
+
  * vboxCallWrite 
    * Additions/common/VBoxGuestLib/VBoxGuestR0LibSharedFolders.c
- 
+   * SHFL_FN_WRITE は src/VBox/HostServices/SharedFolders/service.cpp の ___svcCall___ で case 分で分岐に参照される
+     * SHFL_FN_WRITE の場合 svcCall は vbfsWrite を呼び出す
+       * vbfsWrite はホストOSのシステムコール呼び出しに繋がる。説明は後述
+       * ということでホスト側の動作は HostServices/SharedFolders を追えばおk
+     * `static DECLCALLBACK(void) svcCall (void *, VBOXHGCMCALLHANDLE callHandle, uint32_t u32ClientID, void *pvClient, uint32_t u32Function, uint32_t cParms, VBOXHGCMSVCPARM paParms[])` 
+       * なげーよ
+
 ```c 
 DECLVBGL(int) vboxCallWrite(PVBSFCLIENT pClient, PVBSFMAP pMap, SHFLHANDLE hFile,
                             uint64_t offset, uint32_t *pcbBuffer, uint8_t *pBuffer, bool fLocked)
