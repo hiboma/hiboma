@@ -37,6 +37,7 @@ int vbsfSymlink(SHFLCLIENTDATA *pClient, SHFLROOT root, SHFLSTRING *pNewPath, SH
  * ホストOSがUNIX系Oなら open(2) を呼び出す。 vbfsOpenFile か vbsfOpenDir に続く
  * vbsfOpenFile から RTFileOpen を呼び出す
    * ___RT___ = RunTime ?
+   * src/VBox/Runtime 以下にプラットフォームごとのディレクトリが見つかる
   
 ```c
 // include/iprt/mangling.h
@@ -51,7 +52,7 @@ int vbsfSymlink(SHFLCLIENTDATA *pClient, SHFLROOT root, SHFLSTRING *pNewPath, SH
 // 最終的に VBoxGuest_RTFileOpen, VBoxHOST_RTFileOpen のシンボルに変換される?
 ```
 
-```
+#### IPRT って何?
 
 ```
 IPRT, a portable runtime library which abstracts file access, threading, string manipulation, etc. 
