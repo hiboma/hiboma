@@ -8,7 +8,8 @@ TODO: ioctl から HostServices に繋げるコードがよくわからない
 
  * vboxCallWrite 
    * Additions/common/VBoxGuestLib/VBoxGuestR0LibSharedFolders.c
-   * SHFL_FN_WRITE は src/VBox/HostServices/SharedFolders/service.cpp の ___svcCall___ で case 分で分岐に参照される
+     * ___VBoxGuestR0Lib___ = ゲストOSの Ring 0 (特権モード) で呼び出すライブラリ
+   * ___SHFL_FN_WRITE___ は src/VBox/HostServices/SharedFolders/service.cpp の ___svcCall___ で case 分で分岐に参照される
      * SHFL_FN_WRITE の場合 svcCall は vbfsWrite を呼び出す
        * vbfsWrite はホストOSのシステムコール呼び出しに繋がる。説明は後述
        * ということでホスト側の動作は HostServices/SharedFolders を追えばおk
@@ -23,6 +24,7 @@ DECLVBGL(int) vboxCallWrite(PVBSFCLIENT pClient, PVBSFMAP pMap, SHFLHANDLE hFile
 
     VBoxSFWrite data;
 
+    // SHFL_FN_ を作る。大事
     //#define VBOX_INIT_CALL(a, b, c)          \
     //    LogFunc(("%s, u32ClientID=%d\n", "SHFL_FN_" # b, \
     //            (c)->ulClientID)); \
@@ -225,9 +227,13 @@ int VBoxGuestCommonIOCtl(unsigned iFunction, PVBOXGUESTDEVEXT pDevExt, PVBOXGUES
 {
 ```
 
+ * この先が謎??? ioctl から ホストOS のプロセスの呼び出し???
+
 ### HostServices
 
- * src/VBox/HostServices/SharedFolders/vbsf.h に APIが定義されている
+ホストOS側のVirtualBoxVM プロセスで実行されるユーザランドのコード。 Not Kernel
+
+ * src/VBox/HostServices/SharedFolders/vbsf.h に ホストOSが svcCall で呼び出すAPIが定義されている
  * ホストOSの VirtualBoxVMプロセスが呼び出すシステムコールの抽象化ラッパー
    * ホストOSのプラットフォームによって呼び出すべきシステムコールが違うので抽象化をかます必要がある
 
