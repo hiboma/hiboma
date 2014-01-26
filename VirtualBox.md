@@ -36,4 +36,26 @@ int vbsfSymlink(SHFLCLIENTDATA *pClient, SHFLROOT root, SHFLSTRING *pNewPath, SH
 
  * ホストOSがUNIX系Oなら open(2) を呼び出す。 vbfsOpenFile か vbsfOpenDir に続く
  * vbsfOpenFile から RTFileOpen を呼び出す
- 
+   * ___RT___ = RunTime ?
+  
+```c
+// include/iprt/mangling.h
+# define RTFileOpen                                     RT_MANGLER(RTFileOpen)
+
+// include/VBox/VBoxGuestMangling.h
+#define RT_MANGLER(symbol)   VBoxGuest_##symbol
+
+// include/VBox/SUPDrvMangling.h
+#define RT_MANGLER(symbol)   VBoxHost_##symbol
+
+// 最終的に VBoxGuest_RTFileOpen, VBoxHOST_RTFileOpen のシンボルに変換される?
+```
+
+```
+
+```
+IPRT, a portable runtime library which abstracts file access, threading, string manipulation, etc. 
+Whenever VirtualBox accesses host operating features, it does so through this library for cross-platform portability.
+
+http://www.virtualbox.org/manual/ch10.html
+```
