@@ -168,6 +168,7 @@ int vbglDriverIOCtl (VBGLDRIVER *pDriver, uint32_t u32Function, void *pvData, ui
     return VERR_WRONG_ORDER;
 
 # else
+    // windows 以外はここ
     return VBoxGuestIDCCall(pDriver->pvOpaque, u32Function, pvData, cbData, NULL);
 # endif
 }
