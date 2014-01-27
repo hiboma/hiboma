@@ -366,6 +366,141 @@ DECLR0VBGL(int) VbglR0HGCMInternalCall(VBoxGuestHGCMCallInfo *pCallInfo, uint32_
 }
 ```
 
+ * vbglR0HGCMInternalDoCall
+   * src/VBox/Additions/common/VBoxGuestLib/HGCMInternal.cpp
+
+```
+/**
+ * Performs the call and completion wait.
+ *
+ * @returns VBox status code of this operation, not necessarily the call.
+ *
+ * @param   pHGCMCall           The HGCM call info.
+ * @param   pfnAsyncCallback    The async callback that will wait for the call
+ *                              to complete.
+ * @param   pvAsyncData         Argument for the callback.
+ * @param   u32AsyncData        Argument for the callback.
+ * @param   pfLeakIt            Where to return the leak it / free it,
+ *                              indicator. Cancellation fun.
+ */
+static int vbglR0HGCMInternalDoCall(VMMDevHGCMCall *pHGCMCall, PFNVBGLHGCMCALLBACK pfnAsyncCallback,
+                                    void *pvAsyncData, uint32_t u32AsyncData, bool *pfLeakIt)
+{
+    int rc;
+
+    Log(("calling VbglGRPerform\n"));
+    rc = VbglGRPerform(&pHGCMCall->header.header);
+    Log(("VbglGRPerform rc = %Rrc (header rc=%d)\n", rc, pHGCMCall->header.result));
+
+    /*
+     * If the call failed, but as a result of the request itself, then pretend
+     * success. Upper layers will interpret the result code in the packet.
+     */
+    if (    RT_FAILURE(rc)
+        &&  rc == pHGCMCall->header.result)
+    {
+        Assert(pHGCMCall->header.fu32Flags & VBOX_HGCM_REQ_DONE);
+        rc = VINF_SUCCESS;
+    }
+
+    /*
+     * Check if host decides to process the request asynchronously,
+     * if so, we wait for it to complete using the caller supplied callback.
+     */
+    *pfLeakIt = false;
+    if (rc == VINF_HGCM_ASYNC_EXECUTE)
+    {
+        Log(("Processing HGCM call asynchronously\n"));
+        rc = pfnAsyncCallback(&pHGCMCall->header, pvAsyncData, u32AsyncData);
+        if (pHGCMCall->header.fu32Flags & VBOX_HGCM_REQ_DONE)
+        {
+            Assert(!(pHGCMCall->header.fu32Flags & VBOX_HGCM_REQ_CANCELLED));
+            rc = VINF_SUCCESS;
+        }
+        else
+        {
+            /*
+             * The request didn't complete in time or the call was interrupted,
+             * the RC from the callback indicates which. Try cancel the request.
+             *
+             * This is a bit messy because we're racing request completion. Sorry.
+             */
+            /** @todo It would be nice if we could use the waiter callback to do further
+             *  waiting in case of a completion race. If it wasn't for WINNT having its own
+             *  version of all that stuff, I would've done it already. */
+            VMMDevHGCMCancel2 *pCancelReq;
+            int rc2 = VbglGRAlloc((VMMDevRequestHeader **)&pCancelReq, sizeof(*pCancelReq), VMMDevReq_HGCMCancel2);
+            if (RT_SUCCESS(rc2))
+            {
+                pCancelReq->physReqToCancel = VbglPhysHeapGetPhysAddr(pHGCMCall);
+                rc2 = VbglGRPerform(&pCancelReq->header);
+                VbglGRFree(&pCancelReq->header);
+            }
+#if 1 /** @todo ADDVER: Remove this on next minor version change. */
+            if (rc2 == VERR_NOT_IMPLEMENTED)
+            {
+                /* host is too old, or we're out of heap. */
+                pHGCMCall->header.fu32Flags |= VBOX_HGCM_REQ_CANCELLED;
+                pHGCMCall->header.header.requestType = VMMDevReq_HGCMCancel;
+                rc2 = VbglGRPerform(&pHGCMCall->header.header);
+                if (rc2 == VERR_INVALID_PARAMETER)
+                    rc2 = VERR_NOT_FOUND;
+                else if (RT_SUCCESS(rc))
+                    RTThreadSleep(1);
+            }
+#endif
+            if (RT_SUCCESS(rc)) rc = VERR_INTERRUPTED; /** @todo weed this out from the WINNT VBoxGuest code. */
+            if (RT_SUCCESS(rc2))
+            {
+                Log(("vbglR0HGCMInternalDoCall: successfully cancelled\n"));
+                pHGCMCall->header.fu32Flags |= VBOX_HGCM_REQ_CANCELLED;
+            }
+            else
+            {
+                /*
+                 * Wait for a bit while the host (hopefully) completes it.
+                 */
+                uint64_t u64Start       = RTTimeSystemMilliTS();
+                uint32_t cMilliesToWait = rc2 == VERR_NOT_FOUND || rc2 == VERR_SEM_DESTROYED ? 500 : 2000;
+                uint64_t cElapsed       = 0;
+                if (rc2 != VERR_NOT_FOUND)
+                {
+                    static unsigned s_cErrors = 0;
+                    if (s_cErrors++ < 32)
+                        LogRel(("vbglR0HGCMInternalDoCall: Failed to cancel the HGCM call on %Rrc: rc2=%Rrc\n", rc, rc2));
+                }
+                else
+                    Log(("vbglR0HGCMInternalDoCall: Cancel race rc=%Rrc rc2=%Rrc\n", rc, rc2));
+
+                do
+                {
+                    ASMCompilerBarrier();       /* paranoia */
+                    if (pHGCMCall->header.fu32Flags & VBOX_HGCM_REQ_DONE)
+                        break;
+                    RTThreadSleep(1);
+                    cElapsed = RTTimeSystemMilliTS() - u64Start;
+                } while (cElapsed < cMilliesToWait);
+
+                ASMCompilerBarrier();           /* paranoia^2 */
+                if (pHGCMCall->header.fu32Flags & VBOX_HGCM_REQ_DONE)
+                    rc = VINF_SUCCESS;
+                else
+                {
+                    LogRel(("vbglR0HGCMInternalDoCall: Leaking %u bytes. Pending call to %u with %u parms. (rc2=%Rrc)\n",
+                            pHGCMCall->header.header.size, pHGCMCall->u32Function, pHGCMCall->cParms, rc2));
+                    *pfLeakIt = true;
+                }
+                Log(("vbglR0HGCMInternalDoCall: Cancel race ended with rc=%Rrc (rc2=%Rrc) after %llu ms\n", rc, rc2, cElapsed));
+            }
+        }
+    }
+
+    Log(("GstHGCMCall: rc=%Rrc result=%Rrc fu32Flags=%#x fLeakIt=%d\n",
+         rc, pHGCMCall->header.result, pHGCMCall->header.fu32Flags, *pfLeakIt));
+    return rc;
+}
+```
+
  * VbglGRPerform
   * src/VBox/Additions/common/VBoxGuestLib/GenericRequest.cpp
 
