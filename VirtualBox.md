@@ -364,7 +364,102 @@ DECLR0VBGL(int) VbglR0HGCMInternalCall(VBoxGuestHGCMCallInfo *pCallInfo, uint32_
 
     return rc;
 }
-```  
+```
+
+ * VbglGRPerform
+  * src/VBox/Additions/common/VBoxGuestLib/GenericRequest.cpp
+
+```c
+DECLVBGL(int) VbglGRPerform (VMMDevRequestHeader *pReq)
+{
+    RTCCPHYS physaddr;
+
+    // これなんだ
+    int rc = vbglR0Enter (); 
+
+    if (RT_FAILURE(rc))
+        return rc; 
+
+    if (!pReq)
+        return VERR_INVALID_PARAMETER;
+
+    physaddr = VbglPhysHeapGetPhysAddr (pReq);
+    if (  !physaddr
+       || (physaddr >> 32) != 0) /* Port IO is 32 bit. */
+    {   
+        rc = VERR_VBGL_INVALID_ADDR;
+    }   
+    else
+    {   
+        ASMOutU32(g_vbgldata.portVMMDev + VMMDEV_PORT_OFF_REQUEST, (uint32_t)physaddr);
+        /* Make the compiler aware that the host has changed memory. */
+        ASMCompilerBarrier();
+        rc = pReq->rc;
+    }   
+    return rc; 
+}
+```
+
+ * ASMOutU32
+   * include/iprt/asm-amd64-x86.h
+   * ___ASM___ = ___AMD64 and x86 Specific Assembly Functions___
+   * outl で I/Oポートにデータを書く
+   * VMMDevRequestHeader の開始アドレスを書いて、ホストOSが読む?
+
+```
+/**
+ * Writes a 32-bit unsigned integer to an I/O port, ordered.
+ *
+ * @param   Port    I/O port to write to.
+ * @param   u32     32-bit integer to write.
+ */
+#if RT_INLINE_ASM_EXTERNAL && !RT_INLINE_ASM_USES_INTRIN
+DECLASM(void) ASMOutU32(RTIOPORT Port, uint32_t u32);
+#else
+DECLINLINE(void) ASMOutU32(RTIOPORT Port, uint32_t u32) 
+{
+# if RT_INLINE_ASM_GNU_STYLE
+    __asm__ __volatile__("outl %1, %w0\n\t"
+                         :: "Nd" (Port),
+                            "a" (u32));
+
+# elif RT_INLINE_ASM_USES_INTRIN
+    __outdword(Port, u32);
+
+# else
+    __asm
+    {    
+        mov     dx, [Port]
+        mov     eax, [u32]
+        out     dx, eax
+    }    
+# endif
+}
+#endif
+```   
+
+ * VbglPhysHeapGetPhysAddr
+   * src/VBox/Additions/common/VBoxGuestLib/PhysHeap.cpp
+   * 物理ヒープ?の物理アドレスを出す?
+
+```c
+DECLVBGL(uint32_t) VbglPhysHeapGetPhysAddr (void *p) 
+{
+    uint32_t physAddr = 0;
+    VBGLPHYSHEAPBLOCK *pBlock = vbglPhysHeapData2Block (p);
+
+    if (pBlock)
+    {   
+        VBGL_PH_ASSERTMsg((pBlock->fu32Flags & VBGL_PH_BF_ALLOCATED) != 0,
+                         ("pBlock = %p, pBlock->fu32Flags = %08X\n", pBlock, pBlock->fu32Flags));
+
+        if (pBlock->fu32Flags & VBGL_PH_BF_ALLOCATED)
+            physAddr = pBlock->pChunk->physAddr + (uint32_t)((uintptr_t)p - (uintptr_t)pBlock->pChunk);
+    }   
+
+    return physAddr;
+}
+```
 
 ### HostServices
 
