@@ -159,9 +159,212 @@ DECLEXPORT(int) VBOXCALL VBoxGuestIDCCall(void *pvSession, unsigned iCmd, void *
 int VBoxGuestCommonIOCtl(unsigned iFunction, PVBOXGUESTDEVEXT pDevExt, PVBOXGUESTSESSION pSession,
                          void *pvData, size_t cbData, size_t *pcbDataReturned)
 {
+
+// ...
+
+    else if (VBOXGUEST_IOCTL_STRIP_SIZE(iFunction) == VBOXGUEST_IOCTL_STRIP_SIZE(VBOXGUEST_IOCTL_HGCM_CALL(0)))
+    {    
+        bool fInterruptible = pSession->R0Process != NIL_RTR0PROCESS;
+        CHECKRET_MIN_SIZE("HGCM_CALL", sizeof(VBoxGuestHGCMCallInfo));
+        rc = VBoxGuestCommonIOCtl_HGCMCall(pDevExt, pSession, (VBoxGuestHGCMCallInfo *)pvData, RT_INDEFINITE_WAIT,
+                                           fInterruptible, false /*f32bit*/, false /* fUserData */,
+                                           0, cbData, pcbDataReturned);
+    }    
+
 ```
 
- * この先が謎??? ioctl から ホストOS のプロセスの呼び出し???
+ * VBoxGuestCommonIOCtl_HGCMCall
+   * src/VBox/Additions/common/VBoxGuest/VBoxGuest.cpp
+
+```c
+static int VBoxGuestCommonIOCtl_HGCMCall(PVBOXGUESTDEVEXT pDevExt,
+                                         PVBOXGUESTSESSION pSession,
+                                         VBoxGuestHGCMCallInfo *pInfo,
+                                         uint32_t cMillies, bool fInterruptible, bool f32bit, bool fUserData,
+                                         size_t cbExtra, size_t cbData, size_t *pcbDataReturned)
+{
+    const uint32_t  u32ClientId = pInfo->u32ClientID;
+    uint32_t        fFlags;
+    size_t          cbActual;
+    unsigned        i;
+    int             rc;
+
+    /*
+     * Some more validations.
+     */
+    if (pInfo->cParms > 4096) /* (Just make sure it doesn't overflow the next check.) */
+    {
+        LogRel(("VBoxGuestCommonIOCtl: HGCM_CALL: cParm=%RX32 is not sane\n", pInfo->cParms));
+        return VERR_INVALID_PARAMETER;
+    }
+
+    cbActual = cbExtra + sizeof(*pInfo);
+#ifdef RT_ARCH_AMD64
+    if (f32bit)
+        cbActual += pInfo->cParms * sizeof(HGCMFunctionParameter32);
+    else
+#endif
+        cbActual += pInfo->cParms * sizeof(HGCMFunctionParameter);
+    if (cbData < cbActual)
+    {
+        LogRel(("VBoxGuestCommonIOCtl: HGCM_CALL: cbData=%#zx (%zu) required size is %#zx (%zu)\n",
+               cbData, cbData, cbActual, cbActual));
+        return VERR_INVALID_PARAMETER;
+    }
+
+    /*
+     * Validate the client id.
+     */
+    RTSpinlockAcquire(pDevExt->SessionSpinlock);
+    for (i = 0; i < RT_ELEMENTS(pSession->aHGCMClientIds); i++)
+        if (pSession->aHGCMClientIds[i] == u32ClientId)
+            break;
+    RTSpinlockReleaseNoInts(pDevExt->SessionSpinlock);
+    if (RT_UNLIKELY(i >= RT_ELEMENTS(pSession->aHGCMClientIds)))
+    {
+        static unsigned s_cErrors = 0;
+        if (s_cErrors++ > 32)
+            LogRel(("VBoxGuestCommonIOCtl: HGCM_CALL: Invalid handle. u32Client=%RX32\n", u32ClientId));
+        return VERR_INVALID_HANDLE;
+    }
+
+    /*
+     * The VbglHGCMCall call will invoke the callback if the HGCM
+     * call is performed in an ASYNC fashion. This function can
+     * deal with cancelled requests, so we let user more requests
+     * be interruptible (should add a flag for this later I guess).
+     */
+    Log(("VBoxGuestCommonIOCtl: HGCM_CALL: u32Client=%RX32\n", pInfo->u32ClientID));
+    fFlags = !fUserData && pSession->R0Process == NIL_RTR0PROCESS ? VBGLR0_HGCMCALL_F_KERNEL : VBGLR0_HGCMCALL_F_USER;
+#ifdef RT_ARCH_AMD64
+    if (f32bit)
+    {
+        if (fInterruptible)
+            rc = VbglR0HGCMInternalCall32(pInfo, cbData - cbExtra, fFlags, VBoxGuestHGCMAsyncWaitCallbackInterruptible, pDevExt, cMillies);
+        else
+            rc = VbglR0HGCMInternalCall32(pInfo, cbData - cbExtra, fFlags, VBoxGuestHGCMAsyncWaitCallback, pDevExt, cMillies);
+    }
+    else
+#endif
+    {
+        if (fInterruptible)
+            rc = VbglR0HGCMInternalCall(pInfo, cbData - cbExtra, fFlags, VBoxGuestHGCMAsyncWaitCallbackInterruptible, pDevExt, cMillies);
+        else
+            rc = VbglR0HGCMInternalCall(pInfo, cbData - cbExtra, fFlags, VBoxGuestHGCMAsyncWaitCallback, pDevExt, cMillies);
+    }
+    if (RT_SUCCESS(rc))
+    {
+        Log(("VBoxGuestCommonIOCtl: HGCM_CALL: result=%Rrc\n", pInfo->result));
+        if (pcbDataReturned)
+            *pcbDataReturned = cbActual;
+    }
+    else
+    {
+        if (   rc != VERR_INTERRUPTED
+            && rc != VERR_TIMEOUT)
+        {
+            static unsigned s_cErrors = 0;
+            if (s_cErrors++ < 32)
+                LogRel(("VBoxGuestCommonIOCtl: HGCM_CALL: %s Failed. rc=%Rrc.\n", f32bit ? "32" : "64", rc));
+        }
+        else
+            Log(("VBoxGuestCommonIOCtl: HGCM_CALL: %s Failed. rc=%Rrc.\n", f32bit ? "32" : "64", rc));
+    }
+    return rc;
+}
+```
+
+ * VbglR0HGCMInternalCall
+  * src/VBox/Additions/common/VBoxGuestLib/HGCMInternal.cpp
+
+```c
+DECLR0VBGL(int) VbglR0HGCMInternalCall(VBoxGuestHGCMCallInfo *pCallInfo, uint32_t cbCallInfo, uint32_t fFlags,
+                                       PFNVBGLHGCMCALLBACK pfnAsyncCallback, void *pvAsyncData, uint32_t u32AsyncData)
+{
+    bool                    fIsUser = (fFlags & VBGLR0_HGCMCALL_F_MODE_MASK) == VBGLR0_HGCMCALL_F_USER;
+    struct VbglR0ParmInfo   ParmInfo;
+    size_t                  cbExtra;
+    int                     rc;
+
+    /*
+     * Basic validation.
+     */
+    AssertMsgReturn(   !pCallInfo
+                    || !pfnAsyncCallback
+                    || pCallInfo->cParms > VBOX_HGCM_MAX_PARMS
+                    || !(fFlags & ~VBGLR0_HGCMCALL_F_MODE_MASK),
+                    ("pCallInfo=%p pfnAsyncCallback=%p fFlags=%#x\n", pCallInfo, pfnAsyncCallback, fFlags),
+                    VERR_INVALID_PARAMETER);
+    AssertReturn(   cbCallInfo >= sizeof(VBoxGuestHGCMCallInfo)
+                 || cbCallInfo >= pCallInfo->cParms * sizeof(HGCMFunctionParameter),
+                 VERR_INVALID_PARAMETER);
+
+    Log(("GstHGCMCall: u32ClientID=%#x u32Function=%u cParms=%u cbCallInfo=%#x fFlags=%#x\n",
+         pCallInfo->u32ClientID, pCallInfo->u32ClientID, pCallInfo->u32Function, pCallInfo->cParms, cbCallInfo, fFlags));
+
+    /*
+     * Validate, lock and buffer the parameters for the call.
+     * This will calculate the amount of extra space for physical page list.
+     */
+    rc = vbglR0HGCMInternalPreprocessCall(pCallInfo, cbCallInfo, fIsUser, &ParmInfo, &cbExtra);
+    if (RT_SUCCESS(rc))
+    {
+        /*
+         * Allocate the request buffer and recreate the call request.
+         */
+        VMMDevHGCMCall *pHGCMCall;
+        rc = VbglGRAlloc((VMMDevRequestHeader **)&pHGCMCall,
+                         sizeof(VMMDevHGCMCall) + pCallInfo->cParms * sizeof(HGCMFunctionParameter) + cbExtra,
+                         VMMDevReq_HGCMCall);
+        if (RT_SUCCESS(rc))
+        {
+            bool fLeakIt;
+            vbglR0HGCMInternalInitCall(pHGCMCall, pCallInfo, cbCallInfo, fIsUser, &ParmInfo);
+
+            /*
+             * Perform the call.
+             */
+            rc = vbglR0HGCMInternalDoCall(pHGCMCall, pfnAsyncCallback, pvAsyncData, u32AsyncData, &fLeakIt);
+            if (RT_SUCCESS(rc))
+            {
+                /*
+                 * Copy back the result (parameters and buffers that changed).
+                 */
+                rc = vbglR0HGCMInternalCopyBackResult(pCallInfo, pHGCMCall, &ParmInfo, fIsUser, rc);
+            }
+            else
+            {
+                if (   rc != VERR_INTERRUPTED
+                    && rc != VERR_TIMEOUT)
+                {
+                    static unsigned s_cErrors = 0;
+                    if (s_cErrors++ < 32)
+                        LogRel(("VbglR0HGCMInternalCall: vbglR0HGCMInternalDoCall failed. rc=%Rrc\n", rc));
+                }
+            }
+
+            if (!fLeakIt)
+                VbglGRFree(&pHGCMCall->header.header);
+        }
+    }
+    else
+        LogRel(("VbglR0HGCMInternalCall: vbglR0HGCMInternalPreprocessCall failed. rc=%Rrc\n", rc));
+
+    /*
+     * Release locks and free bounce buffers.
+     */
+    if (ParmInfo.cLockBufs)
+        while (ParmInfo.cLockBufs-- > 0)
+        {
+            RTR0MemObjFree(ParmInfo.aLockBufs[ParmInfo.cLockBufs].hObj, false /*fFreeMappings*/);
+#ifdef USE_BOUNCE_BUFFERS
+            RTMemTmpFree(ParmInfo.aLockBufs[ParmInfo.cLockBufs].pvSmallBuf);
+#endif
+        }
+
+    return rc;
+}
+```  
 
 ### HostServices
 
