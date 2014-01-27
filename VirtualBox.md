@@ -541,7 +541,7 @@ DECLVBGL(int) VbglGRPerform (VMMDevRequestHeader *pReq)
    * outl で I/Oポートにデータを書く
    * VMMDevRequestHeader の開始アドレスを書いて、ホストOSが読む?
 
-```
+```c
 /**
  * Writes a 32-bit unsigned integer to an I/O port, ordered.
  *
