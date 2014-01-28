@@ -11,6 +11,29 @@
    * プロセッサ間割り込み (InterProcessor Interrput = IPI)
    * 送り元 CPU => ローカルAPIC == バス ==> ローカルAPIC => ターゲットCPU
 
+/var/log/messages に I/O APIC を割り込みのルーティング(転送?) に使用するとのログがでる
+
+```
+Jan 28 12:40:21 vagrant-centos65 kernel: ACPI: Using IOAPIC for interrupt routing
+```
+
+I/O APIC から Local APIC への割り込みの分配が均等に行われることを指すのだろうか?
+
+```
+Jan 28 12:40:21 vagrant-centos65 kernel: Setting APIC routing to flat.
+Jan 28 12:40:21 vagrant-centos65 kernel: Setting APIC routing to flat.
+```
+
+I/O APIC を使わないと SMP が無効になったとのログがでる
+
+```
+Jan 28 12:34:27 vagrant-centos65 kernel: SMP: Allowing 1 CPUs, 0 hotplug CPUs
+Jan 28 12:34:27 vagrant-centos65 kernel: SMP alternatives: switching to UP code
+Jan 28 12:34:27 vagrant-centos65 kernel: Freeing SMP alternatives: 36k freed
+Jan 28 12:34:27 vagrant-centos65 kernel: SMP motherboard not detected.
+Jan 28 12:34:27 vagrant-centos65 kernel: SMP disabled
+```
+
 ### TSC Time Stamp Counter
 
  * [access.redhat.com 15.1. ハードウェアクロック](https://access.redhat.com/site/documentation/ja-JP/Red_Hat_Enterprise_MRG/2/html/Realtime_Reference_Guide/chap-Realtime_Reference_Guide-Timestamping.html)
