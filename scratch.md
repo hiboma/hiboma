@@ -1,4 +1,19 @@
 
+## Vagrant のネットワークアダプタを変える
+
+CentOS6のデフォルトのアダプタは virio-net
+
+```ruby
+    vb.customize ["modifyvm", :id, "--nictype1", "82540EM"]
+```
+
+```
+[vagrant@vagrant-centos65 ~]$ fgrep eth0 /proc/interrupts
+ 19:        796          0   IO-APIC-fasteoi   eth0
+```
+
+http://vboxmania.net/content/ネットワーク設定 当たりを参照するとよろし
+
 ## APIC
 
  * ___Local APIC___
@@ -52,7 +67,6 @@ Jan 28 12:40:21 vagrant-centos65 kernel: TSC synchronization [CPU#0 -> CPU#1]:
 Jan 28 12:40:21 vagrant-centos65 kernel: Measured 1826989 cycles TSC warp between CPUs, turning off TSC clock.
 Jan 28 12:40:21 vagrant-centos65 kernel: Marking TSC unstable due to check_tsc_sync_source failed
 ```
-
 
 ```
 /**
