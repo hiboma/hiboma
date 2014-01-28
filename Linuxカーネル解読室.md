@@ -209,5 +209,11 @@ $ getconf PAGESIZE
    * I/O APIC
      * Local APIC に割り込みを転送(リダイレクション)。SMPの場合はどれか一つのコアを選択
      * VirtualBox に `Enable I/O APIC` の項目がある
+       * I/O APIC を無効にすると /var/log/messages に SMP disabled が出て、仮想CPUを複数あててもゲストOSでは1個のみになる
+
+![2014-01-28 13 24 43](https://f.cloud.github.com/assets/172456/2016294/310db0ac-87d4-11e3-8cf7-150dd0194910.png)
+
+ * http://serverfault.com/questions/74672/why-should-i-enable-io-apic-in-virtualbox
+     
 
    
