@@ -197,3 +197,15 @@ $ getconf PAGESIZE
    * kmem_cache_alloc ?
    * dentryキャッシュ
      * dget, dput
+
+## 第4章 時計
+
+### 4.4 各種タイマー関連ハードウェア
+
+ * ___APIC___
+   * http://ja.wikipedia.org/wiki/APIC
+   * Local APIC
+     * 各CPUコアに内蔵
+   * I/O APIC
+     * VirtualBox に `Enable I/O APIC` の項目がある
+   
