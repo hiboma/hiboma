@@ -1,16 +1,64 @@
 
 ## APIC
 
+ * Local APIC
+   * CPUごとの割り込みコントローラー
+ * I/O APIC
+   * 外部デバイスに繋がった割り込みコントローラー。Local APIC に割り込みを転送(リダイレクションする)
+
 ### TSC Time Stamp Counter
 
  * [access.redhat.com 15.1. ハードウェアクロック](https://access.redhat.com/site/documentation/ja-JP/Red_Hat_Enterprise_MRG/2/html/Realtime_Reference_Guide/chap-Realtime_Reference_Guide-Timestamping.html)
    * クロックソース
  * http://msmania.wordpress.com/tag/rdtsc/
-   * プロセッサごとにある
+   * プロセッサごとに用意されてるレジスタ
+   * 高速な理由
 
-> それが、RDTSC (=Read Time Stamp Counter) 命令です。詳細は IA-32 の仕様書に書いてありますが、RDTSC を実行すると、1 命令で Tick 値を取得することができます。しかも単位はクロック単位です。Pentium 以降の IA-32 アーキテクチャーでは、プロセッサーごとに TSC (=Time Stamp Counter) という 64bit カウンターが MSR (マシン固有レジスタ) に含まれており、RDTSC はこれを EDX:EAX レジスターにロードする命令です。
+> それが、RDTSC (=Read Time Stamp Counter) 命令です。詳細は IA-32 の仕様書に書いてありますが、RDTSC を実行すると、1 命令で Tick 値を取得することができます。
+> しかも単位はクロック単位です。Pentium 以降の IA-32 アーキテクチャーでは、プロセッサーごとに TSC (=Time Stamp Counter) という 64bit カウンターが MSR (マシン固有レジスタ) に含まれており、RDTSC はこれを EDX:EAX レジスターにロードする命令です。
 
-   
+```
+/**
+ * setup_local_APIC - setup the local APIC
+ */
+void __cpuinit setup_local_APIC(void)
+```
+
+ * SMPを無効にする場合 I/O APIC のセットアップがスキップされる
+
+```c
+void arch_disable_smp_support(void)
+{
+#ifdef CONFIG_PCI
+	noioapicquirk = 1;
+	noioapicreroute = -1;
+#endif
+	skip_ioapic_setup = 1;
+}
+```
+
+```c
+void __init setup_IO_APIC(void)
+{
+
+	/*
+	 * calling enable_IO_APIC() is moved to setup_local_APIC for BP
+	 */
+	io_apic_irqs = nr_legacy_irqs ? ~PIC_IRQS : ~0UL;
+
+	apic_printk(APIC_VERBOSE, "ENABLING IO-APIC IRQs\n");
+	/*
+         * Set up IO-APIC IRQ routing.
+         */
+	x86_init.mpparse.setup_ioapic_ids();
+
+	sync_Arb_IDs();
+	setup_IO_APIC_irqs();
+	init_IO_APIC_traps();
+	if (nr_legacy_irqs)
+		check_timer();
+}
+```
 
 ## プロセッサの数を取る
 
