@@ -1,4 +1,12 @@
 
+## プロセッサの数を取る
+
+```
+export MAKEFLAGS="-j $( getconf _NPROCESSORS_ONLN )"
+```
+
+もじゃの人から拝借。便利
+
 ## vagrant ssh-config を Tempfile に書き出して ssh -F で vagrant に接続
 
 ```ruby
