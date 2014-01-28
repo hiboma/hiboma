@@ -5,6 +5,10 @@
    * CPUごとの割り込みコントローラー
  * I/O APIC
    * 外部デバイスに繋がった割り込みコントローラー。Local APIC に割り込みを転送(リダイレクションする)
+ * APIC + I/O APIC = マルチAPICシステム
+ * SMPアーキテクチャ
+   * 複数のCPUに割り込みを分配する
+
 
 ### TSC Time Stamp Counter
 
