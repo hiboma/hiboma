@@ -1,11 +1,15 @@
 
 ## Vagrant のネットワークアダプタを変える
 
-CentOS6のデフォルトのアダプタは virio-net
+ * CentOS6.5のデフォルトのアダプタは virio-net (準仮想化ネットワーク) に調整されていた
+   * 意図して変える場合
 
 ```ruby
     vb.customize ["modifyvm", :id, "--nictype1", "82540EM"]
 ```
+
+ * /proc/interrupts で eth0 からの割り込みの様子を確認できる。
+   * I/O APIC がまず割り込みを受けてることが分かる?
 
 ```
 [vagrant@vagrant-centos65 ~]$ fgrep eth0 /proc/interrupts
@@ -47,6 +51,35 @@ Jan 28 12:34:27 vagrant-centos65 kernel: SMP alternatives: switching to UP code
 Jan 28 12:34:27 vagrant-centos65 kernel: Freeing SMP alternatives: 36k freed
 Jan 28 12:34:27 vagrant-centos65 kernel: SMP motherboard not detected.
 Jan 28 12:34:27 vagrant-centos65 kernel: SMP disabled
+```
+
+IO APIC にもいろいろ種類がある様子
+
+```
+[vagrant@vagrant-centos65 ~]$ cat /proc/interrupts
+           CPU0       CPU1       
+  0:        191          0   IO-APIC-edge      timer
+  1:          7          0   IO-APIC-edge      i8042
+  8:          0          0   IO-APIC-edge      rtc0
+  9:          0          0   IO-APIC-fasteoi   acpi
+ 12:        108          0   IO-APIC-edge      i8042
+ 19:        690          0   IO-APIC-fasteoi   eth0
+ 20:        100          0   IO-APIC-fasteoi   vboxguest
+ 21:       1930          0   IO-APIC-fasteoi   ahci
+NMI:          0          0   Non-maskable interrupts
+LOC:      16493      43382   Local timer interrupts
+SPU:          0          0   Spurious interrupts
+PMI:          0          0   Performance monitoring interrupts
+IWI:          0          0   IRQ work interrupts
+RES:       9384       2599   Rescheduling interrupts
+CAL:         85         62   Function call interrupts
+TLB:        274        405   TLB shootdowns
+TRM:          0          0   Thermal event interrupts
+THR:          0          0   Threshold APIC interrupts
+MCE:          0          0   Machine check exceptions
+MCP:          1          1   Machine check polls
+ERR:          0
+MIS:          0
 ```
 
 #### TSC Time Stamp Counter

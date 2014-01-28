@@ -89,6 +89,37 @@ __マルチタクス環境__
      * 他のほとんどの処理はブロックされる
      * ネットワークパケットのロス、ディスクヘッドのセクタ転送? を取りこぼしたりする可能性。"重要"
 
+---
+
+ * 割り込みを確認する
+
+```
+[vagrant@vagrant-centos65 ~]$ cat /proc/interrupts
+           CPU0       CPU1
+  0:        191          0   IO-APIC-edge      timer
+  1:          7          0   IO-APIC-edge      i8042
+  8:          0          0   IO-APIC-edge      rtc0
+  9:          0          0   IO-APIC-fasteoi   acpi
+ 12:        108          0   IO-APIC-edge      i8042
+ 19:        690          0   IO-APIC-fasteoi   eth0
+ 20:        100          0   IO-APIC-fasteoi   vboxguest
+ 21:       1930          0   IO-APIC-fasteoi   ahci
+NMI:          0          0   Non-maskable interrupts
+LOC:      16493      43382   Local timer interrupts
+SPU:          0          0   Spurious interrupts
+PMI:          0          0   Performance monitoring interrupts
+IWI:          0          0   IRQ work interrupts
+RES:       9384       2599   Rescheduling interrupts
+CAL:         85         62   Function call interrupts
+TLB:        274        405   TLB shootdowns
+TRM:          0          0   Thermal event interrupts
+THR:          0          0   Threshold APIC interrupts
+MCE:          0          0   Machine check exceptions
+MCP:          1          1   Machine check polls
+ERR:          0
+MIS:          0
+```
+
 ----
 
 Linuxカーネル本より。Intelでの呼び方
