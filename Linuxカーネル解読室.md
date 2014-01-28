@@ -214,6 +214,12 @@ $ getconf PAGESIZE
 ![2014-01-28 13 24 43](https://f.cloud.github.com/assets/172456/2016294/310db0ac-87d4-11e3-8cf7-150dd0194910.png)
 
  * http://serverfault.com/questions/74672/why-should-i-enable-io-apic-in-virtualbox
+
+> Note: Enabling the I/O APIC is required for 64-bit guest operating systems, especially Windows Vista;
+> it is also required if you want to use more than one virtual CPU in a virtual machine.
+
+> However, software support for I/O APICs has been unreliable with some operating systems other than Windows.
+> Also, the use of an I/O APIC slightly increases the overhead of virtualization and therefore slows down the guest OS a little.
      
 
    
