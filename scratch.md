@@ -1,15 +1,15 @@
 
 ## APIC
 
- * Local APIC
+ * ___Local APIC___
    * CPUごとの割り込みコントローラー
- * I/O APIC
+ * ___I/O APIC___
    * 外部デバイスに繋がった割り込みコントローラー。Local APIC に割り込みを転送(リダイレクションする)
  * APIC + I/O APIC = マルチAPICシステム
  * SMPアーキテクチャ
-   * 複数のCPUに割り込みを分配する
-   * プロセッサ間割り込み (InterProcessor Interrput = IPI)
-   * 送り元 CPU => ローカルAPIC == バス ==> ローカルAPIC => ターゲットCPU
+   * 複数のCPUに割り込みを分配する必要がある
+   * プロセッサ間割り込み (InterProcessor Interrput = IPI) を生成できる
+     * 送り元 `CPU => ローカルAPIC == バス ==> ローカルAPIC => ターゲットCPU`
 
 /var/log/messages に I/O APIC を割り込みのルーティング(転送?) に使用するとのログがでる
 
@@ -34,7 +34,7 @@ Jan 28 12:34:27 vagrant-centos65 kernel: SMP motherboard not detected.
 Jan 28 12:34:27 vagrant-centos65 kernel: SMP disabled
 ```
 
-### TSC Time Stamp Counter
+#### TSC Time Stamp Counter
 
  * [access.redhat.com 15.1. ハードウェアクロック](https://access.redhat.com/site/documentation/ja-JP/Red_Hat_Enterprise_MRG/2/html/Realtime_Reference_Guide/chap-Realtime_Reference_Guide-Timestamping.html)
    * クロックソース
@@ -61,7 +61,7 @@ Jan 28 12:40:21 vagrant-centos65 kernel: Marking TSC unstable due to check_tsc_s
 void __cpuinit setup_local_APIC(void)
 ```
 
- * SMPを無効にする場合 I/O APIC のセットアップがスキップされる
+SMPを無効にする場合 I/O APIC のセットアップがスキップされる
 
 ```c
 void arch_disable_smp_support(void)
