@@ -207,5 +207,7 @@ $ getconf PAGESIZE
    * Local APIC
      * 各CPUコアに内蔵
    * I/O APIC
+     * Local APIC に割り込みを転送(リダイレクション)。SMPの場合はどれか一つのコアを選択
      * VirtualBox に `Enable I/O APIC` の項目がある
+
    
