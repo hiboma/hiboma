@@ -1,4 +1,28 @@
 
+## vagrant で シリアルコンソール
+
+ * Vagrantfile
+
+```ruby
+  config.vm.provider :virtualbox do |vb|
+    # vb.gui = true
+    vb.customize ["modifyvm", :id, "--uart1", "0x3F8", "4"]
+    vb.customize ["modifyvm", :id, "--uartmode1", "server", "/tmp/machine1.sock"]
+  end
+```
+
+ * ゲストOSの /etc/grub/conf をちょちょいといじる
+
+```
+console=tty console=ttyS0,9600
+```
+
+ホストOS (Mac) から以下のコマンドで繋げる
+
+```
+nc -U /tmp/machine1.sock
+```
+
 ## Vagrant のネットワークアダプタを変える
 
  * CentOS6.5のデフォルトのアダプタは virio-net (準仮想化ネットワーク) に調整されていた
