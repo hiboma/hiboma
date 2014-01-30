@@ -254,4 +254,5 @@ E: DEVLINKS=/dev/block/8:0 /dev/disk/by-id/scsi-* /dev/disk/by-path/*.com.amazon
  * remount とブロック
    * lock_kernel();
    * sb_down
- 
+ * syn flooding
+ * SCSI のドライブレター
