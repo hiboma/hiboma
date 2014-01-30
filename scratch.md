@@ -25,6 +25,16 @@ console=tty console=ttyS0,9600
 nc -U /tmp/machine1.sock
 ```
 
+ * /var/log/dmesg
+
+```
+console [ttyS0] enabled
+serial8250: ttyS0 at I/O 0x3f8 (irq = 4) is a 16550A
+00:05: ttyS0 at I/O 0x3f8 (irq = 4) is a 16550A
+```
+
+drivers/serial/8250.c がドライバだろうか?
+
 ## Vagrant のネットワークアダプタを変える
 
  * CentOS6.5のデフォルトのアダプタは virio-net (準仮想化ネットワーク) に調整されていた
