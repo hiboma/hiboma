@@ -6,6 +6,8 @@
 ```ruby
   config.vm.provider :virtualbox do |vb|
     # vb.gui = true
+    # http://en.wikipedia.org/wiki/COM_(hardware_interface)
+    # I/O port と IRQ
     vb.customize ["modifyvm", :id, "--uart1", "0x3F8", "4"]
     vb.customize ["modifyvm", :id, "--uartmode1", "server", "/tmp/machine1.sock"]
   end
