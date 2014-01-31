@@ -111,7 +111,7 @@ repeat:
 			goto unhash_it;
 	}
 	/* Unreachable? Get rid of it */
- 	if (d_unhashed(dentry))
+ 	if (d_unhashed(dentry)) // DCACHE_UNHASHED
 		goto kill_it;
   	if (list_empty(&dentry->d_lru)) {
   		dentry->d_flags |= DCACHE_REFERENCED;
@@ -129,5 +129,73 @@ kill_it:
 	dentry = d_kill(dentry);
 	if (dentry)
 		goto repeat;
+}
+```
+
+### d_drop
+
+ * 親 dentry から unhash する ( __DCACHE_UNHASHED__ が立つ)
+ * VFS の lookup で見つからない
+ * d_delete との違いは?
+   * d_delete は (可能なら) negative とマークする
+   * d_delete は ___negative___ lookup でひっかかる
+   * d_drop は ___cache___ lookup しないようにする
+
+```c
+/**
+ * d_drop - drop a dentry
+ * @dentry: dentry to drop
+ *
+ * d_drop() unhashes the entry from the parent dentry hashes, so that it won't
+ * be found through a VFS lookup any more. Note that this is different from
+ * deleting the dentry - d_delete will try to mark the dentry negative if
+ * possible, giving a successful _negative_ lookup, while d_drop will
+ * just make the cache lookup fail.
+ *
+ * d_drop() is used mainly for stuff that wants to invalidate a dentry for some
+ * reason (NFS timeouts or autofs deletes).
+ *
+ * __d_drop requires dentry->d_lock.
+ */
+
+static inline void __d_drop(struct dentry *dentry)
+{
+	if (!(dentry->d_flags & DCACHE_UNHASHED)) {
+		dentry->d_flags |= DCACHE_UNHASHED;
+		hlist_del_rcu(&dentry->d_hash);
+	}
+}
+```
+
+### d_kill
+
+ * unhashed で LRU から外されてる dentry を削除する
+  * d_free -> __d_free -> kfree
+
+```c
+/**
+ * d_kill - kill dentry and return parent
+ * @dentry: dentry to kill
+ *
+ * The dentry must already be unhashed and removed from the LRU.
+ *
+ * If this is the root of the dentry tree, return NULL.
+ */
+static struct dentry *d_kill(struct dentry *dentry)
+	__releases(dentry->d_lock)
+	__releases(dcache_lock)
+{
+	struct dentry *parent;
+
+	list_del(&dentry->d_u.d_child);
+	dentry_stat.nr_dentry--;	/* For d_free, below */
+	/*drops the locks, at that point nobody can reach this dentry */
+	dentry_iput(dentry);
+	if (IS_ROOT(dentry))
+		parent = NULL;
+	else
+		parent = dentry->d_parent;
+	d_free(dentry);
+	return parent;
 }
 ```
