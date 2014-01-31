@@ -107,6 +107,7 @@ struct dentry_operations {
 	int (*d_delete)(struct dentry *);
 	void (*d_release)(struct dentry *);
 	void (*d_iput)(struct dentry *, struct inode *);
+    // pipefs が 動的に dentry の名前作るのに使ってた
 	char *(*d_dname)(struct dentry *, char *, int);
 #ifndef __GENKSYMS__
 	struct vfsmount *(*d_automount)(struct path *);
