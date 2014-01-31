@@ -5,6 +5,8 @@
  * `/proc/sys/vm/drop_caches`
  * `sysctl -w vm.drop_caches=N でも同じ`
  * 下記のビット演算で 1 と 2 と 3 に対応する。なるほど
+   * invalidate_mapping_pages ... 全部破棄
+   * shrink_slab              ... 全破棄する訳じゃない
 
 ```c
 		if (sysctl_drop_caches & 1)
@@ -25,21 +27,23 @@
 #include <linux/sysctl.h>
 #include <linux/gfp.h>
 
-/* A global variable is a bit ugly, but it keeps the code simple */
-int sysctl_drop_caches;
-
 static void drop_pagecache_sb(struct super_block *sb)
 {
 	struct inode *inode, *toput_inode = NULL;
 
 	spin_lock(&inode_lock);
+    // superblock に繋がった VFS inode を全走査する
 	list_for_each_entry(inode, &sb->s_inodes, i_sb_list) {
+        // dirty でない inode は何もしない
 		if (inode->i_state & (I_FREEING|I_CLEAR|I_WILL_FREE|I_NEW))
 			continue;
+        // マッピングしてるページサイズがゼロならなんもしない
+        // どゆこと?
 		if (inode->i_mapping->nrpages == 0)
 			continue;
 		__iget(inode);
 		spin_unlock(&inode_lock);
+        // ページキャッシュの破棄 !!!!
 		invalidate_mapping_pages(inode->i_mapping, 0, -1);
 		iput(toput_inode);
 		toput_inode = inode;
