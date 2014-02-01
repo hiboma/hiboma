@@ -131,7 +131,7 @@ int drop_caches_sysctl_handler(ctl_table *table, int write,
 ### drop_slab 以下を深追い
 
  * shrink_slab は slab キャッシュをのサイズを小さくする
-   * slab はいろんなオブジェクトがあるので、減らすサイズを決定する関数 ( shrinker ) も様々ある
+   * slab はいろんなオブジェクトがあるので、サイズを減らす関数 ( shrinker ) も様々ある
    * shrinker_list をイテレートして shrinker を呼び回る
 
 ```c
@@ -263,7 +263,7 @@ static int shrink_dcache_memory(struct shrinker *shrink, int nr, gfp_t gfp_mask)
 	}
 	return (dentry_stat.nr_unused / 100) * sysctl_vfs_cache_pressure;
 }
-``
+```
 
 ```c
 /**
