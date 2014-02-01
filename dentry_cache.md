@@ -1,14 +1,21 @@
 # dnetry cache
 
- * slubで割り当て ->　kmem_cache_alloc, kmem_cache_free
- * 4つの状態
+ * slabで割り当て ->　kmem_cache_alloc, kmem_cache_free
+   * `static struct kmem_cache *dentry_cache __read_mostly;`
+ * dentry は4つの状態をもつ
 
  　 | inode | dcount | 破棄 |
 --- | --- | --- | ---
 Free | - | - | - |
-Active | ○ | 0 | ○ 
-Inactive  | ○ | 1以上 | × 
+Active (DCACHE_REFERENCED?) | ○ | 0 | ○ 
+Inactive (  | ○ | 1以上 | × 
 Negative | NULL | 0 | ○?
+
+## dentry の使用量/数を調べる
+
+ * slabtop
+ * _/proc/sys/fs/dentry-state_
+   * `nr_dentry - nr_unused` で Active な dentry (削除できない) の数を出せる?
 
 ```
 /proc/sys/fs/dentry-state (Linux 2.2 以降)
@@ -20,8 +27,6 @@ Negative | NULL | 0 | ○?
  * age_limit は、メモリが不足している場合に次に dcache entry を再要求できるように なるまでの残り時間 (秒数) である。
  * want_pages は、カーネルが shrink_dcache_pages() を呼び出したが dcache がまだ縮小されていない場合に、0 以外の値となる。
 ```
-
-nr_dentry - nr_unused で Active な dentry (削除できない) の数を出す
 
 ## procfs の drop_cache
 
