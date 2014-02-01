@@ -248,6 +248,86 @@ static int shrink_dcache_memory(struct shrinker *shrink, int nr, gfp_t gfp_mask)
 }
 ``
 
+```c
+/**
+ * prune_dcache - shrink the dcache
+ * @count: number of entries to try to free
+ *
+ * Shrink the dcache. This is done when we need more memory, or simply when we
+ * need to unmount something (at which point we need to unuse all dentries).
+ *
+ * This function may fail to free any resources if all the dentries are in use.
+ */
+static void prune_dcache(int count)
+{
+	struct super_block *sb;
+	int w_count;
+	int unused = dentry_stat.nr_unused;
+	int prune_ratio;
+	int pruned;
+
+	if (unused == 0 || count == 0)
+		return;
+	spin_lock(&dcache_lock);
+restart:
+	if (count >= unused)
+		prune_ratio = 1;
+	else
+		prune_ratio = unused / count;
+	spin_lock(&sb_lock);
+	list_for_each_entry(sb, &super_blocks, s_list) {
+		if (sb->s_nr_dentry_unused == 0)
+			continue;
+		sb->s_count++;
+		/* Now, we reclaim unused dentrins with fairness.
+		 * We reclaim them same percentage from each superblock.
+		 * We calculate number of dentries to scan on this sb
+		 * as follows, but the implementation is arranged to avoid
+		 * overflows:
+		 * number of dentries to scan on this sb =
+		 * count * (number of dentries on this sb /
+		 * number of dentries in the machine)
+		 */
+		spin_unlock(&sb_lock);
+		if (prune_ratio != 1)
+			w_count = (sb->s_nr_dentry_unused / prune_ratio) + 1;
+		else
+			w_count = sb->s_nr_dentry_unused;
+		pruned = w_count;
+		/*
+		 * We need to be sure this filesystem isn't being unmounted,
+		 * otherwise we could race with generic_shutdown_super(), and
+		 * end up holding a reference to an inode while the filesystem
+		 * is unmounted.  So we try to get s_umount, and make sure
+		 * s_root isn't NULL.
+		 */
+		if (down_read_trylock(&sb->s_umount)) {
+			if ((sb->s_root != NULL) &&
+			    (!list_empty(&sb->s_dentry_lru))) {
+				spin_unlock(&dcache_lock);
+				__shrink_dcache_sb(sb, &w_count,
+						DCACHE_REFERENCED);
+				pruned -= w_count;
+				spin_lock(&dcache_lock);
+			}
+			up_read(&sb->s_umount);
+		}
+		spin_lock(&sb_lock);
+		count -= pruned;
+		/*
+		 * restart only when sb is no longer on the list and
+		 * we have more work to do.
+		 */
+		if (__put_super_and_need_restart(sb) && count > 0) {
+			spin_unlock(&sb_lock);
+			goto restart;
+		}
+	}
+	spin_unlock(&sb_lock);
+	spin_unlock(&dcache_lock);
+}
+```
+
 ## dentry_operations
 
 ```c
