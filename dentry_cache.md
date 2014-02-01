@@ -91,6 +91,8 @@ static void drop_slab(void)
 	int nr_objects;
 
 	do {
+        // struct shrinker をイテレートして slab のサイズを小さくする
+        // dcache の場合は dcache_shrinker を呼ぶ
 		nr_objects = shrink_slab(1000, GFP_KERNEL, 1000);
 	} while (nr_objects > 10);
 }
@@ -109,9 +111,42 @@ int drop_caches_sysctl_handler(ctl_table *table, int write,
 }
 ```
 
+### drop_slab 以下を深追い
+
+```c
+static struct shrinker dcache_shrinker = {
+	.shrink = shrink_dcache_memory,
+	.seeks = DEFAULT_SEEKS,
+};
 ```
+
+```c
 	register_shrinker(&dcache_shrinker);
 ```
+
+```c
+/*
+ * Scan `nr' dentries and return the number which remain.
+ *
+ * We need to avoid reentering the filesystem if the caller is performing a
+ * GFP_NOFS allocation attempt.  One example deadlock is:
+ *
+ * ext2_new_block->getblk->GFP->shrink_dcache_memory->prune_dcache->
+ * prune_one_dentry->dput->dentry_iput->iput->inode->i_sb->s_op->put_inode->
+ * ext2_discard_prealloc->ext2_free_blocks->lock_super->DEADLOCK.
+ *
+ * In this case we return -1 to tell the caller that we baled.
+ */
+static int shrink_dcache_memory(struct shrinker *shrink, int nr, gfp_t gfp_mask)
+{
+	if (nr) {
+		if (!(gfp_mask & __GFP_FS))
+			return -1;
+		prune_dcache(nr);
+	}
+	return (dentry_stat.nr_unused / 100) * sysctl_vfs_cache_pressure;
+}
+``
 
 ## dentry_operations
 
