@@ -8,8 +8,20 @@
 Free | - | - | - |
 Active | ○ | 0 | ○ 
 Inactive  | ○ | 1以上 | × 
-Negative | NULL | 0 | ○? 
+Negative | NULL | 0 | ○?
 
+```
+/proc/sys/fs/dentry-state (Linux 2.2 以降)
+  このファイルには、ディレクトリキャッシュ (dcache) の状態に関する情報が 入っている。
+  ファイルには、 nr_dentry, nr_unused, age_limit (秒単位の age), want_pages (システムがリクエストしたページ数), ダミーの 2 つの値、 という 6 つの数字が書かれている。
+
+ * nr_dentry は割り当てられた dentry (dcache エントリ) の数である。 このフィールドは Linux 2.2 では使用されない。
+ * nr_unused は未使用の dentry 数である。
+ * age_limit は、メモリが不足している場合に次に dcache entry を再要求できるように なるまでの残り時間 (秒数) である。
+ * want_pages は、カーネルが shrink_dcache_pages() を呼び出したが dcache がまだ縮小されていない場合に、0 以外の値となる。
+```
+
+nr_dentry - nr_unused で Active な dentry (削除できない) の数を出す
 
 ## procfs の drop_cache
 
