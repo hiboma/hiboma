@@ -1,6 +1,15 @@
 # dnetry cache
 
  * slubで割り当て ->　kmem_cache_alloc, kmem_cache_free
+ * 4つの状態
+
+ 　 | inode | dcount | 破棄 |
+--- | --- | --- | ---
+free | - | - | - |
+unused | ○ | 0 | ○ 
+using  | ○ | 1以上 | × 
+negative | NULL | 0 | ○? 
+
 
 ## procfs の drop_cache
 
