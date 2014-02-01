@@ -1,5 +1,7 @@
 # dnetry cache
 
+ * slubで割り当て ->　kmem_cache_alloc, kmem_cache_free
+
 ## procfs の drop_cache
 
  * `/proc/sys/vm/drop_caches`
