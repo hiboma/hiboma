@@ -5,10 +5,10 @@
 
  　 | inode | dcount | 破棄 |
 --- | --- | --- | ---
-free | - | - | - |
-unused | ○ | 0 | ○ 
-using  | ○ | 1以上 | × 
-negative | NULL | 0 | ○? 
+Free | - | - | - |
+Active | ○ | 0 | ○ 
+Inactive  | ○ | 1以上 | × 
+Negative | NULL | 0 | ○? 
 
 
 ## procfs の drop_cache
@@ -76,6 +76,7 @@ restart:
 		spin_unlock(&sb_lock);
 		down_read(&sb->s_umount);
 		if (sb->s_root)
+            // superblock ごとに ページキャッシュの破棄
 			drop_pagecache_sb(sb);
 		up_read(&sb->s_umount);
 		spin_lock(&sb_lock);
@@ -106,6 +107,10 @@ int drop_caches_sysctl_handler(ctl_table *table, int write,
 	}
 	return 0;
 }
+```
+
+```
+	register_shrinker(&dcache_shrinker);
 ```
 
 ## dentry_operations
