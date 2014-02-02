@@ -1,4 +1,4 @@
-# dnetry cache
+# dentry cache
 
  * slabで割り当て ->　kmem_cache_alloc, kmem_cache_free
    * `static struct kmem_cache *dentry_cache __read_mostly;`
@@ -27,6 +27,17 @@ negative | NULL | 0 | ○?
  * age_limit は、メモリが不足している場合に次に dcache entry を再要求できるように なるまでの残り時間 (秒数) である。
  * want_pages は、カーネルが shrink_dcache_pages() を呼び出したが dcache がまだ縮小されていない場合に、0 以外の値となる。
 ```
+
+ * ___dentry_hashtable___
+   * active な dentry はグローバル変数 dentry_hashtable に蓄えられる
+ * ___dentry_unussed___
+   * LRU ( d_lru で繋ぐ) 
+   * どのプロセスからも参照されいない d_count == 0 のリスト
+   * 古いほどリストの末尾
+ * ___DCACHE_DISCONNECTED___
+  * superblock の dentry ツリーにぶら下がっていない状態
+ * ___DCACHE_UNHASHED___
+  * detnry が inode のハッシュテーブルを含まない
 
 ## procfs の drop_cache
 
@@ -369,7 +380,8 @@ struct dentry_operations {
 
  * tmpfs は .lookup する際に dentry_operations に .d_delete をセットしている
    * backing store が RAM の場合は、削除済みファイルの dentry をキッシュしてもメモリと探索時間の無駄になるので、すぐに消すとの事
-     * backing store から読み込みを速くするためのキャッシュとしての意味は無いし、dentry 増えてハッシュ値の比較回数が無駄に増える
+     * backing store からの lookup を速くするキャッシュとしての意味は無いし、dentry 増えてハッシュ値の比較回数が無駄に増える
+     * filename と Inode の結びつけ以外の働きはしない
    * simple_delete_dentry は dput で呼ばれる
 
 ```c
