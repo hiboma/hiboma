@@ -6,10 +6,10 @@
 
  　 | inode | dcount | 破棄 |
 --- | --- | --- | ---
-Free | - | - | - |
-Active (DCACHE_REFERENCED?) | ○ | 0 | ○ 
-Inactive (  | ○ | 1以上 | × 
-Negative | NULL | 0 | ○?
+free | - | - | - |
+nonused | ○ | 0 | ○ 
+used (  | ○ | 1以上 | × 
+negative | NULL | 0 | ○?
 
 ## dentry の使用量/数を調べる
 
