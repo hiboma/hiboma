@@ -367,9 +367,9 @@ struct dentry_operations {
 
 ## tmpfs
 
- * tmpfs は .lookup する際に dentry_operations .d_delete をセットしている
-   * backing store が RAM の場合は、削除済みファイルの dentry をキッシュしてもメモリと探索時間の無駄になる
-   * ので、すぐに消すとの事
+ * tmpfs は .lookup する際に dentry_operations に .d_delete をセットしている
+   * backing store が RAM の場合は、削除済みファイルの dentry をキッシュしてもメモリと探索時間の無駄になるので、すぐに消すとの事
+     * backing store から読み込みを速くするためのキャッシュとしての意味は無いし、dentry 増えてハッシュ値の比較回数が無駄に増える
    * simple_delete_dentry は dput で呼ばれる
 
 ```c
