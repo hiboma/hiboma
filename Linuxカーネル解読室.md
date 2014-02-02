@@ -307,7 +307,26 @@ brw-rw----   1 root    disk      7,   3 Feb  2 12:38 loop3
 ### 0.8.1 ソケット
 
  * ___ソケットバッファ___
+   * struct sk_buff, struct sk_buff_head
 
+#### 0.8.2 TCP/IPプロトコルスタック
+
+ * System V ___STREAMS___
+
+### 0.9 プロセス間通信
+
+ * IPC
+   * パイプ
+   * 名前付きパイプ
+   * ___プリエンプションの発生回数を抑制するような実装___
+ * ___System V IPC___
+   * shared memory
+     * ___ファイルシステムとしてアクセス可能___ => tmpfs
+   * semahpre
+   * message
+ * futex
+   * 同一ページをプロセス間でマップ、ロック変数を共有
+   * 競合が発生しない限りシステムコールを介さずに排他
 
 ## 第4章 時計
 
