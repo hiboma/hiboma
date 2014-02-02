@@ -47,6 +47,17 @@ negative | NULL | 0 | ○?
  * flags ___DCACHE_UNHASHED___
   * dentry_hashtable に繋がっていない
 
+## dentry cache 疑問
+
+ * dentry cache のサイズに制限をかけられるか ?
+   * できなそう
+   * vfs_cache_pressure を高い数値にしておくしかないのかな?
+ * 選択的に dentry cache を削除することはできるか ?
+   * 特定のディレクトリの d_subdirs を走査したらいける???
+   * [shrink_dcache_for_umount_subtree](http://lxr.free-electrons.com/ident?v=2.6.32&i=shrink_dcache_for_umount_subtree) を参考に
+ * bind mount の場合は dcache はどう扱われるか?
+   * 分からん
+
 ## procfs の drop_cache
 
  * `/proc/sys/vm/drop_caches`
