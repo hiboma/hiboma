@@ -1,8 +1,12 @@
 # dentry cache
 
- * slabで割り当て ->　kmem_cache_alloc, kmem_cache_free
-   * `static struct kmem_cache *dentry_cache __read_mostly;`
- * dentry は4つの状態をもつ
+slabで割り当て ->　kmem_cache_alloc, kmem_cache_free
+
+```c 
+static struct kmem_cache *dentry_cache __read_mostly;`
+```
+
+## dentry は4つの状態をもつ
 
  　 | inode | dcount | 破棄 |
 --- | --- | --- | ---
