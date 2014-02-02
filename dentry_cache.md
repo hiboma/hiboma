@@ -28,16 +28,20 @@ negative | NULL | 0 | ○?
  * want_pages は、カーネルが shrink_dcache_pages() を呼び出したが dcache がまだ縮小されていない場合に、0 以外の値となる。
 ```
 
+## dentry cache の管理
+
  * ___dentry_hashtable___
-   * active な dentry はグローバル変数 dentry_hashtable に蓄えられる
+   * active な dentry をいれとくハッシュテーブル。グローバル変数 
+   * d_add で追加
+   * d_drop で削除
  * ___dentry_unussed___
-   * LRU ( d_lru で繋ぐ) 
-   * どのプロセスからも参照されいない d_count == 0 のリスト
-   * 古いほどリストの末尾
- * ___DCACHE_DISCONNECTED___
+   * どのプロセスからも参照されいない d_count == 0 のLRUリスト
+   * 古いほどリストの末尾に繋がる
+ * flags ___DCACHE_DISCONNECTED___
   * superblock の dentry ツリーにぶら下がっていない状態
- * ___DCACHE_UNHASHED___
-  * detnry が inode のハッシュテーブルを含まない
+  * ???
+ * flags ___DCACHE_UNHASHED___
+  * dentry_hashtable に繋がっていない
 
 ## procfs の drop_cache
 
@@ -276,6 +280,8 @@ static int shrink_dcache_memory(struct shrinker *shrink, int nr, gfp_t gfp_mask)
 }
 ```
 
+prune_dcache で dcache のサイズを小さくする
+
 ```c
 /**
  * prune_dcache - shrink the dcache
@@ -360,8 +366,10 @@ restart:
 
 ```c
 struct dentry_operations {
+    // ネットワークファイルシステムなどで
 	int (*d_revalidate)(struct dentry *, struct nameidata *);
 	int (*d_hash) (struct dentry *, struct qstr *);
+    // 大文字小文字を区別しないファイルシステムなどで実装される
 	int (*d_compare) (struct dentry *, struct qstr *, struct qstr *);
 	int (*d_delete)(struct dentry *);
 	void (*d_release)(struct dentry *);
