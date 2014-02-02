@@ -4,7 +4,8 @@
  * free で表示されるバッファは /proc/meminfo の Buffers の数値
  * Buffers の数値は fs/proc/meminfo.c の [si_meminfo](http://lxr.free-electrons.com/ident?v=2.6.32&i=si_meminfo) で {val->bufferram = nr_blockdev_pages();` で代入される
  * nr_blockdev_pages
-   * block_device 型ファイル にマッピングされたページ数 = Buffers = バッファのサイズ
+   * block_device 型ファイルのアドレス空間にマッピングされたページ数 = Buffers = バッファのサイズ
+   * ブロックデバイスは all_bdevs のリストに繋がってる
 
 ```c
 long nr_blockdev_pages(void)

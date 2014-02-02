@@ -262,6 +262,9 @@ $ getconf PAGESIZE
 
  * VFS ( ___Virtual FileSystem___ or ___Virtual Filesystem Switch___ )
    * ActiveRecord (データストアを意識しない抽象レイヤ) を例に出す
+   * 統一的なインタフェースを提供、下位実装を隠蔽
+     * ___common file model___
+   * 関数ポインタを駆使してオブジェクト指向風に操作
 
 #### 0.7.3.1 ローカルファイルシステム
 
@@ -286,7 +289,10 @@ $ getconf PAGESIZE
 
 #### 0.7.6 ブロック型デバイス
 
+ * データ転送の単位がブロックサイズ
+ * キャラクタデバイスが無い?
  * 下記コマンドでブロック型デバイス出せる
+ 
 
 ```
 $ ls -hal /dev/ | grep ^b
@@ -298,7 +304,10 @@ brw-rw----   1 root    disk      7,   3 Feb  2 12:38 loop3
 ```
 
  * ___バッファ___ から 複数ページの集まり???
- * ___エレベータ___
+ * ___エレベータ___ (I/Oスケジューラ???)
+   * Noop
+   * CFQ
+   * Deadline
 
 ## 0.8 ネットワーク
 
