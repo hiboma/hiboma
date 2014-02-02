@@ -213,11 +213,17 @@ $ getconf PAGESIZE
  * CPUのアーキテクチャ依存
  * ___Buddyシステム___
    * ページの結合、断片化
- * ___Slabアトケータ__
+ * ___Slabアロケータ__
+   * PAGESIZE以下のメモリ
+   * kmem_cache_alloc ( dentry cache, inode cahce ...)
  * テキストセグメントの ___書き込み保護___
    * 書き込もうとしたらどうなるか => SIGSEGV
 
-#### 0.6.2 デマンドページング
+#### 0.6.2 仮想記憶
+
+ * __アドレス空間__
+   * vm_area_struct
+ * デマンドページング
 
 ### 0.7 ファイルシステム
 
