@@ -222,8 +222,17 @@ $ getconf PAGESIZE
 #### 0.6.2 仮想記憶
 
  * __アドレス空間__
-   * vm_area_struct
- * デマンドページング
+   * mm_struct, vm_area_struct
+
+#### 0.6.2 デマンドページング
+
+ * ___CoW___
+
+#### ページアウトとスワップ
+
+ * ___ページアウト___
+   * 二次記憶に追い出す = スワップ
+   * kswapd
 
 ### 0.7 ファイルシステム
 
@@ -240,13 +249,18 @@ $ getconf PAGESIZE
  * ___順次アクセス___
    * シーケンシャルリード
    * struct backing_dev_info
- * ___遅延させて2次記憶___
-   * dirty なページの書き出し
+ * ___遅延させて2次記憶に書き出す___
+   * dirty なページの書き出し => pdflush
+   * 2.6.32 だと pdflush は bdiスレッドに置き換わった [refs](http://www.oreilly.co.jp/community/blog/2010/08/buffer-cache-and-aio-part1.html)
    * generic_file_aio_write
- * ___inodeキャッシュ___
-   * kmem_cache_alloc ?
-   * dentryキャッシュ
-     * dget, dput
+ * ___inodeキャッシュ___, __dentryキャッシュ___
+   * slabアロケータ
+     * kmem_cache_alloc
+   * dget, dput, iget, iput
+
+### 0.7.3 仮想ファイルシステム
+
+ * VFS ( ___Virtual FileSystem___ or ___Virtual Filesystem Switch___ )
 
 ## 第4章 時計
 
