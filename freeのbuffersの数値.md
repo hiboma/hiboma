@@ -6,7 +6,7 @@ free で表示されるバッファは /proc/meminfo の Buffers の数値と一
 open("/proc/meminfo", O_RDONLY)         = 3
 ```
 
-Buffers の数値は fs/proc/meminfo.c の [si_meminfo](http://lxr.free-electrons.com/ident?v=2.6.32&i=si_meminfo) で {val->bufferram = nr_blockdev_pages();` で代入される
+Buffers の数値は fs/proc/meminfo.c の [si_meminfo](http://lxr.free-electrons.com/ident?v=2.6.32&i=si_meminfo) でで代入される
 
 ```c
 void si_meminfo(struct sysinfo *val)
@@ -14,6 +14,7 @@ void si_meminfo(struct sysinfo *val)
 	val->totalram = totalram_pages;
 	val->sharedram = 0;
 	val->freeram = global_page_state(NR_FREE_PAGES);
+    // こやつ
 	val->bufferram = nr_blockdev_pages();
 	val->totalhigh = totalhigh_pages;
 	val->freehigh = nr_free_highpages();
