@@ -348,6 +348,7 @@ TODO
      * http://en.wikipedia.org/wiki/FLAGS_register
      * http://d.hatena.ne.jp/yamanetoshi/20060608/1149772551
    * 特権レジスタ
+ * [Linux x86インラインアセンブラー](http://www.ibm.com/developerworks/jp/linux/library/l-ia/)
 
 ### context_switch
 
@@ -458,14 +459,14 @@ struct task_struct fastcall * __switch_to(struct task_struct *prev_p, struct tas
 	struct tss_struct *tss = &per_cpu(init_tss, cpu);
 
 	/* never put a printk in __switch_to... printk() calls wake_up*() indirectly */
-```
-```
 	__unlazy_fpu(prev_p);
 ```
 
 ----
 
-#### Floating Point Unit
+### ___unlazy_fpu
+
+FPU = Floating Point Unit 浮動小数点レジスタ
 
  * thread_info->status に FPU を使用したかどうかのフラグ TS_USEDFPU を持つ
     * save_init_fpu -> __save_init_fpu で [fnsave, fwait](http://softwaretechnique.jp/OS_Development/Tips/IA32_X87_Instructions/FSAVE.html), [fxsave, fnclex](http://softwaretechnique.jp/OS_Development/Tips/IA32_X87_Instructions/FCLEX.html) とかいう命令呼ぶ
