@@ -353,6 +353,7 @@ schedule の中で呼ばれるよ
    * メモリディスクリプタ
    * vm_area_struct, red-black木, セグメントのアドレス, ...
  * カーネルスレッドでは current->mm が NULL
+ 
 
 ```c
 /*
@@ -390,6 +391,26 @@ task_t * context_switch(runqueue_t *rq, task_t *prev, task_t *next)
 
 	return prev;
 }
+```
+
+```
+// pushfl と popfl が書いてないぞ ...
+#define switch_to(prev,next,last) do {					\
+	unsigned long esi,edi;						\
+              // pushfl                                   // FLAGSレジスタをスタックに退避
+	asm volatile("pushl %%ebp\n\t"					\     // EBPレジスタをカーネルスタックに退避
+		     "movl %%esp,%0\n\t"	/* save ESP */		\ // prev->thread.esp = $esp　ESPレジスタを退避
+		     "movl %5,%%esp\n\t"	/* restore ESP */	\ // $esp = next->thread.eip　EIPレジスタを復帰
+		     "movl $1f,%1\n\t"		/* save EIP */		\ // preh->thread.epi = $1f
+		     "pushl %6\n\t"		/* restore EIP */	\     // next->thread.epi ?
+		     "jmp __switch_to\n"				\
+		     "1:\t"						\
+		     "popl %%ebp\n\t"					\
+		     :"=m" (prev->thread.esp),"=m" (prev->thread.eip),	\
+		      "=a" (last),"=S" (esi),"=D" (edi)			\
+		     :"m" (next->thread.esp),"m" (next->thread.eip),	\
+		      "2" (prev), "d" (next));				\
+} while (0)
 ```
 
 ```c
