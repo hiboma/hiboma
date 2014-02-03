@@ -339,6 +339,12 @@ brw-rw----   1 root    disk      7,   3 Feb  2 12:38 loop3
 
 ## 第2章
 
+TODO
+ * レジスタの種類を整理
+   * 汎用レジスタ
+     * eax, ebx, ecx, edx, ... eip, esp ?
+   * 特権レジスタ
+
 ### context_switch
 
 schedule の中で呼ばれるよ
@@ -359,11 +365,18 @@ task_t * context_switch(runqueue_t *rq, task_t *prev, task_t *next)
 	struct mm_struct *mm = next->mm;
 	struct mm_struct *oldmm = prev->active_mm;
 
+    // http://wiki.bit-hive.com/north/pg/likely%A4%C8unlikely
+    // if (!mm) として読んで OK
+    // つまりは mm == NULL -> 実行中のタスクがカーネルスレッドの場合を指す
 	if (unlikely(!mm)) {
+        // カーネルスレッドでは mm_struct を切り替える必要が無い
+        // というか、 mm_struct を共有する
 		next->active_mm = oldmm;
 		atomic_inc(&oldmm->mm_count);
+        // TLBフラッシュの遅延?
 		enter_lazy_tlb(oldmm, next);
 	} else
+        // カーネルスレッド以外 = 普通のプロセスの場合
 		switch_mm(oldmm, mm, next);
 
 	if (unlikely(!prev->mm)) {
