@@ -479,22 +479,22 @@ FPU = Floating Point Unit 浮動小数点レジスタ
 } while (0)
 ```
 
-```
+ ```c
 /*
  * These must be called with preempt disabled
  */
 static inline void __save_init_fpu( struct task_struct *tsk )
 {
 	alternative_input(
-		"fnsave %1 ; fwait ;" GENERIC_NOP2,
+		"fnsave %1 ; fwait ;" GENERIC_NOP2, // NOP ?
 		"fxsave %1 ; fnclex",
 		X86_FEATURE_FXSR,
-		"m" (tsk->thread.i387.fxsave) // FPUレジスタ, FPU例外フラグを保存しとく場所
+		"m" (tsk->thread.i387.fxsave) // FPUレジスタ, FPU例外フラグを保存しとくメモリ
 		:"memory");
 	tsk->thread_info->status &= ~TS_USEDFPU;
 }
 ```
-    
+
  ```c
 /*
  * Thread-synchronous status.
@@ -528,6 +528,7 @@ static inline void __save_init_fpu( struct task_struct *tsk )
 	/*
 	 * Load the per-thread Thread-Local Storage descriptor.
 	 */
+    // GDT で実装されてる?
 	load_TLS(next, cpu);
 
 	/*
@@ -541,12 +542,69 @@ static inline void __save_init_fpu( struct task_struct *tsk )
 
 	if (prev->gs | next->gs)
 		loadsegment(gs, next->gs);
+```
 
+----
+
+### loadsegment
+
+ ```c
+/*
+ * Load a segment. Fall back on loading the zero
+ * segment if something goes wrong..
+ */
+#define loadsegment(seg,value)			\
+	asm volatile("\n"			\
+		"1:\t"				\
+		"mov %0,%%" #seg "\n"		\
+		"2:\n"				\
+		".section .fixup,\"ax\"\n"	\
+		"3:\t"				\
+		"pushl $0\n\t"			\
+		"popl %%" #seg "\n\t"		\
+		"jmp 2b\n"			\
+		".previous\n"			\
+		".section __ex_table,\"a\"\n\t"	\
+		".align 4\n\t"			\
+		".long 1b,3b\n"			\
+		".previous"			\
+		: :"rm" (value))
+```
+
+----
+
+
+```
 	/*
 	 * Restore IOPL if needed.
 	 */
 	if (unlikely(prev->iopl != next->iopl))
 		set_iopl_mask(next->iopl);
+```
+
+### set_iopl_mask
+
+----
+
+ ```c
+/*
+ * Set IOPL bits in EFLAGS from given mask
+ */
+static inline void set_iopl_mask(unsigned mask)
+{
+	unsigned int reg;
+	__asm__ __volatile__ ("pushfl;"
+			      "popl %0;"
+			      "andl %1, %0;"
+			      "orl %2, %0;"
+			      "pushl %0;"
+			      "popfl"
+				: "=&r" (reg)
+				: "i" (~X86_EFLAGS_IOPL), "r" (mask));
+}
+``` 
+
+----
 
 	/*
 	 * Now maybe reload the debug registers
