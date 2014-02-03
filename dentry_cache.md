@@ -49,7 +49,7 @@ negative | NULL | 0 | ○?
  * DCACHE_UNHASHED
   * dentry_hashtable に繋がっていない
 
-## dentry のロック
+## dentry_operations のロック
 
  * dcache_lock
    * スピンロック dentry_hashtable のロックかな?
@@ -67,7 +67,9 @@ d_delete:	no		yes		no       no
 d_release:	no		no		no       yes
 d_iput:		no		no		no       yes
  */
-```  
+```
+
+___may block___
 
 ## dentry cache 疑問
 
