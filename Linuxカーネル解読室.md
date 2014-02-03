@@ -343,6 +343,10 @@ TODO
  * レジスタの種類を整理
    * 汎用レジスタ
      * eax, ebx, ecx, edx, ... eip, esp ?
+   * EFLAGSレジスタ
+     * pushfl, popfl
+     * http://en.wikipedia.org/wiki/FLAGS_register
+     * http://d.hatena.ne.jp/yamanetoshi/20060608/1149772551
    * 特権レジスタ
 
 ### context_switch
@@ -393,11 +397,13 @@ task_t * context_switch(runqueue_t *rq, task_t *prev, task_t *next)
 }
 ```
 
+### context_switch -> switch_to
+
 ```
 // pushfl と popfl が書いてないぞ ...
 #define switch_to(prev,next,last) do {					\
 	unsigned long esi,edi;						\
-              // pushfl                                   // FLAGSレジスタをスタックに退避
+              // pushfl                                   // EFLAGSレジスタをスタックに退避
 	asm volatile("pushl %%ebp\n\t"					\     // EBPレジスタをカーネルスタックに退避
 		     "movl %%esp,%0\n\t"	/* save ESP */		\ // prev->thread.esp = $esp　ESPレジスタを退避
 		     "movl %5,%%esp\n\t"	/* restore ESP */	\ // $esp = next->thread.eip　EIPレジスタを復帰
@@ -405,12 +411,116 @@ task_t * context_switch(runqueue_t *rq, task_t *prev, task_t *next)
 		     "pushl %6\n\t"		/* restore EIP */	\     // next->thread.epi ?
 		     "jmp __switch_to\n"				\
 		     "1:\t"						\
-		     "popl %%ebp\n\t"					\
+		     "popl %%ebp\n\t"					\         // EBPレジスタをカーネルスタックから復帰
+             // popfl                                     // EFLAGSレジスタをカーねるスタックから復帰
 		     :"=m" (prev->thread.esp),"=m" (prev->thread.eip),	\
 		      "=a" (last),"=S" (esi),"=D" (edi)			\
 		     :"m" (next->thread.esp),"m" (next->thread.eip),	\
 		      "2" (prev), "d" (next));				\
 } while (0)
+```
+
+### context_switch -> switch_to -> _switch_to
+
+```c
+/*
+ *	switch_to(x,yn) should switch tasks from x to y.
+ *
+ * We fsave/fwait so that an exception goes off at the right time
+ * (as a call from the fsave or fwait in effect) rather than to
+ * the wrong process. Lazy FP saving no longer makes any sense
+ * with modern CPU's, and this simplifies a lot of things (SMP
+ * and UP become the same).
+ *
+ * NOTE! We used to use the x86 hardware context switching. The
+ * reason for not using it any more becomes apparent when you
+ * try to recover gracefully from saved state that is no longer
+ * valid (stale segment register values in particular). With the
+ * hardware task-switch, there is no way to fix up bad state in
+ * a reasonable manner.
+ *
+ * The fact that Intel documents the hardware task-switching to
+ * be slow is a fairly red herring - this code is not noticeably
+ * faster. However, there _is_ some room for improvement here,
+ * so the performance issues may eventually be a valid point.
+ * More important, however, is the fact that this allows us much
+ * more flexibility.
+ *
+ * The return value (in %eax) will be the "prev" task after
+ * the task-switch, and shows up in ret_from_fork in entry.S,
+ * for example.
+ */
+struct task_struct fastcall * __switch_to(struct task_struct *prev_p, struct task_struct *next_p)
+{
+	struct thread_struct *prev = &prev_p->thread,
+				 *next = &next_p->thread;
+	int cpu = smp_processor_id();
+	struct tss_struct *tss = &per_cpu(init_tss, cpu);
+
+	/* never put a printk in __switch_to... printk() calls wake_up*() indirectly */
+
+	__unlazy_fpu(prev_p);
+
+	/*
+	 * Reload esp0.
+	 */
+	load_esp0(tss, next);
+
+	/*
+	 * Save away %fs and %gs. No need to save %es and %ds, as
+	 * those are always kernel segments while inside the kernel.
+	 * Doing this before setting the new TLS descriptors avoids
+	 * the situation where we temporarily have non-reloadable
+	 * segments in %fs and %gs.  This could be an issue if the
+	 * NMI handler ever used %fs or %gs (it does not today), or
+	 * if the kernel is running inside of a hypervisor layer.
+	 */
+	savesegment(fs, prev->fs);
+	savesegment(gs, prev->gs);
+
+	/*
+	 * Load the per-thread Thread-Local Storage descriptor.
+	 */
+	load_TLS(next, cpu);
+
+	/*
+	 * Restore %fs and %gs if needed.
+	 *
+	 * Glibc normally makes %fs be zero, and %gs is one of
+	 * the TLS segments.
+	 */
+	if (unlikely(prev->fs | next->fs))
+		loadsegment(fs, next->fs);
+
+	if (prev->gs | next->gs)
+		loadsegment(gs, next->gs);
+
+	/*
+	 * Restore IOPL if needed.
+	 */
+	if (unlikely(prev->iopl != next->iopl))
+		set_iopl_mask(next->iopl);
+
+	/*
+	 * Now maybe reload the debug registers
+	 */
+	if (unlikely(next->debugreg[7])) {
+		set_debugreg(next->debugreg[0], 0);
+		set_debugreg(next->debugreg[1], 1);
+		set_debugreg(next->debugreg[2], 2);
+		set_debugreg(next->debugreg[3], 3);
+		/* no 4 and 5 */
+		set_debugreg(next->debugreg[6], 6);
+		set_debugreg(next->debugreg[7], 7);
+	}
+
+	if (unlikely(prev->io_bitmap_ptr || next->io_bitmap_ptr))
+		handle_io_bitmap(next, tss);
+
+	disable_tsc(prev_p, next_p);
+
+	return prev_p;
+}
 ```
 
 ```c
