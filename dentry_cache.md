@@ -15,6 +15,14 @@ nonused | ○ | 0 | ○
 used (  | ○ | 1以上 | × 
 negative | NULL | 0 | ○?
 
+negative は DNSのネガティブキャッシュとよく似ている ( ___存在しない___ レコードのlookup を高速化)
+
+```
+# negative な dentry cache が増えまくる
+for i in $( seq 1 100000 ); do ls -hal /tmp/$i; done;
+```
+
+
 ## dentry の使用量/数を調べる
 
  * slabtop
@@ -31,6 +39,7 @@ negative | NULL | 0 | ○?
  * age_limit は、メモリが不足している場合に次に dcache entry を再要求できるように なるまでの残り時間 (秒数) である。
  * want_pages は、カーネルが shrink_dcache_pages() を呼び出したが dcache がまだ縮小されていない場合に、0 以外の値となる。
 ```
+
 
 ## dentry cache の管理
 
