@@ -34,18 +34,40 @@ negative | NULL | 0 | ○?
 
 ## dentry cache の管理
 
- * ___dentry_hashtable___
+ * dentry_hashtable
    * active な dentry をいれとくハッシュテーブル。グローバル変数 
    * d_add で追加
    * d_drop で削除
- * ___dentry_unussed___
+ * dentry_unussed
    * どのプロセスからも参照されいない d_count == 0 のLRUリスト
    * 古いほどリストの末尾に繋がる
- * flags ___DCACHE_DISCONNECTED___
+ * DCACHE_REFERENCED
+   * _/* Recently used, don't discard. */_
+ * DCACHE_DISCONNECTED
   * superblock の dentry ツリーにぶら下がっていない状態
   * ???
- * flags ___DCACHE_UNHASHED___
+ * DCACHE_UNHASHED
   * dentry_hashtable に繋がっていない
+
+## dentry のロック
+
+ * dcache_lock
+   * スピンロック dentry_hashtable のロックかな?
+ * d_lock
+   * スピンロック dentry単体のロック
+
+```
+/*
+locking rules:
+		big lock	dcache_lock	d_lock   may block
+d_revalidate:	no		no		no       yes
+d_hash		no		no		no       yes
+d_compare:	no		yes		yes      no
+d_delete:	no		yes		no       no
+d_release:	no		no		no       yes
+d_iput:		no		no		no       yes
+ */
+```  
 
 ## dentry cache 疑問
 
