@@ -458,8 +458,54 @@ struct task_struct fastcall * __switch_to(struct task_struct *prev_p, struct tas
 	struct tss_struct *tss = &per_cpu(init_tss, cpu);
 
 	/* never put a printk in __switch_to... printk() calls wake_up*() indirectly */
-
+```
+```
 	__unlazy_fpu(prev_p);
+```
+
+----
+
+#### Floating Point Unit
+
+ * thread_info->status に FPU を使用したかどうかのフラグ TS_USEDFPU を持つ
+    * save_init_fpu -> __save_init_fpu で [fnsave, fwait](http://softwaretechnique.jp/OS_Development/Tips/IA32_X87_Instructions/FSAVE.html), [fxsave, fnclex](http://softwaretechnique.jp/OS_Development/Tips/IA32_X87_Instructions/FCLEX.html) とかいう命令呼ぶ
+    * FPU, FPUフラグ例外を退避したりクリアしたり
+
+ ```c
+#define __unlazy_fpu( tsk ) do { \
+	if ((tsk)->thread_info->status & TS_USEDFPU) \
+		save_init_fpu( tsk ); \
+} while (0)
+```
+
+```
+/*
+ * These must be called with preempt disabled
+ */
+static inline void __save_init_fpu( struct task_struct *tsk )
+{
+	alternative_input(
+		"fnsave %1 ; fwait ;" GENERIC_NOP2,
+		"fxsave %1 ; fnclex",
+		X86_FEATURE_FXSR,
+		"m" (tsk->thread.i387.fxsave) // FPUレジスタ, FPU例外フラグを保存しとく場所
+		:"memory");
+	tsk->thread_info->status &= ~TS_USEDFPU;
+}
+```
+    
+ ```c
+/*
+ * Thread-synchronous status.
+ *
+ * This is different from the flags in that nobody else
+ * ever touches our thread-synchronous status, so we don't
+ * have to worry about atomic accesses.
+ */
+#define TS_USEDFPU		0x0001	/* FPU was used by this task this quantum (SMP) */
+```
+
+----
 
 	/*
 	 * Reload esp0.
