@@ -4,18 +4,18 @@ TODO
  * レジスタの種類を整理
    * 汎用レジスタ
      * eax, ebx, ecx, edx, ... eip, esp
-   * EFLAGSレジスタ
+   * ___EFLAGSレジスタ___
      * pushfl, popfl
      * http://en.wikipedia.org/wiki/FLAGS_register
      * http://d.hatena.ne.jp/yamanetoshi/20060608/1149772551
-   * FPUレジスタ
-   * 特権レジスタ?
-   * セグメントセレクタ
-   * CR3制御レジスタ
+   * ___FPUレジスタ___
+   * ___特権レジスタ___
+   * ___セグメントセレクタ___
+   * ___CR3制御レジスタ___
      * ページテーブルの検索を開始するアドレス(ページディレクトリの物理アドレス)をいれとく
      * CR3 を書き変えると TLB はフラッシュされる (コスト高い)
- * TSS Task Statement Segment
- * TLB Translation Lookaside Buffer
+ * ___TSS___ Task Statement Segment
+ * ___TLB___ Translation Lookaside Buffer
    * リニアドレス -> 物理アドレスの変換キャッシュ
    * 各々のCPUローカル
  * [Linux x86インラインアセンブラー](http://www.ibm.com/developerworks/jp/linux/library/l-ia/)
@@ -27,8 +27,7 @@ schedule の中で呼ばれるよ
  * mm_struct
    * メモリディスクリプタ
    * vm_area_struct, red-black木, セグメントのアドレス, ...
- * カーネルスレッドでは current->mm が NULL
- 
+ * カーネルスレッドは current->mm が NULL
 
 ```c
 /*
