@@ -14,6 +14,7 @@ TODO
    * CR3制御レジスタ
      * ページテーブルの検索を開始するアドレス(ページディレクトリの物理アドレス)をいれとく
      * CR3 を書き変えると TLB はフラッシュされる (コスト高い)
+ * TSS Task Statement Segment
  * TLB Translation Lookaside Buffer
    * リニアドレス -> 物理アドレスの変換キャッシュ
    * 各々のCPUローカル
@@ -181,18 +182,24 @@ dump_stack で current のカーネルスタックを dump
 
 ### context_switch -> switch_to マクロ
 
+ * prev,next,last と三つあるのが難しい
+
 ```c
 // pushfl と popfl が書いてないぞ ...
 #define switch_to(prev,next,last) do {					\
 	unsigned long esi,edi;						\
-              // pushfl                                   // EFLAGSレジスタをスタックに退避
-	asm volatile("pushl %%ebp\n\t"					\     // EBPレジスタを現在の task のカーネルスタックにpush
-		     "movl %%esp,%0\n\t"	/* save ESP */		\ // prev->thread.esp = $esp 現在のプロセスのESPレジスタを退避
-		     "movl %5,%%esp\n\t"	/* restore ESP */	\ // $esp = next->thread.eip   次のプロセスのEIPレジスタを復帰
-		     "movl $1f,%1\n\t"		/* save EIP */		\ // preh->thread.epi = $1f
-		     "pushl %6\n\t"		/* restore EIP */	\     // next->thread.epi ?
-		     "jmp __switch_to\n"				\
-		     "1:\t"						\
+              // EFLAGSレジスタをスタックに退避
+              // pushfl                                   
+	asm volatile("pushl %%ebp\n\t"					\     // EBPレジスタを現在の prev の task_struct のカーネルスタックにpush
+		     "movl %%esp,%0\n\t"	/* save ESP */		\ // prev->thread.esp = $esp prev プロセスのESPレジスタを退避
+             
+		     "movl %5,%%esp\n\t"	/* restore ESP */	\ // $esp = next->thread.esp next プロセスのESPレジスタを復帰
+                                                          // この時点でカーネルスタックが next を差している => プロセスが切り替わり
+		     "movl $1f,%1\n\t"		/* save EIP */		\ // preh->thread.eip = $1f
+		     "pushl %6\n\t"		/* restore EIP */	\     // next のカーネルスタックに next->thread.eip を push
+                                                          // next->thread.eip は $1f ラベルが指すアドレス
+		     "jmp __switch_to\n"				\         
+		     "1:\t"						        \         // $1f が指すラベル???
 		     "popl %%ebp\n\t"					\         // EBPレジスタをカーネルスタックから復帰
              // popfl                                     // EFLAGSレジスタをカーねるスタックから復帰
 		     :"=m" (prev->thread.esp),"=m" (prev->thread.eip),	\
@@ -237,6 +244,8 @@ struct task_struct fastcall * __switch_to(struct task_struct *prev_p, struct tas
 	struct thread_struct *prev = &prev_p->thread,
 				 *next = &next_p->thread;
 	int cpu = smp_processor_id();
+
+    // task statement segment
 	struct tss_struct *tss = &per_cpu(init_tss, cpu);
 
 	/* never put a printk in __switch_to... printk() calls wake_up*() indirectly */
