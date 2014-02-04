@@ -3,12 +3,14 @@
 TODO
  * レジスタの種類を整理
    * 汎用レジスタ
-     * eax, ebx, ecx, edx, ... eip, esp ?
+     * eax, ebx, ecx, edx, ... eip, esp
    * EFLAGSレジスタ
      * pushfl, popfl
      * http://en.wikipedia.org/wiki/FLAGS_register
      * http://d.hatena.ne.jp/yamanetoshi/20060608/1149772551
-   * 特権レジスタ
+   * FPUレジスタ
+   * 特権レジスタ?
+   * セグメントセレクタ
  * [Linux x86インラインアセンブラー](http://www.ibm.com/developerworks/jp/linux/library/l-ia/)
 
 ### context_switch
@@ -27,6 +29,9 @@ schedule の中で呼ばれるよ
  * thread's register state.
  */
 static inline
+
+// runqueue_t ... CPUごとの実行キュー
+
 task_t * context_switch(runqueue_t *rq, task_t *prev, task_t *next)
 {
 	struct mm_struct *mm = next->mm;
