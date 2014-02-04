@@ -12,6 +12,8 @@ TODO
    * 特権レジスタ?
    * セグメントセレクタ
    * cr3制御レジスタ
+     * ページテーブルの検索を開始するアドレス(ページディレクトリの物理アドレス)をいれとく
+     * cr3 を書き変えると TLB はフラッシュされる
  * TLB Translation Lookaside Buffer
    * リニアドレス -> 物理アドレスの変換キャッシュ
    * 各々のCPUローカル
@@ -86,14 +88,20 @@ static inline void switch_mm(struct mm_struct *prev, struct mm_struct *next,
 			     struct task_struct *tsk)
 {
 	unsigned cpu = smp_processor_id();
+    // 別のプロセスに変わる場合    
 	if (likely(prev != next)) {
 		/* stop flush ipis for the previous mm */
 		clear_bit(cpu, &prev->cpu_vm_mask);
 #ifdef CONFIG_SMP
+       // pda ... Perprocessor Datastructure Address?
+       // mmu_state ???
 		write_pda(mmu_state, TLBSTATE_OK);
+        // CPU の active_mm を next に切り替え???
 		write_pda(active_mm, next);
 #endif
 		set_bit(cpu, &next->cpu_vm_mask);
+
+        // cr3 レジスタに next->pgd をセット
 		load_cr3(next->pgd);
 
 		if (unlikely(next->context.ldt != prev->context.ldt)) 
@@ -114,6 +122,34 @@ static inline void switch_mm(struct mm_struct *prev, struct mm_struct *next,
 		}
 	}
 #endif
+}
+```
+
+ ```c
+/* Per processor datastructure. %gs points to it while the kernel runs */ 
+struct x8664_pda {
+	struct task_struct *pcurrent;	/* Current process */
+	unsigned long data_offset;	/* Per cpu data offset from linker address */
+	unsigned long kernelstack;  /* top of kernel stack for current */ 
+	unsigned long oldrsp; 	    /* user rsp for system call */
+        int irqcount;		    /* Irq nesting counter. Starts with -1 */  	
+	int cpunumber;		    /* Logical CPU number */
+	char *irqstackptr;	/* top of irqstack */
+	int nodenumber;		    /* number of current node */
+	unsigned int __softirq_pending;
+	unsigned int __nmi_count;	/* number of NMI on this CPUs */
+	struct mm_struct *active_mm;
+	int mmu_state;     
+	unsigned apic_timer_irqs;
+} ____cacheline_aligned_in_smp;
+```
+
+ * cr3レジスタをセットすると TLB がフラッシュされるのでコスト高い
+
+ ```c
+static inline void load_cr3(pgd_t *pgd)
+{
+	asm volatile("movq %0,%%cr3" :: "r" (__pa(pgd)) : "memory");
 }
 ```
 
