@@ -11,6 +11,10 @@ TODO
    * FPUレジスタ
    * 特権レジスタ?
    * セグメントセレクタ
+   * cr3制御レジスタ
+ * TLB Translation Lookaside Buffer
+   * リニアドレス -> 物理アドレスの変換キャッシュ
+   * 各々のCPUローカル
  * [Linux x86インラインアセンブラー](http://www.ibm.com/developerworks/jp/linux/library/l-ia/)
 
 ### context_switch
@@ -30,8 +34,12 @@ schedule の中で呼ばれるよ
  */
 static inline
 
-// runqueue_t ... CPUごとの実行キュー
+// 1. アドレス空間の切り替え
+//  * カーネルスレッドの場合は active_mm のポインタを切り替えるだけ
+//  * 通常プロセスの場合は switch_mm で切り替え
+// 2. プロセスの切り替え
 
+// runqueue_t ... CPUごとの実行キュー
 task_t * context_switch(runqueue_t *rq, task_t *prev, task_t *next)
 {
 	struct mm_struct *mm = next->mm;
@@ -43,7 +51,7 @@ task_t * context_switch(runqueue_t *rq, task_t *prev, task_t *next)
     // if (!mm) として読んで OK
     // mm == NULL => prevタスクのメモリディスクリプタが NULL => 実行中のタスクがカーネルスレッドの場合を指す
 	if (unlikely(!mm)) {
-        // カーネルスレッドでは mm_struct を切り替える必要が無い
+        // カーネルスレッドでは mm_struct を切り替える必要が無い (ページテーブルを変更しない)
         // というか、 mm_struct を共有する
         // カーネルスレッドは active_mm は有るけど、 mm は NULL
 		next->active_mm = oldmm;
@@ -52,7 +60,7 @@ task_t * context_switch(runqueue_t *rq, task_t *prev, task_t *next)
         // 遅延TLBモード
 		enter_lazy_tlb(oldmm, next);
 	} else
-        // 次のタスクが普通のプロセスの場合にプロセス空間の切り替え
+        // 次のタスクが普通のプロセスの場合、アドレス空間の切り替え
 		switch_mm(oldmm, mm, next);
 
 	if (unlikely(!prev->mm)) {
@@ -68,6 +76,44 @@ task_t * context_switch(runqueue_t *rq, task_t *prev, task_t *next)
 	switch_to(prev, next, prev);
 
 	return prev;
+}
+```
+
+#### switch_mm
+
+ ```c
+static inline void switch_mm(struct mm_struct *prev, struct mm_struct *next, 
+			     struct task_struct *tsk)
+{
+	unsigned cpu = smp_processor_id();
+	if (likely(prev != next)) {
+		/* stop flush ipis for the previous mm */
+		clear_bit(cpu, &prev->cpu_vm_mask);
+#ifdef CONFIG_SMP
+		write_pda(mmu_state, TLBSTATE_OK);
+		write_pda(active_mm, next);
+#endif
+		set_bit(cpu, &next->cpu_vm_mask);
+		load_cr3(next->pgd);
+
+		if (unlikely(next->context.ldt != prev->context.ldt)) 
+			load_LDT_nolock(&next->context, cpu);
+	}
+#ifdef CONFIG_SMP
+	else {
+		write_pda(mmu_state, TLBSTATE_OK);
+		if (read_pda(active_mm) != next)
+			out_of_line_bug();
+		if(!test_and_set_bit(cpu, &next->cpu_vm_mask)) {
+			/* We were in lazy tlb mode and leave_mm disabled 
+			 * tlb flush IPI delivery. We must reload CR3
+			 * to make sure to use no freed page tables.
+			 */
+			load_cr3(next->pgd);
+			load_LDT_nolock(&next->context, cpu);
+		}
+	}
+#endif
 }
 ```
 
