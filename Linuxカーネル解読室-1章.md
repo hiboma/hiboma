@@ -11,9 +11,9 @@ TODO
    * FPUレジスタ
    * 特権レジスタ?
    * セグメントセレクタ
-   * cr3制御レジスタ
+   * CR3制御レジスタ
      * ページテーブルの検索を開始するアドレス(ページディレクトリの物理アドレス)をいれとく
-     * cr3 を書き変えると TLB はフラッシュされる
+     * CR3 を書き変えると TLB はフラッシュされる (コスト高い)
  * TLB Translation Lookaside Buffer
    * リニアドレス -> 物理アドレスの変換キャッシュ
    * 各々のCPUローカル
@@ -81,14 +81,17 @@ task_t * context_switch(runqueue_t *rq, task_t *prev, task_t *next)
 }
 ```
 
-#### switch_mm
+#### context_switch -> switch_mm
+
+ * プロセス空間 (アドレス空間?) の切り替え
+   * 別プロセスの場合と、同一プロセスのスレッドの場合とが考えられる
 
  ```c
 static inline void switch_mm(struct mm_struct *prev, struct mm_struct *next, 
 			     struct task_struct *tsk)
 {
 	unsigned cpu = smp_processor_id();
-    // 別のプロセスに変わる場合    
+    // 別のプロセスに変わる場合 ( スレッドの切り替えでない場合 )
 	if (likely(prev != next)) {
 		/* stop flush ipis for the previous mm */
 		clear_bit(cpu, &prev->cpu_vm_mask);
@@ -101,17 +104,25 @@ static inline void switch_mm(struct mm_struct *prev, struct mm_struct *next,
 #endif
 		set_bit(cpu, &next->cpu_vm_mask);
 
-        // cr3 レジスタに next->pgd をセット
+        // cr3 レジスタに next->pgd を読み込む
+        // この時点で TLB がフラッシュされる 
 		load_cr3(next->pgd);
 
+        // local descriptor table 
 		if (unlikely(next->context.ldt != prev->context.ldt)) 
 			load_LDT_nolock(&next->context, cpu);
 	}
 #ifdef CONFIG_SMP
 	else {
+    // prev == next で同じ mm_struct を差している場合
+    // 同一プロセスのスレッドの場合だと mm_struct が一緒になりうる
 		write_pda(mmu_state, TLBSTATE_OK);
+
 		if (read_pda(active_mm) != next)
+            // BUG() で死ぬ
 			out_of_line_bug();
+
+         // ???
 		if(!test_and_set_bit(cpu, &next->cpu_vm_mask)) {
 			/* We were in lazy tlb mode and leave_mm disabled 
 			 * tlb flush IPI delivery. We must reload CR3
@@ -125,6 +136,7 @@ static inline void switch_mm(struct mm_struct *prev, struct mm_struct *next,
 }
 ```
 
+ * プロセッサごとになんか構造体が用意されている
  ```c
 /* Per processor datastructure. %gs points to it while the kernel runs */ 
 struct x8664_pda {
@@ -145,7 +157,6 @@ struct x8664_pda {
 ```
 
  * cr3レジスタをセットすると TLB がフラッシュされるのでコスト高い
-
  ```c
 static inline void load_cr3(pgd_t *pgd)
 {
@@ -168,16 +179,16 @@ dump_stack で current のカーネルスタックを dump
 #endif
 ```
 
-### context_switch -> switch_to
+### context_switch -> switch_to マクロ
 
-```
+```c
 // pushfl と popfl が書いてないぞ ...
 #define switch_to(prev,next,last) do {					\
 	unsigned long esi,edi;						\
               // pushfl                                   // EFLAGSレジスタをスタックに退避
-	asm volatile("pushl %%ebp\n\t"					\     // EBPレジスタをカーネルスタックに退避
-		     "movl %%esp,%0\n\t"	/* save ESP */		\ // prev->thread.esp = $esp　ESPレジスタを退避
-		     "movl %5,%%esp\n\t"	/* restore ESP */	\ // $esp = next->thread.eip　EIPレジスタを復帰
+	asm volatile("pushl %%ebp\n\t"					\     // EBPレジスタを現在の task のカーネルスタックにpush
+		     "movl %%esp,%0\n\t"	/* save ESP */		\ // prev->thread.esp = $esp 現在のプロセスのESPレジスタを退避
+		     "movl %5,%%esp\n\t"	/* restore ESP */	\ // $esp = next->thread.eip   次のプロセスのEIPレジスタを復帰
 		     "movl $1f,%1\n\t"		/* save EIP */		\ // preh->thread.epi = $1f
 		     "pushl %6\n\t"		/* restore EIP */	\     // next->thread.epi ?
 		     "jmp __switch_to\n"				\
