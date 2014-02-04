@@ -37,23 +37,30 @@ task_t * context_switch(runqueue_t *rq, task_t *prev, task_t *next)
 	struct mm_struct *mm = next->mm;
 	struct mm_struct *oldmm = prev->active_mm;
 
-    // http://wiki.bit-hive.com/north/pg/likely%A4%C8unlikely
+    // unlikely() とは?
+    //   http://wiki.bit-hive.com/north/pg/likely%A4%C8unlikely
+    //
     // if (!mm) として読んで OK
-    // つまりは mm == NULL -> 実行中のタスクがカーネルスレッドの場合を指す
+    // mm == NULL => prevタスクのメモリディスクリプタが NULL => 実行中のタスクがカーネルスレッドの場合を指す
 	if (unlikely(!mm)) {
         // カーネルスレッドでは mm_struct を切り替える必要が無い
         // というか、 mm_struct を共有する
+        // カーネルスレッドは active_mm は有るけど、 mm は NULL
 		next->active_mm = oldmm;
 		atomic_inc(&oldmm->mm_count);
-        // TLBフラッシュの遅延?
+
+        // 遅延TLBモード
 		enter_lazy_tlb(oldmm, next);
 	} else
-        // カーネルスレッド以外 = 普通のプロセスの場合
+        // 次のタスクが普通のプロセスの場合にプロセス空間の切り替え
 		switch_mm(oldmm, mm, next);
 
 	if (unlikely(!prev->mm)) {
 		prev->active_mm = NULL;
+        // 後述
+        // NULL になってない場合を見ているがどういうこと???
 		WARN_ON(rq->prev_mm);
+        // ?
 		rq->prev_mm = oldmm;
 	}
 
@@ -62,6 +69,21 @@ task_t * context_switch(runqueue_t *rq, task_t *prev, task_t *next)
 
 	return prev;
 }
+```
+
+#### WARN_ON
+
+dump_stack で current のカーネルスタックを dump
+
+ ```c
+#ifndef HAVE_ARCH_WARN_ON
+#define WARN_ON(condition) do { \
+	if (unlikely((condition)!=0)) { \
+		printk("Badness in %s at %s:%d\n", __FUNCTION__, __FILE__, __LINE__); \
+		dump_stack(); \
+	} \
+} while (0)
+#endif
 ```
 
 ### context_switch -> switch_to
