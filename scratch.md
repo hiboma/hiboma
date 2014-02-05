@@ -1,3 +1,6 @@
+## nscd のアレ
+
+http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=616171
 
 ## free のバッファ
 
