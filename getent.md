@@ -33,6 +33,14 @@ D(shadow)
   };
 ```
 
+getent group の場合
+
+ * getgrent()
+ * getgrgid
+ * getgrnam
+
+あたりをもにょってるだけ
+
 ```
 static int
 group_keys (int number, char *key[])
