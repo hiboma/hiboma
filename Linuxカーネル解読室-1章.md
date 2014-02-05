@@ -18,6 +18,9 @@ TODO
  * ___TLB___ Translation Lookaside Buffer
    * リニアドレス -> 物理アドレスの変換キャッシュ
    * 各々のCPUローカル
+ * mm_struct -> pgd
+   * ページグローバルディレクトリ
+   * http://www.xml.com/ldd/chapter/book/figs/ldr2_1302.gif の図
  * [Linux x86インラインアセンブラー](http://www.ibm.com/developerworks/jp/linux/library/l-ia/)
 
 ### context_switch
