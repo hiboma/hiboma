@@ -23,6 +23,52 @@ TODO
    * http://www.xml.com/ldd/chapter/book/figs/ldr2_1302.gif の図
  * [Linux x86インラインアセンブラー](http://www.ibm.com/developerworks/jp/linux/library/l-ia/)
 
+## 寄り道
+
+ * mm_struct の pgd 
+
+```
+pgd_t *pgd_alloc(struct mm_struct *mm)
+{
+	pgd_t *pgd;
+	pmd_t *pmds[PREALLOCATED_PMDS];
+
+	pgd = (pgd_t *)__get_free_page(PGALLOC_GFP);
+
+	if (pgd == NULL)
+		goto out;
+
+	mm->pgd = pgd;
+
+	if (preallocate_pmds(pmds) != 0)
+		goto out_free_pgd;
+
+	if (paravirt_pgd_alloc(mm) != 0)
+		goto out_free_pmds;
+
+	/*
+	 * Make sure that pre-populating the pmds is atomic with
+	 * respect to anything walking the pgd_list, so that they
+	 * never see a partially populated pgd.
+	 */
+	spin_lock(&pgd_lock);
+
+	pgd_ctor(mm, pgd);
+	pgd_prepopulate_pmd(mm, pgd, pmds);
+
+	spin_unlock(&pgd_lock);
+
+	return pgd;
+
+out_free_pmds:
+	free_pmds(pmds);
+out_free_pgd:
+	free_page((unsigned long)pgd);
+out:
+	return NULL;
+}
+```
+
 ### context_switch
 
 schedule の中で呼ばれるよ
