@@ -34,6 +34,7 @@ pgd_t *pgd_alloc(struct mm_struct *mm)
 	pgd_t *pgd;
 	pmd_t *pmds[PREALLOCATED_PMDS];
 
+    // ページグローバルディレクトリは page そのもの
 	pgd = (pgd_t *)__get_free_page(PGALLOC_GFP);
 
 	if (pgd == NULL)
