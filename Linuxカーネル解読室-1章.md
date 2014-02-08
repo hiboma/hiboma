@@ -14,13 +14,14 @@
        * 「共有」 => mm_struct の切り替えをする必要がない
        * カーネルスレッドは mm_struct が NULL
      * 各種レジスタ
+       * レジスタがCPUごとにあるのを図示がよさそ
 
 ## 1.3 プロセス切り替え
 
  * ___プロセスディスパッチ、プロセスディスパッチャー___
    * プログラムカウンタレジスタ = EIP, RIP
    * スタックポインタ = ESP, EBP
-   * 特殊レジスタ = CR3
+   * 特殊レジスタ = CR3   
 
 ## 1.4 プロセスディスパッチャの実装
 
@@ -28,7 +29,7 @@
 
 メモは下記
 
-### 1.4.3 switch_to マクロ
+### 1.4.2 switch_to マクロ
 
  * GCCインラインアセンブラは下記を読んで理解しよう
    * http://caspar.hazymoon.jp/OpenBSD/annex/gcc_inline_asm.html
@@ -46,8 +47,10 @@ struct thread_struct {
 /* Hardware debugging registers */
 	unsigned long	debugreg[8];  /* %%db0-7 debug registers */
 /* fault info */
+    // cr2 ... ページフォルト例外を検出した際のアドレス
 	unsigned long	cr2, trap_no, error_code;
 /* floating point info */
+    // 浮動小数点レジスタを退避
 	union i387_union	i387;
 /* virtual 86 mode info */
 	struct vm86_struct __user * vm86_info;
@@ -62,7 +65,16 @@ struct thread_struct {
 };
 ```
 
+### 1.4.3 s__witch_to 関数
 
+ * FPUCレジスタの遅延きりかえ
+   * 例外の内容は?
+ * 「マルチプロセッサの場合退避処理の遅延が難しい」
+   * CPUごとにFPUレジスタがあり、他のCPUでスケジューリングされる場合、どうやって FPUレジスタを壊さず移動させるのか?問題
+   * どっかに退避しておかないと無理そう
+ * ___TLS___ [スレッドローカルストレージ](http://ja.wikipedia.org/wiki/スレッド局所記憶#Pthreads_.E3.81.A7.E3.81.AE.E5.AE.9F.E8.A3.85)
+   * Pthread実装 pthread_key_create, pthread_setspecific, pthread_key_delete
+   * `C言語では C11 からキーワード _Thread_local を用いて TLS を使用できる`
 
 TODO
  * レジスタの種類を整理
@@ -373,6 +385,7 @@ FPU = Floating Point Unit 浮動小数点レジスタ
  * thread_info->status に FPU を使用したかどうかのフラグ TS_USEDFPU を持つ
     * save_init_fpu -> __save_init_fpu で [fnsave, fwait](http://softwaretechnique.jp/OS_Development/Tips/IA32_X87_Instructions/FSAVE.html), [fxsave, fnclex](http://softwaretechnique.jp/OS_Development/Tips/IA32_X87_Instructions/FCLEX.html) とかいう命令呼ぶ
     * FPU, FPUフラグ例外を退避したりクリアしたり
+    * 遅延させた場合にどんな例外がでる?
 
  ```c
 #define __unlazy_fpu( tsk ) do { \
@@ -413,6 +426,7 @@ static inline void __save_init_fpu( struct task_struct *tsk )
 	/*
 	 * Reload esp0.
 	 */
+     // カーネルスタックのアドレスを esp0 にロード
 	load_esp0(tss, next);
 
 	/*
