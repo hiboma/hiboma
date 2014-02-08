@@ -76,6 +76,9 @@ struct thread_struct {
    * Pthread実装 pthread_key_create, pthread_setspecific, pthread_key_delete
    * `C言語では C11 からキーワード _Thread_local を用いて TLS を使用できる`
 
+プロセス空間を共有している => スタック以外スレッド間でメモリ共有している => 破壊しうる ってのを確認してから
+どうやって スレッド固有のデータを管理したらいいか? で TLS を引き合いに出す
+
 TODO
  * レジスタの種類を整理
    * 汎用レジスタ
@@ -326,6 +329,7 @@ dump_stack で current のカーネルスタックを dump
                                                           // next->thread.eip は $1f ラベルが指すアドレス
 		     "jmp __switch_to\n"				\         
 		     "1:\t"						        \         // $1f が指すラベル???
+                                                          // fork の場合はここから始まるように子プロセスの thread.eip をセットする
 		     "popl %%ebp\n\t"					\         // EBPレジスタをカーネルスタックから復帰
              // popfl                                     // EFLAGSレジスタをカーねるスタックから復帰
 		     :"=m" (prev->thread.esp),"=m" (prev->thread.eip),	\
