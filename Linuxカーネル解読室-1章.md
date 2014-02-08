@@ -22,6 +22,45 @@
    * スタックポインタ = ESP, EBP
    * 特殊レジスタ = CR3
 
+## 1.4 プロセスディスパッチャの実装
+
+### 1.4.1 context_switch
+
+メモは下記
+
+### 1.4.2 switch_to マクロ
+
+```c
+struct thread_struct {
+/* cached TLS descriptors. */ // スレッドローカルストレージ?
+	struct desc_struct tls_array[GDT_ENTRY_TLS_ENTRIES];
+	unsigned long	esp0;
+	unsigned long	sysenter_cs;
+	unsigned long	eip;
+	unsigned long	esp;
+	unsigned long	fs;
+	unsigned long	gs;
+/* Hardware debugging registers */
+	unsigned long	debugreg[8];  /* %%db0-7 debug registers */
+/* fault info */
+	unsigned long	cr2, trap_no, error_code;
+/* floating point info */
+	union i387_union	i387;
+/* virtual 86 mode info */
+	struct vm86_struct __user * vm86_info;
+	unsigned long		screen_bitmap;
+	unsigned long		v86flags, v86mask, saved_esp0;
+	unsigned int		saved_fs, saved_gs;
+/* IO permissions */
+	unsigned long	*io_bitmap_ptr;
+ 	unsigned long	iopl;
+/* max allowed port in the bitmap, in bytes: */
+	unsigned long	io_bitmap_max;
+};
+```
+
+
+
 TODO
  * レジスタの種類を整理
    * 汎用レジスタ
