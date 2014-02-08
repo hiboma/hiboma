@@ -23,7 +23,9 @@ x86アーキテクチャであることを確認取る
  * ___プロセスディスパッチ、プロセスディスパッチャー___
    * プログラムカウンタレジスタ = EIP, RIP
    * スタックポインタ = ESP, EBP
-   * 特殊レジスタ = CR3   
+   * 特殊レジスタ = CR3
+
+別のアーキテクチャだとどんなんか? バタリ   
 
 ## 1.4 プロセスディスパッチャの実装
 
@@ -42,10 +44,12 @@ x86アーキテクチャであることを確認取る
 struct thread_struct {
 /* cached TLS descriptors. */ // スレッドローカルストレージ?
 	struct desc_struct tls_array[GDT_ENTRY_TLS_ENTRIES];
+    // カーネルスタックのベースポインタ???
 	unsigned long	esp0;
 	unsigned long	sysenter_cs;
 	unsigned long	eip;
 	unsigned long	esp;
+    // ???
 	unsigned long	fs;
 	unsigned long	gs;
 /* Hardware debugging registers */
