@@ -83,6 +83,11 @@ struct thread_struct {
 プロセス空間を共有している => スタック以外スレッド間でメモリ共有している => 破壊しうる ってのを確認してから
 どうやって スレッド固有のデータを管理したらいいか? で TLS を引き合いに出す
 
+### 1.4.3 汎用レジスタの退避
+
+ * eax, ebx, ...
+ * タイマ割り込みが発生した時点で退避されてるんだっけ?
+
 TODO
  * レジスタの種類を整理
    * 汎用レジスタ
@@ -343,7 +348,49 @@ dump_stack で current のカーネルスタックを dump
 } while (0)
 ```
 
-fork の場合 sys_fork -> do_fork -> copy_thread 
+ * fork の場合 sys_fork -> do_fork -> copy_thread で子プロセスの EIP をセットする
+   * これによって親プロセスと子プロセスが再開する EIP が分離する
+   * thread.eip には `asmlinkage void ret_from_fork(void) __asm__("ret_from_fork");` をセット
+
+```c
+int copy_thread(int nr, unsigned long clone_flags, unsigned long esp,
+	unsigned long unused,
+	struct task_struct * p, struct pt_regs * regs)
+{
+    // 子プロセスのEIPレジスタをセット
+	p->thread.eip = (unsigned long) ret_from_fork;
+
+```
+
+ * ret_from_fork はアセンブラ
+
+```asm
+/*
+ * A newly forked process directly context switches into this.
+ */ 	
+/* rdi:	prev */	
+ENTRY(ret_from_fork)
+	CFI_DEFAULT_STACK
+	call schedule_tail
+	GET_THREAD_INFO(%rcx)
+	testl $(_TIF_SYSCALL_TRACE|_TIF_SYSCALL_AUDIT),threadinfo_flags(%rcx)
+	jnz rff_trace
+rff_action:	
+	RESTORE_REST
+	testl $3,CS-ARGOFFSET(%rsp)	# from kernel_thread?
+	je   int_ret_from_sys_call
+	testl $_TIF_IA32,threadinfo_flags(%rcx)
+	jnz  int_ret_from_sys_call
+	RESTORE_TOP_OF_STACK %rdi,ARGOFFSET
+	jmp ret_from_sys_call
+rff_trace:
+	movq %rsp,%rdi
+	call syscall_trace_leave
+	GET_THREAD_INFO(%rcx)	
+	jmp rff_action
+	CFI_ENDPROC
+```
+
 
 ### context_switch -> switch_to -> _switch_to
 
