@@ -18,6 +18,8 @@
 
 ## 1.3 プロセス切り替え
 
+x86アーキテクチャであることを確認取る
+
  * ___プロセスディスパッチ、プロセスディスパッチャー___
    * プログラムカウンタレジスタ = EIP, RIP
    * スタックポインタ = ESP, EBP
@@ -33,7 +35,9 @@
 
  * GCCインラインアセンブラは下記を読んで理解しよう
    * http://caspar.hazymoon.jp/OpenBSD/annex/gcc_inline_asm.html
- * thread.eip, thread.esp 以外のメンバ
+ * thread_struct
+   * アーキテクチャ依存なので、ジェネリックなコードでは thread.eip など出てこんよ
+   *  thread.eip, thread.esp 以外のメンバ
 ```c
 struct thread_struct {
 /* cached TLS descriptors. */ // スレッドローカルストレージ?
@@ -338,6 +342,8 @@ dump_stack で current のカーネルスタックを dump
 		      "2" (prev), "d" (next));				\
 } while (0)
 ```
+
+fork の場合 sys_fork -> do_fork -> copy_thread 
 
 ### context_switch -> switch_to -> _switch_to
 
