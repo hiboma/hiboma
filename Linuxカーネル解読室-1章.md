@@ -28,8 +28,11 @@
 
 メモは下記
 
-### 1.4.2 switch_to マクロ
+### 1.4.3 switch_to マクロ
 
+ * GCCインラインアセンブラは下記を読んで理解しよう
+   * http://caspar.hazymoon.jp/OpenBSD/annex/gcc_inline_asm.html
+ * thread.eip, thread.esp 以外のメンバ
 ```c
 struct thread_struct {
 /* cached TLS descriptors. */ // スレッドローカルストレージ?
