@@ -150,14 +150,6 @@ struct thread_struct {
  * arch/i386/kernel/entry.S に割り込み/例外ハンドラが定義されてる
   * x86系の場合 ハンドラが自前で汎用レジスタを退避する
 
-```asm 
-common_interrupt:
-	SAVE_ALL
-	movl %esp,%eax
-	call do_IRQ
-	jmp ret_from_intr
-```
-
 SAVE_ALL の中身
 
 ``` asm
@@ -179,6 +171,18 @@ SAVE_ALL の中身
 	movl %edx, %ds; \
 	movl %edx, %es;
 ```
+
+割り込みハンドラ(ハードウェア割り込みかソフトウェア割り込みかは区別されていない))
+
+```asm 
+common_interrupt:
+	SAVE_ALL
+	movl %esp,%eax
+	call do_IRQ
+	jmp ret_from_intr
+```
+
+システムコールの例外ハンドラ
 
 ```asm
 	# system call handler stub
@@ -204,7 +208,9 @@ syscall_exit:
 	jne syscall_exit_work
 ```
 
-```
+ページフォルトの例外ハンドラ
+
+```asm
 KPROBE_ENTRY(page_fault)
 	pushl $do_page_fault
 	jmp error_code
