@@ -1,5 +1,7 @@
 ## 第1章
 
+http://sourceforge.jp/projects/linux-kernel-docs/wiki/1.1%E3%80%80マルチタスク
+
 ## 1.1 マルチタスク
 
  * ___プロセススケジューラ___
