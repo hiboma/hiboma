@@ -32,269 +32,19 @@ TODO: 別のアーキテクチャだとどんなんか?
    * スタックポインタ = ESP, EBP
    * 特殊レジスタ = CR3 Page Directory Base Registe
 
+OpenBSDのページだけど http://caspar.hazymoon.jp/OpenBSD/annex/intel_arc.html にレジスタ一覧。
+32bitでシンプルな方がとっつきは楽そう
+
 > これらコンテキストをtask_struct構造体やカーネルスタックに退避しておき
 
  * 退避 => メモリに書き込む (movl, pushl)
-
 
 ## 1.4 プロセスディスパッチャの実装
 
 ### 1.4.1 context_switch
 
-メモは下記
 
  * ハードウェアの機能 TSS(タスク状態セグメント x86) を使用しない)
-
-#### context switch の回数はどこで見れる?
-
- * sar -W で見れるよ
-```
-[vagrant@vagrant-centos65 ~]$ sar -w 1 1000
-Linux 2.6.32-431.el6.x86_64 (vagrant-centos65.vagrantup.com)    02/06/14        _x86_64_        (1 CPU)
-
-23:17:21       proc/s   cswch/s
-23:17:22         0.00     70.41
-23:17:23         0.00     72.00
-23:17:24         0.00     71.72
-23:17:25         1.03    170.10
-23:17:26         0.00    122.11
-23:17:27         1.18   1571.76  # find / したら一気に数値上がる, read/write, ...
-23:17:28         0.00   3633.80  # 割り込みコンテキストから復帰の際にスイッチ?
-23:17:29         0.00   2367.90  # ttyへの書き込みの際にもスイッチ?
-23:17:30         0.00   2840.74
-```
-
- * /proc/stat で取れる
-   * ctxt が全CPUを加算した数値
-```
-cpu  19504 274 37370 6426181 14123 3191 9799 0 0
-cpu0 19504 274 37370 6426181 14123 3191 9799 0 0
-intr 1536233 516 159 0 0 0 0 0 0 0 0 0 0 116 0 0 0 0 0 0 69287 14881 20253 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
- 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
- 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
- 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
-ctxt 8162633
-btime 1391661893
-processes 3707
-procs_running 1
-procs_blocked 0
-softirq 11516172 0 999181 13159 9016972 19519 0 162 0 50333 1416846
-```
-
- * `proc_misc.c:407:		"\nctxt %llu\n"`, context_switches で数値取っている
-   * schedule(void) の中で context_switch する前に 	`rq->nr_switches++;` してインクリメントしている
-   * cpu_rq(i) => runqueue_t の数値なので CPUごとに増えてく数値 (CPU単位でコンテキストスイッチするからそらそうだ)
-
-```c
-unsigned long long nr_context_switches(void)
-{
-	unsigned long long i, sum = 0;
-
-	for_each_cpu(i)
-		sum += cpu_rq(i)->nr_switches;
-
-	return sum;
-}
-```
-
-### 1.4.2 switch_to マクロ
-
- * GCCインラインアセンブラは下記を読んで理解しよう
-   * http://caspar.hazymoon.jp/OpenBSD/annex/gcc_inline_asm.html
- * thread_struct
-   * アーキテクチャ依存なので、ジェネリックなコードでは thread.eip など出てこんよ
-   *  thread.eip, thread.esp 以外のメンバ
-```c
-struct thread_struct {
-/* cached TLS descriptors. */ // スレッドローカルストレージ?
-	struct desc_struct tls_array[GDT_ENTRY_TLS_ENTRIES];
-    // カーネルスタックのベースポインタ???
-	unsigned long	esp0;
-	unsigned long	sysenter_cs;
-	unsigned long	eip;
-	unsigned long	esp;
-    // ???
-	unsigned long	fs;
-	unsigned long	gs;
-/* Hardware debugging registers */
-	unsigned long	debugreg[8];  /* %%db0-7 debug registers */
-/* fault info */
-    // cr2 ... ページフォルト例外を検出した際のアドレス
-	unsigned long	cr2, trap_no, error_code;
-/* floating point info */
-    // 浮動小数点レジスタを退避
-	union i387_union	i387;
-/* virtual 86 mode info */
-	struct vm86_struct __user * vm86_info;
-	unsigned long		screen_bitmap;
-	unsigned long		v86flags, v86mask, saved_esp0;
-	unsigned int		saved_fs, saved_gs;
-/* IO permissions */
-	unsigned long	*io_bitmap_ptr;
- 	unsigned long	iopl;
-/* max allowed port in the bitmap, in bytes: */
-	unsigned long	io_bitmap_max;
-};
-```
-
-### 1.4.3 switch_to 関数
-
- * FPUCレジスタの遅延きりかえ
-   * 例外の内容は?
- * 「マルチプロセッサの場合退避処理の遅延が難しい」
-   * CPUごとにFPUレジスタがあり、他のCPUでスケジューリングされる場合、どうやって FPUレジスタを壊さず移動させるのか?問題
-   * どっかに退避しておかないと無理そう
- * ___TLS___ [スレッドローカルストレージ](http://ja.wikipedia.org/wiki/スレッド局所記憶#Pthreads_.E3.81.A7.E3.81.AE.E5.AE.9F.E8.A3.85)
-   * Pthread実装 pthread_key_create, pthread_setspecific, pthread_key_delete
-   * `C言語では C11 からキーワード _Thread_local を用いて TLS を使用できる`
-
-プロセス空間を共有している => スタック以外スレッド間でメモリ共有している => 破壊しうる ってのを確認してから
-どうやって スレッド固有のデータを管理したらいいか? で TLS を引き合いに出す
-
-### 1.4.3 汎用レジスタの退避
-
- * eax, ebx, ...
- * タイマ割り込みが発生した時点で退避されてるんだっけ?
- * arch/i386/kernel/entry.S に割り込み/例外ハンドラが定義されてる
-  * x86系の場合 ハンドラが自前で汎用レジスタを退避する
-
-SAVE_ALL の中身
-
-``` asm
-#define SAVE_ALL \
-	cld; \          // EFLAGSレジスタのDFフラグをクリアします
-                    // DFフラグが0にセットされいる間は、文字列（バイト配列）操作を行うと、
-                    // インデックスレジスタ（ESIまたはEDI、あるいは両方）がインクリメントされます
-                    // via http://softwaretechnique.jp/OS_Development/Tips/IA32_Instructions/CLD.html
-	pushl %es; \
-	pushl %ds; \
-	pushl %eax; \
-	pushl %ebp; \
-	pushl %edi; \
-	pushl %esi; \
-	pushl %edx; \
-	pushl %ecx; \
-	pushl %ebx; \
-	movl $(__USER_DS), %edx; \
-	movl %edx, %ds; \
-	movl %edx, %es;
-```
-
-割り込みハンドラ(ハードウェア割り込みかソフトウェア割り込みかは区別されていない))
-
-```asm 
-common_interrupt:
-	SAVE_ALL
-	movl %esp,%eax
-	call do_IRQ
-	jmp ret_from_intr
-```
-
-システムコールの例外ハンドラ
-
-```asm
-	# system call handler stub
-ENTRY(system_call)
-	pushl %eax			# save orig_eax
-	SAVE_ALL
-	GET_THREAD_INFO(%ebp)
-					# system call tracing in operation / emulation
-	/* Note, _TIF_SECCOMP is bit number 8, and so it needs testw and not testb */
-	testw $(_TIF_SYSCALL_EMU|_TIF_SYSCALL_TRACE|_TIF_SECCOMP|_TIF_SYSCALL_AUDIT),TI_flags(%ebp)
-	jnz syscall_trace_entry
-	cmpl $(nr_syscalls), %eax
-	jae syscall_badsys
-syscall_call:
-	call *sys_call_table(,%eax,4)
-	movl %eax,EAX(%esp)		# store the return value
-syscall_exit:
-	cli				# make sure we don't miss an interrupt
-					# setting need_resched or sigpending
-					# between sampling and the iret
-	movl TI_flags(%ebp), %ecx
-	testw $_TIF_ALLWORK_MASK, %cx	# current->work
-	jne syscall_exit_work
-```
-
-ページフォルトの例外ハンドラ
-
-```asm
-KPROBE_ENTRY(page_fault)
-	pushl $do_page_fault
-	jmp error_code
-	.previous .text
-```
-
-TODO
- * レジスタの種類を整理
-   * 汎用レジスタ
-     * eax, ebx, ecx, edx, ... eip, esp
-   * ___EFLAGSレジスタ___
-     * pushfl, popfl
-     * http://en.wikipedia.org/wiki/FLAGS_register
-     * http://d.hatena.ne.jp/yamanetoshi/20060608/1149772551
-   * ___FPUレジスタ___
-   * ___特権レジスタ___
-   * ___セグメントセレクタ___
-   * ___CR3制御レジスタ___
-     * ページテーブルの検索を開始するアドレス(ページディレクトリの物理アドレス)をいれとく
-     * CR3 を書き変えると TLB はフラッシュされる (コスト高い)
-     * ところで CR2 レジスタは 例外発生時のアドレスを保持するらしい
- * ___TSS___ Task Statement Segment
- * ___TLB___ Translation Lookaside Buffer
-   * リニアドレス -> 物理アドレスの変換キャッシュ
-   * 各々のCPUローカル
- * mm_struct -> pgd
-   * ページグローバルディレクトリ
-   * http://www.xml.com/ldd/chapter/book/figs/ldr2_1302.gif の図
- * [Linux x86インラインアセンブラー](http://www.ibm.com/developerworks/jp/linux/library/l-ia/)
-
-## 寄り道
-
- * mm_struct の pgd 
-
-```
-pgd_t *pgd_alloc(struct mm_struct *mm)
-{
-	pgd_t *pgd;
-	pmd_t *pmds[PREALLOCATED_PMDS];
-
-    // ページグローバルディレクトリは page そのもの
-	pgd = (pgd_t *)__get_free_page(PGALLOC_GFP);
-
-	if (pgd == NULL)
-		goto out;
-
-	mm->pgd = pgd;
-
-	if (preallocate_pmds(pmds) != 0)
-		goto out_free_pgd;
-
-	if (paravirt_pgd_alloc(mm) != 0)
-		goto out_free_pmds;
-
-	/*
-	 * Make sure that pre-populating the pmds is atomic with
-	 * respect to anything walking the pgd_list, so that they
-	 * never see a partially populated pgd.
-	 */
-	spin_lock(&pgd_lock);
-
-	pgd_ctor(mm, pgd);
-	pgd_prepopulate_pmd(mm, pgd, pmds);
-
-	spin_unlock(&pgd_lock);
-
-	return pgd;
-
-out_free_pmds:
-	free_pmds(pmds);
-out_free_pgd:
-	free_page((unsigned long)pgd);
-out:
-	return NULL;
-}
-```
 
 ### context_switch
 
@@ -476,7 +226,6 @@ dump_stack で current のカーネルスタックを dump
 		     "jmp __switch_to\n"				\
 
 		     "1:\t"						        \         // $1f が指すラベル
-                                                          // fork の場合はここから始まるように子プロセスの thread.eip をセットする
 		     "popl %%ebp\n\t"					\         // EBPレジスタをカーネルスタックから復帰
              // popfl                                     // EFLAGSレジスタをカーねるスタックから復帰
 		     :"=m" (prev->thread.esp),"=m" (prev->thread.eip),	\
@@ -486,9 +235,13 @@ dump_stack で current のカーネルスタックを dump
 } while (0)
 ```
 
- * fork の場合 sys_fork -> do_fork -> copy_thread で子プロセスの EIP をセットする
-   * これによって親プロセスと子プロセスが再開する EIP が分離する
-   * thread.eip には `asmlinkage void ret_from_fork(void) __asm__("ret_from_fork");` をセット
+#### 寄り道 fork(2)
+
+> forkシステムコールによって生まれたばかりの子プロセスは、forkシステムコールの後半処理から動作を始めます。この子プロセスの__switch_to関数からの戻り番地として、forkシステムコールの後半処理を開始アドレスとしてEIPレジスタの退避域（thread.eip）に登録しておきます。
+
+ * fork の場合 sys_fork -> do_fork -> copy_thread で子プロセスの EIP を別にセットする
+   * copy_thread で thread.eip には `asmlinkage void ret_from_fork(void) __asm__("ret_from_fork");` をセットしている 
+   * これによって親プロセスと子プロセスが再会する EIP が分離する
 
 ```c
 int copy_thread(int nr, unsigned long clone_flags, unsigned long esp,
@@ -574,6 +327,8 @@ struct task_struct fastcall * __switch_to(struct task_struct *prev_p, struct tas
 ```
 
 ### ___unlazy_fpu
+
+>__unlazy_fpu関数は、呼び出された瞬間にはFPUレジスタを切り替えません。FPUレジスタには大きなレジスタが複数存在し、レジスタ値の退避/復帰にかかるコストが大きいため、少々トリッキーな手段を使って性能劣化を緩和しています。
 
 FPU = Floating Point Unit 浮動小数点レジスタ
 
@@ -733,6 +488,264 @@ static inline void set_iopl_mask(unsigned mask)
 	return prev_p;
 }
 ```
+ 
+#### context switch の回数はどこで見れる?
+
+ * sar -W で見れるよ
+```
+[vagrant@vagrant-centos65 ~]$ sar -w 1 1000
+Linux 2.6.32-431.el6.x86_64 (vagrant-centos65.vagrantup.com)    02/06/14        _x86_64_        (1 CPU)
+
+23:17:21       proc/s   cswch/s
+23:17:22         0.00     70.41
+23:17:23         0.00     72.00
+23:17:24         0.00     71.72
+23:17:25         1.03    170.10
+23:17:26         0.00    122.11
+23:17:27         1.18   1571.76  # find / したら一気に数値上がる, read/write, ...
+23:17:28         0.00   3633.80  # 割り込みコンテキストから復帰の際にスイッチ?
+23:17:29         0.00   2367.90  # ttyへの書き込みの際にもスイッチ?
+23:17:30         0.00   2840.74
+```
+
+ * /proc/stat で取れる
+   * ctxt が全CPUを加算した数値
+```
+cpu  19504 274 37370 6426181 14123 3191 9799 0 0
+cpu0 19504 274 37370 6426181 14123 3191 9799 0 0
+intr 1536233 516 159 0 0 0 0 0 0 0 0 0 0 116 0 0 0 0 0 0 69287 14881 20253 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+ 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+ 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+ 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+ctxt 8162633
+btime 1391661893
+processes 3707
+procs_running 1
+procs_blocked 0
+softirq 11516172 0 999181 13159 9016972 19519 0 162 0 50333 1416846
+```
+
+ * `proc_misc.c:407:		"\nctxt %llu\n"`, context_switches で数値取っている
+   * schedule(void) の中で context_switch する前に 	`rq->nr_switches++;` してインクリメントしている
+   * cpu_rq(i) => runqueue_t の数値なので CPUごとに増えてく数値 (CPU単位でコンテキストスイッチするからそらそうだ)
+
+```c
+unsigned long long nr_context_switches(void)
+{
+	unsigned long long i, sum = 0;
+
+	for_each_cpu(i)
+		sum += cpu_rq(i)->nr_switches;
+
+	return sum;
+}
+```
+
+### 1.4.2 switch_to マクロ
+
+ * GCCインラインアセンブラは下記を読んで理解しよう
+   * http://caspar.hazymoon.jp/OpenBSD/annex/gcc_inline_asm.html
+ * thread_struct
+   * アーキテクチャ依存なので、ジェネリックなコードでは thread.eip など出てこんよ
+   *  thread.eip, thread.esp 以外のメンバ
+```c
+struct thread_struct {
+/* cached TLS descriptors. */ // スレッドローカルストレージ?
+	struct desc_struct tls_array[GDT_ENTRY_TLS_ENTRIES];
+    // カーネルスタックのベースポインタ???
+	unsigned long	esp0;
+	unsigned long	sysenter_cs;
+	unsigned long	eip;
+	unsigned long	esp;
+    // ???
+	unsigned long	fs;
+	unsigned long	gs;
+/* Hardware debugging registers */
+	unsigned long	debugreg[8];  /* %%db0-7 debug registers */
+/* fault info */
+    // cr2 ... ページフォルト例外を検出した際のアドレス
+	unsigned long	cr2, trap_no, error_code;
+/* floating point info */
+    // 浮動小数点レジスタを退避
+	union i387_union	i387;
+/* virtual 86 mode info */
+	struct vm86_struct __user * vm86_info;
+	unsigned long		screen_bitmap;
+	unsigned long		v86flags, v86mask, saved_esp0;
+	unsigned int		saved_fs, saved_gs;
+/* IO permissions */
+	unsigned long	*io_bitmap_ptr;
+ 	unsigned long	iopl;
+/* max allowed port in the bitmap, in bytes: */
+	unsigned long	io_bitmap_max;
+};
+```
+
+### 1.4.3 switch_to 関数
+
+ * FPUCレジスタの遅延きりかえ
+   * 例外の内容は?
+
+>ところで、一見FPUレジスタの退避処理も遅延させられそうに思えますが、なぜ遅延させていないのでしょうか？
+
+ * 「マルチプロセッサの場合退避処理の遅延が難しい」
+   * CPUごとにFPUレジスタがあり、他のCPUでスケジューリングされる場合、どうやって FPUレジスタを壊さず移動させるのか?問題
+   * どっかに退避しておかないと無理そう
+ * ___TLS___ [スレッドローカルストレージ](http://ja.wikipedia.org/wiki/スレッド局所記憶#Pthreads_.E3.81.A7.E3.81.AE.E5.AE.9F.E8.A3.85)
+   * Pthread実装 pthread_key_create, pthread_setspecific, pthread_key_delete
+   * `C言語では C11 からキーワード _Thread_local を用いて TLS を使用できる`
+
+プロセス空間を共有している => スタック以外スレッド間でメモリ共有している => 破壊しうる ってのを確認してから
+どうやって スレッド固有のデータを管理したらいいか? で TLS を引き合いに出す
+
+### 1.4.3 汎用レジスタの退避
+
+>ここまで見てきて気が付いた人もいると思いますが、汎用レジスタはいつ切り替えたのでしょうか？　実は、Intel x86ではこのタイミングで切り替えることは不要です。必要な情報はすでにスタック上に退避されています。
+
+ * eax, ebx, ...
+ * タイマ割り込みが発生した時点で退避されてるんだっけ?
+   * schdule() を呼び出すまでのカーネルパスを逆に辿って割り込みや例外になった時点で退避されてるはず
+ * arch/i386/kernel/entry.S に割り込み/例外ハンドラが定義されてる
+ * x86系の場合 ハンドラが自前で汎用レジスタを退避する SAVE_ALL を見ると分かる
+
+#### SAVE_ALL の中身
+
+``` asm
+#define SAVE_ALL \
+	cld; \          // EFLAGSレジスタのDFフラグをクリアします
+                    // DFフラグが0にセットされいる間は、文字列（バイト配列）操作を行うと、
+                    // インデックスレジスタ（ESIまたはEDI、あるいは両方）がインクリメントされます
+                    // via http://softwaretechnique.jp/OS_Development/Tips/IA32_Instructions/CLD.html
+	pushl %es; \
+	pushl %ds; \
+	pushl %eax; \
+	pushl %ebp; \
+	pushl %edi; \
+	pushl %esi; \
+	pushl %edx; \
+	pushl %ecx; \
+	pushl %ebx; \
+	movl $(__USER_DS), %edx; \
+	movl %edx, %ds; \
+	movl %edx, %es;
+```
+
+割り込みハンドラ(ハードウェア割り込みかソフトウェア割り込みかは区別されていない))
+
+```asm 
+common_interrupt:
+	SAVE_ALL
+	movl %esp,%eax
+	call do_IRQ
+	jmp ret_from_intr
+```
+
+システムコールの例外ハンドラ
+
+```asm
+	# system call handler stub
+ENTRY(system_call)
+	pushl %eax			# save orig_eax
+	SAVE_ALL
+	GET_THREAD_INFO(%ebp)
+					# system call tracing in operation / emulation
+	/* Note, _TIF_SECCOMP is bit number 8, and so it needs testw and not testb */
+	testw $(_TIF_SYSCALL_EMU|_TIF_SYSCALL_TRACE|_TIF_SECCOMP|_TIF_SYSCALL_AUDIT),TI_flags(%ebp)
+	jnz syscall_trace_entry
+	cmpl $(nr_syscalls), %eax
+	jae syscall_badsys
+syscall_call:
+	call *sys_call_table(,%eax,4)
+	movl %eax,EAX(%esp)		# store the return value
+syscall_exit:
+	cli				# make sure we don't miss an interrupt
+					# setting need_resched or sigpending
+					# between sampling and the iret
+	movl TI_flags(%ebp), %ecx
+	testw $_TIF_ALLWORK_MASK, %cx	# current->work
+	jne syscall_exit_work
+```
+
+ページフォルトの例外ハンドラ
+
+```asm
+KPROBE_ENTRY(page_fault)
+	pushl $do_page_fault
+	jmp error_code
+	.previous .text
+```
+
+TODO
+ * レジスタの種類を整理
+   * 汎用レジスタ
+     * eax, ebx, ecx, edx, ... eip, esp
+   * ___EFLAGSレジスタ___
+     * pushfl, popfl
+     * http://en.wikipedia.org/wiki/FLAGS_register
+     * http://d.hatena.ne.jp/yamanetoshi/20060608/1149772551
+   * ___FPUレジスタ___
+   * ___特権レジスタ___
+   * ___セグメントセレクタ___
+   * ___CR3制御レジスタ___
+     * ページテーブルの検索を開始するアドレス(ページディレクトリの物理アドレス)をいれとく
+     * CR3 を書き変えると TLB はフラッシュされる (コスト高い)
+     * ところで CR2 レジスタは 例外発生時のアドレスを保持するらしい
+ * ___TSS___ Task Statement Segment
+ * ___TLB___ Translation Lookaside Buffer
+   * リニアドレス -> 物理アドレスの変換キャッシュ
+   * 各々のCPUローカル
+ * mm_struct -> pgd
+   * ページグローバルディレクトリ
+   * http://www.xml.com/ldd/chapter/book/figs/ldr2_1302.gif の図
+ * [Linux x86インラインアセンブラー](http://www.ibm.com/developerworks/jp/linux/library/l-ia/)
+
+## 寄り道
+
+ * mm_struct の pgd 
+
+```
+pgd_t *pgd_alloc(struct mm_struct *mm)
+{
+	pgd_t *pgd;
+	pmd_t *pmds[PREALLOCATED_PMDS];
+
+    // ページグローバルディレクトリは page そのもの
+	pgd = (pgd_t *)__get_free_page(PGALLOC_GFP);
+
+	if (pgd == NULL)
+		goto out;
+
+	mm->pgd = pgd;
+
+	if (preallocate_pmds(pmds) != 0)
+		goto out_free_pgd;
+
+	if (paravirt_pgd_alloc(mm) != 0)
+		goto out_free_pmds;
+
+	/*
+	 * Make sure that pre-populating the pmds is atomic with
+	 * respect to anything walking the pgd_list, so that they
+	 * never see a partially populated pgd.
+	 */
+	spin_lock(&pgd_lock);
+
+	pgd_ctor(mm, pgd);
+	pgd_prepopulate_pmd(mm, pgd, pmds);
+
+	spin_unlock(&pgd_lock);
+
+	return pgd;
+
+out_free_pmds:
+	free_pmds(pmds);
+out_free_pgd:
+	free_page((unsigned long)pgd);
+out:
+	return NULL;
+}
+```
+
 
 ### task_struct
 
