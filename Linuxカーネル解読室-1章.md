@@ -149,7 +149,17 @@ struct thread_struct {
  * タイマ割り込みが発生した時点で退避されてるんだっけ?
  * arch/i386/kernel/entry.S に割り込み/例外ハンドラが定義されてる
 
-``` 
+```asm 
+common_interrupt:
+	SAVE_ALL
+	movl %esp,%eax
+	call do_IRQ
+	jmp ret_from_intr
+```
+
+SAVE_ALL の中身
+
+``` asm
 #define SAVE_ALL \
 	cld; \          // EFLAGSレジスタのDFフラグをクリアします
                     // DFフラグが0にセットされいる間は、文字列（バイト配列）操作を行うと、
