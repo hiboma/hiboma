@@ -147,6 +147,27 @@ struct thread_struct {
 
  * eax, ebx, ...
  * タイマ割り込みが発生した時点で退避されてるんだっけ?
+ * arch/i386/kernel/entry.S に割り込み/例外ハンドラが定義されてる
+
+``` 
+#define SAVE_ALL \
+	cld; \          // EFLAGSレジスタのDFフラグをクリアします
+                    // DFフラグが0にセットされいる間は、文字列（バイト配列）操作を行うと、
+                    // インデックスレジスタ（ESIまたはEDI、あるいは両方）がインクリメントされます
+                    // via http://softwaretechnique.jp/OS_Development/Tips/IA32_Instructions/CLD.html
+	pushl %es; \
+	pushl %ds; \
+	pushl %eax; \
+	pushl %ebp; \
+	pushl %edi; \
+	pushl %esi; \
+	pushl %edx; \
+	pushl %ecx; \
+	pushl %ebx; \
+	movl $(__USER_DS), %edx; \
+	movl %edx, %ds; \
+	movl %edx, %es;
+``` 
 
 TODO
  * レジスタの種類を整理
