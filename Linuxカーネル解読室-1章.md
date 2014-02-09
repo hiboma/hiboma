@@ -148,6 +148,7 @@ struct thread_struct {
  * eax, ebx, ...
  * タイマ割り込みが発生した時点で退避されてるんだっけ?
  * arch/i386/kernel/entry.S に割り込み/例外ハンドラが定義されてる
+  * x86系の場合 ハンドラが自前で汎用レジスタを退避する
 
 ```asm 
 common_interrupt:
@@ -177,7 +178,38 @@ SAVE_ALL の中身
 	movl $(__USER_DS), %edx; \
 	movl %edx, %ds; \
 	movl %edx, %es;
-``` 
+```
+
+```asm
+	# system call handler stub
+ENTRY(system_call)
+	pushl %eax			# save orig_eax
+	SAVE_ALL
+	GET_THREAD_INFO(%ebp)
+					# system call tracing in operation / emulation
+	/* Note, _TIF_SECCOMP is bit number 8, and so it needs testw and not testb */
+	testw $(_TIF_SYSCALL_EMU|_TIF_SYSCALL_TRACE|_TIF_SECCOMP|_TIF_SYSCALL_AUDIT),TI_flags(%ebp)
+	jnz syscall_trace_entry
+	cmpl $(nr_syscalls), %eax
+	jae syscall_badsys
+syscall_call:
+	call *sys_call_table(,%eax,4)
+	movl %eax,EAX(%esp)		# store the return value
+syscall_exit:
+	cli				# make sure we don't miss an interrupt
+					# setting need_resched or sigpending
+					# between sampling and the iret
+	movl TI_flags(%ebp), %ecx
+	testw $_TIF_ALLWORK_MASK, %cx	# current->work
+	jne syscall_exit_work
+```
+
+```
+KPROBE_ENTRY(page_fault)
+	pushl $do_page_fault
+	jmp error_code
+	.previous .text
+```
 
 TODO
  * レジスタの種類を整理
