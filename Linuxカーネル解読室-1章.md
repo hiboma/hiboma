@@ -35,6 +35,8 @@ x86アーキテクチャであることを確認取る
 
 メモは下記
 
+ * ハードウェアの機能 TSS(タスク状態セグメント x86) を使用しない)
+
 #### context switch の回数はどこで見れる?
 
  * sar -W で見れるよ
@@ -385,7 +387,7 @@ dump_stack で current のカーネルスタックを dump
 #define switch_to(prev,next,last) do {					\
 	unsigned long esi,edi;						\
               // EFLAGSレジスタをスタックに退避
-              // pushfl                                   
+              // pushfl
 	asm volatile("pushl %%ebp\n\t"					\     // EBPレジスタを現在の prev の task_struct のカーネルスタックにpush
 		     "movl %%esp,%0\n\t"	/* save ESP */		\ // prev->thread.esp = $esp prev プロセスのESPレジスタを退避
              
@@ -394,8 +396,9 @@ dump_stack で current のカーネルスタックを dump
 		     "movl $1f,%1\n\t"		/* save EIP */		\ // preh->thread.eip = $1f
 		     "pushl %6\n\t"		/* restore EIP */	\     // next のカーネルスタックに next->thread.eip を push
                                                           // next->thread.eip は $1f ラベルが指すアドレス
-		     "jmp __switch_to\n"				\         
-		     "1:\t"						        \         // $1f が指すラベル???
+		     "jmp __switch_to\n"				\
+
+		     "1:\t"						        \         // $1f が指すラベル
                                                           // fork の場合はここから始まるように子プロセスの thread.eip をセットする
 		     "popl %%ebp\n\t"					\         // EBPレジスタをカーネルスタックから復帰
              // popfl                                     // EFLAGSレジスタをカーねるスタックから復帰
