@@ -1,6 +1,6 @@
 # glibc
 
-## ビルド方法とテスト方法
+## ソースからのビルド方法とテスト方法
 
 ```
 curl -L -O http://vault.centos.org/6.5/os/Source/SPackages/glibc-2.12-1.132.el6.src.rp
@@ -47,7 +47,8 @@ $ LD_LIBRARY_PATH=/home/vagarnt/app/glibc-2.12.2 LD_PRELOAD=/home/vagrant/app/gl
 /home/vagrant/build-glibc-2.1.2/nscd/nscd: error while loading shared libraries: libselinux.so.1: cannot open shared object file: No such file or directory
 ```
 
-cp 面倒だ。どうやって共有ライブラリを集めたら楽だろうか? とりあえず単純に cp って、make install で libc らへんを上書き
+ * どうやって共有ライブラリを集めたら楽だろうか?
+ * とりあえず単純に cp って、make install で libc らへんを上書き
 
 ```
 sudo cp /usr/lib64/mysql/*.so* /home/vagrant/app/glibc-2.12.2/lib/
@@ -56,13 +57,19 @@ sudo cp /lib64/*.so*           /home/vagrant/app/glibc-2.12.2/lib/
 make instlal
 ```
 
-足らないライブラリは /lib64 や /usr/lib64 を open するみょうに LD_LIBRARY_PATH を複数指定しておけばよいか
+ * cp 面倒
+ * 足らないライブラリは /lib64 や /usr/lib64 を open するみょうに LD_LIBRARY_PATH を複数指定しておけばよい
 
 ```
 sudo LD_LIBRARY_PATH="/home/vagarnt/app/glibc-2.12.2/lib:/lib64:/usr/lib64:/usr/lib64/mysql" LD_PRELOAD=/home/vagrant/app/glibc-2.12.2/lib/libc.so.6 strace -eopen nscd/nscd -d
 ```
 
-## nscd + getgrouplist
+## nscd tips
+
+ * `nscd -i group` `nscd -i passwd` でキャッシュをパージ
+ * /etc/nscd.conf いじればデバッグログ出せる
+
+## nscd + getgrouplist を追う
 
 getgrouplist(3) で group を問い合わせると、nscd は addinitgroups で groupのキャッシュを作ってる
 
@@ -75,7 +82,7 @@ addinitgroups (struct database_dyn *db, int fd, request_header *req, void *key,
 }
 ```
 
-__nss_lookup_function (nip, "initgroups_dyn") で libnss_*** の実装を呼び出し
+__nss_lookup_function (nip, "initgroups_dyn") で libnss_*** の実装を呼び出しする
 
 ```c
 static void
