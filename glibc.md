@@ -40,7 +40,12 @@ LD_LIBRARY_PATH, LD_PRELOAD でビルドした libc を読み込ませる
 ffffffffff600000-ffffffffff601000 r-xp 00000000 00:00 0                  [vsyscall]
 ```
 
-gdb
+GDB を起動しようとするも LD_LIBRARY_PATH 以下に共有ライブラリが無いのでコケる
+
+```
+[vagrant@vagrant-centos65 build-glibc-2.1.2]$ LD_LIBRARY_PATH=/home/vagarnt/app/glibc-2.12.2/bin/ LD_PRELOAD=/home/vagrant/app/glibc-2.12.2/lib/libc.so.6 gdb nscd/nscd
+/home/vagrant/build-glibc-2.1.2/nscd/nscd: error while loading shared libraries: libselinux.so.1: cannot open shared object file: No such file or directory
+```
 
 ## nscd + getgrouplist
 
