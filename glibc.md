@@ -47,7 +47,7 @@ $ LD_LIBRARY_PATH=/home/vagarnt/app/glibc-2.12.2 LD_PRELOAD=/home/vagrant/app/gl
 /home/vagrant/build-glibc-2.1.2/nscd/nscd: error while loading shared libraries: libselinux.so.1: cannot open shared object file: No such file or directory
 ```
 
-どうやって共有ライブラリを集めたら楽だろうか? とりあえず単純に cp って、make install で libc らへんを上書き
+cp 面倒だ。どうやって共有ライブラリを集めたら楽だろうか? とりあえず単純に cp って、make install で libc らへんを上書き
 
 ```
 sudo cp /usr/lib64/mysql/*.so* /home/vagrant/app/glibc-2.12.2/lib/
