@@ -10,8 +10,37 @@ sudo yum-builddep glibc-2.12-1.132.el6.src.rpm
 curl -L -O http://ftp.gnu.org/gnu/glibc/glibc-2.1.2.tar.gz
 tar xfz glibc-2.12.2.tar.gz
 mkdir build-glibc-2.12.2
+
+# ソースと同じディレクトリで configure が通らない
  ../glibc-2.12.2/configure --prefix=$HOME/app/glibc-2.12.2
+ make
+ make install
 ```
+
+LD_LIBRARY_PATH, LD_PRELOAD でビルドした libc を読み込ませる
+
+```
+[vagrant@vagrant-centos65 build-glibc-2.1.2]$ LD_LIBRARY_PATH=/home/vagarnt/app/glibc-2.12.2/bin/ LD_PRELOAD=/home/vagrant/app/glibc-2.12.2/lib/libc.so.6 perl -e 'system("cat /proc/self/maps")'
+00400000-0040b000 r-xp 00000000 08:01 4644                               /bin/cat
+0060a000-0060b000 rw-p 0000a000 08:01 4644                               /bin/cat
+0060b000-0060c000 rw-p 00000000 00:00 0 
+01c5e000-01c7f000 rw-p 00000000 00:00 0                                  [heap]
+7fb6c5b1e000-7fb6c5c7d000 r-xp 00000000 08:01 33843                      /home/vagrant/app/glibc-2.12.2/lib/libc-2.12.2.so
+7fb6c5c7d000-7fb6c5e7d000 ---p 0015f000 08:01 33843                      /home/vagrant/app/glibc-2.12.2/lib/libc-2.12.2.so
+7fb6c5e7d000-7fb6c5e81000 r--p 0015f000 08:01 33843                      /home/vagrant/app/glibc-2.12.2/lib/libc-2.12.2.so
+7fb6c5e81000-7fb6c5e82000 rw-p 00163000 08:01 33843                      /home/vagrant/app/glibc-2.12.2/lib/libc-2.12.2.so
+7fb6c5e82000-7fb6c5e87000 rw-p 00000000 00:00 0 
+7fb6c5e87000-7fb6c5ea7000 r-xp 00000000 08:01 3051                       /lib64/ld-2.12.so
+7fb6c60a2000-7fb6c60a6000 rw-p 00000000 00:00 0 
+7fb6c60a6000-7fb6c60a7000 r--p 0001f000 08:01 3051                       /lib64/ld-2.12.so
+7fb6c60a7000-7fb6c60a8000 rw-p 00020000 08:01 3051                       /lib64/ld-2.12.so
+7fb6c60a8000-7fb6c60a9000 rw-p 00000000 00:00 0 
+7fffa468b000-7fffa46a0000 rw-p 00000000 00:00 0                          [stack]
+7fffa47ff000-7fffa4800000 r-xp 00000000 00:00 0                          [vdso]
+ffffffffff600000-ffffffffff601000 r-xp 00000000 00:00 0                  [vsyscall]
+```
+
+gdb
 
 ## nscd + getgrouplist
 
