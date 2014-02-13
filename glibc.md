@@ -47,6 +47,13 @@ GDB を起動しようとするも LD_LIBRARY_PATH 以下に共有ライブラ�
 /home/vagrant/build-glibc-2.1.2/nscd/nscd: error while loading shared libraries: libselinux.so.1: cannot open shared object file: No such file or directory
 ```
 
+```
+[vagrant@vagrant-centos65 build-glibc-2.1.2]$ sudo cp /lib64/libselinux.so.1 /home/vagrant/app/glibc-2.12.2/lib/
+[vagrant@vagrant-centos65 build-glibc-2.1.2]$ sudo cp /lib64/libaudit.so.1 /home/vagrant/app/glibc-2.12.2/lib/
+[vagrant@vagrant-centos65 build-glibc-2.1.2]$ sudo cp /lib64/libcap.so.2 /home/vagrant/app/glibc-2.12.2/lib/
+[vagrant@vagrant-centos65 build-glibc-2.1.2]$ sudo cp /lib64/libattr.so.1 /home/vagrant/app/glibc-2.12.2/lib/
+```
+
 ## nscd + getgrouplist
 
 getgrouplist(3) で group を問い合わせると、nscd は addinitgroups で groupのキャッシュを作ってる
