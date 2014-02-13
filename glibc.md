@@ -40,18 +40,26 @@ LD_LIBRARY_PATH, LD_PRELOAD でビルドした libc を読み込ませる
 ffffffffff600000-ffffffffff601000 r-xp 00000000 00:00 0                  [vsyscall]
 ```
 
-GDB を起動しようとするも LD_LIBRARY_PATH 以下に共有ライブラリが無いのでコケる
+GDB を起動しようとするも LD_LIBRARY_PATH 以下に共有ライブラリが無いので open(2) で ENOENT
 
 ```
-[vagrant@vagrant-centos65 build-glibc-2.1.2]$ LD_LIBRARY_PATH=/home/vagarnt/app/glibc-2.12.2/bin/ LD_PRELOAD=/home/vagrant/app/glibc-2.12.2/lib/libc.so.6 gdb nscd/nscd
+$ LD_LIBRARY_PATH=/home/vagarnt/app/glibc-2.12.2 LD_PRELOAD=/home/vagrant/app/glibc-2.12.2/lib/libc.so.6 gdb --args nscd/nscd -d
 /home/vagrant/build-glibc-2.1.2/nscd/nscd: error while loading shared libraries: libselinux.so.1: cannot open shared object file: No such file or directory
 ```
 
+どうやって共有ライブラリを集めたら楽だろうか? とりあえず単純に cp って、make install で libc らへんを上書き
+
 ```
-[vagrant@vagrant-centos65 build-glibc-2.1.2]$ sudo cp /lib64/libselinux.so.1 /home/vagrant/app/glibc-2.12.2/lib/
-[vagrant@vagrant-centos65 build-glibc-2.1.2]$ sudo cp /lib64/libaudit.so.1 /home/vagrant/app/glibc-2.12.2/lib/
-[vagrant@vagrant-centos65 build-glibc-2.1.2]$ sudo cp /lib64/libcap.so.2 /home/vagrant/app/glibc-2.12.2/lib/
-[vagrant@vagrant-centos65 build-glibc-2.1.2]$ sudo cp /lib64/libattr.so.1 /home/vagrant/app/glibc-2.12.2/lib/
+sudo cp /usr/lib64/mysql/*.so* /home/vagrant/app/glibc-2.12.2/lib/
+sudo cp /usr/lib64/*.so*       /home/vagrant/app/glibc-2.12.2/lib/
+sudo cp /lib64/*.so*           /home/vagrant/app/glibc-2.12.2/lib/
+make instlal
+```
+
+足らないライブラリは /lib64 や /usr/lib64 を open するみょうに LD_LIBRARY_PATH を複数指定しておけばよいか
+
+```
+sudo LD_LIBRARY_PATH="/home/vagarnt/app/glibc-2.12.2/lib:/lib64:/usr/lib64:/usr/lib64/mysql" LD_PRELOAD=/home/vagrant/app/glibc-2.12.2/lib/libc.so.6 strace -eopen nscd/nscd -d
 ```
 
 ## nscd + getgrouplist
