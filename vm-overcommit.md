@@ -28,7 +28,7 @@ static int meminfo_proc_show(struct seq_file *m, void *v)
 
 ## Committed_AS, CommitLimit
 
-### `extern struct percpu_counter vm_committed_as;`
+### extern struct percpu_counter vm_committed_as
  
 vm_acct_memory, vm_unacct_memory で加減される
 
@@ -49,7 +49,7 @@ static inline void vm_unacct_memory(long pages)
 
 percpu_counter って何ですかね
 
-### `struct percpu_counter`
+### struct percpu_counter
 
  * 大規模な SMPシステムでは _カウンター_ の仕組みがボトルネックになりうる
    * 1個のCPUがロックを獲得 => 他のCPUが待たされる
