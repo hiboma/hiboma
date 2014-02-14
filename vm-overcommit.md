@@ -203,11 +203,15 @@ error:
 https://github.com/hiboma/vagrant-inspect-vm.overcommit で比較
 
 ```
+# vagarnt
 CommitLimit:      597544 kB
-Committed_AS:     564256 kB
+Committed_AS:     564256 kB  # 残り 0.56 %
 ```
 
 ```
+# root
 CommitLimit:      597544 kB
 Committed_AS:     582868 kB
 ```
+
+root の方が
