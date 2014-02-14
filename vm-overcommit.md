@@ -200,18 +200,23 @@ error:
    * 最大で 6% のバッファが出来る
      * 実際は いろんなプロセスが Commit してるから 6% はありえないか
 
+> 非root だと -3% 減る
+
 https://github.com/hiboma/vagrant-inspect-vm.overcommit で比較
 
+__vagrant で実行__
+
 ```
-# vagarnt
 CommitLimit:      597544 kB
 Committed_AS:     564256 kB  # 残り 0.56 %
 ```
 
-```
-# root
-CommitLimit:      597544 kB
-Committed_AS:     582868 kB
+__root で実行__
+
 ```
 
-root の方が
+CommitLimit:      597544 kB
+Committed_AS:     582868 kB  # 残り 0.24 %
+```
+
+3% 分多く commit している
