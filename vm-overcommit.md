@@ -45,7 +45,7 @@ static inline void vm_unacct_memory(long pages)
 
 ## vm_acct_memory <- security_vm_enough_memory
 
-```
+```c
 security_vm_enough_memory(len)
 
 /*
@@ -81,6 +81,7 @@ int __vm_enough_memory(struct mm_struct *mm, long pages, int cap_sys_admin)
 	if (sysctl_overcommit_memory == OVERCOMMIT_GUESS) {
 		unsigned long n;
 
+        // ページキャッシュの総数かな?
 		free = global_page_state(NR_FILE_PAGES);
 		free += nr_swap_pages;
 
@@ -97,7 +98,7 @@ int __vm_enough_memory(struct mm_struct *mm, long pages, int cap_sys_admin)
 		/*
 		 * Leave the last 3% for root
 		 */
-        // root 用に 3% 残しておく
+        // root 用に 3% 残しておく => root だと CommitLimit ギリギリまで使いうる
 		if (!cap_sys_admin)
 			free -= free / 32;
 
