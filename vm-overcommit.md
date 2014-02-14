@@ -51,6 +51,8 @@ percpu_counter って何ですかね
 
 ### struct percpu_counter
 
+Linux Kernel Architecture P.364 に説明載ってる
+
  * 大規模な SMPシステムでは _カウンター_ の仕組みがボトルネックになりうる
    * 1個のCPUがロックを獲得 => 他のCPUが待たされる
    * カウンターが頻繁に利用されるほど競合しやすい
