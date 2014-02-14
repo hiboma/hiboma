@@ -114,7 +114,7 @@ void create_thread_to_handle_connection(THD *thd)
 ```
 
  * pthread_create が返すエラーで死ぬ。システムコールは clone(2) なはず
-   * 違う ...
+   * 違う ... libc が EAGAIN をセットしてそうだ
    * clone(2) 呼び出す前の mmap で死んでる
 
 ```
