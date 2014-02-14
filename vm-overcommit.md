@@ -1,5 +1,7 @@
 
-CommitLimit と Committed_AS を seq_printf してる部分
+## /proc/meminfo
+
+CommitLimit と Committed_AS を seq_printf してる部分は以下のコード
 
 ```c
 static int meminfo_proc_show(struct seq_file *m, void *v)
@@ -33,7 +35,7 @@ static int meminfo_proc_show(struct seq_file *m, void *v)
    * 正確な数値と概算の数値を保持する配列を用意
    * CPUごとに異なるインデックスの数値を加減する
      * percpu_counter_add, percpu_counter_dec
-   * 概算の数値が閾値 ( ___FBC_BATCH___ ) を超えたら 正確な数値のカウンタを出すためにロックを取って更新する
+   * 概算の数値が閾値 ( ***FBC_BATCH*** ) を超えたら 正確な数値のカウンタを出すためにロックを取って更新する
      * percpu_couter_sum
      * 頻繁に発生しないので競合が怒りにくい
 
@@ -165,9 +167,11 @@ int __vm_enough_memory(struct mm_struct *mm, long pages, int cap_sys_admin)
         // 一つのプロセスで使い切らないように 3% 引いておく
 		allowed -= mm->total_vm / 32;
 
+    // allowed (CommitLimit) より小さければ ok 
 	if (percpu_counter_read_positive(&vm_committed_as) < allowed)
 		return 0;
 error:
+    // カウンタから減算する
 	vm_unacct_memory(pages);
 
 	return -ENOMEM;
