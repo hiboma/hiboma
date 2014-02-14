@@ -2,7 +2,7 @@
 
  * 2.6.32 vanilla kernel
 
-## /proc/meminfo
+## /proc/meminfo から辿る
 
 CommitLimit と Committed_AS を seq_printf してる部分は以下のコード
 
