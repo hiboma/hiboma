@@ -148,7 +148,7 @@ int __vm_enough_memory(struct mm_struct *mm, long pages, int cap_sys_admin)
 		goto error;
 	}
 
-    // vm.overcommit_memory=2 の時
+    // vm.overcommit_memory=2 の時 OVERCOMMIT_NEVER
 	allowed = (totalram_pages - hugetlb_total_pages())
 	       	* sysctl_overcommit_ratio / 100;
 	/*
@@ -160,7 +160,9 @@ int __vm_enough_memory(struct mm_struct *mm, long pages, int cap_sys_admin)
 
 	/* Don't let a single process grow too big:
 	   leave 3% of the size of this process for other processes */
+    // mm の有無でカーネルスレッドで無い場合 
 	if (mm)
+        // 一つのプロセスで使い切らないように 3% 引いておく
 		allowed -= mm->total_vm / 32;
 
 	if (percpu_counter_read_positive(&vm_committed_as) < allowed)
