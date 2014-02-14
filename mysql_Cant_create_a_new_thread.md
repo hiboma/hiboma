@@ -114,6 +114,16 @@ void create_thread_to_handle_connection(THD *thd)
 ```
 
  * pthread_create が返すエラーで死ぬ。システムコールは clone(2) なはず
+   * 違う ...
+   * clone(2) 呼び出す前の mmap で死んでる
+
+```
+nanosleep({1, 0}, 0x7fff96fe05a0)       = 0
+mmap(NULL, 10489856, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS|MAP_STACK, -1, 0) = -1 ENOMEM (Cannot allocate memory)
+write(2, "pthread_create failed: errno = 1"..., 76pthread_create failed: errno = 11, error = Resource temporarily unavailable
+) = 76
+``` 
+   
  * mysqld がスレッドを生成できない => kill するためのスレッドを作成できない?
 
 create_thread_to_handle_connection を上に辿ると create_new_thread に辿り着く
@@ -196,3 +206,4 @@ pthread_handler_t handle_connections_sockets(void *arg __attribute__((unused)))
 
 ...
 ```
+
