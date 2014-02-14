@@ -137,6 +137,7 @@ int __vm_enough_memory(struct mm_struct *mm, long pages, int cap_sys_admin)
 		/*
 		 * Leave the last 3% for root
 		 */
+        // やっぱり root 用に 3% 予約
 		if (!cap_sys_admin)
 			n -= n / 32;
 		free += n;
@@ -147,6 +148,7 @@ int __vm_enough_memory(struct mm_struct *mm, long pages, int cap_sys_admin)
 		goto error;
 	}
 
+    // vm.overcommit_memory=2 の時
 	allowed = (totalram_pages - hugetlb_total_pages())
 	       	* sysctl_overcommit_ratio / 100;
 	/*
