@@ -43,4 +43,4 @@ static inline void vm_unacct_memory(long pages)
 }
 ```
 
- 
+security_vm_enough_memory(len)
