@@ -43,4 +43,108 @@ static inline void vm_unacct_memory(long pages)
 }
 ```
 
+## vm_acct_memory <- security_vm_enough_memory
+
+```
 security_vm_enough_memory(len)
+
+/*
+ * Check that a process has enough memory to allocate a new virtual
+ * mapping. 0 means there is enough memory for the allocation to
+ * succeed and -ENOMEM implies there is not.
+ *
+ * We currently support three overcommit policies, which are set via the
+ * vm.overcommit_memory sysctl.  See Documentation/vm/overcommit-accounting
+ *
+ * Strict overcommit modes added 2002 Feb 26 by Alan Cox.
+ * Additional code 2002 Jul 20 by Robert Love.
+ *
+ * cap_sys_admin is 1 if the process has admin privileges, 0 otherwise.
+ *
+ * Note this is a helper function intended to be used by LSMs which
+ * wish to use this logic.
+ */
+int __vm_enough_memory(struct mm_struct *mm, long pages, int cap_sys_admin)
+{
+	unsigned long free, allowed;
+
+	vm_acct_memory(pages);
+
+	/*
+	 * Sometimes we want to use more memory than we have
+	 */
+	if (sysctl_overcommit_memory == OVERCOMMIT_ALWAYS)
+		return 0;
+
+	if (sysctl_overcommit_memory == OVERCOMMIT_GUESS) {
+		unsigned long n;
+
+		free = global_page_state(NR_FILE_PAGES);
+		free += nr_swap_pages;
+
+		/*
+		 * Any slabs which are created with the
+		 * SLAB_RECLAIM_ACCOUNT flag claim to have contents
+		 * which are reclaimable, under pressure.  The dentry
+		 * cache and most inode caches should fall into this
+		 */
+		free += global_page_state(NR_SLAB_RECLAIMABLE);
+
+		/*
+		 * Leave the last 3% for root
+		 */
+		if (!cap_sys_admin)
+			free -= free / 32;
+
+		if (free > pages)
+			return 0;
+
+		/*
+		 * nr_free_pages() is very expensive on large systems,
+		 * only call if we're about to fail.
+		 */
+		n = nr_free_pages();
+
+		/*
+		 * Leave reserved pages. The pages are not for anonymous pages.
+		 */
+		if (n <= totalreserve_pages)
+			goto error;
+		else
+			n -= totalreserve_pages;
+
+		/*
+		 * Leave the last 3% for root
+		 */
+		if (!cap_sys_admin)
+			n -= n / 32;
+		free += n;
+
+		if (free > pages)
+			return 0;
+
+		goto error;
+	}
+
+	allowed = (totalram_pages - hugetlb_total_pages())
+	       	* sysctl_overcommit_ratio / 100;
+	/*
+	 * Leave the last 3% for root
+	 */
+	if (!cap_sys_admin)
+		allowed -= allowed / 32;
+	allowed += total_swap_pages;
+
+	/* Don't let a single process grow too big:
+	   leave 3% of the size of this process for other processes */
+	if (mm)
+		allowed -= mm->total_vm / 32;
+
+	if (percpu_counter_read_positive(&vm_committed_as) < allowed)
+		return 0;
+error:
+	vm_unacct_memory(pages);
+
+	return -ENOMEM;
+}
+```
