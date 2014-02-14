@@ -77,7 +77,7 @@ security_vm_enough_memory(len)
  * mapping. 0 means there is enough memory for the allocation to
  * succeed and -ENOMEM implies there is not.
  * 
- * 0 なら十分なメモリがある
+ * 0 なら十分なメモリがある ( cap_vm_enough_memory から呼ばれるので 0 を返すインタフェース )
  * ENOMEM なら駄目ポ
  * 
  * We currently support three overcommit policies, which are set via the
@@ -222,3 +222,14 @@ Committed_AS:     582868 kB  # 残り 0.24 %
 ```
 
 3% 分多く commit している
+
+## security_vm_enough_***
+
+security_vm_enough_*** -> cap_vm_enough_memory -> __vm_enough_memory の流れ
+
+ * security_vm_enough_memory
+ * security_vm_enough_memory_mm
+ * security_vm_enough_memory_kern
+
+
+
