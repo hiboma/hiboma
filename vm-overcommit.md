@@ -90,6 +90,8 @@ int __vm_enough_memory(struct mm_struct *mm, long pages, int cap_sys_admin)
 		 * which are reclaimable, under pressure.  The dentry
 		 * cache and most inode caches should fall into this
 		 */
+         // memory pressure 下では SLAB_RECLAIM_ACCOUNT フラグのたったslabキャッシュを再利用可
+         // dentry キャッシュと indoe キャッシュが該当?
 		free += global_page_state(NR_SLAB_RECLAIMABLE);
 
 		/*
