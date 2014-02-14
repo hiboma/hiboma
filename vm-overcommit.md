@@ -25,7 +25,9 @@ static int meminfo_proc_show(struct seq_file *m, void *v)
 
 `struct percpu_counter`
  
-大規模な SMPシステムでは _カウンター_ の仕組みがボトルネックになりうる
+ * 大規模な SMPシステムでは _カウンター_ の仕組みがボトルネックになりうる
+   * 1個のCPUがロックを獲得 => 他のCPUが待たされる
+   * カウンターが頻繁に利用されるほど競合しやすい
 
 `extern struct percpu_counter vm_committed_as;`
  
