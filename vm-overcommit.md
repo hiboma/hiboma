@@ -51,6 +51,7 @@ static inline void vm_acct_memory(long pages)
 ```
 static inline void vm_unacct_memory(long pages)
 {
+    // マイナスにして減らしてるだけ
 	vm_acct_memory(-pages);
 }
 ```
