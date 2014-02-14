@@ -1,7 +1,21 @@
 
+MySQL 5.1.73 のソースで `Can't create a new thread (errno %d)` を出す箇所を探す
+
+## まとめ
+
+pthread_create(3) がコケると出るメッセージ
+
+ * 仮想メモリサイズの上限に達した場合にコケえる
+     * `vm.overcommmit_ratio`, `vm.overcommit_memory` によって挙動が変わるので先に見ておくこと
+ * スレッド数が RLIMIT_NPROC の上限に達した場合もコケるはず
+
+[pthread_man の man](http://linuxjm.sourceforge.jp/html/glibc-linuxthreads/man3/pthread_create.3.html) を見るとどちらも EAGAIN を返すので判別できない ...
+
 ## Can't create a new thread (errno %d)
 
-エラー番号とシンボルとメッセージのテンプレ
+### メッセージの詳細
+
+エラー番号とシンボルとメッセージのテンプレは以下の様になっている
 
 ```
    *  Error: `1135' SQLSTATE: `HY000' (`ER_CANT_CREATE_THREAD')
@@ -11,7 +25,8 @@
      OS-dependent bug
 ```
 
-例のメッセージでは　errno 11 = EAGAIN であった
+ * 障碍児のメッセージでは　errno 11 = EAGAIN だった
+ * クライアントではなくサーバ側の問題として発生する
 
 ## ER_CANT_CREATE_THREAD を総ざらい
 
