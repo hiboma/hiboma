@@ -28,19 +28,6 @@ static int meminfo_proc_show(struct seq_file *m, void *v)
 
 ## Committed_AS
 
-`struct percpu_counter`
-
- * 大規模な SMPシステムでは _カウンター_ の仕組みがボトルネックになりうる
-   * 1個のCPUがロックを獲得 => 他のCPUが待たされる
-   * カウンターが頻繁に利用されるほど競合しやすい
- * 正確な値を返さなくていいカウンターがある
-   * だいたい合ってる数値を返しておけばおk
-   * 正確な数値と概算の数値を保持する配列を用意
-   * CPUごとに異なるインデックスの数値を加減する
-     * percpu_counter_add, percpu_counter_dec
-   * 概算の数値が閾値 ( ***FBC_BATCH*** ) を超えたら 正確な数値のカウンタを出すためにロックを取って更新する
-     * percpu_couter_sum
-     * 頻繁に発生しないので競合が怒りにくい
 
 `extern struct percpu_counter vm_committed_as;`
  
@@ -61,7 +48,25 @@ static inline void vm_unacct_memory(long pages)
 }
 ```
 
+percpu_counter って何ですかね
+
+`struct percpu_counter`
+
+ * 大規模な SMPシステムでは _カウンター_ の仕組みがボトルネックになりうる
+   * 1個のCPUがロックを獲得 => 他のCPUが待たされる
+   * カウンターが頻繁に利用されるほど競合しやすい
+ * 正確な値を返さなくていいカウンターがある
+   * だいたい合ってる数値を返しておけばおk
+   * 正確な数値と概算の数値を保持する配列を用意
+   * CPUごとに異なるインデックスの数値を加減する
+     * percpu_counter_add, percpu_counter_dec
+   * 概算の数値が閾値 ( ***FBC_BATCH*** ) を超えたら 正確な数値のカウンタを出すためにロックを取って更新する
+     * percpu_couter_sum
+     * このケースは頻繁に発生しないので競合が起こりにくい
+
 ## vm_acct_memory <- security_vm_enough_memory
+
+vm_acct_memory が呼び出されるのは以下のコード ( vm_unacct_memory はいろんな所で呼び出される)
 
 ```c
 security_vm_enough_memory(len)
@@ -70,7 +75,10 @@ security_vm_enough_memory(len)
  * Check that a process has enough memory to allocate a new virtual
  * mapping. 0 means there is enough memory for the allocation to
  * succeed and -ENOMEM implies there is not.
- *
+ * 
+ * 0 なら十分なメモリがある
+ * ENOMEM なら駄目ポ
+ * 
  * We currently support three overcommit policies, which are set via the
  * vm.overcommit_memory sysctl.  See Documentation/vm/overcommit-accounting
  *
@@ -78,6 +86,7 @@ security_vm_enough_memory(len)
  * Additional code 2002 Jul 20 by Robert Love.
  *
  * cap_sys_admin is 1 if the process has admin privileges, 0 otherwise.
+ * root 権限持ってるか否かで数値の扱いが違う
  *
  * Note this is a helper function intended to be used by LSMs which
  * wish to use this logic.
