@@ -202,6 +202,8 @@ error:
    * 最大で 6% のバッファが出来る
      * 実際は いろんなプロセスが Commit してるから 6% はありえないか
 
+足らん場合は ENOMEM 返す => 続きあり
+
 > 非root だと -3% 減る
 
 https://github.com/hiboma/vagrant-inspect-vm.overcommit で比較
