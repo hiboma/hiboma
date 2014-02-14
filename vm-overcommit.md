@@ -28,11 +28,13 @@ static int meminfo_proc_show(struct seq_file *m, void *v)
  * 大規模な SMPシステムでは _カウンター_ の仕組みがボトルネックになりうる
    * 1個のCPUがロックを獲得 => 他のCPUが待たされる
    * カウンターが頻繁に利用されるほど競合しやすい
- * 正確な値を返さなくていいカウンターがある。
+ * 正確な値を返さなくていいカウンターがある
    * だいたい合ってる数値を返しておけばおk
    * 正確な数値と概算の数値を保持する配列を用意
    * CPUごとに異なるインデックスの数値を加減する
-   * 概算の数値が閾値を超えたら 正確な数値のカウンタのロックを取って更新する
+     * percpu_counter_add, percpu_counter_dec
+   * 概算の数値が閾値 ( ___FBC_BATCH___ ) を超えたら 正確な数値のカウンタを出すためにロックを取って更新する
+     * percpu_couter_sum
      * 頻繁に発生しないので競合が怒りにくい
 
 `extern struct percpu_counter vm_committed_as;`
