@@ -1,3 +1,6 @@
+# vm.overcommit_ratio, vm.overcommit_memory をソースで理解する
+
+ * 2.6.32 vanilla kernel
 
 ## /proc/meminfo
 
@@ -21,7 +24,7 @@ static int meminfo_proc_show(struct seq_file *m, void *v)
 ```
 
  * CommitLimit = allowd は `(ページ数 - HUGEページ数) * vm.overcommmit_ratio /100 + swap のページ数` でよくある説明通り
-   * HUGEページを引いているのが違うかな
+   * HUGEページを引いているのが何でだろう
 
 ## Committed_AS
 
@@ -43,14 +46,14 @@ static int meminfo_proc_show(struct seq_file *m, void *v)
  
 vm_acct_memory, vm_unacct_memory で加減される
 
-```
+```c
 static inline void vm_acct_memory(long pages)
 {
 	percpu_counter_add(&vm_committed_as, pages);
 }
 ```
 
-```
+```c
 static inline void vm_unacct_memory(long pages)
 {
     // マイナスにして減らしてるだけ
