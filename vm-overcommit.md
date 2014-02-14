@@ -123,7 +123,7 @@ int __vm_enough_memory(struct mm_struct *mm, long pages, int cap_sys_admin)
 		 * nr_free_pages() is very expensive on large systems,
 		 * only call if we're about to fail.
 		 */
-        // コストが高いのは何で?
+        // コストが高いとあるが何で?
 		n = nr_free_pages();
 
 		/*
