@@ -26,10 +26,9 @@ static int meminfo_proc_show(struct seq_file *m, void *v)
  * CommitLimit = allowd は `(ページ数 - HUGEページ数) * vm.overcommmit_ratio /100 + swap のページ数` でよくある説明通り
    * HUGEページを引いているのが何でだろう
 
-## Committed_AS
+## Committed_AS, CommitLimit
 
-
-`extern struct percpu_counter vm_committed_as;`
+### `extern struct percpu_counter vm_committed_as;`
  
 vm_acct_memory, vm_unacct_memory で加減される
 
@@ -50,7 +49,7 @@ static inline void vm_unacct_memory(long pages)
 
 percpu_counter って何ですかね
 
-`struct percpu_counter`
+### `struct percpu_counter`
 
  * 大規模な SMPシステムでは _カウンター_ の仕組みがボトルネックになりうる
    * 1個のCPUがロックを獲得 => 他のCPUが待たされる
@@ -105,6 +104,7 @@ int __vm_enough_memory(struct mm_struct *mm, long pages, int cap_sys_admin)
 		return 0;
 
     // vm.overcommit_memory=0 の時
+    // 空きページ数を元に判定
 	if (sysctl_overcommit_memory == OVERCOMMIT_GUESS) {
 		unsigned long n;
 
