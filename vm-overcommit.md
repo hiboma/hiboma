@@ -73,6 +73,7 @@ int __vm_enough_memory(struct mm_struct *mm, long pages, int cap_sys_admin)
 	/*
 	 * Sometimes we want to use more memory than we have
 	 */
+    // vm.overcommit_memory=1 の時。何も判定しない !!!!
 	if (sysctl_overcommit_memory == OVERCOMMIT_ALWAYS)
 		return 0;
 
