@@ -190,6 +190,10 @@ error:
 }
 ```
 
- * 
- * 非root だと -3%
- * 一つのプロセスで専有しないように, プロセスのVMサイズを -3%
+3行まとめ
+
+ * OVERCOMMIT_ALWAYS はほんと何も見ない
+ * OVERCOMMIT_GUESS は空きページ数を見て判別
+ * OVERCOMMIT_NEVER は RAM と swap と overcommit_ratio の説明通り
+   * 非root だと -3% 減る
+   * 一つのプロセスで専有しないように, プロセスの仮想メモリサイズの -3% 減る
