@@ -115,7 +115,10 @@ void create_thread_to_handle_connection(THD *thd)
 
  * pthread_create が返すエラーで死ぬ。システムコールは clone(2) なはず
    * 違う ... libc が EAGAIN をセットしてそうだ
+     * https://www.sourceware.org/bugzilla/show_bug.cgi?id=386
+     * POSIXでは ENOMEM じゃなくて EAGAIN を返すのが正しいのかな?
    * clone(2) 呼び出す前の mmap で死んでる
+     * MAP_STACK なのでスレッド用のスタック
 
 ```
 nanosleep({1, 0}, 0x7fff96fe05a0)       = 0
