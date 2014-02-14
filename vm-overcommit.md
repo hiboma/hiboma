@@ -23,9 +23,11 @@ static int meminfo_proc_show(struct seq_file *m, void *v)
 
 ## Committed_AS
 
- * `struct percpu_counter`
+`struct percpu_counter`
+ 
+大規模な SMPシステムでは _カウンター_ の仕組みがボトルネックになりうる
 
- * `extern struct percpu_counter vm_committed_as;`
+`extern struct percpu_counter vm_committed_as;`
  
 vm_acct_memory, vm_unacct_memory で加減される
 
