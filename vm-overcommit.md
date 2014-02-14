@@ -199,3 +199,15 @@ error:
    * 一つのプロセスで専有しないように, プロセスの仮想メモリサイズの -3% 減る
    * 最大で 6% のバッファが出来る
      * 実際は いろんなプロセスが Commit してるから 6% はありえないか
+
+https://github.com/hiboma/vagrant-inspect-vm.overcommit で比較
+
+```
+CommitLimit:      597544 kB
+Committed_AS:     564256 kB
+```
+
+```
+CommitLimit:      597544 kB
+Committed_AS:     582868 kB
+```
