@@ -28,6 +28,8 @@ $ fg
 $ fg
 ```
 
+ここでmysql が malloc とか mmap したらすぐにコケるほろほろな状態
+
 改めて mysqlクライアントでテスト用のテーブルを作成する
 
 ```sh
@@ -184,6 +186,8 @@ void *my_malloc(size_t size, myf my_flags)
   DBUG_RETURN((void*) point);
 } /* my_malloc */
 ```
+
+malloc に指定したサイズがでかいと中で mmap 呼ぶはずだから再現コードと一致する?
  
 ### my_once_alloc と EE_OUTOFMEMORY
 
