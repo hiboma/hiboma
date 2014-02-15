@@ -215,7 +215,7 @@ CommitLimit:      597544 kB
 Committed_AS:     564256 kB  # 残り 0.56 %
 ```
 
-__root で実行__
+        __root で実行__
 
 ```
 CommitLimit:      597544 kB
@@ -232,3 +232,55 @@ security_vm_enough_*** -> cap_vm_enough_memory -> __vm_enough_memory の流れ
  * security_vm_enough_memory_mm
    * カーネルスレッドを渡すと WARN_ON を出す。
  * security_vm_enough_memory_kern
+
+
+ ## mmap
+
+   * MAP_PRIVATE|MAP_ANONYMOUS は Committed_AS に加算される
+
+ ```c
+ #if 0
+#!/bin/bash
+o=`basename $0`
+o="__${o%.*}"
+CFLAGS="-O2 -g -std=gnu99 -W -Wall -fPIE"
+gcc ${CFLAGS} ${LDFLAGS} -o $o $0 && ./$o $*; exit
+#endif
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdbool.h>
+#include <sys/mman.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <err.h>
+#include <time.h>
+#include <sys/time.h>
+
+static int MILLI_SEC = 1000000;
+
+int main(int argc, char *argv[]) {
+
+	struct timespec spec = {0, 100 * MILLI_SEC};
+	size_t length = 1 * 1024 * 1024;
+
+	if (argc == 2)
+		length = atoi(argv[1]);
+	
+	for (;;) {
+		void *p = mmap(NULL, length, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
+		if (p == MAP_FAILED) {
+			perror("mmap failed");
+			exit(EXIT_FAILURE);
+		}
+		nanosleep(&spec, NULL);
+	}
+	
+	exit(0);
+}
+```
+ 
+
+ 
