@@ -28,13 +28,13 @@ $ fg
 $ fg
 ```
 
-改めて mysql で繋いで テーブルを作成する
+改めて mysqlクライアントでテスト用のテーブルを作成する
 
 ```sh
 $ mysql -uroot -Dtest -e 'CREATE TABLE hoge (id int)'
 ```
 
-おもむろに INSERT しまくると `Out of memory Needed( %d bytes)` を出す
+おもむろに大量のレコードを INSERT しまくると `Out of memory Needed( %d bytes)` を出す
 
 ```
 $ mysql -uroot -Dtest 'INSERT INTO hoge VALUES (1)'
@@ -42,7 +42,7 @@ $ mysql -uroot -Dtest 'INSERT INTO hoge SELECT * FROM hoge'
 ERROR 5 (HY000): Out of memory (Needed 128016 bytes)
 ```
 
-SELECT も `Out of memory` で死ぬ
+このレコードを SELECT しても `Out of memory` で死ぬ
 
 ```
 $ mysql -uroot -Dtest -e 'SELECT * from hoge'
@@ -57,8 +57,6 @@ ERROR 2008 (HY000) at line 1: MySQL client ran out of memory
  * malloc(3), mmap, mprotect の ENOMEM が返してる
 
 上の条件が重なって Commited_AS が CommitLimit に達して出てる ENOMEM と判定できる。
-
-mysqlクライアント側で出てる。mysqld 側で出したいけどなかなか難しそうだ
 
 ## INSERT時の mysqld の strace
 
