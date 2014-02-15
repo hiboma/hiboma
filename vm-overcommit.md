@@ -49,7 +49,7 @@ static inline void vm_unacct_memory(long pages)
 
 percpu_counter って何ですかね
 
-### struct percpu_counter 
+### struct percpu_counter
 
 Linux Kernel Architecture P.364 に説明載ってる
 
@@ -67,7 +67,8 @@ Linux Kernel Architecture P.364 に説明載ってる
 
 ## vm_acct_memory <- security_vm_enough_memory
 
-vm_acct_memory が呼び出されるのは以下のコード ( vm_unacct_memory はいろんな所で呼び出される)
+ * vm_acct_memory が呼び出されるのは以下のコード ( vm_unacct_memory はいろんな所で呼び出される)
+ * vm.overcommmit_memory の値に応じて オーバーコミットの判定をする
 
 ```c
 security_vm_enough_memory(len)
@@ -191,8 +192,6 @@ error:
 	return -ENOMEM;
 }
 ```
-
-3行+α まとめ
 
  * OVERCOMMIT_ALWAYS はほんと何も見ない
  * OVERCOMMIT_GUESS は空きページ数を見て判別
