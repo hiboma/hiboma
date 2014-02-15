@@ -114,15 +114,18 @@ void create_thread_to_handle_connection(THD *thd)
 ```
 
  * pthread_create が返すエラーで死ぬ。システムコールは clone(2) なはず
-   * 違う ... libc が EAGAIN をセットしてそうだ
-     * https://www.sourceware.org/bugzilla/show_bug.cgi?id=386
-     * POSIXでは ENOMEM じゃなくて EAGAIN を返すのが正しいのかな?
+   * 違った ... libc が EAGAIN をセットしてそう
+     * https://www.sourceware.org/bugzilla/show_bug.cgi?id=386 EAGAIN か ENOMEM かの議論
+     * POSIXでは ENOMEM じゃなくて EAGAIN を返すのが正しい仕様な様子
    * clone(2) 呼び出す前の mmap で死んでる
      * MAP_STACK なのでスレッド用のスタック
 
 ```
-nanosleep({1, 0}, 0x7fff96fe05a0)       = 0
+// LWP生えて ...
+clone(child_stack=0x7f5c41248ff0, flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM|CLONE_SETTLS|CLONE_PARENT_SETTID|CLONE_CHILD_CLEARTID, parent_tidptr=0x7f5c412499d0, tls=0x7f5c41249700, child_tidptr=0x7f5c412499d0) = 1962
+// mmap でスタックを作ろうとしたところ
 mmap(NULL, 10489856, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS|MAP_STACK, -1, 0) = -1 ENOMEM (Cannot allocate memory)
+// ぷげら
 write(2, "pthread_create failed: errno = 1"..., 76pthread_create failed: errno = 11, error = Resource temporarily unavailable
 ) = 76
 ``` 
