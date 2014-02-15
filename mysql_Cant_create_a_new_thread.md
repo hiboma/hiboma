@@ -152,7 +152,9 @@ child_stack=0x7f856e8e4f10, flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CL
 ``` 
    
  * mysqld がスレッドを生成できない => kill するためのスレッドを作成できない?
-
+   * pthread_create が EAGAIN 返すような状況で `/etc/init.d/mysqld stop` しても mysqld が応答しない
+   * クライアントを止めても stop はブロックし続ける
+   * シグナルハンドラ周りでブロックしてそうだけど、 strace 見ただけじゃよく分からん
 
 create_thread_to_handle_connection を上に辿ると create_new_thread に辿り着く
 
