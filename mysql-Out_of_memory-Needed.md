@@ -111,6 +111,10 @@ write(2) が EAGAIN
 [pid  1257] write(50, "\0e\0011\2\0\0f\0011\2\0\0g\0011\2\0\0h\0011\2\0\0i\0011\2\0\0j"..., 384) = -1 EAGAIN (Resource temporarily unavailable)
 ```
 
+----
+
+# ソースで追う
+
 ## "Out of memory (Needed %u bytes)" のソース
 
 ```
