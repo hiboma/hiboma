@@ -130,9 +130,28 @@ mmap(NULL, 10489856, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS|MAP_STACK, 
 // ぷげら
 write(2, "pthread_create failed: errno = 1"..., 76pthread_create failed: errno = 11, error = Resource temporarily unavailable
 ) = 76
+```
+
+ * mysqld をトレースすると pthread_create の mprotect(2) で ENOMEM で死んでた
+   * 再現コードと一緒
+
+``` 
+[pid 10526] clone(Process 10592 attached
+child_stack=0x7f856e8e4f10, flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM|CLONE_SETTLS|CLONE_PARENT_SETTID|CLONE_CHILD_CLEARTID, parent_tidptr=0x7f856e8e59d0, tls=0x7f856e8e5700, child_tidptr=0x7f856e8e59d0) = 10592
+[pid 10526] select(13, [10 12], NULL, NULL, NULL <unfinished ...>
+[pid 10592] set_robust_list(0x7f856e8e59e0, 0x18) = 0
+[pid 10592] mmap(NULL, 134217728, PROT_NONE, MAP_PRIVATE|MAP_ANONYMOUS|MAP_NORESERVE, -1, 0) = 0x7f854c000000
+[pid 10592] munmap(0x7f8550000000, 67108864) = 0
+[pid 10592] mprotect(0x7f854c000000, 135168, PROT_READ|PROT_WRITE) = -1 ENOMEM (Cannot allocate memory)
+[pid 10592] munmap(0x7f854c000000, 67108864) = 0
+[pid 10592] mmap(0x7f8550000000, 67108864, PROT_NONE, MAP_PRIVATE|MAP_ANONYMOUS|MAP_NORESERVE, -1, 0) = 0x7f8550000000
+[pid 10592] mprotect(0x7f8550000000, 135168, PROT_READ|PROT_WRITE) = -1 ENOMEM (Cannot allocate memory)
+[pid 10592] munmap(0x7f8550000000, 67108864) = 0
+[pid 10592] write(33, "\271\0\0\0\377\21\4Out of memory; check if mysqld or some other process uses all available memory; if not, you may have to use 'ulimit' to allow mysqld to use more memory or you can add more swap space", 189) = 189
 ``` 
    
  * mysqld がスレッドを生成できない => kill するためのスレッドを作成できない?
+
 
 create_thread_to_handle_connection を上に辿ると create_new_thread に辿り着く
 
