@@ -23,7 +23,7 @@ $ fg
 $ fg
 ```
 
-改めて mysql で繋ぐ
+改めて mysql で繋いで テーブルを作成する
 
 ```
 mysql -uroot -Dtest -e 'CREATE TABLE hoge (id int)'
