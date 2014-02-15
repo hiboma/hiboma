@@ -36,7 +36,7 @@ $ mysql -uroot -Dtest -e 'CREATE TABLE hoge (id int)'
 
 おもむろに大量のレコードを INSERT しまくると `Out of memory Needed( %d bytes)` を出す
 
-```
+```sh
 $ mysql -uroot -Dtest 'INSERT INTO hoge VALUES (1)'
 $ mysql -uroot -Dtest 'INSERT INTO hoge SELECT * FROM hoge'
 ERROR 5 (HY000): Out of memory (Needed 128016 bytes)
@@ -44,7 +44,7 @@ ERROR 5 (HY000): Out of memory (Needed 128016 bytes)
 
 このレコードを SELECT しても `Out of memory` で死ぬ
 
-```
+```sh
 $ mysql -uroot -Dtest -e 'SELECT * from hoge'
 mysql: Out of memory (Needed 367200 bytes)
 ERROR 2008 (HY000) at line 1: MySQL client ran out of memory
