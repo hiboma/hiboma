@@ -80,9 +80,9 @@ Linux Kernel Architecture P.364 に説明載ってる
 
 ## vm_acct_memory <- security_vm_enough_memory
 
- * vm_acct_memory が呼び出されるのは以下のコード ( vm_unacct_memory はいろんな所で呼び出される)
- * vm.overcommmit_memory の値に応じて オーバーコミットの判定をする
-   * OVERCOMMIT_ALWAYS はほんと何も見ない
+ * vm_acct_memory が呼び出されるのは security_vm_enough_memory 内 ( vm_unacct_memory はいろんな所で呼び出される)
+ * security_vm_enough_memory では vm.overcommmit_memory の値に応じて オーバーコミットの判定をする
+   * OVERCOMMIT_ALWAYS は何も見ないで 0 返す
    * OVERCOMMIT_GUESS は空きページ数を見て判別
    * OVERCOMMIT_NEVER は RAM と swap と overcommit_ratio の説明通り
      * 非root だと -3% 減る
@@ -213,7 +213,7 @@ error:
 }
 ```
 
-#### 非root だと Commitできる量が -3% 減る
+#### 非root だと Commitできる量が -3% 減る の検証
 
 https://github.com/hiboma/vagrant-inspect-vm.overcommit で比較した
 
@@ -256,8 +256,7 @@ security_vm_enough_*** -> cap_vm_enough_memory -> __vm_enough_memory の流れ
    * shmem.c ([shmem_acct_size](http://lxr.free-electrons.com/source/mm/shmem.c?v=2.6.32#L185), [shmem_acct_block](http://lxr.free-electrons.com/source/mm/shmem.c?v=2.6.32#L203)) でのみ使われている
    * ファイルシステムの実装として使われている。システムコールとは違うことを _kern で意味したい?
 
-
- ## mmap で検証
+## mmap で検証
 
  * Committed_AS に加算されるかどうかはどこで決まるのか?
    * accountable_mapping
@@ -282,6 +281,7 @@ static inline int accountable_mapping(struct file *file, unsigned int vm_flags)
 ```
 
  * PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS は Committed_AS に加算される
+   * private writable
 
 ```
 [vagrant@vagrant-centos65 ~]$ pmap 494
