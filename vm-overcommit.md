@@ -9,6 +9,11 @@
    * mmap, brk, stack
    * pmap で `rw--`
  * プロセス単位の Committed_AS のサイズは取れない?
+   * 下記のワンライナーで近い値は出せる
+
+```sh
+sudo pmap `sudo cat /var/run/mysqld/mysqld.pid` | grep 'rw--' | perl -anle '$s=$F[1];$s=~s/k//;$sum+=$s;END { warn $sum }'
+```
 
 ## /proc/meminfo から辿る
 
