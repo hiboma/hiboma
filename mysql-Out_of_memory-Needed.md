@@ -12,13 +12,17 @@ https://github.com/hiboma/vagrant-inspect-vm.overcommit 使ってやると楽
 
 ## 再現手順
 
-```
-for i in {0..100}; do mysql -e "select sleep(180)" & done
+MySQLが仮想メモリをコミットまくりで、 Commited_AS が CommitLimit ギリギリという状況を再現したい
+
+mysqlクライアントを繋ぎまくると `ERROR 1135 (HY000): Can't create a new thread (errno 11);` でコケる
+
+```sh
+$ for i in {0..100}; do mysql -e "select sleep(180)" & done
 ```
 
 このまんまだと mysql に繋げないので、`fg` して Ctrl-C で mysql クライアントを 2-3個消す
 
-```
+```sh
 $ fg
 $ fg
 $ fg
@@ -26,8 +30,8 @@ $ fg
 
 改めて mysql で繋いで テーブルを作成する
 
-```
-mysql -uroot -Dtest -e 'CREATE TABLE hoge (id int)'
+```sh
+$ mysql -uroot -Dtest -e 'CREATE TABLE hoge (id int)'
 ```
 
 おもむろに INSERT しまくると `Out of memory Needed( %d bytes)` を出す
