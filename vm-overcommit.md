@@ -246,9 +246,34 @@ security_vm_enough_*** -> cap_vm_enough_memory -> __vm_enough_memory の流れ
 
  ## mmap
 
-   * PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS は Committed_AS に加算される
+   * PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS は Committed_AS に加算される
+   * PROT_READ,            MAP_PRIVATE|MAP_ANONYMOUS だと加算されない
+      * 無名リージョンを読み出しだけだと意味無いな
+[vagrant@vagrant-centos65 ~]$ pmap 440
+440:   ./__mmap
+0000000000400000      4K r-x--  /home/vagrant/__mmap
+0000000000600000      4K rw---  /home/vagrant/__mmap
+00007f1d1d5ff000 4618240K r----    [ anon ]             # [anon] が r---- だとコミットに加算されない
+00007f1e373ff000   1580K r-x--  /lib64/libc-2.12.so
+00007f1e3758a000   2044K -----  /lib64/libc-2.12.so
+00007f1e37789000     16K r----  /lib64/libc-2.12.so
+00007f1e3778d000      4K rw---  /lib64/libc-2.12.so
+00007f1e3778e000     20K rw---    [ anon ]
+00007f1e37793000    128K r-x--  /lib64/ld-2.12.so
+00007f1e379a9000     12K rw---    [ anon ]
+00007f1e379b1000      4K rw---    [ anon ]
+00007f1e379b2000      4K r----  /lib64/ld-2.12.so
+00007f1e379b3000      4K rw---  /lib64/ld-2.12.so
+00007f1e379b4000      4K rw---    [ anon ]
+00007fff1a8fd000     84K rw---    [ stack ]
+00007fff1a9ff000      4K r-x--    [ anon ]
+ffffffffff600000      4K r-x--    [ anon ]
+ total          4622160K
+```
 
- ```c
+実証用コード
+
+```c
  #if 0
 #!/bin/bash
 o=`basename $0`
