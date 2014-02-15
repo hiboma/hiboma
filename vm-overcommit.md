@@ -186,6 +186,8 @@ int __vm_enough_memory(struct mm_struct *mm, long pages, int cap_sys_admin)
 	}
 
     // vm.overcommit_memory=2 の時 OVERCOMMIT_NEVER
+    // HugeTLB https://access.redhat.com/site/documentation/ja-JP/Red_Hat_Enterprise_Linux/6/html/Performance_Tuning_Guide/main-memory.html#s-memory-tlb
+    // ttp://blog.livedoor.jp/rootan2007/archives/51711958.html
 	allowed = (totalram_pages - hugetlb_total_pages())
 	       	* sysctl_overcommit_ratio / 100;
 	/*
