@@ -5,10 +5,10 @@
 ## まとめ
 
  * root の 3%, プロセスサイズの3%
- * プロセス単位の Committed_AS のサイズは取れない?
  * private writable なリージョンが Commited_AS に加算される
    * mmap, brk, stack
-   * pmap で rw--
+   * pmap で `rw--`
+ * プロセス単位の Committed_AS のサイズは取れない?
 
 ## /proc/meminfo から辿る
 
@@ -371,6 +371,3 @@ int main(int argc, char *argv[]) {
 	exit(0);
 }
 ```
- 
-
- 
