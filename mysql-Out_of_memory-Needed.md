@@ -37,6 +37,14 @@ mysql> INSERT INTO hoge SELECT * FROM hoge;
 ERROR 5 (HY000): Out of memory (Needed 128016 bytes)
 ```
 
+### なんで出るん?
+
+ * `vm.overcommit_ratio=99`
+ * `vm.overcommit_memory=2`
+ * malloc(3), mmap, mprotect の ENOMEM が返してる
+
+上の条件が重なって Commited_AS が CommitLimit に達して出てる ENOMEM と判定できる
+
 ## INSERT時の mysqld の strace
 
 mprotect, mmap で ENOMEM を返す
