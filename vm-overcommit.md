@@ -8,6 +8,7 @@
  * プロセス単位の Committed_AS のサイズは取れない?
  * private writable なリージョンが Commited_AS に加算される
    * mmap, brk, stack
+   * pmap で rw--
 
 ## /proc/meminfo から辿る
 
