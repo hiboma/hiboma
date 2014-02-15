@@ -5,8 +5,14 @@ MySQL 5.1.73 のソースで `Can't create a new thread (errno %d)` を出す箇
 
 pthread_create(3) がコケると出るメッセージ
 
- * 仮想メモリサイズの上限に達した場合にコケえる
+ * 仮想メモリサイズの上限に達した場合にコケる
      * `vm.overcommmit_ratio`, `vm.overcommit_memory` によって挙動が変わるので先に見ておくこと
+     * clone ではなく mmap や mprotect でもコケる
+     * システムコールの errno は ENOMEM だけど、 pthread の仕様で EAGAIN に変えて返される
+ * /etc/init.d/mysql stop がタイムアウト
+   * シグナルに応答しない
+   * シグナルハンドリング用のメモリも取れない状態?
+ * クライアントを止めると復帰する
  * スレッド数が RLIMIT_NPROC の上限に達した場合もコケるはず
 
 [pthread_man の man](http://linuxjm.sourceforge.jp/html/glibc-linuxthreads/man3/pthread_create.3.html) を見るとどちらも EAGAIN を返すので判別できない ...
