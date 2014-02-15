@@ -69,6 +69,13 @@ Linux Kernel Architecture P.364 に説明載ってる
 
  * vm_acct_memory が呼び出されるのは以下のコード ( vm_unacct_memory はいろんな所で呼び出される)
  * vm.overcommmit_memory の値に応じて オーバーコミットの判定をする
+   * OVERCOMMIT_ALWAYS はほんと何も見ない
+   * OVERCOMMIT_GUESS は空きページ数を見て判別
+   * OVERCOMMIT_NEVER は RAM と swap と overcommit_ratio の説明通り
+     * 非root だと -3% 減る
+     * 一つのプロセスで専有しないように, プロセスの仮想メモリサイズの -3% 減る
+     * 最大で 6% のバッファが出来る
+       * 実際は いろんなプロセスが Commit してるから 6% はありえないか
 
 ```c
 security_vm_enough_memory(len)
@@ -193,19 +200,9 @@ error:
 }
 ```
 
- * OVERCOMMIT_ALWAYS はほんと何も見ない
- * OVERCOMMIT_GUESS は空きページ数を見て判別
- * OVERCOMMIT_NEVER は RAM と swap と overcommit_ratio の説明通り
-   * 非root だと -3% 減る
-   * 一つのプロセスで専有しないように, プロセスの仮想メモリサイズの -3% 減る
-   * 最大で 6% のバッファが出来る
-     * 実際は いろんなプロセスが Commit してるから 6% はありえないか
+#### 非root だと Commitできる量が -3% 減る
 
-足らん場合は ENOMEM 返す => 続きあり
-
-> 非root だと -3% 減る
-
-https://github.com/hiboma/vagrant-inspect-vm.overcommit で比較
+https://github.com/hiboma/vagrant-inspect-vm.overcommit で比較した
 
 __vagrant で実行__
 
@@ -221,7 +218,8 @@ CommitLimit:      597544 kB
 Committed_AS:     582868 kB  # 残り 0.24 %
 ```
 
-3% 分多く commit している
+ * 3% 分多く commit している
+ * シェルの操作まで巻き添えにするので大分危険
 
 ## security_vm_enough_*** API
 
