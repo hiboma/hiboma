@@ -20,7 +20,7 @@ for i in {0..100}; do mysql -e "select sleep(180)" & done
 改めて mysql で繋ぐ
 
 ```
-mysql -uroot
+mysql -uroot 
 
 # テスト用のテーブルを作る
 mysql> use test;
@@ -30,11 +30,9 @@ mysql> create table hoge (id int);
 おもむろに INSERT しまくると `Out of memory Needed( %d bytes)` を出す
 
 ```
-mysql> INSERT INTO hoge VALUES (1);
-Query OK, 1 row affected (0.00 sec)
-
-mysql> INSERT INTO hoge SELECT * FROM hoge;
-ERROR 5 (HY000): Out of memory (Needed 128016 bytes)
+> mysql -uroot -Dtest -e 'select * from hoge;'
+mysql: Out of memory (Needed 367200 bytes)
+ERROR 2008 (HY000) at line 1: MySQL client ran out of memory
 ```
 
 ### なんで出るん?
@@ -43,7 +41,9 @@ ERROR 5 (HY000): Out of memory (Needed 128016 bytes)
  * `vm.overcommit_memory=2`
  * malloc(3), mmap, mprotect の ENOMEM が返してる
 
-上の条件が重なって Commited_AS が CommitLimit に達して出てる ENOMEM と判定できる
+上の条件が重なって Commited_AS が CommitLimit に達して出てる ENOMEM と判定できる。
+
+mysqlクライアント側で出てる。mysqld 側で出したいけどなかなか難しそうだ
 
 ## INSERT時の mysqld の strace
 
