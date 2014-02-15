@@ -246,7 +246,7 @@ security_vm_enough_*** -> cap_vm_enough_memory -> __vm_enough_memory の流れ
 
  ## mmap
 
-   * MAP_PRIVATE|MAP_ANONYMOUS は Committed_AS に加算される
+   * PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS は Committed_AS に加算される
 
  ```c
  #if 0
