@@ -230,6 +230,9 @@ security_vm_enough_*** -> cap_vm_enough_memory -> __vm_enough_memory の流れ
 
  * security_vm_enough_memory
    * カーネルスレッドを渡すと WARN_ON を出す
+   * [mmap_region](http://lxr.free-electrons.com/source/mm/mmap.c?v=2.6.32#L1108)
+      * accountable_mapping 
+   * [do_brk](http://lxr.free-electrons.com/source/mm/mmap.c?v=2.6.32#L1990)
  * security_vm_enough_memory_mm
    * task_struct が渡ってこない無い関数パスでも呼び出せるようインタフェースを変えてるだけなのかな?
    * [acct_stack_growth](http://lxr.free-electrons.com/source/mm/mmap.c?v=2.6.32#L1553) スタックを拡張する際に呼び出し
