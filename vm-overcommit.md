@@ -49,7 +49,7 @@ static inline void vm_unacct_memory(long pages)
 
 percpu_counter って何ですかね
 
-### struct percpu_counter
+### struct percpu_counter 
 
 Linux Kernel Architecture P.364 に説明載ってる
 
