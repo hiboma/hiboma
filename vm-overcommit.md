@@ -232,6 +232,7 @@ security_vm_enough_*** -> cap_vm_enough_memory -> __vm_enough_memory の流れ
  * security_vm_enough_memory_mm
    * カーネルスレッドを渡すと WARN_ON を出す。
  * security_vm_enough_memory_kern
+   * shmem.c でのみ使われている
 
 
  ## mmap
