@@ -89,6 +89,10 @@ Linux Kernel Architecture P.364 に説明載ってる
      * 一つのプロセスで専有しないように, プロセスの仮想メモリサイズの -3% 減る
      * 最大で 6% のバッファが出来る
        * 実際は いろんなプロセスが Commit してるから 6% はありえないか
+   * Huge TLB
+     * http://blog.livedoor.jp/rootan2007/archives/51711958.html
+     * https://access.redhat.com/site/documentation/ja-JP/Red_Hat_Enterprise_Linux/6/html/Performance_Tuning_Guide/main-memory.html#s-memory-tlb
+       * 設定してないなら 0
 
 ```c
 security_vm_enough_memory(len)
@@ -188,6 +192,7 @@ int __vm_enough_memory(struct mm_struct *mm, long pages, int cap_sys_admin)
     // vm.overcommit_memory=2 の時 OVERCOMMIT_NEVER
     // HugeTLB https://access.redhat.com/site/documentation/ja-JP/Red_Hat_Enterprise_Linux/6/html/Performance_Tuning_Guide/main-memory.html#s-memory-tlb
     // ttp://blog.livedoor.jp/rootan2007/archives/51711958.html
+    // ふつーのサーバーだと hugetlb_total_pages() のサイズは 0 かなー
 	allowed = (totalram_pages - hugetlb_total_pages())
 	       	* sysctl_overcommit_ratio / 100;
 	/*
