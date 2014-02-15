@@ -295,6 +295,7 @@ ffffffffff600000      4K r-x--    [ anon ]
 
    * PROT_READ, MAP_PRIVATE|MAP_ANONYMOUS だと加算されない
       * 無名リージョンを読み出しだけだと意味無いな
+
 [vagrant@vagrant-centos65 ~]$ pmap 440
 440:   ./__mmap
 0000000000400000      4K r-x--  /home/vagrant/__mmap
