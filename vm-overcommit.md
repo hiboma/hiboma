@@ -232,9 +232,9 @@ security_vm_enough_*** -> cap_vm_enough_memory -> __vm_enough_memory の流れ
    * カーネルスレッドを渡すと WARN_ON を出す
  * security_vm_enough_memory_mm
    * task_struct が渡ってこない無い関数パスでも呼び出せるようインタフェースを変えてるだけなのかな?
-   * acct_stack_growth
+   * [acct_stack_growth](http://lxr.free-electrons.com/source/mm/mmap.c?v=2.6.32#L1553) スタックを拡張する際に呼び出し
  * security_vm_enough_memory_kern
-   * shmem.c (shmem_acct_size, shmem_acct_block) でのみ使われている
+   * shmem.c ([shmem_acct_size](http://lxr.free-electrons.com/source/mm/shmem.c?v=2.6.32#L185), [shmem_acct_block](http://lxr.free-electrons.com/source/mm/shmem.c?v=2.6.32#L203)) でのみ使われている
 
 
  ## mmap
