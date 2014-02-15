@@ -1,7 +1,5 @@
 # vm.overcommit_ratio, vm.overcommit_memory をソースで理解する
 
-2.6.32 vanilla kernel
-
 ## まとめ
 
  * root の 3%, プロセスサイズの3%
@@ -241,25 +239,34 @@ Committed_AS:     582868 kB  # 残り 0.24 %
 
 ## security_vm_enough_*** API
 
-security_vm_enough_*** -> cap_vm_enough_memory -> __vm_enough_memory の流れ
+__vm_enough_memory を呼び出す API群
 
- * security_vm_enough_memory
-   * カーネルスレッドを渡すと WARN_ON を出す
-   * [mmap_region](http://lxr.free-electrons.com/source/mm/mmap.c?v=2.6.32#L1108)
-      * accountable_mapping
-   * [do_brk](http://lxr.free-electrons.com/source/mm/mmap.c?v=2.6.32#L1990)
-   * [vma_to_resize](http://lxr.free-electrons.com/source/mm/mremap.c?v=2.6.32#L262)
-   * [swapoff](http://lxr.free-electrons.com/source/mm/swapfile.c?v=2.6.32#L1512)
-   * [mprotect_fixup](http://lxr.free-electrons.com/source/mm/mprotect.c?v=2.6.32#L136)
-   * [dup_mmap](http://lxr.free-electrons.com/source/kernel/fork.c?v=2.6.32#L279)
-     * fork
- * security_vm_enough_memory_mm
-   * task_struct が渡ってこない無い関数パスでも呼び出せるようインタフェースを変えてるだけなのかな?
+`security_vm_enough_*** -> cap_vm_enough_memory -> __vm_enough_memory` の流れ
+
+### security_vm_enough_memory
+
+ * カーネルスレッドを渡すと WARN_ON を出す
+ * [mmap_region](http://lxr.free-electrons.com/source/mm/mmap.c?v=2.6.32#L1108)
+    * accountable_mapping
+ * [do_brk](http://lxr.free-electrons.com/source/mm/mmap.c?v=2.6.32#L1990)
+    * brk(2)
+ * [vma_to_resize](http://lxr.free-electrons.com/source/mm/mremap.c?v=2.6.32#L262)
+ * [swapoff](http://lxr.free-electrons.com/source/mm/swapfile.c?v=2.6.32#L1512)
+    * swap したページをページフレームに読み込めるかどうか?
+ * [mprotect_fixup](http://lxr.free-electrons.com/source/mm/mprotect.c?v=2.6.32#L136)
+ * [dup_mmap](http://lxr.free-electrons.com/source/kernel/fork.c?v=2.6.32#L279)
+   * fork の途中
+
+### security_vm_enough_memory_mm
+
+ * task_struct が渡ってこない無い関数パスでも呼び出せるようインタフェースを変えてるだけなのかな?
    * [acct_stack_growth](http://lxr.free-electrons.com/source/mm/mmap.c?v=2.6.32#L1553) スタックを拡張する際に呼び出し
    * [insert_vm_struct](http://lxr.free-electrons.com/source/mm/mmap.c?v=2.6.32#L2167)
- * security_vm_enough_memory_kern
-   * shmem.c ([shmem_acct_size](http://lxr.free-electrons.com/source/mm/shmem.c?v=2.6.32#L185), [shmem_acct_block](http://lxr.free-electrons.com/source/mm/shmem.c?v=2.6.32#L203)) でのみ使われている
-   * ファイルシステムの実装として使われている。システムコールとは違うことを _kern で意味したい?
+
+### security_vm_enough_memory_kern
+
+ * shmem.c ([shmem_acct_size](http://lxr.free-electrons.com/source/mm/shmem.c?v=2.6.32#L185), [shmem_acct_block](http://lxr.free-electrons.com/source/mm/shmem.c?v=2.6.32#L203)) でのみ使われている
+     * ファイルシステムの実装として使われている。システムコールとは違うことを _kern で意味したい?
 
 ## mmap で検証
 
