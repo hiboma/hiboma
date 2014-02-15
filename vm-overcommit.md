@@ -218,7 +218,6 @@ Committed_AS:     564256 kB  # 残り 0.56 %
 __root で実行__
 
 ```
-
 CommitLimit:      597544 kB
 Committed_AS:     582868 kB  # 残り 0.24 %
 ```
@@ -233,7 +232,3 @@ security_vm_enough_*** -> cap_vm_enough_memory -> __vm_enough_memory の流れ
  * security_vm_enough_memory_mm
    * カーネルスレッドを渡すと WARN_ON を出す。
  * security_vm_enough_memory_kern
- 
-
-
-
