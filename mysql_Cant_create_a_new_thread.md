@@ -133,7 +133,8 @@ write(2, "pthread_create failed: errno = 1"..., 76pthread_create failed: errno =
 ```
 
  * mysqld をトレースすると pthread_create の mprotect(2) で ENOMEM で死んでた
-   * 再現コードと一緒
+   * 疑似再現コードだと MAP_STACK の mmap(2) だったのでちょっと違う
+   * pthread_create の中であるのは合ってるかな?
 
 ``` 
 [pid 10526] clone(Process 10592 attached
