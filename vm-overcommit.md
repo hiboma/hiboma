@@ -257,7 +257,7 @@ security_vm_enough_*** -> cap_vm_enough_memory -> __vm_enough_memory の流れ
    * ファイルシステムの実装として使われている。システムコールとは違うことを _kern で意味したい?
 
 
- ## mmap
+ ## mmap で検証
 
  * Committed_AS に加算されるかどうかはどこで決まるのか?
    * accountable_mapping
