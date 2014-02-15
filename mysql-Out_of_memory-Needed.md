@@ -1,13 +1,14 @@
 # MySQL
 
-## Out of memory (Needed %d bytes) 
-
-https://github.com/hiboma/vagrant-inspect-vm.overcommit
+## Out of memory (Needed %d bytes) を再現する手順
 
  * CentOS 6.5
- * mysql 
- * vm.overcommit_ratio=99
+ * mysql-server-5.1.73-3.el6_5.x86_64
  * vm.overcommit_memory=2
+ * vm.overcommit_ratio=99
+   * CommitLimit > Commited_AS の制限
+
+https://github.com/hiboma/vagrant-inspect-vm.overcommit 使ってやると楽
 
 ## 再現手順
 
