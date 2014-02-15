@@ -17,20 +17,30 @@ for i in {0..100}; do mysql -e "select sleep(180)" & done
 
 このまんまだと mysql に繋げないので、`fg` して Ctrl-C で mysql クライアントを 2-3個消す
 
+```
+$ fg
+$ fg
+$ fg
+```
+
 改めて mysql で繋ぐ
 
 ```
-mysql -uroot 
-
-# テスト用のテーブルを作る
-mysql> use test;
-mysql> create table hoge (id int);
+mysql -uroot -Dtest -e 'CREATE TABLE hoge (id int)'
 ```
 
 おもむろに INSERT しまくると `Out of memory Needed( %d bytes)` を出す
 
 ```
-> mysql -uroot -Dtest -e 'select * from hoge;'
+$ mysql -uroot -Dtest 'INSERT INTO hoge VALUES (1)'
+$ mysql -uroot -Dtest 'INSERT INTO hoge SELECT * FROM hoge'
+ERROR 5 (HY000): Out of memory (Needed 128016 bytes)
+```
+
+SELECT も `Out of memory` で死ぬ
+
+```
+$ mysql -uroot -Dtest -e 'SELECT * from hoge'
 mysql: Out of memory (Needed 367200 bytes)
 ERROR 2008 (HY000) at line 1: MySQL client ran out of memory
 ```
