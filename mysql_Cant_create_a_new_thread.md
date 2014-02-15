@@ -1,4 +1,3 @@
-
 # MySQL 5.1.73 のソースで `Can't create a new thread (errno %d)` を出す箇所を探す
 
 ## まとめ
