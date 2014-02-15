@@ -119,6 +119,12 @@ void create_thread_to_handle_connection(THD *thd)
 }
 ```
 
+ * ltrace だと pthread_create が `errno = 11`
+
+```
+[pid 1662] pthread_create(0x3928d58, 0xd3f5e0, 0x5c5250, 0x3927430, 0xd3ef60)                                   = 11
+```
+
  * pthread_create が返すエラーで死ぬ。システムコールは clone(2) なはず
    * 違った ... libc が EAGAIN をセットしてそう
      * https://www.sourceware.org/bugzilla/show_bug.cgi?id=386 EAGAIN か ENOMEM かの議論
