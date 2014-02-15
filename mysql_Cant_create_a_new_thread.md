@@ -119,6 +119,8 @@ void create_thread_to_handle_connection(THD *thd)
      * POSIXでは ENOMEM じゃなくて EAGAIN を返すのが正しい仕様な様子
    * clone(2) 呼び出す前の mmap で死んでる
      * MAP_STACK なのでスレッド用のスタック
+     * man を見るとスタックサイズは 2MB がデフォルトとあるが、下記のログだと 1MB
+     * コネクション数 * 1MB だとなかなか仮想メモリをしっかり取るな
 
 ```
 // LWP生えて ...
