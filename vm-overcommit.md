@@ -1,6 +1,13 @@
 # vm.overcommit_ratio, vm.overcommit_memory をソースで理解する
 
- * 2.6.32 vanilla kernel
+2.6.32 vanilla kernel
+
+## まとめ
+
+ * root の 3%, プロセスサイズの3%
+ * プロセス単位の Committed_AS のサイズは取れない?
+ * private writable なリージョンが Commited_AS に加算される
+   * mmap, brk, stack
 
 ## /proc/meminfo から辿る
 
@@ -268,7 +275,7 @@ static inline int accountable_mapping(struct file *file, unsigned int vm_flags)
 }
 ```
 
-   * PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS は Committed_AS に加算される
+ * PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS は Committed_AS に加算される
 
 ```
 [vagrant@vagrant-centos65 ~]$ pmap 494
@@ -293,8 +300,8 @@ ffffffffff600000      4K r-x--    [ anon ]
  total           495440K
 ```
 
-   * PROT_READ, MAP_PRIVATE|MAP_ANONYMOUS だと加算されない
-      * 無名リージョンを読み出しだけだと意味無いな
+ * PROT_READ, MAP_PRIVATE|MAP_ANONYMOUS だと加算されない
+    * 無名リージョンを読み出しだけだと意味無いな
 
 [vagrant@vagrant-centos65 ~]$ pmap 440
 440:   ./__mmap
