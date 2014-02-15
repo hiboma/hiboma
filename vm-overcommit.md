@@ -269,13 +269,37 @@ static inline int accountable_mapping(struct file *file, unsigned int vm_flags)
 ```
 
    * PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS は Committed_AS に加算される
-   * PROT_READ,            MAP_PRIVATE|MAP_ANONYMOUS だと加算されない
+
+```
+[vagrant@vagrant-centos65 ~]$ pmap 494
+494:   ./__mmap
+0000000000400000      4K r-x--  /home/vagrant/__mmap
+0000000000600000      4K rw---  /home/vagrant/__mmap
+00007f7ee974f000 491520K rw---    [ anon ]              # private writable 加算される
+00007f7f0774f000   1580K r-x--  /lib64/libc-2.12.so
+00007f7f078da000   2044K -----  /lib64/libc-2.12.so
+00007f7f07ad9000     16K r----  /lib64/libc-2.12.so
+00007f7f07add000      4K rw---  /lib64/libc-2.12.so
+00007f7f07ade000     20K rw---    [ anon ]
+00007f7f07ae3000    128K r-x--  /lib64/ld-2.12.so
+00007f7f07cf9000     12K rw---    [ anon ]
+00007f7f07d01000      4K rw---    [ anon ]
+00007f7f07d02000      4K r----  /lib64/ld-2.12.so
+00007f7f07d03000      4K rw---  /lib64/ld-2.12.so
+00007f7f07d04000      4K rw---    [ anon ]
+00007fff5f9b2000     84K rw---    [ stack ]
+00007fff5f9ff000      4K r-x--    [ anon ]
+ffffffffff600000      4K r-x--    [ anon ]
+ total           495440K
+```
+
+   * PROT_READ, MAP_PRIVATE|MAP_ANONYMOUS だと加算されない
       * 無名リージョンを読み出しだけだと意味無いな
 [vagrant@vagrant-centos65 ~]$ pmap 440
 440:   ./__mmap
 0000000000400000      4K r-x--  /home/vagrant/__mmap
 0000000000600000      4K rw---  /home/vagrant/__mmap
-00007f1d1d5ff000 4618240K r----    [ anon ]             # [anon] が r---- だとコミットに加算されない
+00007f1d1d5ff000 4618240K r----    [ anon ]             # not private writable, 加算されない
 00007f1e373ff000   1580K r-x--  /lib64/libc-2.12.so
 00007f1e3758a000   2044K -----  /lib64/libc-2.12.so
 00007f1e37789000     16K r----  /lib64/libc-2.12.so
