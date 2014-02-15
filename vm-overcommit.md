@@ -246,6 +246,28 @@ security_vm_enough_*** -> cap_vm_enough_memory -> __vm_enough_memory の流れ
 
  ## mmap
 
+ * Committed_AS に加算されるかどうかはどこで決まるのか?
+   * accountable_mapping
+   * `We account for memory if it's a private writeable__ mapping`
+
+```c
+/*
+ * We account for memory if it's a private writeable mapping,
+ * not hugepages and VM_NORESERVE wasn't set.
+ */
+static inline int accountable_mapping(struct file *file, unsigned int vm_flags)
+{
+	/*
+	 * hugetlb has its own accounting separate from the core VM
+	 * VM_HUGETLB may not be set yet so we cannot check for that flag.
+	 */
+	if (file && is_file_hugepages(file))
+		return 0;
+
+	return (vm_flags & (VM_NORESERVE | VM_SHARED | VM_WRITE)) == VM_WRITE;
+}
+```
+
    * PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS は Committed_AS に加算される
    * PROT_READ,            MAP_PRIVATE|MAP_ANONYMOUS だと加算されない
       * 無名リージョンを読み出しだけだと意味無いな
