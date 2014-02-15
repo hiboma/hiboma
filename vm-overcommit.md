@@ -80,8 +80,8 @@ Linux Kernel Architecture P.364 に説明載ってる
 
 ## vm_acct_memory <- security_vm_enough_memory
 
- * vm_acct_memory が呼び出されるのは security_vm_enough_memory 内 ( vm_unacct_memory はいろんな所で呼び出される)
- * security_vm_enough_memory では vm.overcommmit_memory の値に応じて オーバーコミットの判定をする
+ * vm_acct_memory が呼び出されるのは __vm_enough_memory 内 ( vm_unacct_memory はいろんな所で呼び出される)
+ * __vm_enough_memory では vm.overcommmit_memory の値に応じて オーバーコミットの判定をする
    * OVERCOMMIT_ALWAYS は何も見ないで 0 返す
    * OVERCOMMIT_GUESS は空きページ数を見て判別
    * OVERCOMMIT_NEVER は RAM と swap と overcommit_ratio の説明通り
@@ -95,8 +95,6 @@ Linux Kernel Architecture P.364 に説明載ってる
        * 設定してないなら 0
 
 ```c
-security_vm_enough_memory(len)
-
 /*
  * Check that a process has enough memory to allocate a new virtual
  * mapping. 0 means there is enough memory for the allocation to
