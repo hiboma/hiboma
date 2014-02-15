@@ -229,10 +229,12 @@ Committed_AS:     582868 kB  # 残り 0.24 %
 security_vm_enough_*** -> cap_vm_enough_memory -> __vm_enough_memory の流れ
 
  * security_vm_enough_memory
+   * カーネルスレッドを渡すと WARN_ON を出す
  * security_vm_enough_memory_mm
-   * カーネルスレッドを渡すと WARN_ON を出す。
+   * task_struct が渡ってこない無い関数パスでも呼び出せるようインタフェースを変えてるだけなのかな?
+   * acct_stack_growth
  * security_vm_enough_memory_kern
-   * shmem.c でのみ使われている
+   * shmem.c (shmem_acct_size, shmem_acct_block) でのみ使われている
 
 
  ## mmap
