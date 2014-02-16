@@ -422,8 +422,8 @@ static inline void load_esp0(struct tss_struct *tss, struct thread_struct *threa
 }
 ```
 
- * FSセグメント
- * GSセグメント
+ * FSセグメント?
+ * GSセグメント?
 
 ```c
 	/*
