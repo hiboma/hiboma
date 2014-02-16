@@ -224,7 +224,7 @@ CommitLimit:      597544 kB
 Committed_AS:     564256 kB  # 残り 0.56 %
 ```
 
-        __root で実行__
+__root で実行__
 
 ```
 CommitLimit:      597544 kB
