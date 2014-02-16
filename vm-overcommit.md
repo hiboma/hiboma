@@ -241,9 +241,8 @@ Committed_AS:     582868 kB  # 残り 0.24 %
 
 ## security_vm_enough_*** API
 
-__vm_enough_memory を呼び出す API群 をまとめる
-
-`security_vm_enough_*** -> cap_vm_enough_memory -> __vm_enough_memory` の流れ
+ * __vm_enough_memory を呼び出す API群 をまとめる
+ * `security_vm_enough_*** -> cap_vm_enough_memory -> __vm_enough_memory` の流れになる
 
 ### security_vm_enough_memory
 
