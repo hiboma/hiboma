@@ -3,8 +3,8 @@
 ## まとめ
 
  * private writable なリージョンが Commited_AS に加算される
-   * mmap, brk, stack
    * pmap で `rw--` のリージョン
+   * mmap, brk, stack などのシステムコールの過程で加算
  * プロセス単位の Committed_AS のサイズは取れない?
    * 下記のワンライナーで近い値は出せる
  * root だと3%のおまけがつくのと, プロセスサイズの3%ひかれるの
