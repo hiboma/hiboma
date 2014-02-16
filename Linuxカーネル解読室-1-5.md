@@ -49,6 +49,30 @@
    * 固定優先度を元にタイムスライスを割り当て
      * タイムスライスの割り当ては `static unsigned int task_timeslice(task_t *p)` の実装をみるとよい
 
+___task_timeslice___
+
+```
+/*
+ * task_timeslice() scales user-nice values [ -20 ... 0 ... 19 ]
+ * to time slice values: [800ms ... 100ms ... 5ms]
+ *
+ * The higher a thread's priority, the bigger timeslices
+ * it gets during one round of execution. But even the lowest
+ * priority thread gets MIN_TIMESLICE worth of execution time.
+ */
+
+#define SCALE_PRIO(x, prio) \
+	max(x * (MAX_PRIO - prio) / (MAX_USER_PRIO/2), MIN_TIMESLICE)
+
+static unsigned int task_timeslice(task_t *p)
+{
+	if (p->static_prio < NICE_TO_PRIO(0))
+		return SCALE_PRIO(DEF_TIMESLICE*4, p->static_prio);
+	else
+		return SCALE_PRIO(DEF_TIMESLICE, p->static_prio);
+}
+```     
+
 __scheduler_tick__
 
 ```c
