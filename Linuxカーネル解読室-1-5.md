@@ -269,8 +269,8 @@ static void rebalance_tick(int this_cpu, runqueue_t *this_rq,
 			new_load += scale-1;
 		this_rq->cpu_load[i] = (old_load*(scale-1) + new_load) / scale;
 	}
-
-あ	for_each_domain(this_cpu, sd) {
+    
+    for_each_domain(this_cpu, sd) {
 		unsigned long interval;
 
 		if (!(sd->flags & SD_LOAD_BALANCE))
