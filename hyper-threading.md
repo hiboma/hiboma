@@ -1,10 +1,11 @@
-同僚の [https://github.com/banyan:title=banyan 先輩] が、Amazon Linux のマイクロインスタンスを複数作ったらどうも /proc/cpuinfo の出力が違うというネタ教えてくれました
+Amazon Linux のマイクロインスタンスを複数作ったらどうも /proc/cpuinfo の出力が違うというネタ
 
 ## 何が違うのか
 
-具体的な違いは <span class="deco" style="font-weight:bold;">physical id, cpu cores, siblings </span>などの行が出力されるかどうかの違いでした
+具体的な違いは ___physical id, cpu cores, siblings___ などの行が出力されるかどうかの違いでした
 
-- とあるインスタンス
+ * とあるインスタンス
+
 ```
 $ cat /proc/cpuinfo 
 processor	: 0
@@ -28,7 +29,8 @@ address sizes	: 38 bits physical, 48 bits virtual
 power management:
 ```
 
-- とあるインスタンス2 
+ * とあるインスタンス2
+
 ```
 $ cat /proc/cpuinfo 
 processor	: 0
@@ -58,31 +60,27 @@ address sizes	: 40 bits physical, 48 bits virtual
 power management:
 ```
 
-ね 違うでしょ
-
+違う
 
 ## 結論
 
 結論を先に言うと
 
-- それぞれのインスタンスのホストOSのCPUが異なっている
-- CPUがハイパースレッディングをサポートしているかどうか
+ *  それぞれのインスタンスのホストOSのCPUが異なっている
+ * CPUがハイパースレッディングをサポートしているかどうか
 
-の二つの影響でした。 <span class="deco" style="font-weight:bold;">physical id, siblings, core id, cpu cores, apicid, initial apicid</span> の行はハイパースレッディングが有効な場合に出力されます。
+の二つの影響でした。 ___physical id, siblings, core id, cpu cores, apicid, initial apicid___ の行はハイパースレッディングが有効な場合に出力されます。
 
-裏付ける情報として <span class="deco" style="font-weight:bold;">physical id</span> などの行の有無を grep してハイパースレッディングしてるかどうかという tips が Googleすると見つかります。一見落着。
-
-
-## ソースを読もう
+## ソース
 
 とまぁ 疑問は解決したのですが、どういう仕組みになってるのかソースも追いかけてみました。参照したバージョンはバニラカーネルの 3.2.27 です。
-
 
 ## /proc/cpuinfo の該当部分を出力するソース
 
 "cpu cores:" で grep すると procfs に出力するコードが引っかかります。
 
-- arch/x86/kernel/cpu/proc.c 
+ * arch/x86/kernel/cpu/proc.c
+ 
 ```c
 /*
  *      Get CPU information for use by the procfs.
@@ -104,17 +102,19 @@ static void show_cpuinfo_core(struct seq_file *m, struct cpuinfo_x86 *c,
 }
 ```
 
-<span class="deco" style="font-style:italic;">if ( c->x86_max_cores * smp_num_sibling > 1 )</span>s が肝となる条件ですが、何を指す変数かよく分かりません。とにもかくにもハイパースレッディングが有効な場合は、ここの結果が 1 以上になるようです。
-
+`if ( c->x86_max_cores * smp_num_sibling > 1` が肝となる条件ですが、何を指す変数かよく分かりません。
+とにもかくにもハイパースレッディングが有効な場合は、ここの結果が 1 以上になるようです。
 
 ## c->x86_max_cores の初期化
 
-<span class="deco" style="font-weight:bold;">c->x86_max_cores</span> は <span class="deco" style="font-weight:bold;">intel_num_cpu_cores() </span>で初期化されています。
+`c->x86_max_cores` は `intel_num_cpu_cores()` で初期化されています。
 
-- arch/x86/kernel/cpu/intel.c 
+*
+arch/x86/kernel/cpu/intel.c 
 ```c
                 c->x86_max_cores = intel_num_cpu_cores(c);
 ```
+
 ```c
 /*
  * find out the number of processor cores on the die
@@ -135,7 +135,7 @@ static int __cpuinit intel_num_cpu_cores(struct cpuinfo_x86 *c)
 }
 ```
 
-<span class="deco" style="font-weight:bold;">cpuid_count() </span>を呼び出していますが、これはインラインアセンブラで <span class="deco" style="font-weight:bold;">cpuid</span> という命令を呼び出す実装になっています。
+`cpuid_count()` を呼び出していますが、これはインラインアセンブラで `cpuid` という命令を呼び出す実装になっています。
 
 
 ## cpuid 命令とは
