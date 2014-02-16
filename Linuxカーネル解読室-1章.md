@@ -432,7 +432,11 @@ static inline void load_esp0(struct tss_struct *tss, struct thread_struct *threa
 	 */
     // GDT で実装されてる?
 	load_TLS(next, cpu);
+```    
 
+
+
+ ```c
 	/*
 	 * Restore %fs and %gs if needed.
 	 *
@@ -739,6 +743,7 @@ KPROBE_ENTRY(page_fault)
    * http://www.xml.com/ldd/chapter/book/figs/ldr2_1302.gif の図
  * [Linux x86インラインアセンブラー](http://www.ibm.com/developerworks/jp/linux/library/l-ia/)
  * tss_struct の使われかたがよく分からん
+ * gs, fs セグメント何?
 
 ## 寄り道
 
