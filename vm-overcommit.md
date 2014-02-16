@@ -15,6 +15,16 @@
 sudo pmap <pid> | grep 'rw--' | perl -anle '$s=$F[1];$s=~s/k//;$sum+=$s;END { warn $sum }'
 ```
 
+__todo___
+
+do_mmap_pgoff で max_map_count なるもので ENOMEM になるケースもあるぞよ
+
+```
+	/* Too many mappings? */
+	if (mm->map_count > sysctl_max_map_count)
+		return -ENOMEM;
+```
+
 ## /proc/meminfo から辿る
 
 CommitLimit と Committed_AS を seq_printf してる部分は以下のコード。ここから逆に辿る
@@ -423,3 +433,4 @@ unsigned long mmap_region(struct file *file, unsigned long addr,
 			vm_flags |= VM_NORESERVE;
 	}
 ```
+
