@@ -35,7 +35,7 @@ static int meminfo_proc_show(struct seq_file *m, void *v)
 ```
 
  * CommitLimit = allowd は `(ページ数 - HUGEページ数) * vm.overcommmit_ratio /100 + swap のページ数` でよくある説明通り
-   * HUGEページを引いているのが何でだろう
+   * HUGETLBページを引いているのが何でだろう
 
 ## Committed_AS, CommitLimit
 
