@@ -773,6 +773,7 @@ KPROBE_ENTRY(page_fault)
    * http://www.xml.com/ldd/chapter/book/figs/ldr2_1302.gif の図
  * [Linux x86インラインアセンブラー](http://www.ibm.com/developerworks/jp/linux/library/l-ia/)
  * tss_struct の使われかたがよく分からん
+   * TSSセグメント(ハードウェアコンテキスト) を使わない代わり
  * gs, fs セグメント何?
 
 ## 寄り道
