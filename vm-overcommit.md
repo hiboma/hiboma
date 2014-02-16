@@ -4,8 +4,9 @@
 
  * private writable なリージョンが Commited_AS に加算される
    * security_vm_enough_memory が使われてるコードを追うと分かる
-    * mmap, brk, stack などのシステムコールの過程で加算
+     * mmap, brk, stack などのシステムコールの過程で加算
    * accountable_mapping = pmap で `rw--` のリージョン
+     * VM_SHARED な場合ハ除外
  * プロセス単位の Committed_AS のサイズは取れない?
    * 下記のワンライナーで近い値は出せる
  * root だと3%のおまけがつくのと, プロセスサイズの3%ひかれる特殊ケースを理解する
@@ -393,3 +394,22 @@ int main(int argc, char *argv[]) {
 ```
 
 ## VM_NORESERVE が除外されるのはどういう用途?
+
+```
+unsigned long mmap_region(struct file *file, unsigned long addr,
+			  unsigned long len, unsigned long flags,
+			  unsigned int vm_flags, unsigned long pgoff)
+{
+	/*
+	 * Set 'VM_NORESERVE' if we should not account for the
+	 * memory use of this mapping.
+	 */
+	if ((flags & MAP_NORESERVE)) {
+		/* We honor MAP_NORESERVE if allowed to overcommit */
+		if (sysctl_overcommit_memory != OVERCOMMIT_NEVER)
+			vm_flags |= VM_NORESERVE;
+
+		/* hugetlb applies strict overcommit unless MAP_NORESERVE */
+		if (file && is_file_hugepages(file))
+			vm_flags |= VM_NORESERVE;
+	}
