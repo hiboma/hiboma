@@ -51,6 +51,8 @@
 
 ** task_timeslice **
 
+タイムスライスを優先度から計算して返す
+
 ```
 /*
  * task_timeslice() scales user-nice values [ -20 ... 0 ... 19 ]
