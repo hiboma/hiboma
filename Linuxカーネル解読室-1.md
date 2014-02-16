@@ -473,7 +473,7 @@ static inline void load_TLS(struct thread_struct *t, unsigned int cpu)
 		loadsegment(gs, next->gs);
 ```
 
-### loadsegment
+loadsegment の中味
 
  ```c
 /*
