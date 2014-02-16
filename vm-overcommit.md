@@ -348,7 +348,7 @@ ffffffffff600000      4K r-x--    [ anon ]
  total          4622160K
 ```
 
-実証用コード
+実証用のコード
 
 ```c
  #if 0
