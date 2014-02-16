@@ -50,10 +50,12 @@ void scheduler_tick(void)
     // http://www.02.246.ne.jp/~torutk/cxx/clock/cpucounter.html
 	unsigned long long now = sched_clock();
 
+    // p->sched_time に前回からの scheduler_tick の時間を入れとく
 	update_cpu_clock(p, rq, now);
 
 	rq->timestamp_last_tick = now;
 
+    // idleプロセス?
 	if (p == rq->idle) {
 		if (wake_priority_sleeper(rq))
 			goto out;
@@ -74,6 +76,7 @@ void scheduler_tick(void)
 	 * timeslice. This makes it possible for interactive tasks
 	 * to use up their timeslices at their highest priority levels.
 	 */
+    // リアルタイムプロセスの場合
 	if (rt_task(p)) {
 		/*
 		 * RR tasks need a special form of timeslice management.
@@ -89,6 +92,7 @@ void scheduler_tick(void)
 		}
 		goto out_unlock;
 	}
+    // タイムスライスをデクリメントする
 	if (!--p->time_slice) {
 		dequeue_task(p, rq->active);
 		set_tsk_need_resched(p);
