@@ -396,6 +396,7 @@ device_not_available_emulate:
 	 * Reload esp0.
 	 */
      // カーネルスタックのアドレスを tss->esp0 に保持
+     // tss->esp0 は何に使うんだろう?
 	load_esp0(tss, next);
 ```
 
