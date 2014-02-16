@@ -738,7 +738,7 @@ syscall_exit:
 	jne syscall_exit_work
 ```
 
-ついでにページフォルトの例外ハンドラを見る
+SAVE_ALL 関係無いけどページフォルトの例外ハンドラを見る
 
 ```asm
 KPROBE_ENTRY(page_fault)
