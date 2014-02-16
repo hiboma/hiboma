@@ -390,3 +390,5 @@ int main(int argc, char *argv[]) {
 	exit(0);
 }
 ```
+
+## VM_NORESERVE が除外されるのはどういう用途?
