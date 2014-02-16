@@ -25,8 +25,7 @@ do_mmap_pgoff で max_map_count なるもので ENOMEM になるケースもあ�
 		return -ENOMEM;
 ```
 
-vm.max_map_count = 65530
-
+`vm.max_map_count = 65530` こんな値がセットされている
 
 ## /proc/meminfo から辿る
 
