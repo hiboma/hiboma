@@ -434,7 +434,8 @@ static inline void load_esp0(struct tss_struct *tss, struct thread_struct *threa
 	load_TLS(next, cpu);
 ```    
 
-TLS は GDT を使って実装されている
+ * TLS は GDT を使って実装されている
+ * per_cpu がついてるので GDT って CPU ごとに保持されてる?
 
  ```c
 static inline void load_TLS(struct thread_struct *t, unsigned int cpu)
@@ -444,6 +445,8 @@ static inline void load_TLS(struct thread_struct *t, unsigned int cpu)
 #undef C
 }
 ```
+
+次のプロセスの fs と gs を復帰。
 
  ```c
 	/*
@@ -483,6 +486,8 @@ static inline void load_TLS(struct thread_struct *t, unsigned int cpu)
 		".previous"			\
 		: :"rm" (value))
 ```
+
+IOPL = I/O特権レベル
 
 ```
 	/*
