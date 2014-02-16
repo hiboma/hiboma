@@ -214,12 +214,10 @@ out:
 
 ## 1.5.4.2　NUMA
 
-
 * Non-Uniformed Memory Architecture
    * 反対は UMA
  * ノード
    * > ノード間を超えてのプロセス移動はできません。実行性能の劣化が大きいためです。
    * ノード間でのメモリコピーが必要だから?
  * MySQL, OOM killer, numactl
- 
-
+  * a
