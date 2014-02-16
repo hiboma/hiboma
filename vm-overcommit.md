@@ -269,6 +269,7 @@ Committed_AS:     582868 kB  # 残り 0.24 %
 
  * accountable_mapping() の実装を追うとよい
    * `We account for memory if it's a private writeable__ mapping`
+   * HugePage と VM_NORESERVE は除外される
 
 ```c
 /*
