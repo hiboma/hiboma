@@ -6,7 +6,7 @@
    * security_vm_enough_memory が使われてるコードを追うと分かる
      * mmap, brk, stack などのシステムコールの過程で加算
    * accountable_mapping = pmap で `rw--` のリージョン
-     * VM_SHARED な場合ハ除外
+     * VM_SHARED な場合は除外
  * プロセス単位の Committed_AS のサイズは取れない?
    * 下記のワンライナーで近い値は出せる
  * root だと3%のおまけがつくのと, プロセスサイズの3%ひかれる特殊ケースを理解する
