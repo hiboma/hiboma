@@ -34,7 +34,7 @@
    * task_struct の `int prio`
    * リアルタイムプロセスは変動優先度が max
  * ___preempt___ , ___preemption___
-   * preempt_disable, preempt_enable
+   * preempt_disable(), preempt_enable()
    * __Nonpreemptive multitasking___ , __Preemptive multitasking__
      * Windows3.1, Mac OS
  * 優先度による preempt
