@@ -338,7 +338,7 @@ FPU = Floating Point Unit 浮動小数点レジスタ
     * save_init_fpu -> __save_init_fpu で [fnsave, fwait](http://softwaretechnique.jp/OS_Development/Tips/IA32_X87_Instructions/FSAVE.html), [fxsave, fnclex](http://softwaretechnique.jp/OS_Development/Tips/IA32_X87_Instructions/FCLEX.html) とかいう命令呼ぶ
     * FPU, FPUフラグ例外を退避したりクリアしたり
     * 遅延させた場合にどんな例外がでる?
-      * デバイス使用不可能例外(#NM) が出る
+      * EFLAGS の EMビットが 1 の際に浮動小数命令を実行するとデバイス使用不可能例外(#NM) が出る
 
  ```c
 #define __unlazy_fpu( tsk ) do { \
@@ -363,18 +363,7 @@ static inline void __save_init_fpu( struct task_struct *tsk )
 }
 ```
 
- ```c
-/*
- * Thread-synchronous status.
- *
- * This is different from the flags in that nobody else
- * ever touches our thread-synchronous status, so we don't
- * have to worry about atomic accesses.
- */
-#define TS_USEDFPU		0x0001	/* FPU was used by this task this quantum (SMP) */
-```
-
-デバイス使用不可能例外
+デバイス使用不可能例外のハンドラ
 
  ```asm
 ENTRY(device_not_available)
@@ -386,6 +375,7 @@ ENTRY(device_not_available)
 	testl $0x4, %eax		# EM (math emulation bit)
 	jne device_not_available_emulate
 	preempt_stop
+    // ここで浮動小数点の復帰
 	call math_state_restore
 	jmp ret_from_exception
 device_not_available_emulate:
