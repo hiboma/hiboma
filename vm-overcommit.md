@@ -9,8 +9,7 @@
      * VM_SHARED な場合は除外
    * MAP_NORESERVE を立てると加算されない。ただし vm.overcommit_memory=2 の場合は問答無用で加算される
  * ファイルの mmap は Commited_AS に加算されない
-
- * プロセス単位の Committed_AS のサイズは取れない?
+ * プロセス単位の Committed_AS のサイズは取れないのか?
    * 下記のワンライナーで近い値は出せる
  * root だと3%のおまけがつくのと, プロセスサイズの3%ひかれる特殊ケースを理解する
 
