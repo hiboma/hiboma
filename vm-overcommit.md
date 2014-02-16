@@ -34,9 +34,9 @@ static int meminfo_proc_show(struct seq_file *m, void *v)
 		K(committed),
 ```
 
- * CommitLimit = allowd は `(ページ数 - HUGEページ数) * vm.overcommmit_ratio /100 + swap のページ数` でよくある説明通り
+ * CommitLimit = allowd は `(ページ数 - HUGE TLBページ数) * vm.overcommmit_ratio /100 + swap のページ数` でよくある説明通り
    * Huge TLBページを引いているのが何でだろう?
-   * ふつーの環境だと 0
+   * ふつーの環境だと 0 だから気にしなくてもいいけど
 
 ## Committed_AS, CommitLimit
 
