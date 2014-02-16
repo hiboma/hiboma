@@ -416,7 +416,7 @@ unsigned long mmap_region(struct file *file, unsigned long addr,
 		if (sysctl_overcommit_memory != OVERCOMMIT_NEVER)
 			vm_flags |= VM_NORESERVE;
 
-        // file は struct *file
+        // file は struct *file 
         // ファイルを mmap した場合は VM_NORESERVE になる
 		/* hugetlb applies strict overcommit unless MAP_NORESERVE */
 		if (file && is_file_hugepages(file))
