@@ -84,7 +84,7 @@ static unsigned int task_timeslice(task_t *p)
 ** scheduler_tick **
 
  * タイマ割り込みで HZ周期で呼び出される。割り込みを禁止して呼び出し
- * fork(2) で呼び出す。親プロセスのタイムスライスを変えるため
+ * 親プロセスのタイムスライスを変える際に fork(2) で呼び出す
 
 ```c
 /*
