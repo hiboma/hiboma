@@ -214,6 +214,8 @@ out:
 
 ## 1.5.4.2　NUMA
 
+2.6.15 だと`#ifdef CONFIG_NUMA` で囲われた部分
+
 * Non-Uniformed Memory Architecture
    * 反対は UMA
  * ノード
