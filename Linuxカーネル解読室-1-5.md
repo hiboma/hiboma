@@ -214,6 +214,7 @@ out:
 
 ## 1.5.4.2　NUMA
 
+
 * Non-Uniformed Memory Architecture
    * 反対は UMA
  * ノード
