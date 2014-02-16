@@ -74,6 +74,7 @@ void scheduler_tick(void)
 	if (p == rq->idle) {
 		if (wake_priority_sleeper(rq))
 			goto out;
+        // CPU間のロードバランス
 		rebalance_tick(cpu, rq, SCHED_IDLE);
 		return;
 	}
@@ -204,7 +205,8 @@ out:
  * CPU アフィニティ
    * sched_setaffinity
    * task_struct の cpuset
-  * 2.6.32 だと scheduler_tick -> trigger_load_balance でCPU間でロードバランシングされる
+ * rebalance_tick で ロードバランシング
+   * 2.6.32 だと scheduler_tick -> trigger_load_balance でCPU間でロードバランシングされる
 
 ## 1.5.4.1　ハイパースレッディング
 
@@ -227,3 +229,200 @@ out:
    * 負荷の低いノードはどうやって判定されている?
    * 最近の話 http://gihyo.jp/dev/serial/01/linuxcon_basic/0005
    * sched_domain http://www.kerneldesign.info/wiki/index.php?sched_domain%2Flinux2.6
+
+----
+
+## rebalance_tick
+
+```c
+/*
+ * rebalance_tick will get called every timer tick, on every CPU.
+ *
+ * It checks each scheduling domain to see if it is due to be balanced,
+ * and initiates a balancing operation if so.
+ *
+ * Balancing parameters are set up in arch_init_sched_domains.
+ */
+
+/* Don't have all balancing operations going off at once */
+#define CPU_OFFSET(cpu) (HZ * cpu / NR_CPUS)
+
+static void rebalance_tick(int this_cpu, runqueue_t *this_rq,
+			   enum idle_type idle)
+{
+	unsigned long old_load, this_load;
+	unsigned long j = jiffies + CPU_OFFSET(this_cpu);
+	struct sched_domain *sd;
+	int i;
+
+	this_load = this_rq->nr_running * SCHED_LOAD_SCALE;
+	/* Update our load */
+	for (i = 0; i < 3; i++) {
+		unsigned long new_load = this_load;
+		int scale = 1 << i;
+		old_load = this_rq->cpu_load[i];
+		/*
+		 * Round up the averaging division if load is increasing. This
+		 * prevents us from getting stuck on 9 if the load is 10, for
+		 * example.
+		 */
+		if (new_load > old_load)
+			new_load += scale-1;
+		this_rq->cpu_load[i] = (old_load*(scale-1) + new_load) / scale;
+	}
+
+	for_each_domain(this_cpu, sd) {
+		unsigned long interval;
+
+		if (!(sd->flags & SD_LOAD_BALANCE))
+			continue;
+
+		interval = sd->balance_interval;
+		if (idle != SCHED_IDLE)
+			interval *= sd->busy_factor;
+
+		/* scale ms to jiffies */
+		interval = msecs_to_jiffies(interval);
+		if (unlikely(!interval))
+			interval = 1;
+
+		if (j - sd->last_balance >= interval) {
+			if (load_balance(this_cpu, this_rq, sd, idle)) {
+				/*
+				 * We've pulled tasks over so either we're no
+				 * longer idle, or one of our SMT siblings is
+				 * not idle.
+				 */
+				idle = NOT_IDLE;
+			}
+			sd->last_balance += interval;
+		}
+	}
+}
+```
+
+```c
+/*
+ * Check this_cpu to ensure it is balanced within domain. Attempt to move
+ * tasks if there is an imbalance.
+ *
+ * Called with this_rq unlocked.
+ */
+static int load_balance(int this_cpu, runqueue_t *this_rq,
+			struct sched_domain *sd, enum idle_type idle)
+{
+	struct sched_group *group;
+	runqueue_t *busiest;
+	unsigned long imbalance;
+	int nr_moved, all_pinned = 0;
+	int active_balance = 0;
+	int sd_idle = 0;
+
+	if (idle != NOT_IDLE && sd->flags & SD_SHARE_CPUPOWER)
+		sd_idle = 1;
+
+	schedstat_inc(sd, lb_cnt[idle]);
+
+	group = find_busiest_group(sd, this_cpu, &imbalance, idle, &sd_idle);
+	if (!group) {
+		schedstat_inc(sd, lb_nobusyg[idle]);
+		goto out_balanced;
+	}
+
+	busiest = find_busiest_queue(group, idle);
+	if (!busiest) {
+		schedstat_inc(sd, lb_nobusyq[idle]);
+		goto out_balanced;
+	}
+
+	BUG_ON(busiest == this_rq);
+
+	schedstat_add(sd, lb_imbalance[idle], imbalance);
+
+	nr_moved = 0;
+	if (busiest->nr_running > 1) {
+		/*
+		 * Attempt to move tasks. If find_busiest_group has found
+		 * an imbalance but busiest->nr_running <= 1, the group is
+		 * still unbalanced. nr_moved simply stays zero, so it is
+		 * correctly treated as an imbalance.
+		 */
+		double_rq_lock(this_rq, busiest);
+		nr_moved = move_tasks(this_rq, this_cpu, busiest,
+					imbalance, sd, idle, &all_pinned);
+		double_rq_unlock(this_rq, busiest);
+
+		/* All tasks on this runqueue were pinned by CPU affinity */
+		if (unlikely(all_pinned))
+			goto out_balanced;
+	}
+
+	if (!nr_moved) {
+		schedstat_inc(sd, lb_failed[idle]);
+		sd->nr_balance_failed++;
+
+		if (unlikely(sd->nr_balance_failed > sd->cache_nice_tries+2)) {
+
+			spin_lock(&busiest->lock);
+
+			/* don't kick the migration_thread, if the curr
+			 * task on busiest cpu can't be moved to this_cpu
+			 */
+			if (!cpu_isset(this_cpu, busiest->curr->cpus_allowed)) {
+				spin_unlock(&busiest->lock);
+				all_pinned = 1;
+				goto out_one_pinned;
+			}
+
+			if (!busiest->active_balance) {
+				busiest->active_balance = 1;
+				busiest->push_cpu = this_cpu;
+				active_balance = 1;
+			}
+			spin_unlock(&busiest->lock);
+			if (active_balance)
+				wake_up_process(busiest->migration_thread);
+
+			/*
+			 * We've kicked active balancing, reset the failure
+			 * counter.
+			 */
+			sd->nr_balance_failed = sd->cache_nice_tries+1;
+		}
+	} else
+		sd->nr_balance_failed = 0;
+
+	if (likely(!active_balance)) {
+		/* We were unbalanced, so reset the balancing interval */
+		sd->balance_interval = sd->min_interval;
+	} else {
+		/*
+		 * If we've begun active balancing, start to back off. This
+		 * case may not be covered by the all_pinned logic if there
+		 * is only 1 task on the busy runqueue (because we don't call
+		 * move_tasks).
+		 */
+		if (sd->balance_interval < sd->max_interval)
+			sd->balance_interval *= 2;
+	}
+
+	if (!nr_moved && !sd_idle && sd->flags & SD_SHARE_CPUPOWER)
+		return -1;
+	return nr_moved;
+
+out_balanced:
+	schedstat_inc(sd, lb_balanced[idle]);
+
+	sd->nr_balance_failed = 0;
+
+out_one_pinned:
+	/* tune up the balancing interval */
+	if ((all_pinned && sd->balance_interval < MAX_PINNED_INTERVAL) ||
+			(sd->balance_interval < sd->max_interval))
+		sd->balance_interval *= 2;
+
+	if (!sd_idle && sd->flags & SD_SHARE_CPUPOWER)
+		return -1;
+	return 0;
+}
+```
