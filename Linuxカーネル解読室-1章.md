@@ -434,7 +434,16 @@ static inline void load_esp0(struct tss_struct *tss, struct thread_struct *threa
 	load_TLS(next, cpu);
 ```    
 
+TLS は GDT を使って実装されている
 
+ ```c
+static inline void load_TLS(struct thread_struct *t, unsigned int cpu)
+{
+#define C(i) get_cpu_gdt_table(cpu)[GDT_ENTRY_TLS_MIN + i] = t->tls_array[i]
+	C(0); C(1); C(2);
+#undef C
+}
+```
 
  ```c
 	/*
