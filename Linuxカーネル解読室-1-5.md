@@ -2,6 +2,7 @@
 ## TODO
 
  * タイマ割り込みから scheduler_tick までのパスは?
+   * smp_local_timer_interrupt -> update_process_times -> scheduler_tick
  * CPUキャッシュの整理
 
 ## 1.5 プロセススケジューラ
