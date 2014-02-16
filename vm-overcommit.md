@@ -395,11 +395,16 @@ int main(int argc, char *argv[]) {
 
 ## VM_NORESERVE が除外されるのはどういう用途?
 
+ * mmap に MAP_NORESERVE を渡した場合
+
 ```
 unsigned long mmap_region(struct file *file, unsigned long addr,
 			  unsigned long len, unsigned long flags,
 			  unsigned int vm_flags, unsigned long pgoff)
 {
+
+ ///...
+
 	/*
 	 * Set 'VM_NORESERVE' if we should not account for the
 	 * memory use of this mapping.
@@ -413,3 +418,4 @@ unsigned long mmap_region(struct file *file, unsigned long addr,
 		if (file && is_file_hugepages(file))
 			vm_flags |= VM_NORESERVE;
 	}
+```
