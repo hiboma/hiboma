@@ -246,7 +246,7 @@ Committed_AS:     582868 kB  # 残り 0.24 %
 
 ### security_vm_enough_memory
 
- * カーネルスレッドを渡すと WARN_ON を出す
+ * カーネルスレッドを渡すと WARN_ON を出す以外は security_vm_enough_memory_** と同じ
  * [mmap_region](http://lxr.free-electrons.com/source/mm/mmap.c?v=2.6.32#L1108)
     * accountable_mapping
  * [do_brk](http://lxr.free-electrons.com/source/mm/mmap.c?v=2.6.32#L1990)
