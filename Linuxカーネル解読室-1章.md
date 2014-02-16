@@ -391,12 +391,27 @@ device_not_available_emulate:
 ```
 
 ```c
-
 	/*
 	 * Reload esp0.
 	 */
-     // カーネルスタックのアドレスを esp0 にロード
+     // カーネルスタックのアドレスを tss->esp0 に保持
 	load_esp0(tss, next);
+```
+
+ ```c
+static inline void load_esp0(struct tss_struct *tss, struct thread_struct *thread)
+{
+    // task statement segment に esp0 を退避?
+	tss->esp0 = thread->esp0;
+	/* This can only happen when SEP is enabled, no need to test "SEP"arately */
+	if (unlikely(tss->ss1 != thread->sysenter_cs)) {
+		tss->ss1 = thread->sysenter_cs;
+        // MSR = Model Specfic Register モデル固有レジスタ 
+        // http://mcn.oops.jp/wiki/index.php?CPU%2FMSR
+        // wrmsr はモデル固有レジスタに書き込む命令
+		wrmsr(MSR_IA32_SYSENTER_CS, thread->sysenter_cs, 0);
+	}
+}
 ```
 
 ```
