@@ -74,6 +74,7 @@ void scheduler_tick(void)
 		goto out;
 	}
 	spin_lock(&rq->lock);
+
 	/*
 	 * The task was running during this tick - update the
 	 * time slice counter. Note: we do not update a thread's
@@ -97,6 +98,8 @@ void scheduler_tick(void)
 		}
 		goto out_unlock;
 	}
+
+    // 通常のタスクの場合
     // タイムスライスをデクリメントする
 	if (!--p->time_slice) {
         // タイムスライスが 0 = 使い切った場合
@@ -106,9 +109,10 @@ void scheduler_tick(void)
         // thread_info に TIF_NEED_RESCHED をセット
 		set_tsk_need_resched(p);
 		p->prio = effective_prio(p);
-        
+
         // タイムスライスの割り当て
 		p->time_slice = task_timeslice(p);
+        // これ?
 		p->first_time_slice = 0;
 
 		if (!rq->expired_timestamp)
