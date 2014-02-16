@@ -222,3 +222,4 @@ out:
  * MySQL, OOM killer, numactl
  * exec の際にロードバランシングする
    * 負荷の低いノードはどうやって判定されている?
+   * http://gihyo.jp/dev/serial/01/linuxcon_basic/0005
