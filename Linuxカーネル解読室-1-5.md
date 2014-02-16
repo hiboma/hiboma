@@ -63,6 +63,8 @@
  * priority thread gets MIN_TIMESLICE worth of execution time.
  */
 
+ // 優先度の最大値から prio を引いた数値 * x ?
+ // ユーザ優先度を2で割る
 #define SCALE_PRIO(x, prio) \
 	max(x * (MAX_PRIO - prio) / (MAX_USER_PRIO/2), MIN_TIMESLICE)
 
