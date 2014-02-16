@@ -634,6 +634,7 @@ struct thread_struct {
  * ___TLS___ [スレッドローカルストレージ](http://ja.wikipedia.org/wiki/スレッド局所記憶#Pthreads_.E3.81.A7.E3.81.AE.E5.AE.9F.E8.A3.85)
    * Pthread実装 pthread_key_create, pthread_setspecific, pthread_key_delete
    * `C言語では C11 からキーワード _Thread_local を用いて TLS を使用できる`
+   * __thread
 
 プロセス空間を共有している => スタック以外スレッド間でメモリ共有している => 破壊しうる ってのを確認してから
 どうやって スレッド固有のデータを管理したらいいか? で TLS を引き合いに出す
