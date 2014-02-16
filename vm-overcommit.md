@@ -397,7 +397,7 @@ int main(int argc, char *argv[]) {
 
  * mmap(2) に MAP_NORESERVE を立てた場合
    * OVERCOMMIT_NEVER では無視される (全て厳密にカウントされる)
- *
+ *　
 
 ```
 unsigned long mmap_region(struct file *file, unsigned long addr,
@@ -416,6 +416,8 @@ unsigned long mmap_region(struct file *file, unsigned long addr,
 		if (sysctl_overcommit_memory != OVERCOMMIT_NEVER)
 			vm_flags |= VM_NORESERVE;
 
+        // file は struct *file
+        // ファイルを mmap した場合は VM_NORESERVE になる
 		/* hugetlb applies strict overcommit unless MAP_NORESERVE */
 		if (file && is_file_hugepages(file))
 			vm_flags |= VM_NORESERVE;
