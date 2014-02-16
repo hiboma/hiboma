@@ -7,6 +7,8 @@
      * mmap, brk, stack などのシステムコールの過程で加算
    * accountable_mapping = pmap で `rw--` のリージョン
      * VM_SHARED な場合は除外
+ * ファイルの mmap は Commited_AS に加算されない
+ * MAP_NORESERVE を指定すると加算されない。ただし vm.overcommit_memory=2 の場合は問答無用で加算される
  * プロセス単位の Committed_AS のサイズは取れない?
    * 下記のワンライナーで近い値は出せる
  * root だと3%のおまけがつくのと, プロセスサイズの3%ひかれる特殊ケースを理解する
