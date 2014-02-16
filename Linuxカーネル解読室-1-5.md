@@ -72,7 +72,6 @@
 #define NICE_TO_PRIO(nice)	(MAX_RT_PRIO + (nice) + 20)
 
 // p->static_prio の数値が低い方がタイムスライスがいっぱいもらえる
-
 static unsigned int task_timeslice(task_t *p)
 {
 	if (p->static_prio < NICE_TO_PRIO(0))
