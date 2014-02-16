@@ -346,6 +346,8 @@ FPU = Floating Point Unit 浮動小数点レジスタ
 } while (0)
 ```
 
+ * FPUの退避
+
  ```c
 /*
  * These must be called with preempt disabled
