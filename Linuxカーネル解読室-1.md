@@ -334,7 +334,7 @@ struct task_struct fastcall * __switch_to(struct task_struct *prev_p, struct tas
 FPU = Floating Point Unit 浮動小数点レジスタ
 
  * thread_info->status に FPU を使用したかどうかのフラグ TS_USEDFPU を持つ
-    * save_init_fpu -> __save_init_fpu で [fnsave, fwait](http://softwaretechnique.jp/OS_Development/Tips/IA32_X87_Instructions/FSAVE.html), [fxsave, fnclex](http://softwaretechnique.jp/OS_Development/Tips/IA32_X87_Instructions/FCLEX.html) とかいう命令呼ぶ
+    * save_init_fpu -> __save_init_fpu で [fnsave, fwait](http:/s/softwaretechnique.jp/OS_Development/Tips/IA32_X87_Instructions/FSAVE.html), [fxsave, fnclex](http://softwaretechnique.jp/OS_Development/Tips/IA32_X87_Instructions/FCLEX.html) とかいう命令呼ぶ
     * FPU, FPUフラグ例外を退避したりクリアしたり
     * 遅延させた場合にどんな例外がでる?
       * EFLAGS の EMビットが 1 の際に浮動小数命令を実行するとデバイス使用不可能例外(#NM) が出る
