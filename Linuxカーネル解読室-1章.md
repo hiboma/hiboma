@@ -631,7 +631,7 @@ struct thread_struct {
 
 #### SAVE_ALL の中身
 
-i386
+i386の実装を見てみる
 
 ``` asm
 #define SAVE_ALL \
@@ -653,7 +653,7 @@ i386
 	movl %edx, %es;
 ```
 
-割り込みハンドラ(ハードウェア割り込みかソフトウェア割り込みかは区別されていない))
+割り込みハンドラ(ハードウェア割り込みかソフトウェア割り込みかは区別されていない)) での使われかた
 
 ```asm 
 common_interrupt:
@@ -663,7 +663,7 @@ common_interrupt:
 	jmp ret_from_intr
 ```
 
-システムコールの例外ハンドラ
+システムコールの例外ハンドラでの使われかた
 
 ```asm
 	# system call handler stub
@@ -689,7 +689,7 @@ syscall_exit:
 	jne syscall_exit_work
 ```
 
-ページフォルトの例外ハンドラ
+ついでにページフォルトの例外ハンドラを見る
 
 ```asm
 KPROBE_ENTRY(page_fault)
@@ -698,7 +698,8 @@ KPROBE_ENTRY(page_fault)
 	.previous .text
 ```
 
-TODO
+## まとめ
+
  * レジスタの種類を整理
    * 汎用レジスタ
      * eax, ebx, ecx, edx, ... eip, esp
