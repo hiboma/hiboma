@@ -212,7 +212,7 @@ dump_stack で current のカーネルスタックを dump
 
 ```c
 // pushfl と popfl が書いてないぞ ...
-#define switch_to(prev,next,last) do {					\
+define switch_to(prev,next,last) do {					\
 	unsigned long esi,edi;						\
               // EFLAGSレジスタをスタックに退避
               // pushfl
@@ -325,6 +325,7 @@ struct task_struct fastcall * __switch_to(struct task_struct *prev_p, struct tas
 
 	/* never put a printk in __switch_to... printk() calls wake_up*() indirectly */
 	__unlazy_fpu(prev_p);
+
 ```
 
 ### ___unlazy_fpu
