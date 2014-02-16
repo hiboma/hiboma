@@ -47,9 +47,7 @@ static inline void vm_acct_memory(long pages)
 {
 	percpu_counter_add(&vm_committed_as, pages);
 }
-```
 
-```c
 static inline void vm_unacct_memory(long pages)
 {
     // マイナスにして減らしてるだけ
