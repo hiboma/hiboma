@@ -42,7 +42,7 @@ static int meminfo_proc_show(struct seq_file *m, void *v)
 
 ### extern struct percpu_counter vm_committed_as
  
-vm_acct_memory, vm_unacct_memory で加減される
+Committed_AS は vm_acct_memory, vm_unacct_memory で加減される
 
 ```c
 static inline void vm_acct_memory(long pages)
