@@ -269,10 +269,9 @@ Committed_AS:     582868 kB  # 残り 0.24 %
  * shmem.c ([shmem_acct_size](http://lxr.free-electrons.com/source/mm/shmem.c?v=2.6.32#L185), [shmem_acct_block](http://lxr.free-electrons.com/source/mm/shmem.c?v=2.6.32#L203)) でのみ使われている
      * ファイルシステムの実装として使われている。システムコールとは違うことを _kern で意味したい?
 
-## mmap で検証
+## Committed_AS に加算されるかどうかはどこで決まるのか? mmap で検証
 
- * Committed_AS に加算されるかどうかはどこで決まるのか?
-   * accountable_mapping
+ * accountable_mapping() の実装を追うとよい
    * `We account for memory if it's a private writeable__ mapping`
 
 ```c
