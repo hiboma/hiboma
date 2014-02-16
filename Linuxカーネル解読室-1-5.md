@@ -56,7 +56,7 @@ __scheduler_tick__
 void scheduler_tick(void)
 {
     // CPU ID
-	int cpu = smp_processor_id();
+    int cpu = smp_processor_id();
     // CPUごとの runqueue
 	runqueue_t *rq = this_rq();
 	task_t *p = current;
@@ -197,11 +197,28 @@ out:
  * ___対称型マルチプロセッサ___
    * マスタ/スレーブ構成
  * プロセスのマイグレーション
- * CPUごとのキャッシュ
+ * CPUのキャッシュがあるのでプロセスを同じCPUで固定で実行した方がいいケースがある
    * L1, L2
    * TLB
  * プロセススケジューラは CPU上で独立して動作している
  * CPU アフィニティ
    * sched_setaffinity
+   * task_struct の cpuset
 
 ## 1.5.4.1　ハイパースレッディング
+
+ * メモリアクセスで遅延、ストールする
+ * レジスタセットを2組持つ
+   * 片方のレジスタセットがストールしている間に、別のレジスタセットで命令コードの実行
+ * OSからは仮想的なCPUとして見える
+
+## 1.5.4.2　NUMA
+
+ * Non-Uniformed Memory Architecture
+   * 反対は UMA
+ * ノード
+   * > ノード間を超えてのプロセス移動はできません。実行性能の劣化が大きいためです。
+   * ノード間でのメモリコピーが必要だから?
+ * MySQL, OOM killer, numactl
+ 
+
