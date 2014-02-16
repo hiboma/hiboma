@@ -712,7 +712,7 @@ common_interrupt:
 	jmp ret_from_intr
 ```
 
-システムコールの例外ハンドラでの使われかた
+SAVE_ALL のシステムコールの例外ハンドラでの使われかた
 
 ```asm
 	# system call handler stub
