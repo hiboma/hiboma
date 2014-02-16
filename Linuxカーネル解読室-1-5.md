@@ -17,5 +17,7 @@
  * 固定優先度
  * 変動優先度
    * リアルタイムプロセスは変動優先度が max
+ * ___preempt___ , ___preemption___
+   * preempt_disable, preempt_enable
 
  
