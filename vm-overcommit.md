@@ -8,7 +8,7 @@
    * accountable_mapping = pmap で `rw--` のリージョン
  * プロセス単位の Committed_AS のサイズは取れない?
    * 下記のワンライナーで近い値は出せる
- * root だと3%のおまけがつくのと, プロセスサイズの3%ひかれるの
+ * root だと3%のおまけがつくのと, プロセスサイズの3%ひかれる特殊ケースを理解する
 
 ```sh
 sudo pmap <pid> | grep 'rw--' | perl -anle '$s=$F[1];$s=~s/k//;$sum+=$s;END { warn $sum }'
