@@ -687,7 +687,8 @@ i386の実装を見てみる
                     // DFフラグが0にセットされいる間は、文字列（バイト配列）操作を行うと、
                     // インデックスレジスタ（ESIまたはEDI、あるいは両方）がインクリメントされます
                     // via http://softwaretechnique.jp/OS_Development/Tips/IA32_Instructions/CLD.html
-	pushl %es; \
+
+	pushl %es; \    // ひたすらカーネルスタックに push する
 	pushl %ds; \
 	pushl %eax; \
 	pushl %ebp; \
