@@ -15,7 +15,7 @@ sudo pmap <pid> | grep 'rw--' | perl -anle '$s=$F[1];$s=~s/k//;$sum+=$s;END { wa
 
 ## /proc/meminfo から辿る
 
-CommitLimit と Committed_AS を seq_printf してる部分は以下のコード
+CommitLimit と Committed_AS を seq_printf してる部分は以下のコード。ここから逆に辿る
 
 ```c
 static int meminfo_proc_show(struct seq_file *m, void *v)
@@ -27,9 +27,7 @@ static int meminfo_proc_show(struct seq_file *m, void *v)
 	seq_printf(m,
         "CommitLimit:    %8lu kB\n"
 		"Committed_AS:   %8lu kB\n"
-
 // ...
-
 		K(allowed),
 		K(committed),
 ```
