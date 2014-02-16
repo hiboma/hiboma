@@ -19,5 +19,7 @@
    * リアルタイムプロセスは変動優先度が max
  * ___preempt___ , ___preemption___
    * preempt_disable, preempt_enable
+ * 優先度による preempt
+   * プロセススケジューラが優先度を元に切り替えるプロセスを判定 -> プロセスディスパッチャで切り替え
 
  
