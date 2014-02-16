@@ -49,7 +49,7 @@
    * 固定優先度を元にタイムスライスを割り当て
      * タイムスライスの割り当ては `static unsigned int task_timeslice(task_t *p)` の実装をみるとよい
 
-*** task_timeslice ***
+** task_timeslice **
 
 ```
 /*
@@ -71,9 +71,9 @@ static unsigned int task_timeslice(task_t *p)
 	else
 		return SCALE_PRIO(DEF_TIMESLICE, p->static_prio);
 }
-```     
+```
 
-*** scheduler_tick ***
+** scheduler_tick **
 
 ```c
 /*
