@@ -100,6 +100,7 @@ void scheduler_tick(void)
 	 * to use up their timeslices at their highest priority levels.
 	 */
     // リアルタイムプロセスの場合
+    // (p)->prio < MAX_RT_PRIO で判別する
 	if (rt_task(p)) {
 		/*
 		 * RR tasks need a special form of timeslice management.
