@@ -414,7 +414,7 @@ static inline void load_esp0(struct tss_struct *tss, struct thread_struct *threa
 }
 ```
 
-```
+```c
 	/*
 	 * Save away %fs and %gs. No need to save %es and %ds, as
 	 * those are always kernel segments while inside the kernel.
@@ -426,7 +426,9 @@ static inline void load_esp0(struct tss_struct *tss, struct thread_struct *threa
 	 */
 	savesegment(fs, prev->fs);
 	savesegment(gs, prev->gs);
+```
 
+```
 	/*
 	 * Load the per-thread Thread-Local Storage descriptor.
 	 */
@@ -738,6 +740,7 @@ KPROBE_ENTRY(page_fault)
    * ページグローバルディレクトリ
    * http://www.xml.com/ldd/chapter/book/figs/ldr2_1302.gif の図
  * [Linux x86インラインアセンブラー](http://www.ibm.com/developerworks/jp/linux/library/l-ia/)
+ * tss_struct の使われかたがよく分からん
 
 ## 寄り道
 
