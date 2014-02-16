@@ -436,3 +436,4 @@ unsigned long mmap_region(struct file *file, unsigned long addr,
 	}
 ```
 
+ファイルの場合はページキャッシュを経由するんだっけ? どうだっけ?
