@@ -417,7 +417,7 @@ int main(int argc, char *argv[]) {
  * MAP_NORESERVE を指定して嬉しいのはどんな状況???
    * `このマッピングに対するスワップ空間の予約を行わない`
 
-```
+```c
 unsigned long mmap_region(struct file *file, unsigned long addr,
 			  unsigned long len, unsigned long flags,
 			  unsigned int vm_flags, unsigned long pgoff)
