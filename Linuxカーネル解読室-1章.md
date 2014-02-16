@@ -424,11 +424,9 @@ static inline void load_esp0(struct tss_struct *tss, struct thread_struct *threa
 	 * NMI handler ever used %fs or %gs (it does not today), or
 	 * if the kernel is running inside of a hypervisor layer.
 	 */
-	savesegment(fs, prev->fs);
-	savesegment(gs, prev->gs);
-```
+	savesegment(fs, prev->fs);  // mov %%fs,  prev->fs してるだけ
+	savesegment(gs, prev->gs);  // mov %%gfs, prev->gs してるだけ
 
-```
 	/*
 	 * Load the per-thread Thread-Local Storage descriptor.
 	 */
