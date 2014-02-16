@@ -225,3 +225,4 @@ out:
  * exec の際にロードバランシングする
    * 負荷の低いノードはどうやって判定されている?
    * 最近の話 http://gihyo.jp/dev/serial/01/linuxcon_basic/0005
+   * sched_domain http://www.kerneldesign.info/wiki/index.php?sched_domain%2Flinux2.6
