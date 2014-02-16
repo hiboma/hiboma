@@ -1,3 +1,9 @@
+
+## TODO
+
+ * タイマ割り込みから scheduler_tick までのパスは?
+ * CPUキャッシュの整理
+
 ## 1.5 プロセススケジューラ
 
  * 実行可能、待機状態の確認
@@ -17,8 +23,9 @@
 ## 1.5.1.2　優先度の指標
 
  * 固定優先度
-   * priority ?
+   * task_struct の `int static_privo`
  * 変動優先度
+   * task_struct の `int prio`
    * リアルタイムプロセスは変動優先度が max
  * ___preempt___ , ___preemption___
    * preempt_disable, preempt_enable
@@ -31,11 +38,12 @@
 
  * 時分割 タイムシェアリング
  * タイムスライス
-   * ってどこで管理してるんだっけ?
-     * task_struct に `unsigned int time_slice` がある。scheduler_tick でデクリメントされていく
+     * task_struct の `unsigned int time_slice` のこと
+     * scheduler_tick でデクリメントされていく
    * 固定優先度を元にタイムスライスを割り当て
-     * `static unsigned int task_timeslice(task_t *p)` の実装をみるとよい
- * scheduler_tick
+     * タイムスライスの割り当ては `static unsigned int task_timeslice(task_t *p)` の実装をみるとよい
+
+__scheduler_tick__
 
 ```c
 /*
