@@ -292,6 +292,10 @@ static inline int accountable_mapping(struct file *file, unsigned int vm_flags)
 }
 ```
 
+VM_WRITE フラグがたってると加算されるぽい
+
+#### 検証
+
  * PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS は Committed_AS に加算される
    * private writable
 
