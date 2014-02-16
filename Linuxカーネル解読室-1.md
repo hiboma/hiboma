@@ -443,10 +443,10 @@ static inline void load_esp0(struct tss_struct *tss, struct thread_struct *threa
 	 */
     // GDT で実装されてる?
 	load_TLS(next, cpu);
-```    
+```
 
  * TLS は GDT を使って実装されている
- * per_cpu がついてるので GDT って CPU ごとに保持されてる?
+ * per_cpu がついてるので GDT って CPU ごとに保持されてる
 
  ```c
 static inline void load_TLS(struct thread_struct *t, unsigned int cpu)
