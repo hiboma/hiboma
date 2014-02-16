@@ -26,7 +26,7 @@ __todo___
 		return -ENOMEM;
 ```
 
-`vm.max_map_count = 65530` こんな値がセットされている
+ `vm.max_map_count = 65530` こんな値がセットされているなー。現在値はどうやって取るんだろ
 
 * MAP_NORESERVE の用途が分からん
 
