@@ -204,6 +204,7 @@ out:
  * CPU アフィニティ
    * sched_setaffinity
    * task_struct の cpuset
+  * 2.6.32 だと scheduler_tick -> trigger_load_balance でCPU間でロードバランシングされる
 
 ## 1.5.4.1　ハイパースレッディング
 
