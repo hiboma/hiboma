@@ -631,6 +631,8 @@ struct thread_struct {
 
 #### SAVE_ALL の中身
 
+i386
+
 ``` asm
 #define SAVE_ALL \
 	cld; \          // EFLAGSレジスタのDFフラグをクリアします
