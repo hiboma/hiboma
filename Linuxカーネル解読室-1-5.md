@@ -8,8 +8,7 @@
    * smp_local_timer_interrupt
       * APIC から割り込みがリダイレクションして Local APIC に転送
    * update_process_times
-   * scheduler_tick 
- * CPUキャッシュの整理
+   * scheduler_tick
 
 ## 1.5 プロセススケジューラ
 
