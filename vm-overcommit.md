@@ -405,11 +405,11 @@ int main(int argc, char *argv[]) {
 }
 ```
 
-## VM_NORESERVE が除外されるのはどういう用途?
+## VM_NORESERVE で Committed_AS から除外されるのはどういう用途?
 
  * mmap(2) に MAP_NORESERVE を立てた場合
    * OVERCOMMIT_NEVER では無視される (全て厳密にカウントされる)
- *　
+ * file を mmap した場合は除外される
 
 ```
 unsigned long mmap_region(struct file *file, unsigned long addr,
