@@ -254,7 +254,7 @@ int copy_thread(int nr, unsigned long clone_flags, unsigned long esp,
 
 ```
 
- * ret_from_fork はアセンブラ
+p->thread.eip にセットされる ret_from_fork はアセンブラ
 
 ```asm
 /*
