@@ -371,11 +371,13 @@ ENTRY(device_not_available)
 	pushl $-1			# mark this as an int
 	CFI_ADJUST_CFA_OFFSET 4
 	SAVE_ALL
+    # CR0 レジスタを取る
 	movl %cr0, %eax
+    # EMビット
 	testl $0x4, %eax		# EM (math emulation bit)
 	jne device_not_available_emulate
 	preempt_stop
-    // ここで浮動小数点の復帰
+    # ここで浮動小数点の復帰
 	call math_state_restore
 	jmp ret_from_exception
 device_not_available_emulate:
@@ -395,7 +397,9 @@ device_not_available_emulate:
 	 */
      // カーネルスタックのアドレスを esp0 にロード
 	load_esp0(tss, next);
+```
 
+```
 	/*
 	 * Save away %fs and %gs. No need to save %es and %ds, as
 	 * those are always kernel segments while inside the kernel.
