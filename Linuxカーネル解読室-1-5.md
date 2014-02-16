@@ -41,6 +41,7 @@
 void scheduler_tick(void)
 {
 	int cpu = smp_processor_id();
+    // CPUごとのランキュー
 	runqueue_t *rq = this_rq();
 	task_t *p = current;
 	unsigned long long now = sched_clock();
