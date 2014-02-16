@@ -30,9 +30,9 @@
  * 時分割 タイムシェアリング
  * タイムスライス
    * ってどこで管理してるんだっけ?
-     * task_struct に `unsigned int time_slice` がある
+     * task_struct に `unsigned int time_slice` がある。scheduler_tick でデクリメントされていく
    * 固定優先度を元にタイムスライスを割り当て
-     * `static unsigned int task_timeslice(task_t *p)`
+     * `static unsigned int task_timeslice(task_t *p)` の実装をみるとよい
  * scheduler_tick
 
 ```c
