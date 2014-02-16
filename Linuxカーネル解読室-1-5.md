@@ -45,9 +45,9 @@
  * 時分割 タイムシェアリング
  * タイムスライス
      * task_struct の `unsigned int time_slice` のこと
-     * scheduler_tick() でデクリメントされていく
+     * scheduler_tick でデクリメントされていく
    * 固定優先度を元にタイムスライスを割り当て
-     * タイムスライスの割り当ては task_timeslice() の実装をみるとよい
+     * タイムスライスの割り当ては task_timeslice の実装をみるとよい
 
 ** task_timeslice **
 
