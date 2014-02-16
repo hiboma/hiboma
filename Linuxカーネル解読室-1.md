@@ -362,7 +362,7 @@ static inline void __save_init_fpu( struct task_struct *tsk )
 }
 ```
 
-扶桑小数点命令を実行したに出るデバイス使用不可能例外のハンドラ
+遅延させて浮動小数点命令を実行したに出るデバイス使用不可能例外のハンドラ
 
  ```asm
 ENTRY(device_not_available)
