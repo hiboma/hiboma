@@ -45,6 +45,9 @@ void scheduler_tick(void)
     // CPUごとの runqueue
 	runqueue_t *rq = this_rq();
 	task_t *p = current;
+    
+    // rdtsc (Read Time Stamp Counter) 命令で CPU のタイムスタンプカウンタから時刻を取る
+    // http://www.02.246.ne.jp/~torutk/cxx/clock/cpucounter.html
 	unsigned long long now = sched_clock();
 
 	update_cpu_clock(p, rq, now);
