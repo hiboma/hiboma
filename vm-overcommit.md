@@ -244,7 +244,7 @@ Committed_AS:     582868 kB  # 残り 0.24 %
 
  * カーネルスレッドを渡すと WARN_ON を出す以外は他と大体同じ
  * [mmap_region](http://lxr.free-electrons.com/source/mm/mmap.c?v=2.6.32#L1108)
-    * accountable_mapping
+    * accountable_mapping が重要
  * [do_brk](http://lxr.free-electrons.com/source/mm/mmap.c?v=2.6.32#L1990)
     * brk(2)
  * [vma_to_resize](http://lxr.free-electrons.com/source/mm/mremap.c?v=2.6.32#L262)
