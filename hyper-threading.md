@@ -142,18 +142,17 @@ static int __cpuinit intel_num_cpu_cores(struct cpuinfo_x86 *c)
 
 cpuid の使い方の仕様は Intel のマニュアルに書いてあります。CPUの情報を取る命令のようです。
 
-- http://www.intel.com/content/dam/www/public/us/en/documents/application-notes/processor-identification-cpuid-instruction-note.pdf
-- http://www.intel.co.jp/content/dam/www/public/ijkk/jp/ja/documents/developer/Processor_Identification_071405_i.pdf
--- 2005年と古いけど日本語
+ * http://www.intel.com/content/dam/www/public/us/en/documents/application-notes/processor-identification-cpuid-instruction-note.pdf
+ * http://www.intel.co.jp/content/dam/www/public/ijkk/jp/ja/documents/developer/Processor_Identification_071405_i.pdf
+   * 2005年と古いけど日本語
 
-eax = 4 を指定して cpuid を呼び出すと、 eax の 31~26bit に ダイ上のプロセッサ・コアの数(マルチコア) が 入ると書いてありました。
+`eax = 4` を指定して cpuid を呼び出すと、 eax の 31~26bit に ダイ上のプロセッサ・コアの数(マルチコア) が 入ると書いてありました。
 
-<span class="deco" style="font-weight:bold;font-style:italic;">c->x86_max_cores</span>  は 物理コア数を指す変数と分かりました。
-
+`c->x86_max_cores`  は 物理コア数を指す変数と分かりました。
 
 ## smp_num_siblings の初期化
 
-<span class="deco" style="font-weight:bold;font-style:italic;">smp_num_siblings</span> は arch/x86/kernel/cpu/common.c の <span class="deco" style="font-weight:bold;font-style:italic;">detect_ht() の</span>中で初期化されます。
+`smp_num_siblings` は arch/x86/kernel/cpu/common.c の `detect_ht()` の中で初期化されます。
 
 ```c
 void __cpuinit detect_ht(struct cpuinfo_x86 *c)
@@ -183,27 +182,25 @@ void __cpuinit detect_ht(struct cpuinfo_x86 *c)
 }
 ```
 
-Inetel のリファレンスには eax = 1 にして cpuid を呼び出すと ebx の 23-16bitに 論理プロセッサの数 が入ると書いてあります。(ただし、CPUがハイパースレッディングに対応している場合にのみ取れる数値とのこと)
+Inetel のリファレンスには `eax = 1` にして cpuid を呼び出すと ebx の 23-16bitに 論理プロセッサの数 が入ると書いてあります。(ただし、CPUがハイパースレッディングに対応している場合にのみ取れる数値とのこと)
 
-cpuid で論理プロセッサの数を取得した後、 <span class="deco" style="font-weight:bold;">smp_num_siblings</span> を 物理コア数 <span class="deco" style="font-weight:bold;"> c->x86_max_cores</span> で除算しています。これによって <span class="deco" style="font-weight:bold;font-style:italic;">smp_num_siblings</span>  は 物理コア1個あたりが論理CPUとして何個に見えるか、を指す数字として扱われていると分かりました。
+cpuid で論理プロセッサの数を取得した後、 `smp_num_siblings` を 物理コア数 `c->x86_max_cores` で除算しています。これによって `smp_num_siblings`  は 物理コア1個あたりが論理CPUとして何個に見えるか、を指す数字として扱われていると分かりました。
 
 
 ## まとめ
 
-- c->x86_max_cores は物理コアの数
-- smp_num_siblings はハイパースレッディングによる1物理コアあたりの論理CPUの数
-- c->x86_max_cores * smp_num_siblings > 1 であれば ハイパースレッディングが有効である、と見なせる
+ * c->x86_max_cores は物理コアの数
+ * smp_num_siblings はハイパースレッディングによる1物理コアあたりの論理CPUの数
+ * c->x86_max_cores * smp_num_siblings > 1 であれば ハイパースレッディングが有効である、と見なせる
 
 というまとめになります。
-
 
 ## 課題
 
 ここまでまとめておいたところで、AWSのインスタンスは64bitなのに、Intelのリファレンスは IA-32 (32bit)のアーキテクチャの説明だった気がつきました。とほほ。
 
-
 ## 参考にしたブログ
 
-- http://d.hatena.ne.jp/ruicc/20090212/1234455865
-- http://piro791.blog.so-net.ne.jp/2008-09-30-3
-- http://open-groove.net/linux/cpu-core-hyper-threading/
+ * http://d.hatena.ne.jp/ruicc/20090212/1234455865
+ * http://piro791.blog.so-net.ne.jp/2008-09-30-3
+ * http://open-groove.net/linux/cpu-core-hyper-threading/
