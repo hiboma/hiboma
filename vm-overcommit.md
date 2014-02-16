@@ -25,6 +25,9 @@ do_mmap_pgoff で max_map_count なるもので ENOMEM になるケースもあ�
 		return -ENOMEM;
 ```
 
+vm.max_map_count = 65530
+
+
 ## /proc/meminfo から辿る
 
 CommitLimit と Committed_AS を seq_printf してる部分は以下のコード。ここから逆に辿る
