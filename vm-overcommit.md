@@ -2,12 +2,12 @@
 
 ## まとめ
 
- * root の 3%, プロセスサイズの3%
  * private writable なリージョンが Commited_AS に加算される
    * mmap, brk, stack
    * pmap で `rw--`
  * プロセス単位の Committed_AS のサイズは取れない?
    * 下記のワンライナーで近い値は出せる
+ * root だと3%のおまけがつくのと, プロセスサイズの3%ひかれるのと
 
 ```sh
 sudo pmap `sudo cat /var/run/mysqld/mysqld.pid` | grep 'rw--' | perl -anle '$s=$F[1];$s=~s/k//;$sum+=$s;END { warn $sum }'
