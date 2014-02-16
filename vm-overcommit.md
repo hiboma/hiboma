@@ -3,6 +3,7 @@
 ## まとめ
 
  * private writable なリージョンが Commited_AS に加算される
+   * accountable_mapping を見よう
    * pmap で `rw--` のリージョン
    * mmap, brk, stack などのシステムコールの過程で加算
  * プロセス単位の Committed_AS のサイズは取れない?
