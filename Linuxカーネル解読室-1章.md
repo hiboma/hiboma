@@ -43,7 +43,6 @@ OpenBSDのページだけど http://caspar.hazymoon.jp/OpenBSD/annex/intel_arc.h
 
 ### 1.4.1 context_switch
 
-
  * ハードウェアの機能 TSS(タスク状態セグメント x86) を使用しない)
 
 ### context_switch
