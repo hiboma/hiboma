@@ -47,7 +47,7 @@
      * task_struct の `unsigned int time_slice` のこと
      * scheduler_tick() でデクリメントされていく
    * 固定優先度を元にタイムスライスを割り当て
-     * タイムスライスの割り当ては `static unsigned int task_timeslice(task_t *p)` の実装をみるとよい
+     * タイムスライスの割り当ては task_timeslice() の実装をみるとよい
 
 ** task_timeslice **
 
