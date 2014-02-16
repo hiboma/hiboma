@@ -283,7 +283,6 @@ rff_trace:
 	CFI_ENDPROC
 ```
 
-
 ### context_switch -> switch_to -> _switch_to
 
 ```c
@@ -363,7 +362,7 @@ static inline void __save_init_fpu( struct task_struct *tsk )
 }
 ```
 
-デバイス使用不可能例外のハンドラ
+扶桑小数点命令を実行したに出るデバイス使用不可能例外のハンドラ
 
  ```asm
 ENTRY(device_not_available)
