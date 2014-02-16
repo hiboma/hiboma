@@ -413,6 +413,7 @@ int main(int argc, char *argv[]) {
    * vm.overcommit_memory=0,1 の場合は MAP_NORESERVE をつけると Committed_AS が増えないことを確認した
  * file を mmap した場合は除外される
  * MAP_NORESERVE を指定して嬉しいのはどんな状況???
+   * `このマッピングに対するスワップ空間の予約を行わない`
 
 ```
 unsigned long mmap_region(struct file *file, unsigned long addr,
