@@ -169,4 +169,10 @@ out:
  * 自ら実行権を手放す場合
    * 1. 事象が成立するために待機状態に遷移
      * TASK_INTERRUPTIBLE, TASK_UNINTERRUPTIBLE
- * 2.
+     * I/O, ネットワーク, ロック, sleep 
+   * 2. 明示的に他のプロセスに実行権をゆずる
+     * カーネルの実行パスが長い場合
+     * fork とか?
+     * sched_yield ?
+ * 実行中プロセスから実行権を奪い取る(プリエンプションする)場合
+   * resched_task
