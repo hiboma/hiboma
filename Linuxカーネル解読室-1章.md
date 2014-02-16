@@ -524,6 +524,8 @@ static inline void set_iopl_mask(unsigned mask)
 	/*
 	 * Now maybe reload the debug registers
 	 */
+    // http://en.wikipedia.org/wiki/Debug_register
+    // デバッグレジスタを使うことでハードウェアブレークポイントの実装ができる
 	if (unlikely(next->debugreg[7])) {
 		set_debugreg(next->debugreg[0], 0);
 		set_debugreg(next->debugreg[1], 1);
