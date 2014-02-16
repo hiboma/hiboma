@@ -3,8 +3,9 @@
 
  * タイマ割り込みから scheduler_tick までのパスは?
    * smp_apic_timer_interrupt
+      * I/O APIC での割り込み
    * smp_local_timer_interrupt
-      * APIC から割り込みがリダイレクションしてCPUに転送
+      * APIC から割り込みがリダイレクションして Local APIC に転送
    * update_process_times
    * scheduler_tick
  * CPUキャッシュの整理
