@@ -5,6 +5,7 @@
 ## 1.5.1　スケジューリングの方針
 
  * 対話型プロセス
+   * TASK_INTERACTIVE
  * 数値計算プロセス
    * バッチ型 の単語がいきなり出て来るぞ
 
@@ -27,10 +28,11 @@
  * 時分割 タイムシェアリング
  * タイムスライス
    * ってどこで管理してるんだっけ?
-     * => task_struct に unsigned int time_slice がある
+     * task_struct に `unsigned int time_slice` がある
    * 固定優先度を元にタイムスライスを割り当て
+     * `static unsigned int task_timeslice(task_t *p)`
  * scheduler_tick
- 
+
 ```c
 /*
  * This function gets called by the timer code, with HZ frequency.
@@ -102,6 +104,8 @@ void scheduler_tick(void)
         // thread_info に TIF_NEED_RESCHED をセット
 		set_tsk_need_resched(p);
 		p->prio = effective_prio(p);
+        
+        // タイムスライスの割り当て
 		p->time_slice = task_timeslice(p);
 		p->first_time_slice = 0;
 
