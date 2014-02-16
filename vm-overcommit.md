@@ -10,7 +10,7 @@
  * root だと3%のおまけがつくのと, プロセスサイズの3%ひかれるの
 
 ```sh
-sudo pmap `sudo cat /var/run/mysqld/mysqld.pid` | grep 'rw--' | perl -anle '$s=$F[1];$s=~s/k//;$sum+=$s;END { warn $sum }'
+sudo pmap <pid> | grep 'rw--' | perl -anle '$s=$F[1];$s=~s/k//;$sum+=$s;END { warn $sum }'
 ```
 
 ## /proc/meminfo から辿る
