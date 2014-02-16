@@ -18,7 +18,7 @@ sudo pmap <pid> | grep 'rw--' | perl -anle '$s=$F[1];$s=~s/k//;$sum+=$s;END { wa
 
 __todo___
 
-do_mmap_pgoff で max_map_count なるもので ENOMEM になるケースもあるぞよ
+ * do_mmap_pgoff で max_map_count なるもので ENOMEM になるケースもあるぞよ
 
 ```
 	/* Too many mappings? */
@@ -27,6 +27,8 @@ do_mmap_pgoff で max_map_count なるもので ENOMEM になるケースもあ�
 ```
 
 `vm.max_map_count = 65530` こんな値がセットされている
+
+* MAP_NORESERVE の用途が分からん
 
 ## /proc/meminfo から辿る
 
