@@ -77,7 +77,7 @@ Linux Kernel Architecture P.364 に説明載ってる
      * percpu_couter_sum
      * このケースは頻繁に発生しないので競合が起こりにくい
 
-## vm_acct_memory <- security_vm_enough_memory
+## security_vm_enough_memory -> vm_acct_memory の呼び出し
 
  * vm_acct_memory が呼び出されるのは __vm_enough_memory 内 ( vm_unacct_memory はいろんな所で呼び出される)
  * __vm_enough_memory では vm.overcommmit_memory の値に応じて オーバーコミットの判定をする
