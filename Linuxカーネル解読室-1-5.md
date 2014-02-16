@@ -83,6 +83,9 @@ static unsigned int task_timeslice(task_t *p)
 
 ** scheduler_tick **
 
+ * タイマ割り込みで HZ周期で呼び出される
+ * 割り込みを禁止して呼び出しする
+
 ```c
 /*
  * This function gets called by the timer code, with HZ frequency.
