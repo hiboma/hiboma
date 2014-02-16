@@ -27,6 +27,7 @@
  * 時分割 タイムシェアリング
  * タイムスライス
    * ってどこで管理してるんだっけ?
+     * => task_struct に unsigned int time_slice がある
    * 固定優先度を元にタイムスライスを割り当て
  * scheduler_tick
  
@@ -94,7 +95,11 @@ void scheduler_tick(void)
 	}
     // タイムスライスをデクリメントする
 	if (!--p->time_slice) {
+        // タイムスライスが 0 = 使い切った場合
+        // タスクを runqueue から dequeue 
 		dequeue_task(p, rq->active);
+        // 再スケジューリングが必要であるフラグをたてる
+        // thread_info に TIF_NEED_RESCHED をセット
 		set_tsk_need_resched(p);
 		p->prio = effective_prio(p);
 		p->time_slice = task_timeslice(p);
