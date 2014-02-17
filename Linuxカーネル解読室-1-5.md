@@ -266,9 +266,28 @@ switch_tasks:
 		prev->sleep_avg = 0;
 	prev->timestamp = prev->last_ran = now;
 
+	sched_info_switch(prev, next);
+	if (likely(prev != next)) {
+		next->timestamp = now;
+		rq->nr_switches++;
+		rq->curr = next;
+
+        // ここでインクリメント
+		++*switch_count;
+
 		prepare_task_switch(rq, next);
+
+        // コンテキストスイッチする
 		prev = context_switch(rq, prev, next);
 		barrier();
+		/*
+		 * this_rq must be evaluated again because prev may have moved
+		 * CPUs since it called schedule(), thus the 'rq' on its stack
+		 * frame will be invalid.
+		 */
+		finish_task_switch(this_rq(), prev);
+	} else
+		spin_unlock_irq(&rq->lock);
 ```    
 
 ```c
