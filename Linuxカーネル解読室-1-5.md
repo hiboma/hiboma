@@ -278,7 +278,9 @@ asmlinkage long sys_sched_yield(void)
 		schedstat_inc(rq, yld_exp_empty);
 
 	if (array != target) {
+        // runqueue から外す
 		dequeue_task(current, array);
+        // expired キューに繋ぐ
 		enqueue_task(current, target);
 	} else
 		/*
