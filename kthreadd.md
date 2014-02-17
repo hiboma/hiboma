@@ -148,7 +148,7 @@ struct task_struct *kthread_create(int (*threadfn)(void *data),
     // kthreadd を起こす
 	wake_up_process(kthreadd_task);
     // リストに追加したスレッドを kthreadd が作るのを待つ
-    // create.done はどこで解除される?
+    // create.done の wait はどこで解除される?
 	wait_for_completion(&create.done);
 
 	if (!IS_ERR(create.result)) {
