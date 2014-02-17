@@ -243,7 +243,6 @@ nonvoluntary_ctxt_switches:	5992
     * task_struct の `unsigned long nvcsw; /* context switch counts */`
   * voluntary_ctxt_switches に sys_sched_yield は含まれる? => No
     * task_struct の 'unsigned long nivcsw 	/* involuntary */`
-
 ```c
     // nivcsw か nvcsw どちらをカウントするか switch_count に入れる
 	switch_count = &prev->nivcsw;
