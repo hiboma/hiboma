@@ -50,6 +50,7 @@ int kthreadd(void *unused)
 			list_del_init(&create->list);
 			spin_unlock(&kthread_create_lock);
 
+            // スレッド作る君
 			create_kthread(create);
 
 			spin_lock(&kthread_create_lock);
