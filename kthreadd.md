@@ -44,6 +44,7 @@ int kthreadd(void *unused)
 		while (!list_empty(&kthread_create_list)) {
 			struct kthread_create_info *create;
 
+            // 作成要求のリストから取り出し
 			create = list_entry(kthread_create_list.next,
 					    struct kthread_create_info, list);
 			list_del_init(&create->list);
