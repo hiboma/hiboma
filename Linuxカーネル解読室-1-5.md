@@ -245,12 +245,13 @@ nonvoluntary_ctxt_switches:	5992
 
 ```c
 /**
- * sys_sched_yield - yield the current processor to other threads.
+
  *
  * this function yields the current CPU by moving the calling thread
  * to the expired array. If there are no other threads running on this
  * CPU then this function will return.
  */
+ // yield = 呼び出したスレッド(タスク) を expired array に移す
 asmlinkage long sys_sched_yield(void)
 {
 	runqueue_t *rq = this_rq_lock();
