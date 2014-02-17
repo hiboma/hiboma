@@ -242,7 +242,7 @@ nonvoluntary_ctxt_switches:	5992
   * nonvoluntary_ctxt_switches はタイムスライスを使いきった際に ++ される?
     * task_struct の `unsigned long nvcsw; /* context switch counts */`
   * voluntary_ctxt_switches に sys_sched_yield は含まれる? => No
-    * task_struct の 'unsigned long nivcsw 	/* involuntary " */`
+    * task_struct の 'unsigned long nivcsw 	/* involuntary */`
 
 ```c
 /**
