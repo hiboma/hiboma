@@ -58,6 +58,20 @@ int kthreadd(void *unused)
 }
 ```
 
+static void create_kthread(struct kthread_create_info *create)
+{
+	int pid;
+
+	/* We want our own signal handler (we take no signals by default). */
+	pid = kernel_thread(kthread, create, CLONE_FS | CLONE_FILES | SIGCHLD);
+	if (pid < 0) {
+		create->result = ERR_PTR(pid);
+		complete(&create->done);
+	}
+}
+
+## kthread_create - スレッド作成の要求を出す側
+
 ```c
 /**
  * kthread_create - create a kthread.
