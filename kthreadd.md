@@ -94,6 +94,7 @@ int kernel_thread(int (*fn)(void *), void *arg, unsigned long flags)
 	regs.fs = __KERNEL_PERCPU;
 	regs.gs = __KERNEL_STACK_CANARY;
 	regs.orig_ax = -1;
+    // eip をセットしている
 	regs.ip = (unsigned long) kernel_thread_helper;
 	regs.cs = __KERNEL_CS | get_kernel_rpl();
 	regs.flags = X86_EFLAGS_IF | X86_EFLAGS_SF | X86_EFLAGS_PF | 0x2;
