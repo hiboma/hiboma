@@ -252,6 +252,12 @@ nonvoluntary_ctxt_switches:	5992
 
 // ...
 
+	cpu = smp_processor_id();
+	if (unlikely(!rq->nr_running)) {
+go_idle:
+
+// ...
+
 switch_tasks:
 	if (next == rq->idle)
 		schedstat_inc(rq, sched_goidle);
