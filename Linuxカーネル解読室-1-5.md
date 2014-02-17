@@ -245,6 +245,7 @@ nonvoluntary_ctxt_switches:	5992
     * task_struct の 'unsigned long nivcsw 	/* involuntary */`
     
 ```c
+    // nivcsw か nvcsw どちらをカウントするか switch_count に入れる
 	switch_count = &prev->nivcsw;
 	if (prev->state && !(preempt_count() & PREEMPT_ACTIVE)) {
 		switch_count = &prev->nvcsw;
