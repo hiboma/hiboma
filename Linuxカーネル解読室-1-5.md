@@ -249,6 +249,8 @@ nonvoluntary_ctxt_switches:	5992
 	if (prev->state && !(preempt_count() & PREEMPT_ACTIVE)) {
 		switch_count = &prev->nvcsw;
 
+// ...
+
 switch_tasks:
 	if (next == rq->idle)
 		schedstat_inc(rq, sched_goidle);
