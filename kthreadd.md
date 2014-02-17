@@ -94,6 +94,7 @@ struct task_struct *kthread_create(int (*threadfn)(void *data),
 	spin_unlock(&kthread_create_lock);
 
 	wake_up_process(kthreadd_task);
+    // リストに追加したスレッドを kthreadd が作るのを待つ
 	wait_for_completion(&create.done);
 
 	if (!IS_ERR(create.result)) {
