@@ -29,7 +29,8 @@
 ## 1.5.1.2　優先度の指標
 
  * 固定優先度
-   * task_struct の `int static_privo`
+   * task_struct の `int static_prio`
+   * nice の値と同値
  * 変動優先度
    * task_struct の `int prio`
    * リアルタイムプロセスは変動優先度が max
