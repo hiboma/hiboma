@@ -244,7 +244,7 @@ nonvoluntary_ctxt_switches:	5992
   * voluntary_ctxt_switches に sys_sched_yield は含まれる? => No
     * task_struct の 'unsigned long nivcsw 	/* involuntary */`
     
-
+```c
 	switch_count = &prev->nivcsw;
 	if (prev->state && !(preempt_count() & PREEMPT_ACTIVE)) {
 		switch_count = &prev->nvcsw;
@@ -263,7 +263,7 @@ switch_tasks:
 	if ((long)prev->sleep_avg <= 0)
 		prev->sleep_avg = 0;
 	prev->timestamp = prev->last_ran = now;
-    
+```    
 
 ```c
 /**
