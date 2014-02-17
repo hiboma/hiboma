@@ -20,7 +20,7 @@ root        11  0.0  0.0      0     0 ?        S    Feb14   0:00  \_ [migration/
 
  * set_task_comm
  * wake_up_process(kthreadd_task);
- * wait_for_completion(&create.done);
+ * wait_for_completion(&create.done) => complete(&create->done);
 
 ## kthreadd - kthread を作る側
 
