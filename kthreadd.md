@@ -16,6 +16,11 @@ root        10  0.0  0.0      0     0 ?        S    Feb14   0:00  \_ [watchdog/1
 root        11  0.0  0.0      0     0 ?        S    Feb14   0:00  \_ [migration/2]
 ```
 
+## todo
+
+ * wake_up_process(kthreadd_task);
+ * wait_for_completion(&create.done);
+
 ## kthreadd - kthread を作る側
 
 ```c
