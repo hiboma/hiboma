@@ -60,6 +60,7 @@ int kthreadd(void *unused)
 }
 ```
 
+```c
 static void create_kthread(struct kthread_create_info *create)
 {
 	int pid;
@@ -71,6 +72,37 @@ static void create_kthread(struct kthread_create_info *create)
 		complete(&create->done);
 	}
 }
+```
+
+ * 32bit用
+
+```c
+/*
+ * Create a kernel thread
+ */
+int kernel_thread(int (*fn)(void *), void *arg, unsigned long flags)
+{
+	struct pt_regs regs;
+
+	memset(&regs, 0, sizeof(regs));
+
+	regs.bx = (unsigned long) fn;
+	regs.dx = (unsigned long) arg;
+
+	regs.ds = __USER_DS;
+	regs.es = __USER_DS;
+	regs.fs = __KERNEL_PERCPU;
+	regs.gs = __KERNEL_STACK_CANARY;
+	regs.orig_ax = -1;
+	regs.ip = (unsigned long) kernel_thread_helper;
+	regs.cs = __KERNEL_CS | get_kernel_rpl();
+	regs.flags = X86_EFLAGS_IF | X86_EFLAGS_SF | X86_EFLAGS_PF | 0x2;
+
+	/* Ok, create the new process.. */
+	return do_fork(flags | CLONE_VM | CLONE_UNTRACED, 0, &regs, 0, NULL, NULL);
+}
+EXPORT_SYMBOL(kernel_thread);
+```
 
 ## kthread_create - スレッド作成の要求を出す側
 
