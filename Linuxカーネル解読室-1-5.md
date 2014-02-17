@@ -284,6 +284,7 @@ asmlinkage long sys_sched_yield(void)
 		/*
 		 * requeue_task is cheaper so perform that if possible.
 		 */
+         // キューの末尾に繋ぎ直す
 		requeue_task(current, array);
 
 	/*
