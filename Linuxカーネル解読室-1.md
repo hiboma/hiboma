@@ -108,6 +108,10 @@ task_t * context_switch(runqueue_t *rq, task_t *prev, task_t *next)
 }
 ```
 
+ * likeky, unlikely
+   * __builin_expect のラッパー
+   * パイプライニングをサポートするCPUで、命令がストールしている間に次の命令を読み込んだりの prefetch 等の最適化を入れる
+
 #### context_switch -> switch_mm
 
  * プロセス空間 (アドレス空間?) の切り替え
