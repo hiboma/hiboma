@@ -233,6 +233,11 @@ out:
    * 割り込み、遅延処理(taskletとか?), 排他区間以外
    * CONFIG_PREEMPT=y 
    * http://wiki.bit-hive.com/linuxkernelmemo/pg/%A5%D7%A5%EA%A5%A8%A5%F3%A5%D7%A5%B7%A5%E7%A5%F3
+  * /proc/<pid>status に実行権を手放した回数が記録されている
+``` 
+voluntary_ctxt_switches:	21073656
+nonvoluntary_ctxt_switches:	5992
+```   
 
 ## 1.5.4　マルチプロセッサシステムにおけるプロセススケジューリング
 
