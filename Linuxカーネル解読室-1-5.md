@@ -248,6 +248,7 @@ nonvoluntary_ctxt_switches:	5992
     // nivcsw か nvcsw どちらをカウントするか switch_count に入れる
 	switch_count = &prev->nivcsw;
 	if (prev->state && !(preempt_count() & PREEMPT_ACTIVE)) {
+        // 自発
 		switch_count = &prev->nvcsw;
 
 // ...
