@@ -241,6 +241,62 @@ nonvoluntary_ctxt_switches:	5992
 ```
   * nonvoluntary_ctxt_switches はタイムスライスを使いきった際に ++ される?
     * task_struct の `unsigned long nvcsw, nivcsw; /* context switch counts */`
+  * voluntary_ctxt_switches に sys_sched_yield は含まれる?
+
+```c    
+/**
+ * sys_sched_yield - yield the current processor to other threads.
+ *
+ * this function yields the current CPU by moving the calling thread
+ * to the expired array. If there are no other threads running on this
+ * CPU then this function will return.
+ */
+asmlinkage long sys_sched_yield(void)
+{
+	runqueue_t *rq = this_rq_lock();
+	prio_array_t *array = current->array;
+	prio_array_t *target = rq->expired;
+
+	schedstat_inc(rq, yld_cnt);
+	/*
+	 * We implement yielding by moving the task into the expired
+	 * queue.
+	 *
+	 * (special rule: RT tasks will just roundrobin in the active
+	 *  array.)
+	 */
+	if (rt_task(current))
+		target = rq->active;
+
+	if (array->nr_active == 1) {
+		schedstat_inc(rq, yld_act_empty);
+		if (!rq->expired->nr_active)
+			schedstat_inc(rq, yld_both_empty);
+	} else if (!rq->expired->nr_active)
+		schedstat_inc(rq, yld_exp_empty);
+
+	if (array != target) {
+		dequeue_task(current, array);
+		enqueue_task(current, target);
+	} else
+		/*
+		 * requeue_task is cheaper so perform that if possible.
+		 */
+		requeue_task(current, array);
+
+	/*
+	 * Since we are going to call schedule() anyway, there's
+	 * no need to preempt or enable interrupts:
+	 */
+	__release(rq->lock);
+	_raw_spin_unlock(&rq->lock);
+	preempt_enable_no_resched();
+
+	schedule();
+
+	return 0;
+}
+```    
 
 ## 1.5.4　マルチプロセッサシステムにおけるプロセススケジューリング
 
