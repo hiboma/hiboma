@@ -233,11 +233,11 @@ out:
    * 割り込み、遅延処理(taskletとか?), 排他区間以外
    * CONFIG_PREEMPT=y 
    * http://wiki.bit-hive.com/linuxkernelmemo/pg/%A5%D7%A5%EA%A5%A8%A5%F3%A5%D7%A5%B7%A5%E7%A5%F3
-  * /proc/<pid>status に実行権を手放した回数が記録されている
+ * /proc/<pid>status に実行権を手放した回数が記録されている
 ``` 
 voluntary_ctxt_switches:	21073656
 nonvoluntary_ctxt_switches:	5992
-```   
+```
 
 ## 1.5.4　マルチプロセッサシステムにおけるプロセススケジューリング
 
@@ -253,6 +253,13 @@ nonvoluntary_ctxt_switches:	5992
    * task_struct の cpuset
  * rebalance_tick で ロードバランシング
    * 2.6.32 だと scheduler_tick -> trigger_load_balance でCPU間でロードバランシングされる
+ * /proc/<pid>status に実行を許可された CPU, メモリが記録されている
+```
+Cpus_allowed:	ffffff
+Cpus_allowed_list:	0-23
+Mems_allowed:	00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000003
+Mems_allowed_list:	0-1
+```
 
 ## 1.5.4.1　ハイパースレッディング
 
