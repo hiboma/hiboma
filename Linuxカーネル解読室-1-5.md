@@ -239,6 +239,7 @@ voluntary_ctxt_switches:	21073656
 nonvoluntary_ctxt_switches:	5992
 ```
   * nonvoluntary_ctxt_switches はタイムスライスを使いきった際に ++ される?
+    * task_struct の `unsigned long nvcsw, nivcsw; /* context switch counts */`
 
 ## 1.5.4　マルチプロセッサシステムにおけるプロセススケジューリング
 
