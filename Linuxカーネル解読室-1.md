@@ -111,6 +111,7 @@ task_t * context_switch(runqueue_t *rq, task_t *prev, task_t *next)
  * likeky, unlikely
    * __builin_expect のラッパー
    * パイプライニングをサポートするCPUで、命令がストールしている間に次の命令を読み込んだりの prefetch 等の最適化を入れる
+     * prefetch = L1, L2, ... キャッシュに読み込み
    * http://www.ibm.com/developerworks/jp/linux/library/l-gcc-hacks/
      * 分岐命令の直後にコードを配置するの最適化
 
