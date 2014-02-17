@@ -31,6 +31,8 @@ int kthreadd(void *unused)
 
 	for (;;) {
 		set_current_state(TASK_INTERRUPTIBLE);
+
+        // kthread_create_list が空なら何もせずスケジューラ呼ぶ
 		if (list_empty(&kthread_create_list))
 			schedule();
 		__set_current_state(TASK_RUNNING);
