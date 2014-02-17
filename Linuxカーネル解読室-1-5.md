@@ -252,6 +252,7 @@ nonvoluntary_ctxt_switches:	5992
  * CPU then this function will return.
  */
  // yield = 呼び出したスレッド(タスク) を expired array に移す
+ // 他にスレッド(タスク) がいなければ 何もしない?
 asmlinkage long sys_sched_yield(void)
 {
 	runqueue_t *rq = this_rq_lock();
