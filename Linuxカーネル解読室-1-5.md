@@ -243,7 +243,7 @@ nonvoluntary_ctxt_switches:	5992
     * task_struct の `unsigned long nvcsw, nivcsw; /* context switch counts */`
   * voluntary_ctxt_switches に sys_sched_yield は含まれる?
 
-```c    
+```c
 /**
  * sys_sched_yield - yield the current processor to other threads.
  *
