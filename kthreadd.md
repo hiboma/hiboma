@@ -1,6 +1,6 @@
 # kthreadd
 
-qカーネルスレッド作る君
+カーネルスレッド作る君
 
 ```
 USER       PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
@@ -15,6 +15,8 @@ root         9  0.0  0.0      0     0 ?        S    Feb14   0:01  \_ [ksoftirqd/
 root        10  0.0  0.0      0     0 ?        S    Feb14   0:00  \_ [watchdog/1]
 root        11  0.0  0.0      0     0 ?        S    Feb14   0:00  \_ [migration/2]
 ```
+
+## kthreadd - kthread を作る側
 
 ```c
 int kthreadd(void *unused)
