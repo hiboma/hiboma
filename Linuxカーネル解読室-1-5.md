@@ -263,6 +263,10 @@ switch_tasks:
 	if ((long)prev->sleep_avg <= 0)
 		prev->sleep_avg = 0;
 	prev->timestamp = prev->last_ran = now;
+
+		prepare_task_switch(rq, next);
+		prev = context_switch(rq, prev, next);
+		barrier();
 ```    
 
 ```c
