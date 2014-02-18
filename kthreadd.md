@@ -16,11 +16,15 @@ root        10  0.0  0.0      0     0 ?        S    Feb14   0:00  \_ [watchdog/1
 root        11  0.0  0.0      0     0 ?        S    Feb14   0:00  \_ [migration/2]
 ```
 
-## todo
+## APIs
 
  * set_task_comm
  * wake_up_process(kthreadd_task);
  * wait_for_completion(&create.done) => complete(&create->done);
+ * set_cpus_allowed_ptr
+ * set_mems_allowed
+ * set_task_comm
+ * ignore_signals
 
 ## kthreadd - kthread を作る側
 
