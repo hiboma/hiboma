@@ -37,8 +37,9 @@ int kthreadd(void *unused)
     // 受信したシグナルも全て flush_signal 
 	ignore_signals(tsk);
 
-    // 全CPUでスケジューリング可能
+    // cpu_all_mask なので全CPUでスケジューリング可能
 	set_cpus_allowed_ptr(tsk, cpu_all_mask);
+    //
 	set_mems_allowed(node_states[N_HIGH_MEMORY]);
 
 	current->flags |= PF_NOFREEZE | PF_FREEZER_NOSIG;
