@@ -33,7 +33,7 @@ int kthreadd(void *unused)
     // スピンロックとって comm に strlcpy するだけ
 	set_task_comm(tsk, "kthreadd");
     
-    // 
+    // シグナルハンドラを全て SIG_IGN にする
 	ignore_signals(tsk);
 	set_cpus_allowed_ptr(tsk, cpu_all_mask);
 	set_mems_allowed(node_states[N_HIGH_MEMORY]);
