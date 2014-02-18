@@ -39,7 +39,7 @@ int kthreadd(void *unused)
 
     // cpu_all_mask なので全CPUでスケジューリング可能
 	set_cpus_allowed_ptr(tsk, cpu_all_mask);
-    //
+    // HIGE_MEMORY ? 
 	set_mems_allowed(node_states[N_HIGH_MEMORY]);
 
 	current->flags |= PF_NOFREEZE | PF_FREEZER_NOSIG;
