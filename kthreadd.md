@@ -36,6 +36,8 @@ int kthreadd(void *unused)
     // シグナルハンドラを全て SIG_IGN にする
     // 受信したシグナルも全て flush_signal 
 	ignore_signals(tsk);
+
+    // 全CPUでスケジューリング可能
 	set_cpus_allowed_ptr(tsk, cpu_all_mask);
 	set_mems_allowed(node_states[N_HIGH_MEMORY]);
 
