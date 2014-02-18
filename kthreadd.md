@@ -30,7 +30,10 @@ int kthreadd(void *unused)
 	struct task_struct *tsk = current;
 
 	/* Setup a clean context for our children to inherit. */
+    // スピンロックとって comm に strlcpy するだけ
 	set_task_comm(tsk, "kthreadd");
+    
+    // 
 	ignore_signals(tsk);
 	set_cpus_allowed_ptr(tsk, cpu_all_mask);
 	set_mems_allowed(node_states[N_HIGH_MEMORY]);
