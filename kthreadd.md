@@ -34,7 +34,7 @@ int kthreadd(void *unused)
 	set_task_comm(tsk, "kthreadd");
     
     // シグナルハンドラを全て SIG_IGN にする
-    // 受信したシグナルも全て flush 
+    // 受信したシグナルも全て flush_signal 
 	ignore_signals(tsk);
 	set_cpus_allowed_ptr(tsk, cpu_all_mask);
 	set_mems_allowed(node_states[N_HIGH_MEMORY]);
