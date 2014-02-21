@@ -432,12 +432,15 @@ static int try_to_wake_up(task_t *p, unsigned int state, int sync)
 		}
 	}
 
+    // 新しいCPUを選択
 	new_cpu = cpu; /* Could not wake to this_cpu. Wake to cpu instead */
 out_set_cpu:
 	new_cpu = wake_idle(new_cpu, p);
 	if (new_cpu != cpu) {
 		set_task_cpu(p, new_cpu);
 		task_rq_unlock(rq, &flags);
+        // ここでスピンロック解除。長い
+
 		/* might preempt at this point */
 		rq = task_rq_lock(p, &flags);
 		old_state = p->state;
@@ -498,6 +501,17 @@ out:
 
  * runqueue には登録されていない
  * runqueue->idle のことか?
+
+```
+/*
+ * __activate_idle_task - move idle task to the _front_ of runqueue.
+ */
+static inline void __activate_idle_task(task_t *p, runqueue_t *rq)
+{
+	enqueue_task_head(p, rq->active);
+	inc_nr_running(p, rq);
+}
+``` 
 
 ## 1.6.5 カレントプロセス
 
