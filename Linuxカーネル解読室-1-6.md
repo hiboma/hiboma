@@ -10,8 +10,12 @@
 
  * expired
    * タイムスライスが余ってる task
+   * active キューが空になったら active に遷移
  * active
    * タイムスライスを使い切った task
+   * active -> expired もしくは active -> TASK_UNINTERRUPTIBLE/TASK_INTERRUPTIBLE に遷移
+
+キュー内でさらに実行優先度ごとに分類されている
 
 ### struct rq
 
@@ -25,12 +29,16 @@
  */
 struct rq {
 	/* runqueue lock: */
+    // rq は CPUごとに用意されているので, 単一のロックを取る場合は競合しない?
+    // ロードバランシングやスレッドマイグレーションする場合は 複数の rq スピンロックが必要
+    // => 競合を起こす
 	spinlock_t lock;
 
 	/*
 	 * nr_running and cpu_load should be in the same cacheline because
 	 * remote CPUs use both these fields when doing load calculation.
 	 */
+    // nr_running と cpu_load の キャッシュラインを揃える
 	unsigned long nr_running;
 	#define CPU_LOAD_IDX_MAX 5
 	unsigned long cpu_load[CPU_LOAD_IDX_MAX];
@@ -43,7 +51,9 @@ struct rq {
 	unsigned long nr_load_updates;
 	u64 nr_switches;
 
+    // CFS用のキュー
 	struct cfs_rq cfs;
+    // リアルタイムプロセス用のキュー
 	struct rt_rq rt;
 
 #ifdef CONFIG_FAIR_GROUP_SCHED
