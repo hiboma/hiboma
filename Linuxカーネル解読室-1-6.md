@@ -501,7 +501,26 @@ out:
 
  * runqueue には登録されていないプロセス
  * runqueue->idle のこと
- * init_idle で初期化されている
+ * do_boot_cpu -> do_fork_idle -> init_idle で初期化されている
+   * OSのブート途中で CPU のブートが実行される。その際に idle プロセスが作られる
+   * CPU の shutdown する再には idle プロセスが止まる
+ 
+```
+task_t * __devinit fork_idle(int cpu)
+{
+	task_t *task;
+	struct pt_regs regs;
+
+	task = copy_process(CLONE_VM, 0, idle_regs(&regs), 0, NULL, NULL, 0);
+	if (!task)
+		return ERR_PTR(-ENOMEM);
+	init_idle(task, cpu);
+    // プロセスリストから外す?
+    // pid を持たないタスク
+	unhash_process(task);
+	return task;
+}
+```
 
 ``` 
 /**
@@ -597,5 +616,5 @@ void sched_idle_next(void)
 
 ## 1.6.6　プロセッサバインド機能
 
- * sched_setaffinity
+ * sched_setaffinity(2)
  * /proc/<pid>/cpuset
