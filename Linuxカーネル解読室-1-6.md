@@ -232,4 +232,14 @@ struct rq {
 
 ## 1.6.3　CPUごとのRUNキュー
 
- * runqueu の ロードバランシング
+ * runqueue の ロードバランシング load_balance
+   * runqueue 上のプロセスが対象なので TASK_RUNNING な奴だけ
+ * try_to_wak_up で idle なプロセッサを割り当てる
+
+## 1.6.4 アイドルプロセス
+
+ * runqueue には登録されていない
+
+## 1.6.5 カレントプロセス
+
+![](http://sourceforge.jp/projects/linux-kernel-docs/wiki/1.6%E3%80%80プロセススケジューラの実装/thumb/310x154/fig1-10.png)
