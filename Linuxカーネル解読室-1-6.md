@@ -239,7 +239,13 @@ struct rq {
 ## 1.6.4 アイドルプロセス
 
  * runqueue には登録されていない
+ * runqueue->idle のことか?
 
 ## 1.6.5 カレントプロセス
 
 ![](http://sourceforge.jp/projects/linux-kernel-docs/wiki/1.6%E3%80%80プロセススケジューラの実装/thumb/310x154/fig1-10.png)
+
+ * runqueue->curr
+ * current
+   * ESP の下位ビットをマスク -> thread_info を出す
+   * thread_info -> task_struct
