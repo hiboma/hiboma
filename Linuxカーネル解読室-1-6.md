@@ -8,17 +8,25 @@
 
 ## 1.6.1　実行優先度ごとのRUNキュー
 
- * expired
+ * rq->expired
    * タイムスライスが余ってる task
    * active キューが空になったら active に遷移
- * active
+ * rq->active
    * タイムスライスを使い切った task
    * active -> expired もしくは active -> TASK_UNINTERRUPTIBLE/TASK_INTERRUPTIBLE に遷移
  * キュー内でさらに実行優先度ごとに分類されている
    * struct prio_array_t のこと
  * runqueue に繋がっている限りは必ず CPU の実行が保証される
 
-.6.32  では CFS が導入されているので全然違うことを確認する
+```c
+struct prio_array {
+	unsigned int nr_active;
+	unsigned long bitmap[BITMAP_SIZE];
+	struct list_head queue[MAX_PRIO];
+};
+``` 
+
+2.6.32  では CFS が導入されているので全然違うことを確認する
 
 ### struct runqueue
 
