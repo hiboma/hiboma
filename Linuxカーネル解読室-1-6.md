@@ -14,8 +14,9 @@
  * rq->active
    * タイムスライスを使い切った task
    * active -> expired もしくは active -> TASK_UNINTERRUPTIBLE/TASK_INTERRUPTIBLE に遷移
- * キュー内でさらに実行優先度ごとに分類されている
+ * キュー内でさらに実行優先度ごとに分類された list が queue になってる
    * struct prio_array_t のこと
+   * 実際のデータとしての queue は prio_array_t を指す
  * runqueue に繋がっている限りは必ず CPU の実行が保証される
 
 ```c
