@@ -499,10 +499,50 @@ out:
 
 ## 1.6.4 アイドルプロセス
 
- * runqueue には登録されていない
- * runqueue->idle のことか?
+ * runqueue には登録されていないプロセス
+ * runqueue->idle のこと
+ * init_idle で初期化されている
 
+``` 
+/**
+ * init_idle - set up an idle thread for a given CPU
+ * @idle: task in question
+ * @cpu: cpu the idle task belongs to
+ *
+ * NOTE: this function does not set the idle thread's NEED_RESCHED
+ * flag, to make booting more robust.
+ */
+void __devinit init_idle(task_t *idle, int cpu)
+{
+	runqueue_t *rq = cpu_rq(cpu);
+	unsigned long flags;
+
+	idle->sleep_avg = 0;
+	idle->array = NULL;
+	idle->prio = MAX_PRIO;
+	idle->state = TASK_RUNNING;
+	idle->cpus_allowed = cpumask_of_cpu(cpu);
+	set_task_cpu(idle, cpu);
+
+	spin_lock_irqsave(&rq->lock, flags);
+	rq->curr = rq->idle = idle;
+#if defined(CONFIG_SMP) && defined(__ARCH_WANT_UNLOCKED_CTXSW)
+	idle->oncpu = 1;
+#endif
+	spin_unlock_irqrestore(&rq->lock, flags);
+
+	/* Set the preempt count _outside_ the spinlocks! */
+#if defined(CONFIG_PREEMPT) && !defined(CONFIG_PREEMPT_BKL)
+	task_thread_info(idle)->preempt_count = (idle->lock_depth >= 0);
+#else
+	task_thread_info(idle)->preempt_count = 0;
+#endif
+}
 ```
+ 
+ * CPUをオフラインする際にも runqueue->idle が使われる
+   
+```c
 /*
  * __activate_idle_task - move idle task to the _front_ of runqueue.
  */
@@ -512,6 +552,34 @@ static inline void __activate_idle_task(task_t *p, runqueue_t *rq)
 	inc_nr_running(p, rq);
 }
 ``` 
+
+```c
+/* Schedules idle task to be the next runnable task on current CPU.
+ * It does so by boosting its priority to highest possible and adding it to
+ * the _front_ of runqueue. Used by CPU offline code.
+ */
+void sched_idle_next(void)
+{
+	int cpu = smp_processor_id();
+	runqueue_t *rq = this_rq();
+	struct task_struct *p = rq->idle;
+	unsigned long flags;
+
+	/* cpu has to be offline */
+	BUG_ON(cpu_online(cpu));
+
+	/* Strictly not necessary since rest of the CPUs are stopped by now
+	 * and interrupts disabled on current cpu.
+	 */
+	spin_lock_irqsave(&rq->lock, flags);
+
+	__setscheduler(p, SCHED_FIFO, MAX_RT_PRIO-1);
+	/* Add idle task to _front_ of it's priority queue */
+	__activate_idle_task(p, rq);
+
+	spin_unlock_irqrestore(&rq->lock, flags);
+}
+```
 
 ## 1.6.5 カレントプロセス
 
@@ -526,3 +594,8 @@ static inline void __activate_idle_task(task_t *p, runqueue_t *rq)
 
  * schedstat_inc
    * runqueue に統計情報のフィールドをインクリメント
+
+## 1.6.6　プロセッサバインド機能
+
+ * sched_setaffinity
+ * /proc/<pid>/cpuset
