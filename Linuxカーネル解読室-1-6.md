@@ -19,7 +19,6 @@
  * runqueue に繋がっている限りは必ず CPU の実行が保証される
 
 ```c
-
 // #define MAX_USER_RT_PRIO	100
 // #define MAX_RT_PRIO		MAX_USER_RT_PRIO
 // #define MAX_PRIO		(MAX_RT_PRIO + 40)
