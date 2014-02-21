@@ -218,7 +218,7 @@ struct rq {
 	/* schedule() stats */
 	unsigned int sched_switch;
 	unsigned int sched_count;
-	unsigned int sched_goidle;
+	unsigned int sched_switch;
 
 	/* try_to_wake_up() stats */
 	unsigned int ttwu_count;
@@ -234,7 +234,69 @@ struct rq {
 
  * runqueue の ロードバランシング load_balance
    * runqueue 上のプロセスが対象なので TASK_RUNNING な奴だけ
+   * double_rq_lock, double_rq_unlock で二つの runqueue を同時にスピンロック 
+   * find_busiest_group
+   * find_busiest_queue
  * try_to_wak_up で idle なプロセッサを割り当てる
+
+```c
+/*
+ * find_busiest_queue - find the busiest runqueue among the cpus in group.
+ */
+static runqueue_t *find_busiest_queue(struct sched_group *group,
+	enum idle_type idle)
+{
+	unsigned long load, max_load = 0;
+	runqueue_t *busiest = NULL;
+	int i;
+
+	for_each_cpu_mask(i, group->cpumask) {
+        // ここで「負荷」を返す
+		load = __source_load(i, 0, idle);
+
+		if (load > max_load) {
+			max_load = load;
+			busiest = cpu_rq(i);
+		}
+	}
+
+	return busiest;
+}
+``` 
+
+```c
+/*
+ * Return a low guess at the load of a migration-source cpu.
+ *
+ * We want to under-estimate the load of migration sources, to
+ * balance conservatively.
+ */
+static inline unsigned long __source_load(int cpu, int type, enum idle_type idle)
+{
+	runqueue_t *rq = cpu_rq(cpu);
+	unsigned long running = rq->nr_running;
+	unsigned long source_load, cpu_load = rq->cpu_load[type-1],
+		load_now = running * SCHED_LOAD_SCALE;
+
+	if (type == 0)
+		source_load = load_now;
+	else
+		source_load = min(cpu_load, load_now);
+
+	if (running > 1 || (idle == NOT_IDLE && running))
+		/*
+		 * If we are busy rebalancing the load is biased by
+		 * priority to create 'nice' support across cpus. When
+		 * idle rebalancing we should only bias the source_load if
+		 * there is more than one task running on that queue to
+		 * prevent idle rebalance from trying to pull tasks from a
+		 * queue with only one running task.
+		 */
+		source_load = source_load * rq->prio_bias / running;
+
+	return source_load;
+}
+```
 
 ## 1.6.4 アイドルプロセス
 
@@ -249,3 +311,8 @@ struct rq {
  * current
    * ESP の下位ビットをマスク -> thread_info を出す
    * thread_info -> task_struct
+
+----
+
+ * schedstat_inc
+   * runqueue に統計情報のフィールドをインクリメント
