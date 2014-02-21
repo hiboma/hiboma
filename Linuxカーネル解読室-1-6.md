@@ -348,13 +348,19 @@ static int try_to_wake_up(task_t *p, unsigned int state, int sync)
 	if (!(old_state & state))
 		goto out;
 
+    // ?
 	if (p->array)
 		goto out_running;
 
+    // タスクの実行CPU を取る
+    // task_thread_info(p)->cpu
+    // task_thread_info の `__u32			cpu;		/* current CPU */` を指す
 	cpu = task_cpu(p);
 	this_cpu = smp_processor_id();
 
 #ifdef CONFIG_SMP
+    // task_running は runqueue->curr == p かどうかを見る
+    // task が CPU上で実行中なので何もしない?
 	if (unlikely(task_running(rq, p)))
 		goto out_activate;
 
