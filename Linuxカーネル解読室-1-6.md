@@ -234,9 +234,12 @@ struct rq {
 
  * runqueue の ロードバランシング load_balance
    * runqueue 上のプロセスが対象なので TASK_RUNNING な奴だけ
-   * double_rq_lock, double_rq_unlock で二つの runqueue を同時にスピンロック 
+   * double_rq_lock, double_rq_unlock で二つの runqueue を同時にスピンロック
+     * デッドロックを防ぐために runqueue のポインタのサイズを比較してアドレスの小さい方からスピンロックを取る
    * find_busiest_group
+     * ドメイン単位?
    * find_busiest_queue
+     * runqueue 単位
  * try_to_wak_up で idle なプロセッサを割り当てる
 
 ```c
@@ -264,6 +267,8 @@ static runqueue_t *find_busiest_queue(struct sched_group *group,
 }
 ``` 
 
+__source_load
+
 ```c
 /*
  * Return a low guess at the load of a migration-source cpu.
@@ -274,8 +279,14 @@ static runqueue_t *find_busiest_queue(struct sched_group *group,
 static inline unsigned long __source_load(int cpu, int type, enum idle_type idle)
 {
 	runqueue_t *rq = cpu_rq(cpu);
+    // TASK_RUNNING なプロセス数
 	unsigned long running = rq->nr_running;
+    
+    // ???
 	unsigned long source_load, cpu_load = rq->cpu_load[type-1],
+
+    // #define SCHED_LOAD_SCALE	128UL	/* increase resolution of load */
+    // 現在の負荷。 SCHED_LOAD_SCALEは 解像度???
 		load_now = running * SCHED_LOAD_SCALE;
 
 	if (type == 0)
@@ -292,6 +303,7 @@ static inline unsigned long __source_load(int cpu, int type, enum idle_type idle
 		 * prevent idle rebalance from trying to pull tasks from a
 		 * queue with only one running task.
 		 */
+         // runqueue の優先度 prio_bias を乗算
 		source_load = source_load * rq->prio_bias / running;
 
 	return source_load;
