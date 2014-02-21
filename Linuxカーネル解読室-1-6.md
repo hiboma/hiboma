@@ -30,7 +30,40 @@ struct prio_array {
 	unsigned long bitmap[BITMAP_SIZE];
 	struct list_head queue[MAX_PRIO];  // 100 + 40 + 1 + 7
 };
-``` 
+```
+
+ * dequeue_task, enqueue_task
+   * task_struct をキューからの削除、末尾に追加 の API
+
+```c
+/*
+ * Adding/removing a task to/from a priority array:
+ */
+static void dequeue_task(struct task_struct *p, prio_array_t *array)
+{
+	array->nr_active--;
+	list_del(&p->run_list);
+    // 固定優先度をインデックスとして list の配列を選択
+    // ruby 風に書くとこんなん
+    //
+    //   list = array.queue[ p->prio ]
+    //   list.remove(p)
+    //   array.bitmap[ p->prio ]
+    //
+	if (list_empty(array->queue + p->prio))
+		__clear_bit(p->prio, array->bitmap);
+}
+
+static void enqueue_task(struct task_struct *p, prio_array_t *array)
+{
+	sched_info_queued(p);
+    // 末尾に追加
+	list_add_tail(&p->run_list, array->queue + p->prio);
+	__set_bit(p->prio, array->bitmap);
+	array->nr_active++;
+	p->array = array;
+}
+```
 
 2.6.32  では CFS が導入されているので全然違うことを確認する
 
