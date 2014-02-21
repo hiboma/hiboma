@@ -28,7 +28,7 @@
 struct prio_array {
 	unsigned int nr_active;
 	unsigned long bitmap[BITMAP_SIZE];
-	struct list_head queue[MAX_PRIO];
+	struct list_head queue[MAX_PRIO];  // 100 + 40 + 1 + 7
 };
 ``` 
 
