@@ -7,11 +7,12 @@
    * LIDT( Load IDT) , SIDT (Set IDT)
    * IDT はリニアアドレス空間のどこに常駐してもかまわない。8バイト
 
-/_/howm/images/Intel.txt-20130203212738.png
+![](https://f.cloud.github.com/assets/172456/2227492/576344f4-9ac3-11e3-836f-46180e2bd94d.png)
 
-/_/howm/images/-20130203213107.png
+![](https://f.cloud.github.com/assets/172456/2227494/5e59844e-9ac3-11e3-970e-dfdd9f43017d.png)
 
-/_/howm/images/-20130203213546.png
+
+![](https://f.cloud.github.com/assets/172456/2227495/5e68cd1e-9ac3-11e3-808c-8b1bc168fb5d.png)
 
  * "CR0 ~ CR"4 Control register 制御レジスタ
    * CR0 PG(Paging 31bit) ... ページングの enable / disable
@@ -59,12 +60,12 @@
  * デマンドページ、仮想メモリ => 共有メモリ
  * 論理アドレス(farポインタ) = セグメントセレクタ+オフセット
 
-[[/_/howm/images/Intel.txt-20130203134733.png]]
+![](https://f.cloud.github.com/assets/172456/2227490/52134ada-9ac3-11e3-9715-4f18d69850c5.png)
 
  * フラットモデル => Linux
- 
-[[/_/howm/images/Intel.txt-20130203135416.png]]
 
+![](https://f.cloud.github.com/assets/172456/2227491/56f18030-9ac3-11e3-91dd-9f5e7e2c2fdd.png)
+ 
  * 保護されたフラットモデル ( proctected flat model )
  * マルチセグメントモデル
    * ハードウェア依存レベルが高い感
