@@ -35,11 +35,13 @@
 
  * general register
  * segment register
- * "EFLAGS"
- * "EIP"
+ * EFLAGS
+ * EIP
  * "特権レベル0,1,2 のスタックセグメント"のセグメントセレクタ+スタックポインタ
  * LDTのセグメントセレクタ
  * ページテーブルのベースアドレス
+
+Linux では TSS は使わずに struct tss_struct に退避させる
 
 ## ページング
 
