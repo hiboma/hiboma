@@ -232,6 +232,8 @@ struct rq {
 
 ## 1.6.3　CPUごとのRUNキュー
 
+> ただし、RUNキュー間で負荷状態に偏りが出たときは、RUNキュー間で実行待ちプロセスの移動を行いバランスを取ります（load_balance関数）。
+
  * runqueue の ロードバランシング load_balance
    * runqueue 上のプロセスが対象なので TASK_RUNNING な奴だけ
    * double_rq_lock, double_rq_unlock で二つの runqueue を同時にスピンロック
@@ -279,9 +281,10 @@ __source_load
 static inline unsigned long __source_load(int cpu, int type, enum idle_type idle)
 {
 	runqueue_t *rq = cpu_rq(cpu);
+
     // TASK_RUNNING なプロセス数
 	unsigned long running = rq->nr_running;
-    
+
     // ???
 	unsigned long source_load, cpu_load = rq->cpu_load[type-1],
 
@@ -307,6 +310,181 @@ static inline unsigned long __source_load(int cpu, int type, enum idle_type idle
 		source_load = source_load * rq->prio_bias / running;
 
 	return source_load;
+}
+```
+
+> また、プロセスの起床時（後述try_to_wake_up関数）にもアイドル状態のプロセッサにそのプロセスを割り付けることにより、負荷バランスを保つようになっています。
+
+```c
+/***
+ * try_to_wake_up - wake up a thread
+ * @p: the to-be-woken-up thread
+ * @state: the mask of task states that can be woken
+ * @sync: do a synchronous wakeup?
+ *
+ * Put it on the run-queue if it's not already there. The "current"
+ * thread is always on the run-queue (except when the actual
+ * re-schedule is in progress), and as such you're allowed to do
+ * the simpler "current->state = TASK_RUNNING" to mark yourself
+ * runnable without the overhead of this.
+ *
+ * returns failure only if the task is already active.
+ */
+static int try_to_wake_up(task_t *p, unsigned int state, int sync)
+{
+	int cpu, this_cpu, success = 0;
+	unsigned long flags;
+	long old_state;
+	runqueue_t *rq;
+#ifdef CONFIG_SMP
+	unsigned long load, this_load;
+	struct sched_domain *sd, *this_sd = NULL;
+	int new_cpu;
+#endif
+
+    // 割り込み禁止 + スピンロッk
+	rq = task_rq_lock(p, &flags);
+	old_state = p->state;
+	if (!(old_state & state))
+		goto out;
+
+	if (p->array)
+		goto out_running;
+
+	cpu = task_cpu(p);
+	this_cpu = smp_processor_id();
+
+#ifdef CONFIG_SMP
+	if (unlikely(task_running(rq, p)))
+		goto out_activate;
+
+	new_cpu = cpu;
+
+	schedstat_inc(rq, ttwu_cnt);
+	if (cpu == this_cpu) {
+		schedstat_inc(rq, ttwu_local);
+		goto out_set_cpu;
+	}
+
+	for_each_domain(this_cpu, sd) {
+		if (cpu_isset(cpu, sd->span)) {
+			schedstat_inc(sd, ttwu_wake_remote);
+			this_sd = sd;
+			break;
+		}
+	}
+
+	if (unlikely(!cpu_isset(this_cpu, p->cpus_allowed)))
+		goto out_set_cpu;
+
+	/*
+	 * Check for affine wakeup and passive balancing possibilities.
+	 */
+	if (this_sd) {
+		int idx = this_sd->wake_idx;
+		unsigned int imbalance;
+
+		imbalance = 100 + (this_sd->imbalance_pct - 100) / 2;
+
+		load = source_load(cpu, idx);
+		this_load = target_load(this_cpu, idx);
+
+		new_cpu = this_cpu; /* Wake to this CPU if we can */
+
+		if (this_sd->flags & SD_WAKE_AFFINE) {
+			unsigned long tl = this_load;
+			/*
+			 * If sync wakeup then subtract the (maximum possible)
+			 * effect of the currently running task from the load
+			 * of the current CPU:
+			 */
+			if (sync)
+				tl -= SCHED_LOAD_SCALE;
+
+			if ((tl <= load &&
+				tl + target_load(cpu, idx) <= SCHED_LOAD_SCALE) ||
+				100*(tl + SCHED_LOAD_SCALE) <= imbalance*load) {
+				/*
+				 * This domain has SD_WAKE_AFFINE and
+				 * p is cache cold in this domain, and
+				 * there is no bad imbalance.
+				 */
+				schedstat_inc(this_sd, ttwu_move_affine);
+				goto out_set_cpu;
+			}
+		}
+
+		/*
+		 * Start passive balancing when half the imbalance_pct
+		 * limit is reached.
+		 */
+		if (this_sd->flags & SD_WAKE_BALANCE) {
+			if (imbalance*this_load <= 100*load) {
+				schedstat_inc(this_sd, ttwu_move_balance);
+				goto out_set_cpu;
+			}
+		}
+	}
+
+	new_cpu = cpu; /* Could not wake to this_cpu. Wake to cpu instead */
+out_set_cpu:
+	new_cpu = wake_idle(new_cpu, p);
+	if (new_cpu != cpu) {
+		set_task_cpu(p, new_cpu);
+		task_rq_unlock(rq, &flags);
+		/* might preempt at this point */
+		rq = task_rq_lock(p, &flags);
+		old_state = p->state;
+		if (!(old_state & state))
+			goto out;
+		if (p->array)
+			goto out_running;
+
+		this_cpu = smp_processor_id();
+		cpu = task_cpu(p);
+	}
+
+out_activate:
+#endif /* CONFIG_SMP */
+	if (old_state == TASK_UNINTERRUPTIBLE) {
+		rq->nr_uninterruptible--;
+		/*
+		 * Tasks on involuntary sleep don't earn
+		 * sleep_avg beyond just interactive state.
+		 */
+		p->activated = -1;
+	}
+
+	/*
+	 * Tasks that have marked their sleep as noninteractive get
+	 * woken up without updating their sleep average. (i.e. their
+	 * sleep is handled in a priority-neutral manner, no priority
+	 * boost and no penalty.)
+	 */
+	if (old_state & TASK_NONINTERACTIVE)
+		__activate_task(p, rq);
+	else
+		activate_task(p, rq, cpu == this_cpu);
+	/*
+	 * Sync wakeups (i.e. those types of wakeups where the waker
+	 * has indicated that it will leave the CPU in short order)
+	 * don't trigger a preemption, if the woken up task will run on
+	 * this cpu. (in this case the 'I will reschedule' promise of
+	 * the waker guarantees that the freshly woken up task is going
+	 * to be considered on this CPU.)
+	 */
+	if (!sync || cpu != this_cpu) {
+		if (TASK_PREEMPTS_CURR(p, rq))
+			resched_task(rq->curr);
+	}
+	success = 1;
+
+out_running:
+	p->state = TASK_RUNNING;
+out:
+	task_rq_unlock(rq, &flags);
+
+	return success;
 }
 ```
 
