@@ -16,8 +16,9 @@
    * active -> expired もしくは active -> TASK_UNINTERRUPTIBLE/TASK_INTERRUPTIBLE に遷移
  * キュー内でさらに実行優先度ごとに分類されている
    * struct prio_array_t のこと
+ * runqueue に繋がっている限りは必ず CPU の実行が保証される
 
-.6.32 では CFS が導入されているので全然違うことを確認する
+.6.32  では CFS が導入されているので全然違うことを確認する
 
 ### struct runqueue
 
@@ -64,6 +65,7 @@ struct runqueue {
 	atomic_t nr_iowait;
 
 #ifdef CONFIG_SMP
+    // スケジューリングドメイン
 	struct sched_domain *sd;
 
 	/* For active balancing */
@@ -228,3 +230,6 @@ struct rq {
 };
 ```
 
+## 1.6.3　CPUごとのRUNキュー
+
+ * runqueu の ロードバランシング
