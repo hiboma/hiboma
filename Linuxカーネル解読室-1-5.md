@@ -40,6 +40,31 @@
      * Windows3.1, Mac OS
  * 優先度による preempt
    * プロセススケジューラが優先度を元に切り替えるプロセスを判定 -> プロセスディスパッチャで切り替え
+ * プリエンプ可能かどうかは thread_info->preempt_count == 0 かどうか判定される
+   * add_preempt_count, sub_preempt_count
+   * ネストして呼び出せるように +1, -1 の仕組みなのかな?
+ 
+```c
+struct thread_info {
+	struct task_struct	*task;		/* main task structure */
+	struct exec_domain	*exec_domain;	/* execution domain */
+	__u32			flags;		/* low level flags */
+	__u32			status;		/* thread synchronous flags */
+	__u32			cpu;		/* current CPU */
+	int			preempt_count;	/* 0 => preemptable,  // これ
+						   <0 => BUG */ 
+	mm_segment_t		addr_limit;
+	struct restart_block    restart_block;
+	void __user		*sysenter_return;
+#ifdef CONFIG_X86_32
+	unsigned long           previous_esp;   /* ESP of the previous stack in
+						   case of nested (IRQ) stacks
+						*/
+	__u8			supervisor_stack[0];
+#endif
+	int			uaccess_err;
+};
+```   
 
 ## 1.5.1.3　実行保証
 
