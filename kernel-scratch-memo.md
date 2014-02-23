@@ -12,3 +12,8 @@ char *filename = filp->f_dentry->d_name.name
 ```
 
  * 文字列の長さ strlen
+ * 文字列のコピー
+
+``` c
+char *str = kstrdup(target, GFP_KERNEL)
+``` 
