@@ -1,7 +1,18 @@
 
 # xfs
 
-カーネルスレッドのエントリポイントは以下のコード
+## TODO
+
+ * delayed_works
+   * INIT_DELAYED_WORK
+   * cancel_delayed_work_sync
+ * work_struct
+   * INIT_WORK
+   * cancel_work_sync
+
+## xfs_flush_worker
+
+ * カーネルスレッドのエントリポイントは以下のコード
 
 ```c
 STATIC void
@@ -25,6 +36,12 @@ xfs_syncd_init(
 {
 	INIT_WORK(&mp->m_flush_work, xfs_flush_worker);
 ```
+
+**background inode flush** という役割
+
+```c
+	struct work_struct	m_flush_work;	/* background inode flush */
+```    
 
 ## xfs_sync_data
 
