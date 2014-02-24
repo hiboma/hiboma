@@ -13,13 +13,11 @@ char *filename = filp->f_dentry->d_name.name
 
  * 文字列の長さ strlen
  * 文字列のコピー
-
 ``` c
 char *str = kstrdup(target, GFP_KERNEL)
 ```
 
  * mutex_lock, mutex_unlock
-
 ```c
 static DEFINE_MUTEX(chrdevs_lock);
 mutex_lock(&chrdevs_lock)
@@ -30,7 +28,11 @@ mutex_unlock(&chrdevs_lock);
 ```
 
  * INIT_LIST_HEAD(list)
-
-```
+```c
 	struct list_head list;
 ```
+
+ * 0初期化
+```c
+memset(p, 0, sizeof(type p))
+ ```
