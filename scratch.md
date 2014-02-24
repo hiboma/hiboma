@@ -23,6 +23,7 @@ SYSCALL_DEFINE3(mkdirat, int, dfd, const char __user *, pathname, int, mode)
 	if (error)
 		goto out_err;
 
+   // ここを潜る
 	dentry = lookup_create(&nd, 1);
 	error = PTR_ERR(dentry);
 	if (IS_ERR(dentry))
@@ -87,6 +88,8 @@ fail:
 }
 EXPORT_SYMBOL_GPL(lookup_create);
 ```
+
+fdentry->d_inode の有無だけなので、dentry が指しているのが ファイルかディレクトリか等は問わず EEXISTS になるのが分かる
 
 ## nscd のアレ
 
