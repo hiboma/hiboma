@@ -89,7 +89,7 @@ fail:
 EXPORT_SYMBOL_GPL(lookup_create);
 ```
 
-fdentry->d_inode の有無だけなので、dentry が指しているのが ファイルかディレクトリか等は問わず EEXISTS になるのが分かる
+dentry->d_inode の有無だけ見てるので、dentry が指しているのがファイルディレクトリ、またその他かは問わず EEXISTS になるのが分かる
 
 ## nscd のアレ
 
