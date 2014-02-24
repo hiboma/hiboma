@@ -1,7 +1,7 @@
 
 # xfs
 
-## カーネルスレッド
+カーネルスレッドのエントリポイントは以下のコード
 
 ```c
 STATIC void
@@ -15,3 +15,68 @@ xfs_flush_worker(
 	xfs_sync_data(mp, SYNC_TRYLOCK | SYNC_WAIT);
 }
 ```
+
+xfs_flush_worker がポインタで渡されてる箇所
+
+```c
+int
+xfs_syncd_init(
+	struct xfs_mount	*mp)
+{
+	INIT_WORK(&mp->m_flush_work, xfs_flush_worker);
+```
+
+## xfs_sync_data
+
+```c
+/*
+ * Write out pagecache data for the whole filesystem.
+ */
+STATIC int
+xfs_sync_data(
+	struct xfs_mount	*mp,
+	int			flags)
+{
+	int			error;
+
+	ASSERT((flags & ~(SYNC_TRYLOCK|SYNC_WAIT)) == 0);
+
+	error = xfs_inode_ag_iterator(mp, xfs_sync_inode_data, flags);
+	if (error)
+		return XFS_ERROR(error);
+
+	xfs_log_force(mp, (flags & SYNC_WAIT) ? XFS_LOG_SYNC : 0);
+	return 0;
+}
+```
+
+```c
+int
+xfs_inode_ag_iterator(
+	struct xfs_mount	*mp,
+	int			(*execute)(struct xfs_inode *ip,
+					   struct xfs_perag *pag, int flags),
+	int			flags)
+{
+	struct xfs_perag	*pag;
+	int			error = 0;
+	int			last_error = 0;
+	xfs_agnumber_t		ag;
+
+	ag = 0;
+	while ((pag = xfs_perag_get(mp, ag))) {
+		ag = pag->pag_agno + 1;
+		error = xfs_inode_ag_walk(mp, pag, execute, flags);
+		xfs_perag_put(pag);
+		if (error) {
+			last_error = error;
+			if (error == EFSCORRUPTED)
+				break;
+		}
+	}
+	return XFS_ERROR(last_error);
+}
+```
+
+radix_tree
+
