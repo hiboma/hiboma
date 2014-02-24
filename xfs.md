@@ -45,6 +45,7 @@ xfs_flush_inodes(
 {
 	struct xfs_mount	*mp = ip->i_mount;
 
+    // ここで m_flush_work を呼び出す
 	queue_work(xfs_syncd_wq, &mp->m_flush_work);
 	flush_work_sync(&mp->m_flush_work);
 }
