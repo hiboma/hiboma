@@ -9,7 +9,7 @@ SYSCALL_DEFINE2(mkdir, const char __user *, pathname, int, mode)
 }
 ```
 
-lookup_create が EEXISTS を返すケースがある
+lookup_create が -EEXISTS を返すケースがある
 
 ```c
 SYSCALL_DEFINE3(mkdirat, int, dfd, const char __user *, pathname, int, mode)
