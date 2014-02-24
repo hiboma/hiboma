@@ -1,14 +1,16 @@
 
 # xfs
 
-## TODO
+## API
 
- * delayed_works
-   * INIT_DELAYED_WORK
-   * cancel_delayed_work_sync
  * work_struct
    * INIT_WORK
    * cancel_work_sync
+ * delayed_works
+   * INIT_DELAYED_WORK
+   * cancel_delayed_work_sync
+
+xfs の内部は辛そうなのであんま触れない   
 
 ## xfs_flush_worker
 
