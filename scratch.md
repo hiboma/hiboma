@@ -1,3 +1,34 @@
+## mkdir EEXISTS
+
+mkdir(2) は mkdirat(2) のラッパー
+
+```c
+SYSCALL_DEFINE2(mkdir, const char __user *, pathname, int, mode)
+{
+	return sys_mkdirat(AT_FDCWD, pathname, mode);
+}
+```
+
+lookup_create が EEXISTS を返すケースがある
+
+```c
+SYSCALL_DEFINE3(mkdirat, int, dfd, const char __user *, pathname, int, mode)
+{
+	int error = 0;
+	char * tmp;
+	struct dentry *dentry;
+	struct nameidata nd;
+
+	error = user_path_parent(dfd, pathname, &nd, &tmp);
+	if (error)
+		goto out_err;
+
+	dentry = lookup_create(&nd, 1);
+	error = PTR_ERR(dentry);
+	if (IS_ERR(dentry))
+		goto out_unlock;
+```
+
 ## nscd のアレ
 
  * http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=616171
