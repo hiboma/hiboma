@@ -1,5 +1,7 @@
 ## 1.6　プロセススケジューラの実装
 
+2.4 の話から始まる
+
 > Linuxカーネル2.4以前のプロセススケジューラは非常に単純な構造で、マルチプロセッサシステムであっても、単一のキューに実行可能プロセスをすべてつなぎ、再スケジューリングの度にキューに登録されているすべてのプロセスを検索して、実行権を与えるプロセスを選び出していました。
 
  * 単一のキュー
@@ -14,11 +16,10 @@
  * rq->active
    * タイムスライスを使い切った task
    * active -> expired もしくは active -> TASK_UNINTERRUPTIBLE/TASK_INTERRUPTIBLE に遷移
+ * runqueue に繋がっている限りは必ず CPU の実行が保証される
  * キュー内でさらに実行優先度ごとに分類された list が queue になってる
    * struct prio_array_t のこと
    * 実際のデータとしての queue は prio_array_t を指す
- * runqueue に繋がっている限りは必ず CPU の実行が保証される
-
 ```c
 // #define MAX_USER_RT_PRIO	100
 // #define MAX_RT_PRIO		MAX_USER_RT_PRIO
@@ -31,10 +32,8 @@ struct prio_array {
 	struct list_head queue[MAX_PRIO];  // 100 + 40 + 1 + 7
 };
 ```
-
  * dequeue_task, enqueue_task
    * task_struct をキューからの削除、末尾に追加 の API
-
 ```c
 /*
  * Adding/removing a task to/from a priority array:
@@ -50,6 +49,9 @@ static void dequeue_task(struct task_struct *p, prio_array_t *array)
     //   list.remove(p)
     //   array.bitmap[ p->prio ]
     //
+
+    // キューが空になったら bitmap のビットを落とす
+    // ビットマップを見ることで 優先度キューに繋がったプロセスの有無を確認できる
 	if (list_empty(array->queue + p->prio))
 		__clear_bit(p->prio, array->bitmap);
 }
@@ -59,13 +61,15 @@ static void enqueue_task(struct task_struct *p, prio_array_t *array)
 	sched_info_queued(p);
     // 末尾に追加
 	list_add_tail(&p->run_list, array->queue + p->prio);
+
+    // ビットマップのビットを立てる
 	__set_bit(p->prio, array->bitmap);
 	array->nr_active++;
 	p->array = array;
 }
 ```
 
-2.6.32  では CFS が導入されているので全然違うことを確認する
+2.6.32  では CFS が導入されているので実装が全然違うことを確認する
 
 ### struct runqueue
 

@@ -380,7 +380,7 @@ asmlinkage long sys_sched_yield(void)
 
 	return 0;
 }
-```    
+```
 
 ## 1.5.4　マルチプロセッサシステムにおけるプロセススケジューリング
 
@@ -388,8 +388,7 @@ asmlinkage long sys_sched_yield(void)
    * マスタ/スレーブ構成
  * プロセスのマイグレーション
  * CPUのキャッシュがあるのでプロセスを同じCPUで固定で実行した方がいいケースがある
-   * L1, L2, L3
-   * TLB
+   * L1, L2, L3, TLB を指す
  * プロセススケジューラは CPU上で独立して動作している
  * CPU アフィニティ
    * sched_setaffinity
