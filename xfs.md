@@ -7,9 +7,11 @@
    * INIT_WORK
    * cancel_work_sync
      * プロセスコンテキスト
+     * http://www.ibm.com/developerworks/jp/linux/library/l-tasklets/
  * delayed_works
    * INIT_DELAYED_WORK
    * cancel_delayed_work_sync
+ * queue_work
 
 xfs の内部は辛そうなのであんま触れない
 
@@ -21,6 +23,32 @@ xfs の内部は辛そうなのであんま触れない
  * xfs_reclaim_inodes
    * delayed_works 
    * `/* background inode reclaim */`
+
+## queue_work    
+
+```   
+/*
+ * Flush delayed allocate data, attempting to free up reserved space
+ * from existing allocations.  At this point a new allocation attempt
+ * has failed with ENOSPC and we are in the process of scratching our
+ * heads, looking about for more room.
+ *
+ * Queue a new data flush if there isn't one already in progress and
+ * wait for completion of the flush. This means that we only ever have one
+ * inode flush in progress no matter how many ENOSPC events are occurring and
+ * so will prevent the system from bogging down due to every concurrent
+ * ENOSPC event scanning all the active inodes in the system for writeback.
+ */
+void
+xfs_flush_inodes(
+	struct xfs_inode	*ip)
+{
+	struct xfs_mount	*mp = ip->i_mount;
+
+	queue_work(xfs_syncd_wq, &mp->m_flush_work);
+	flush_work_sync(&mp->m_flush_work);
+}
+```   
 
 ## xfs_flush_worker
 
