@@ -6,11 +6,21 @@
  * work_struct
    * INIT_WORK
    * cancel_work_sync
+     * プロセスコンテキスト
  * delayed_works
    * INIT_DELAYED_WORK
    * cancel_delayed_work_sync
 
-xfs の内部は辛そうなのであんま触れない   
+xfs の内部は辛そうなのであんま触れない
+
+ * xfs_flush_worker
+   * `/* background inode flush */`
+ * xfs_sync_worker
+   * delayed_works 
+   * `/* background sync work */`
+ * xfs_reclaim_inodes
+   * delayed_works 
+   * `/* background inode reclaim */`
 
 ## xfs_flush_worker
 
