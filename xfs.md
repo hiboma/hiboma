@@ -83,6 +83,8 @@ xfs_inode_ag_iterator(
 	ag = 0;
 	while ((pag = xfs_perag_get(mp, ag))) {
 		ag = pag->pag_agno + 1;
+        // execute がコールバック
+        // radix_tree 
 		error = xfs_inode_ag_walk(mp, pag, execute, flags);
 		xfs_perag_put(pag);
 		if (error) {
@@ -95,5 +97,74 @@ xfs_inode_ag_iterator(
 }
 ```
 
-radix_tree
+xfs_sync_data のコールバック
 
+```
+STATIC int
+xfs_sync_inode_data(
+	struct xfs_inode	*ip,
+	struct xfs_perag	*pag,
+	int			flags)
+{
+	struct inode		*inode = VFS_I(ip);
+	struct address_space *mapping = inode->i_mapping;
+	int			error = 0;
+
+	if (!mapping_tagged(mapping, PAGECACHE_TAG_DIRTY))
+		return 0;
+
+	if (!xfs_ilock_nowait(ip, XFS_IOLOCK_SHARED)) {
+		if (flags & SYNC_TRYLOCK)
+			return 0;
+		xfs_ilock(ip, XFS_IOLOCK_SHARED);
+	}
+
+	error = xfs_flush_pages(ip, 0, -1, (flags & SYNC_WAIT) ?
+				0 : XBF_ASYNC, FI_NONE);
+	xfs_iunlock(ip, XFS_IOLOCK_SHARED);
+	return error;}
+```
+
+```
+int
+xfs_flush_pages(
+	xfs_inode_t	*ip,
+	xfs_off_t	first,
+	xfs_off_t	last,
+	uint64_t	flags,
+	int		fiopt)
+{
+	struct address_space *mapping = VFS_I(ip)->i_mapping;
+	int		ret = 0;
+	int		ret2;
+
+	xfs_iflags_clear(ip, XFS_ITRUNCATED);
+	ret = -filemap_fdatawrite_range(mapping, first,
+				last == -1 ? LLONG_MAX : last);
+	if (flags & XBF_ASYNC)
+		return ret;
+	ret2 = xfs_wait_on_pages(ip, first, last);
+	if (!ret)
+		ret = ret2;
+	return ret;
+}
+```
+
+これ以下は address_space の実装に依る
+
+```c
+int
+xfs_wait_on_pages(
+	xfs_inode_t	*ip,
+	xfs_off_t	first,
+	xfs_off_t	last)
+{
+	struct address_space *mapping = VFS_I(ip)->i_mapping;
+
+	if (mapping_tagged(mapping, PAGECACHE_TAG_WRITEBACK)) {
+		return -filemap_fdatawait_range(mapping, first,
+					last == -1 ? ip->i_size - 1 : last);
+	}
+	return 0;
+}
+```
