@@ -293,7 +293,7 @@ struct rq {
      * ドメイン単位?
    * find_busiest_queue
      * runqueue 単位
- * try_to_wak_up で idle なプロセッサを割り当てる
+ * try_to_wak_up をする際に idle なプロセッサを割り当てる
 
 ```c
 /*
@@ -506,6 +506,8 @@ out_set_cpu:
 
 out_activate:
 #endif /* CONFIG_SMP */
+
+    // ランキューの統計を更新
 	if (old_state == TASK_UNINTERRUPTIBLE) {
 		rq->nr_uninterruptible--;
 		/*
@@ -550,8 +552,8 @@ out:
 
 ## 1.6.4 アイドルプロセス
 
- * runqueue には登録されていないプロセス
  * runqueue->idle のこと
+   * 通常のタスクとは違って runqueue のリストには登録されていない
  * do_boot_cpu -> do_fork_idle -> init_idle で初期化されている
    * OSのブート途中で CPU のブートが実行される。その際に idle プロセスが作られる
    * CPU の shutdown する再には idle プロセスが止まる
@@ -611,7 +613,6 @@ void __devinit init_idle(task_t *idle, int cpu)
 ```
  
  * CPUをオフラインする際にも runqueue->idle が使われる
-   
 ```c
 /*
  * __activate_idle_task - move idle task to the _front_ of runqueue.
@@ -621,7 +622,7 @@ static inline void __activate_idle_task(task_t *p, runqueue_t *rq)
 	enqueue_task_head(p, rq->active);
 	inc_nr_running(p, rq);
 }
-``` 
+```
 
 ```c
 /* Schedules idle task to be the next runnable task on current CPU.

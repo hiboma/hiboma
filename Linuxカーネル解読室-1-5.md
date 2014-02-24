@@ -388,11 +388,11 @@ asmlinkage long sys_sched_yield(void)
    * マスタ/スレーブ構成
  * プロセスのマイグレーション
  * CPUのキャッシュがあるのでプロセスを同じCPUで固定で実行した方がいいケースがある
-   * L1, L2, L3, TLB を指す
- * プロセススケジューラは CPU上で独立して動作している
+   * キャッシュ = L1, L2, L3, TLB を指す
+ * プロセススケジューラは 各CPU上で独立して動作している
  * CPU アフィニティ
    * sched_setaffinity
-   * task_struct の cpuset
+   * task_struct の cpuset で実行が許可された cpu を保持
  * rebalance_tick で ロードバランシング
    * 2.6.32 だと scheduler_tick -> trigger_load_balance でCPU間でロードバランシングされる
  * /proc/<pid>status に実行を許可された CPU, メモリが記録されている
