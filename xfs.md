@@ -306,3 +306,27 @@ xfs_wait_on_pages(
 	return 0;
 }
 ```
+
+## write から flush_work_sync へのパス
+
+```
+[hiroya@*******]~% sudo cat /proc/$( pgrep find )/stack
+[<ffffffff81083a6a>] flush_work_sync+0x5a/0x70
+[<ffffffffa01b9dff>] xfs_flush_inodes+0x2f/0x40 [xfs]
+[<ffffffffa01b381a>] xfs_iomap_write_delay+0x13a/0x2e0 [xfs]
+[<ffffffffa01a5ee3>] __xfs_get_blocks+0x2d3/0x460 [xfs]
+[<ffffffffa01a60a1>] xfs_get_blocks+0x11/0x20 [xfs]
+[<ffffffff811a3c0c>] __block_write_begin+0x1fc/0x570
+[<ffffffff811a4206>] block_write_begin+0x56/0x90
+[<ffffffffa01a5161>] xfs_vm_write_begin+0x41/0x70 [xfs]
+[<ffffffff8110d9da>] generic_perform_write+0xca/0x210
+[<ffffffff8110db84>] generic_file_buffered_write+0x64/0xa0
+[<ffffffffa01ac571>] xfs_file_buffered_aio_write+0xf1/0x1a0 [xfs]
+[<ffffffffa01aca17>] xfs_file_aio_write+0x1b7/0x290 [xfs]
+[<ffffffff8116e752>] do_sync_write+0xe2/0x120
+[<ffffffff8116ed13>] vfs_write+0xf3/0x1f0
+[<ffffffff8116ef11>] sys_write+0x51/0x90
+[<ffffffff81527a7d>] system_call_fastpath+0x18/0x1d
+[<ffffffffffffffff>] 0xffffffffffffffff
+
+```
