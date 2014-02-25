@@ -35,4 +35,12 @@ mutex_unlock(&chrdevs_lock);
  * 0初期化
 ```c
 memset(p, 0, sizeof(type p))
- ```
+```
+
+ * CPUをイテレート (* 2.6.15)
+```c
+	unsigned long i, sum = 0;
+
+ 	for_each_online_cpu(i)
+		sum += cpu_rq(i)->nr_running;
+```        
