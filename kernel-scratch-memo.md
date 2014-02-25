@@ -44,3 +44,9 @@ memset(p, 0, sizeof(type p))
  	for_each_online_cpu(i)
 		sum += cpu_rq(i)->nr_running;
 ```        
+
+ * CPUの番号
+
+```
+int cpu = get_cpu();
+```
