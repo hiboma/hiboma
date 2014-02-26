@@ -116,3 +116,100 @@ static void process_timeout(unsigned long __data)
 ```
 
 スタックにタイマを持っている + 自分自身を wake_up_process するようコールバックを呼ぶのがおもしろ
+
+## schedule
+
+```c
+/*
+ * schedule() is the main scheduler function.
+ */
+asmlinkage void __sched schedule(void)
+{
+	struct task_struct *prev, *next;
+	unsigned long *switch_count;
+	struct rq *rq;
+	int cpu;
+
+need_resched:
+	preempt_disable();
+	cpu = smp_processor_id();
+	rq = cpu_rq(cpu);
+	rcu_sched_qs(cpu);
+	prev = rq->curr;
+	switch_count = &prev->nivcsw;
+
+	release_kernel_lock(prev);
+need_resched_nonpreemptible:
+
+	schedule_debug(prev);
+
+	if (sched_feat(HRTICK))
+		hrtick_clear(rq);
+
+	spin_lock_irq(&rq->lock);
+	update_rq_clock(rq);
+	clear_tsk_need_resched(prev);
+
+    // prev->state == 0 は TASK_RUNNING
+    // prev->state が真 は TASK_RUNNING 以外を指す
+	if (prev->state && !(preempt_count() & PREEMPT_ACTIVE)) {
+       // シグナルを受信していたら TASK_RUNNING のままでいる
+       // 待機状態になる前にシグナルの確認、とみなす
+		if (unlikely(signal_pending_state(prev->state, prev)))
+			prev->state = TASK_RUNNING;
+		else
+        // TASK_UNINTERRUPTIBLE, TASK_KILLABLE, ...
+			deactivate_task(rq, prev, 1);
+		switch_count = &prev->nvcsw;
+	}
+
+	pre_schedule(rq, prev);
+
+	if (unlikely(!rq->nr_running))
+		idle_balance(cpu, rq);
+
+	put_prev_task(rq, prev);
+	next = pick_next_task(rq);
+
+	if (likely(prev != next)) {
+		sched_info_switch(prev, next);
+		perf_event_task_sched_out(prev, next, cpu);
+
+		rq->nr_switches++;
+		rq->curr = next;
+		++*switch_count;
+
+		context_switch(rq, prev, next); /* unlocks the rq */
+		/*
+		 * the context switch might have flipped the stack from under
+		 * us, hence refresh the local variables.
+		 */
+		cpu = smp_processor_id();
+		rq = cpu_rq(cpu);
+	} else
+		spin_unlock_irq(&rq->lock);
+
+	post_schedule(rq);
+
+	if (unlikely(reacquire_kernel_lock(current) < 0))
+		goto need_resched_nonpreemptible;
+
+	preempt_enable_no_resched();
+	if (need_resched())
+		goto need_resched;
+}
+EXPORT_SYMBOL(schedule);
+```
+
+```
+ * deactivate_task - remove a task from the runqueue.
+ */
+static void deactivate_task(struct rq *rq, struct task_struct *p, int sleep)
+{
+	if (task_contributes_to_load(p))
+		rq->nr_uninterruptible++;
+
+	dequeue_task(rq, p, sleep);
+	dec_nr_running(rq);
+}
+```
