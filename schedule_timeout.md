@@ -225,6 +225,8 @@ static void deactivate_task(struct rq *rq, struct task_struct *p, int sleep)
 }
 ```
 
+O(1)スケジューラだと list_del 呼び出すだけだったけど、スケジューラによって違う
+
 ```c
 static void dequeue_task(struct rq *rq, struct task_struct *p, int sleep)
 {
