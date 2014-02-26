@@ -158,7 +158,7 @@ need_resched_nonpreemptible:
 		if (unlikely(signal_pending_state(prev->state, prev)))
 			prev->state = TASK_RUNNING;
 		else
-        // TASK_UNINTERRUPTIBLE, TASK_KILLABLE, ...
+            // dequeue_task でランキューからプロセスを外す
 			deactivate_task(rq, prev, 1);
 		switch_count = &prev->nvcsw;
 	}
@@ -206,9 +206,16 @@ EXPORT_SYMBOL(schedule);
  */
 static void deactivate_task(struct rq *rq, struct task_struct *p, int sleep)
 {
+    // TASK_UNINTERRUPTIBLE でかつ PF_FREEZING でない場合は
+    // nr_uninterruptible に加算される
+    //#define task_contributes_to_load(task)	\
+    //				((task->state & TASK_UNINTERRUPTIBLE) != 0 && \
+    //				 (task->flags & PF_FREEZING) == 0)
+    //
 	if (task_contributes_to_load(p))
 		rq->nr_uninterruptible++;
 
+    // ここでプロセスをランキューから外す
 	dequeue_task(rq, p, sleep);
 	dec_nr_running(rq);
 }
