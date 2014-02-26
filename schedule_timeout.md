@@ -201,7 +201,9 @@ need_resched_nonpreemptible:
 EXPORT_SYMBOL(schedule);
 ```
 
-```
+deactivate_task -> dequeue_task と繋がる
+
+```c
  * deactivate_task - remove a task from the runqueue.
  */
 static void deactivate_task(struct rq *rq, struct task_struct *p, int sleep)
@@ -217,6 +219,28 @@ static void deactivate_task(struct rq *rq, struct task_struct *p, int sleep)
 
     // ここでプロセスをランキューから外す
 	dequeue_task(rq, p, sleep);
+
+    // rq->nr_running--
 	dec_nr_running(rq);
+}
+```
+
+```c
+static void dequeue_task(struct rq *rq, struct task_struct *p, int sleep)
+{
+	if (sleep) {
+		if (p->se.last_wakeup) {
+			update_avg(&p->se.avg_overlap,
+				p->se.sum_exec_runtime - p->se.last_wakeup);
+			p->se.last_wakeup = 0;
+		} else {
+			update_avg(&p->se.avg_wakeup,
+				sysctl_sched_wakeup_granularity);
+		}
+	}
+
+	sched_info_dequeued(p);
+	p->sched_class->dequeue_task(rq, p, sleep);
+	p->se.on_rq = 0;
 }
 ```
