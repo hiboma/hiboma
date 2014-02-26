@@ -1,4 +1,14 @@
-# schedule_timeout
+# schedule_timeout の実装
+
+ * 2.6.32
+
+## API
+
+ * set_current_state
+ * timer
+ * schedule
+
+## schedule_timeout
 
  * timeout が経過するまで待つ
    * お馴染みの TASK_UNINTERRUPTIBLE, TASK_INTERRUPTIBLE
@@ -40,6 +50,8 @@ signed long __sched schedule_timeout(signed long timeout)
 
 	switch (timeout)
 	{
+    // タイマをセットしない
+    // エコ?
 	case MAX_SCHEDULE_TIMEOUT:
 		/*
 		 * These two special cases are useful to be comfortable
@@ -70,12 +82,17 @@ signed long __sched schedule_timeout(signed long timeout)
 	expire = timeout + jiffies;
 
     // タイマをスタックに確保
+    // (unsigned long)current で task_strcut のアドレスを取る
 	setup_timer_on_stack(&timer, process_timeout, (unsigned long)current);
+    // タイマの expire をセット
 	__mod_timer(&timer, expire, false, TIMER_NOT_PINNED);
+    // 待機
 	schedule();
+    // タイマを削除?
 	del_singleshot_timer_sync(&timer);
 
 	/* Remove the timer from the object tracker */
+    // タイマオブジェクトを削除?     
 	destroy_timer_on_stack(&timer);
 
 	timeout = expire - jiffies;
@@ -97,3 +114,5 @@ static void process_timeout(unsigned long __data)
 	wake_up_process((struct task_struct *)__data);
 }
 ```
+
+スタックにタイマを持っている + 自分自身を wake_up_process するようコールバックを呼ぶのがおもしろ
