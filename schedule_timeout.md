@@ -201,7 +201,7 @@ need_resched_nonpreemptible:
 EXPORT_SYMBOL(schedule);
 ```
 
-deactivate_task -> dequeue_task と繋がる
+ * TASK_RUNNING 以外の場合は deactivate_task される
 
 ```c
  * deactivate_task - remove a task from the runqueue.
@@ -225,7 +225,8 @@ static void deactivate_task(struct rq *rq, struct task_struct *p, int sleep)
 }
 ```
 
-O(1)スケジューラだと list_del 呼び出すだけだったけど、スケジューラによって違う
+ * deactivate_task -> dequeue_task と繋がる
+ * O(1)スケジューラだと list_del 呼び出すだけだったけど、スケジューラによって違う
 
 ```c
 static void dequeue_task(struct rq *rq, struct task_struct *p, int sleep)
