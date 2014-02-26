@@ -46,7 +46,11 @@ memset(p, 0, sizeof(type p))
 ```        
 
  * CPUの番号
-
+```c
+   int cpu = smp_processor_id();
 ```
-int cpu = get_cpu();
+ * CPU のランキュー
+``` c
+    int cpu = smp_processor_id();
+    struct rq *rq = cpu_rq(cpu);
 ```
