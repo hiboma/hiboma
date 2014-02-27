@@ -322,7 +322,7 @@ find_page:
         // radixツリーからページキャッシュ探すぞう
 		page = find_get_page(mapping, index);
 		if (!page) {
-            // ページキャッシュの先読み
+            // ページキャッシュの先読みを同期的に行う
 			page_cache_sync_readahead(mapping,
 					ra, filp,
 					index, last_index - index);
@@ -331,21 +331,27 @@ find_page:
 			if (unlikely(page == NULL))
 				goto no_cached_page;
 		}
-        
+
+        // ----- page 確保とページキャッシュ追加ができてる ------
 		if (PageReadahead(page)) {
 			page_cache_async_readahead(mapping,
 					ra, filp, page,
 					index, last_index - index);
 		}
+
+        // page と disk の内容が同期されていない
 		if (!PageUptodate(page)) {
 			if (inode->i_blkbits == PAGE_CACHE_SHIFT ||
 					!mapping->a_ops->is_partially_uptodate)
 				goto page_not_up_to_date;
+            // PG_locked が取れるか否か
 			if (!trylock_page(page))
 				goto page_not_up_to_date;
 			/* Did it get truncated before we got the lock? */
 			if (!page->mapping)
 				goto page_not_up_to_date_locked;
+
+            // ? update する ?
 			if (!mapping->a_ops->is_partially_uptodate(page,
 								desc, offset))
 				goto page_not_up_to_date_locked;
@@ -487,7 +493,7 @@ no_cached_page:
 		 * Ok, it wasn't cached, so we need to create a new
 		 * page..
 		 */
-        // __GFP_COLD フラグ
+        // __GFP_COLD フラグ付きで page を確保する
 		page = page_cache_alloc_cold(mapping);
 		if (!page) {
 			desc->error = -ENOMEM;
