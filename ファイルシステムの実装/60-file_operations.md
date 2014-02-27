@@ -1,3 +1,7 @@
+
+ * ページフレームとページキャッシュを区別する
+ * struct page と mapping とを add_to_page_cache_lru で結びつけたのがページキャッシュ
+
 ## [struct file_operations](http://lxr.free-electrons.com/source/include/linux/fs.h?v=2.6.32#L1489) の実装
 
 ```
@@ -489,6 +493,8 @@ no_cached_page:
 			desc->error = -ENOMEM;
 			goto out;
 		}
+
+        // ページを割り当てたのでページキャッシュに追加
 		error = add_to_page_cache_lru(page, mapping,
 						index, GFP_KERNEL);
 		if (error) {
