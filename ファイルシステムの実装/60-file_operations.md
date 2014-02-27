@@ -346,6 +346,8 @@ find_page:
 				goto page_not_up_to_date;
             // PG_locked が取れるか否か
 			if (!trylock_page(page))
+
+            // ---- page が PG_locked -----
 				goto page_not_up_to_date;
 			/* Did it get truncated before we got the lock? */
 			if (!page->mapping)
@@ -356,6 +358,7 @@ find_page:
 								desc, offset))
 				goto page_not_up_to_date_locked;
 			unlock_page(page);
+            // ---- page が PG_locked 終わり -----
 		}
 page_ok:
 		/*
@@ -410,6 +413,9 @@ page_ok:
 		 * "pos" here (the actor routine has to update the user buffer
 		 * pointers and the remaining count).
 		 */
+         // ページを確保して、ページの内容も update されたので
+         // ユーザ空間にコピーする (actor の中)
+         
 		ret = actor(desc, page, offset, nr);
 		offset += ret;
 		index += offset >> PAGE_CACHE_SHIFT;
@@ -449,6 +455,7 @@ readpage:
 		 */
 		ClearPageError(page);
 		/* Start the actual read. The read will unlock the page. */
+        // readpage で 読む
 		error = mapping->a_ops->readpage(filp, page);
 
 		if (unlikely(error)) {
@@ -460,15 +467,19 @@ readpage:
 		}
 
 		if (!PageUptodate(page)) {
+            // TASK_KILLABLE でロックを取る
 			error = lock_page_killable(page);
 			if (unlikely(error))
 				goto readpage_error;
+
+            // ------- TASK_KILLABLE ------ 
 			if (!PageUptodate(page)) {
 				if (page->mapping == NULL) {
 					/*
 					 * invalidate_inode_pages got it
 					 */
 					unlock_page(page);
+                    // ------- TASK_KILLABLE ------ 
 					page_cache_release(page);
 					goto find_page;
 				}
