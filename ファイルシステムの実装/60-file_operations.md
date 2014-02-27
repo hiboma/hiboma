@@ -314,6 +314,7 @@ static void do_generic_file_read(struct file *filp, loff_t *ppos,
 
 		cond_resched();
 find_page:
+        // radixツリーからページキャッシュ探すぞう
 		page = find_get_page(mapping, index);
 		if (!page) {
 			page_cache_sync_readahead(mapping,
@@ -323,6 +324,7 @@ find_page:
 			if (unlikely(page == NULL))
 				goto no_cached_page;
 		}
+        
 		if (PageReadahead(page)) {
 			page_cache_async_readahead(mapping,
 					ra, filp, page,
