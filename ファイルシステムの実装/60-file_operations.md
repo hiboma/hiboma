@@ -9,7 +9,7 @@
 
 ### read(2) が Invalid argument [#19](https://github.com/hiboma/nukofs/issues/19)
 
- * vfs_read が file_operations の .read と .aio_write が無い場合は -EINVAL 返す
+vfs_read が file_operations の .read と .aio_write が無い場合は -EINVAL 返す
 
 ```c
 ssize_t vfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
@@ -41,8 +41,9 @@ ssize_t vfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
 }
 ```
 
- * do_sync_read って書いてるのに aio_read に繋がるのね
+do_sync_read って書いてるのに aio_read に繋がるのね
 
+ * 2次記憶装置からデータ読んでバッファが uptodate になるのを同期して待つことを指す?
 ```c
 ssize_t do_sync_read(struct file *filp, char __user *buf, size_t len, loff_t *ppos)
 {
@@ -68,7 +69,7 @@ ssize_t do_sync_read(struct file *filp, char __user *buf, size_t len, loff_t *pp
 }
 ```
 
-TASK_UNINTERRUPTIBLE に移行
+TASK_UNINTERRUPTIBLE に移行して待たされるケース
 
 ```c
 static void wait_on_retry_sync_kiocb(struct kiocb *iocb)
@@ -81,7 +82,47 @@ static void wait_on_retry_sync_kiocb(struct kiocb *iocb)
 		kiocbClearKicked(iocb);
 	__set_current_state(TASK_RUNNING);
 }
+
+/* wait_on_sync_kiocb:
+ *	Waits on the given sync kiocb to complete.
+ */
+ssize_t wait_on_sync_kiocb(struct kiocb *iocb)
+{
+	while (iocb->ki_users) {
+		set_current_state(TASK_UNINTERRUPTIBLE);
+		if (!iocb->ki_users)
+			break;
+		io_schedule();
+	}
+	__set_current_state(TASK_RUNNING);
+	return iocb->ki_user_data;
+}
+EXPORT_SYMBOL(wait_on_sync_kiocb);
 ```
+
+```
+/*
+ * This task is about to go to sleep on IO. Increment rq->nr_iowait so
+ * that process accounting knows that this is a task in IO wait state.
+ */
+void __sched io_schedule(void)
+{
+	struct rq *rq = raw_rq();
+
+	delayacct_blkio_start();
+	atomic_inc(&rq->nr_iowait);
+	current->in_iowait = 1;
+	schedule();
+	current->in_iowait = 0;
+	atomic_dec(&rq->nr_iowait);
+	delayacct_blkio_end();
+}
+EXPORT_SYMBOL(io_schedule);
+```
+
+aio_read を読んだ後は下層の処理が終わるまで待たされる
+
+generic_file_aio_write
 
 
 ### write(2) が Invalid argument [#11](https://github.com/hiboma/nukofs/issues/11)
