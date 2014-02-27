@@ -292,6 +292,7 @@ static void do_generic_file_read(struct file *filp, loff_t *ppos,
 {
 	struct address_space *mapping = filp->f_mapping;
 	struct inode *inode = mapping->host;
+    // 先読み情報
 	struct file_ra_state *ra = &filp->f_ra;
 	pgoff_t index;
 	pgoff_t last_index;
@@ -317,9 +318,11 @@ find_page:
         // radixツリーからページキャッシュ探すぞう
 		page = find_get_page(mapping, index);
 		if (!page) {
+            // ページキャッシュの先読み
 			page_cache_sync_readahead(mapping,
 					ra, filp,
 					index, last_index - index);
+            // ページキャッシュ無し
 			page = find_get_page(mapping, index);
 			if (unlikely(page == NULL))
 				goto no_cached_page;
@@ -480,6 +483,7 @@ no_cached_page:
 		 * Ok, it wasn't cached, so we need to create a new
 		 * page..
 		 */
+        // __GFP_COLD フラグ
 		page = page_cache_alloc_cold(mapping);
 		if (!page) {
 			desc->error = -ENOMEM;
