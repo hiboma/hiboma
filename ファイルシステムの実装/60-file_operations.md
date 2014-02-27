@@ -68,6 +68,22 @@ ssize_t do_sync_read(struct file *filp, char __user *buf, size_t len, loff_t *pp
 }
 ```
 
+TASK_UNINTERRUPTIBLE に移行
+
+```c
+static void wait_on_retry_sync_kiocb(struct kiocb *iocb)
+{
+	set_current_state(TASK_UNINTERRUPTIBLE);
+    // 下層で何かフラグが立たないと TASK_UNINTERRUPTIBLE で待つ
+	if (!kiocbIsKicked(iocb))
+		schedule();
+	else
+		kiocbClearKicked(iocb);
+	__set_current_state(TASK_RUNNING);
+}
+```
+
+
 ### write(2) が Invalid argument [#11](https://github.com/hiboma/nukofs/issues/11)
 
  * [sys_write](http://lxr.free-electrons.com/source/fs/read_write.c?v=2.6.32#L389) -> [vfs_write](http://lxr.free-electrons.com/source/fs/read_write.c?v=2.6.32#L332)
