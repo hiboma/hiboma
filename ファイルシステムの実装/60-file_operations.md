@@ -224,7 +224,7 @@ generic_file_aio_read(struct kiocb *iocb, const struct iovec *iov,
 
 	/* coalesce the iovecs and go direct-to-BIO for O_DIRECT */
     // O_DIRECT の場合
-    // __dentry_open で address_space の .direct_IO, get_xip_mem が無いと EINVAL
+    // ただし __dentry_open で address_space の .direct_IO, get_xip_mem が無いと EINVAL
 	if (filp->f_flags & O_DIRECT) {
 		loff_t size;
 		struct address_space *mapping;
