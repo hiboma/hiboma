@@ -186,6 +186,7 @@ io_schedule とは?
  * in_iowait を立てることで I/O待ちであることをアカウンティング
  * どっかの統計で参照されている???
    * nr_iowait は /proc/stat で `"procs_blocked %lu\n"` の値を出すのに参照されている
+   * sar とか vmstat で b 
 
 ```
 /*
