@@ -224,7 +224,7 @@ generic_file_aio_read(struct kiocb *iocb, const struct iovec *iov,
 
 	/* coalesce the iovecs and go direct-to-BIO for O_DIRECT */
     // O_DIRECT の場合
-    // ただし __dentry_open で address_space の .direct_IO, get_xip_mem が無いと EINVAL
+    // ただし __dentry_open で address_space の .direct_IO, get_xip_mem が無いと open が EINVAL
 	if (filp->f_flags & O_DIRECT) {
 		loff_t size;
 		struct address_space *mapping;
@@ -252,6 +252,7 @@ generic_file_aio_read(struct kiocb *iocb, const struct iovec *iov,
 	}
 
 	for (seg = 0; seg < nr_segs; seg++) {
+        // 読み込んだデータのサイズなんぞを保持しておくだけ
 		read_descriptor_t desc;
 
 		desc.written = 0;
@@ -276,6 +277,10 @@ EXPORT_SYMBOL(generic_file_aio_read);
 ```
 
 do_generic_file_read は強そうだ ...
+
+ * ページキャッシュを探す
+ * readahead?
+ * 無ければページ確保してLRUに追加
 
 ```c
 /**
