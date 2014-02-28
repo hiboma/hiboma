@@ -1,6 +1,12 @@
 
  * ページフレームとページキャッシュを区別する
- * struct page と mapping とを add_to_page_cache_lru で結びつけたのがページキャッシュ
+ * struct page と mapping とを add_to_page_cache_lru に追加したのがページキャッシュ
+ 
+## TODO
+
+ * kiocb
+ * buffer
+ * kmap, highmem
 
 ## [struct file_operations](http://lxr.free-electrons.com/source/include/linux/fs.h?v=2.6.32#L1489) の実装
 
@@ -10,7 +16,6 @@
 
  * inode->i_fop メンバ
  * open(2) ないと呼べないよね? ( `struct file` を確保しているのが前提)
-
 
 ### write(2) が Invalid argument [#11](https://github.com/hiboma/nukofs/issues/11)
 
@@ -53,7 +58,7 @@ ssize_t vfs_write(struct file *file, const char __user *buf, size_t count, loff_
 
 ![](https://f.cloud.github.com/assets/172456/1949504/47a3daf4-810c-11e3-934c-21473ef89139.png)
 
- * `struct address_space_operations` の実装も必要だった様子
+ * file_operations だけでなくて `struct address_space_operations` の実装も必要だった様子
    * generic_file_aio_write がページキャッシュにデータを載せるため
       * O_DIRECT を指定した際に呼ばれる generic_file_direct_write と比較するとページキャッシュの差が分かりやすい?
       * generic_file_buffered_write の有無 によって差がでる
@@ -281,8 +286,6 @@ do_generic_file_read は強そうだ ...
  * ページキャッシュを探す
  * readahead?
  * 無ければページ確保してLRUに追加
-
- 
 
 ```c
 /**
