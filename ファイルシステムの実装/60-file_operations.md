@@ -282,6 +282,8 @@ do_generic_file_read は強そうだ ...
  * readahead?
  * 無ければページ確保してLRUに追加
 
+ 
+
 ```c
 /**
  * do_generic_file_read - generic file read routine
@@ -558,7 +560,9 @@ int file_read_actor(read_descriptor_t *desc, struct page *page,
 	 * Faults on the destination of a read are common, so do it before
 	 * taking the kmap.
 	 */
+    // pagefault を起こすと true になる
 	if (!fault_in_pages_writeable(desc->arg.buf, size)) {
+        // pagefault しなかったので kmap_atomic 
 		kaddr = kmap_atomic(page, KM_USER0);
 		left = __copy_to_user_inatomic(desc->arg.buf,
 						kaddr + offset, size);
@@ -568,7 +572,7 @@ int file_read_actor(read_descriptor_t *desc, struct page *page,
 	}
 
     // kmap_atomic と kmap の違いは?
-
+    // kmap はブロックしうるので割り込みコンテンキストでは使えない
 	/* Do it the slow way */
 	kaddr = kmap(page);
 	left = __copy_to_user(desc->arg.buf, kaddr + offset, size);
