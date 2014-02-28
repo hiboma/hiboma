@@ -35,15 +35,15 @@ VirtualBoxのソースは下記URLからダウンロードすることが出来�
 
 ゲストOSがLinuxの場合にデフォルトで /vagrant としてマウントするファイルシステムは vboxsf (**fs**) ではないので注意) です
 
-```
-mount | grep /vagrant
+```sh
+$ mount | grep /vagrant
 /vagrant on /vagrant type vboxsf (uid=501,gid=501,rw)
 ```
 
 vboxsfのソースは下記ディレクトリ以下に置いてあります
 
-```
-src/VBox/Additions/linux/sharedfolder
+```sh
+# src/VBox/Additions/linux/sharedfolder
 
 $ ls -1
 Makefile.kmk
@@ -63,6 +63,7 @@ vfsmod.h
 vboxfs はゲストOSのLinuxカーネルモジュールとして実装されています
 
 ```
+# カーネルモジュールを grep
 [vagrant@localhost ~]$ lsmod | grep vboxsf
 vboxsf                 37678  3 
 ```
@@ -218,9 +219,9 @@ sf_reg_write ではページキャッシュを経由しないでデータを書�
 
 ##  NFS の file_operations
 
-nfs の file_operation は下記の通り
+ちょっと脇見にそれて NFS の実装を見てみます。nfs の file_operation は下記の通り
 
-```
+```c
 const struct file_operations nfs_file_operations = {
 	.llseek		= nfs_file_llseek,
 	.read		= do_sync_read,
@@ -379,6 +380,6 @@ out:
 
 コメントの説明が簡潔に表していますね
 
-“This is called when we want to check whether the inode has changed on the server.  If it has changed, we must invalidate our local caches.”
+> This is called when we want to check whether the inode has changed on the server.  If it has changed, we must invalidate our local caches.
 
 ということで NFSやSambaのようなネットワークファイルシステムでは generic_file_splice_read を呼び出す前に inode の変更を確認して適宜 ページキャッシュを破棄する必要があるのだと分かります。
