@@ -7,6 +7,7 @@
  * kiocb
  * buffer
  * kmap, highmem
+ * delayacct
 
 ## [struct file_operations](http://lxr.free-electrons.com/source/include/linux/fs.h?v=2.6.32#L1489) の実装
 
@@ -145,7 +146,7 @@ ssize_t do_sync_read(struct file *filp, char __user *buf, size_t len, loff_t *pp
 }
 ```
 
-TASK_UNINTERRUPTIBLE に移行して待たされるケース
+wait_on_retry_sync_kiocb で TASK_UNINTERRUPTIBLE に移行して待たされるケース
 
 ```c
 static void wait_on_retry_sync_kiocb(struct kiocb *iocb)
@@ -158,7 +159,11 @@ static void wait_on_retry_sync_kiocb(struct kiocb *iocb)
 		kiocbClearKicked(iocb);
 	__set_current_state(TASK_RUNNING);
 }
+```
 
+wait_on_sync_kiocb でも TASK_UNINTERRUPTIBLE で待たされるケース
+
+```c
 /* wait_on_sync_kiocb:
  *	Waits on the given sync kiocb to complete.
  */
@@ -175,6 +180,11 @@ ssize_t wait_on_sync_kiocb(struct kiocb *iocb)
 }
 EXPORT_SYMBOL(wait_on_sync_kiocb);
 ```
+
+io_schedule とは?
+
+ * in_iowait を立てることで I/O待ちであることをアカウンティング
+ * どっかの統計で参照されている???
 
 ```
 /*
