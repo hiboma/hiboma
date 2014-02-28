@@ -18,8 +18,8 @@ VirtualBoxのソースは下記URLからダウンロードすることが出来�
  * ゲストOS が Linux で使える sharedfolders (ex. /vagrant ) は **vboxsf** というファイルシステムである
  * vboxsf は sendfile(2) で **generic_file_splice_read** を呼ぶ
  * generic_file_splice_read は 読み出し側ファイルデスクリプタのデータをページキャッシュを経由してから書き出しディスクリプタ側に渡す
- * sendfile(2) は ページキャッシュの revalidate をしない
- * NFS や smbfs では generic_file_splice_read を呼ぶ前に ページキャッシュの revalidate をしている
+ * sendfile(2) は ページキャッシュの **revalidate** をしない
+ * NFS や smbfs では generic_file_splice_read を呼ぶ前に ページキャッシュの revalidate をして更新があればキャッシュを破棄する
 
 これによって
 
