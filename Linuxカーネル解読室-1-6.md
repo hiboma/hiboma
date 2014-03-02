@@ -846,13 +846,18 @@ out_unlock:
 
 schedule()
 
- * active, expired の交換
- * TASK_UNINTERRUPTIBLE, TASK_INTERRUPTIBLE を deactivate_task 
- * 優先度の再計算
+ * プリエンプション禁止
+ * 実行可能プロセスがいなくなった際の active, expired キューの交換
+ * TASK_UNINTERRUPTIBLE, TASK_INTERRUPTIBLE を deactivate_task
+ * TASK_INTERRUPTIBLE から起床した場合に 優先度の再計算
+   * 優先度が変わった場合は dequeue_task, enqueue_task
+   * 優先度が変わらない場合は requeue_task
  * CPU のロードバランス
  * idle プロセスへの context switch
- * 優先度別キューから次のプロセスを選択
+ * ビットマップをffs, 優先度別キューから次のプロセスを選択
  * context swtich
+ * プリエンプション禁止解除
+ * 必要であれば再スケジューリング
 
 ```c
 /*
@@ -976,7 +981,8 @@ go_idle:
 			goto go_idle;
 	}
 
-	array = rq->active;
+	array = rq->active
+    // runqueue 全体で実行可能プロセスがいない = expired と交換;
 	if (unlikely(!array->nr_active)) {
 		/*
 		 * Switch the active and expired arrays.
@@ -1021,6 +1027,7 @@ go_idle:
 	}
 	next->activated = 0;
 switch_tasks:
+    // idle プロセスに switch した統計が取れる
 	if (next == rq->idle)
 		schedstat_inc(rq, sched_goidle);
 	prefetch(next);
@@ -1179,4 +1186,70 @@ static inline void idle_balance(int this_cpu, runqueue_t *this_rq)
 		}
 	}
 }
-{{{
+```
+
+優先度の再計算
+
+```c
+static int recalc_task_prio(task_t *p, unsigned long long now)
+{
+	/* Caller must always ensure 'now >= p->timestamp' */
+	unsigned long long __sleep_time = now - p->timestamp;
+	unsigned long sleep_time;
+
+	if (__sleep_time > NS_MAX_SLEEP_AVG)
+		sleep_time = NS_MAX_SLEEP_AVG;
+	else
+		sleep_time = (unsigned long)__sleep_time;
+
+	if (likely(sleep_time > 0)) {
+		/*
+		 * User tasks that sleep a long time are categorised as
+		 * idle and will get just interactive status to stay active &
+		 * prevent them suddenly becoming cpu hogs and starving
+		 * other processes.
+		 */
+		if (p->mm && p->activated != -1 &&
+			sleep_time > INTERACTIVE_SLEEP(p)) {
+				p->sleep_avg = JIFFIES_TO_NS(MAX_SLEEP_AVG -
+						DEF_TIMESLICE);
+		} else {
+			/*
+			 * The lower the sleep avg a task has the more
+			 * rapidly it will rise with sleep time.
+			 */
+			sleep_time *= (MAX_BONUS - CURRENT_BONUS(p)) ? : 1;
+
+			/*
+			 * Tasks waking from uninterruptible sleep are
+			 * limited in their sleep_avg rise as they
+			 * are likely to be waiting on I/O
+			 */
+			if (p->activated == -1 && p->mm) {
+				if (p->sleep_avg >= INTERACTIVE_SLEEP(p))
+					sleep_time = 0;
+				else if (p->sleep_avg + sleep_time >=
+						INTERACTIVE_SLEEP(p)) {
+					p->sleep_avg = INTERACTIVE_SLEEP(p);
+					sleep_time = 0;
+				}
+			}
+
+			/*
+			 * This code gives a bonus to interactive tasks.
+			 *
+			 * The boost works by updating the 'average sleep time'
+			 * value here, based on ->timestamp. The more time a
+			 * task spends sleeping, the higher the average gets -
+			 * and the higher the priority boost gets as well.
+			 */
+			p->sleep_avg += sleep_time;
+
+			if (p->sleep_avg > NS_MAX_SLEEP_AVG)
+				p->sleep_avg = NS_MAX_SLEEP_AVG;
+		}
+	}
+
+	return effective_prio(p);
+}
+```
