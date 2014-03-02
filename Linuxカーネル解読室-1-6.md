@@ -844,20 +844,21 @@ out_unlock:
 
 ## 1.6.7　プロセススケジューラのアルゴリズム
 
-schedule()
+O(1) schedule()
 
  * プリエンプション禁止
- * 実行可能プロセスがいなくなった際の active, expired キューの交換
- * TASK_UNINTERRUPTIBLE, TASK_INTERRUPTIBLE を deactivate_task
- * TASK_INTERRUPTIBLE から起床した場合に 優先度の再計算
-   * 優先度が変わった場合は dequeue_task, enqueue_task
-   * 優先度が変わらない場合は requeue_task
- * CPU のロードバランス
- * idle プロセスへの context switch
+ * 実行可能プロセスがいなくなっていた際は active, expired キューの交換
+ * TASK_UNINTERRUPTIBLE, TASK_INTERRUPTIBLE のプロセスは deactivate_task される
+   * runqueue のリストから外される
  * ビットマップをffs, 優先度別キューから次のプロセスを選択
- * context swtich
+   * TASK_INTERRUPTIBLE から起床したプロセスの場合は 優先度の再計算
+     * 優先度が変わった場合は dequeue_task, enqueue_task
+     * 優先度が変わらない場合は requeue_task
+ * CPU のロードバランス
+   * 実行可能プロセスがいないのであれば idle プロセスへ context switch
+ * context_swtich
  * プリエンプション禁止解除
- * 必要であれば再スケジューリング
+ * context_swtich後、TIF_NEED_RESCHED であれば再スケジューリング
 
 ```c
 /*
@@ -1030,6 +1031,7 @@ switch_tasks:
     // idle プロセスに switch した統計が取れる
 	if (next == rq->idle)
 		schedstat_inc(rq, sched_goidle);
+        
 	prefetch(next);
 	prefetch_stack(next);
 	clear_tsk_need_resched(prev);
@@ -1050,6 +1052,7 @@ switch_tasks:
 		++*switch_count;
 
 		prepare_task_switch(rq, next);
+        // ここで コンテキストスイッチ してプロセス切り替え
 		prev = context_switch(rq, prev, next);
 		barrier();
 		/*
@@ -1061,6 +1064,7 @@ switch_tasks:
 	} else
 		spin_unlock_irq(&rq->lock);
 
+    // ここはもう入れ替わってる?
 	prev = current;
 	if (unlikely(reacquire_kernel_lock(prev) < 0))
 		goto need_resched_nonpreemptible;
@@ -1079,9 +1083,10 @@ switch_tasks:
     //   #define test_thread_flag(flag) \
     // 	  test_ti_thread_flag(current_thread_info(), flag)
 	if (unlikely(test_thread_flag(TIF_NEED_RESCHED)))
+        // 再スケジューリング
 		goto need_resched;
 }
-
+ 
 EXPORT_SYMBOL(schedule);
 ```
 
