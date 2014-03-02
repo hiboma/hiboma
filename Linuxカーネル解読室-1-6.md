@@ -1092,6 +1092,8 @@ EXPORT_SYMBOL(schedule);
 
 > 続いてプロセススケジューラは、activeキューを検索し次に実行権を与えるべきプロセスとして最も実行優先度の高いプロセスを選び出します（<39>）。つまり、activeキューにおいてプロセスが登録されているスロットを見つけ、先頭のものからプロセスを選びます
 
+***sched_find_first_bit(array->bitmap)*** のコードのこと
+
 ```c
 /*
  * Every architecture must define this function. It's the fastest
@@ -1138,7 +1140,7 @@ static inline int ffs(int x)
 }
 ```
 
-x86_64 だと bsfq 命令で 64bitずつの探索になる
+x86_64 だと bsfq 命令で 64bitずつの探索になる (速いのかな?)
 
 ```c
 /**
@@ -1167,11 +1169,11 @@ static inline int sched_find_first_bit(const unsigned long *b)
 }
 ```
 
-ユーザランド用のライブラリ関数としても用意されている http://man7.org/linux/man-pages/man3/ffs.3.html
+ffs はユーザランド用のライブラリ関数としても用意されている http://man7.org/linux/man-pages/man3/ffs.3.html
 
 > もし、このプロセススケジューラが担当しているRUNキュー上に、実行可能なプロセスがいない場合（activeキューにもexpiredキューにもプロセスが存在しない場合）は、ほかのCPU用のプロセススケジューラが管理しているRUNキューからプロセスを奪ってきます（<36>）
 
-idle_balance で行う
+idle_balance で行っている
 
 ```c
 /*
@@ -1193,7 +1195,7 @@ static inline void idle_balance(int this_cpu, runqueue_t *this_rq)
 }
 ```
 
-優先度の再計算
+優先度の再計算の中身
 
 ```c
 static int recalc_task_prio(task_t *p, unsigned long long now)
