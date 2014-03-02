@@ -54,3 +54,7 @@ memset(p, 0, sizeof(type p))
     int cpu = smp_processor_id();
     struct rq *rq = cpu_rq(cpu);
 ```
+
+ * list_for_each_entry_safe
+ * tasklist_lock
+   * __cacheline_aligned DEFINE_RWLOCK(tasklist_lock);  /* outer */
