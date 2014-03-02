@@ -1000,6 +1000,7 @@ go_idle:
 		if (unlikely((long long)(now - next->timestamp) < 0))
 			delta = 0;
 
+        // 割り込みからの起床での場合
 		if (next->activated == 1)
 			delta = delta * (ON_RUNQUEUE_WEIGHT * 128 / 100) / 128;
 
@@ -1149,7 +1150,7 @@ static inline int sched_find_first_bit(const unsigned long *b)
 }
 ```
 
-ライブラリ関数としても用意されている http://man7.org/linux/man-pages/man3/ffs.3.html
+ユーザランド用のライブラリ関数としても用意されている http://man7.org/linux/man-pages/man3/ffs.3.html
 
 > もし、このプロセススケジューラが担当しているRUNキュー上に、実行可能なプロセスがいない場合（activeキューにもexpiredキューにもプロセスが存在しない場合）は、ほかのCPU用のプロセススケジューラが管理しているRUNキューからプロセスを奪ってきます（<36>）
 
