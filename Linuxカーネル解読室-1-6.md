@@ -847,8 +847,11 @@ out_unlock:
 schedule()
 
  * active, expired の交換
- * 優先度別キューの
+ * TASK_UNINTERRUPTIBLE, TASK_INTERRUPTIBLE を deactivate_task 
+ * 優先度の再計算
+ * CPU のロードバランス
  * idle プロセスへの context switch
+ * 優先度別キューから次のプロセスを選択
  * context swtich
 
 ```c
@@ -995,12 +998,14 @@ go_idle:
     // 次に context switch するプロセス を queueのリストから取り出す
 	next = list_entry(queue->next, task_t, run_list);
 
+    // TASK_INTERRUPTIBLE からの起床の場合
+    // activated の数値の意味が分からんなー
 	if (!rt_task(next) && next->activated > 0) {
 		unsigned long long delta = now - next->timestamp;
 		if (unlikely((long long)(now - next->timestamp) < 0))
 			delta = 0;
 
-        // 割り込みからの起床での場合
+        // 割り込みからの起床での場合??? 優先度を上げる
 		if (next->activated == 1)
 			delta = delta * (ON_RUNQUEUE_WEIGHT * 128 / 100) / 128;
 
