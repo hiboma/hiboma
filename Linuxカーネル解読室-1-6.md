@@ -881,6 +881,7 @@ asmlinkage void __sched schedule(void)
 	 * Otherwise, whine if we are scheduling when we should not be.
 	 */
 	if (likely(!current->exit_state)) {
+        // ?
 		if (unlikely(in_atomic())) {
 			printk(KERN_ERR "scheduling while atomic: "
 				"%s/0x%08x/%d\n",
@@ -910,7 +911,7 @@ need_resched_nonpreemptible:
 		dump_stack();
 	}
 
-    // 2.6.32: フィールド無くなってる
+    // 2.6.32: sched_cnt フィールドは無くなってる
     // /proc/schedstat (runqueueごとの統計) で参照される統計値 スケジューラが呼び出された回数?
 	schedstat_inc(rq, sched_cnt);
 	now = sched_clock();
@@ -929,10 +930,13 @@ need_resched_nonpreemptible:
 
 	spin_lock_irq(&rq->lock);
 
+    // do_exit から呼ばれる schedule() の場合 PF_DEAD が立っている
 	if (unlikely(prev->flags & PF_DEAD))
 		prev->state = EXIT_DEAD;
 
+    // これは後でインクリメントされるかも
 	switch_count = &prev->nivcsw;
+    
     // TASK_RUNNING = 0 なので prev->state は false
 	if (prev->state && !(preempt_count() & PREEMPT_ACTIVE)) {
         // Non Voluntaly Context Switch のカウント
