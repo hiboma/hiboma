@@ -436,3 +436,19 @@ static void sock_def_write_space(struct sock *sk)
 }
 ```
 
+TCP の場合 tcp_rcv_established の中で sk_data_ready を呼び、 connect(2) を呼んだプロセスを起床させている
+
+```
+int tcp_rcv_established(struct sock *sk, struct sk_buff *skb,
+			struct tcphdr *th, unsigned len)
+{
+	struct tcp_sock *tp = tcp_sk(sk);
+
+/// ...
+
+				sk->sk_data_ready(sk, 0);
+			return 0;
+		}
+	}
+    
+```
