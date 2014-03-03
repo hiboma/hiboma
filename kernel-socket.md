@@ -342,6 +342,7 @@ int inet_stream_connect(struct socket *sock, struct sockaddr *uaddr,
 		err = sk->sk_prot->connect(sk, uaddr, addr_len);
 		if (err < 0)
 			goto out;
+
 // ...
 
 	if ((1 << sk->sk_state) & (TCPF_SYN_SENT | TCPF_SYN_RECV)) {
@@ -350,7 +351,7 @@ int inet_stream_connect(struct socket *sock, struct sockaddr *uaddr,
 			goto out;
 ```
 
-inet_wait_for_connect
+inet_wait_for_connect の中身
 
  * sk_sleep を wait_queue_t として prepare_to_wait + schedule_timeout で待つ
  * 定期的に起床して signal_pending でシグナルを受信していないか見る
@@ -380,7 +381,7 @@ static long inet_wait_for_connect(struct sock *sk, long timeo)
 }
 ```
 
-コールバックが呼ばれた際に sk->sk_sleep で待っているプロセスを起床さえる
+sk->sk_sleep で待っているプロセスを起床させるのは以下のコールバック群らしい
 
 ```c
 /*
