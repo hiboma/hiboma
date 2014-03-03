@@ -2,6 +2,13 @@
 
 inode の空き容量表示が分かりにくい奴
 
+```
+$ yumdownloader --source nagios-plugins
+$ rpm -ivh nagios-plugins-1.4.16-10.el6.src.rpm
+$ cd ~/rpmbuild/SOURCES
+$ tar xvfz nagios-plugins-1.4.16.tar.gz
+```
+
 ```c
       // dfree_pct 空き容量のパーセンテージ
       asprintf (&output, "%s %s %.0f %s (%.0f%%",
