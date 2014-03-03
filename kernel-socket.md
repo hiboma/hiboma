@@ -472,14 +472,18 @@ static const struct net_protocol udp_protocol = {
 	.netns_ok =	1,
 };
 
-// udp_rcv
-// __udp4_lib_rcv
-//     sk_add_backlog
-// udp_queue_rcv_skb
-// __udp_queue_rcv_skb
-// sock_queue_rcv_skb
-//     __skb_queue_tail
 // sk->sk_data_ready(sk, skb_len);
+//     __skb_queue_tail
+// sock_queue_rcv_skb
+// __udp_queue_rcv_skb
+// udp_queue_rcv_skb
+//     sk_add_backlog
+// __udp4_lib_rcv
+// udp_rcv
+//     ret = ipprot->handler(skb);
+// ip_local_deliver_finish
+// ip_local_deliver
+// IPルーティング
 
 static const struct net_protocol tcp_protocol = {
 	.handler =	tcp_v4_rcv,
@@ -488,10 +492,14 @@ static const struct net_protocol tcp_protocol = {
 	.netns_ok =	1,
 };
 
-// tcp_v4_rcv
-//   sk_add_backlog
-// tcp_v4_do_rcv
-// tcp_rcv_established
-//     __skb_queue_tail(&sk->sk_receive_queue, skb);
 // sk->sk_data_ready(sk, 0);
+//     __skb_queue_tail(&sk->sk_receive_queue, skb);
+// tcp_rcv_established
+// tcp_v4_do_rcv
+//   sk_add_backlog
+// tcp_v4_rcv
+// ip_local_deliver_finish
+// ip_local_deliver
+// IPルーティング
+
 ```
