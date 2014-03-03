@@ -1,3 +1,24 @@
+## nagios/plugins/check_disk.c
+
+inode の空き容量表示が分かりにくい奴
+
+```c
+      // dfree_pct 空き容量のパーセンテージ
+      asprintf (&output, "%s %s %.0f %s (%.0f%%",
+                output,
+                (!strcmp(me->me_mountdir, "none") || display_mntp) ? me->me_devname : me->me_mountdir,
+                path->dfree_units,
+                units,
+                path->dfree_pct);
+      if (path->dused_inodes_percent < 0) {
+        asprintf(&output, "%s inode=-);", output);
+      } else {
+        asprintf(&output, "%s inode=%.0f%%);", output, path->dfree_inodes_percent );
+      }
+```
+
+asprintf 知らなかった。便利そうだ
+
 ## mkdir EEXISTS で返す箇所を探す
 
 mkdir(2) は mkdirat(2) のラッパー
