@@ -7,6 +7,8 @@
 
  * int allow_signal(int sig)
    * kernel thread にシグナル飛ばせる refs http://kernelnewbies.org/Simple_UDP_Server
+   * signal_pending(current)
+ * daemonize
 
 ## rsync の io timeout
 
