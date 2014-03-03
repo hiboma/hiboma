@@ -1,24 +1,25 @@
 
 
-socket を作るカーネル内API を辿る
+
+## sock_create
+
+BSDソケット (struct socket) を作るカーネル内API を辿る
 
  * struct socket
    * type = SOCK_DGRAM || SOCK_STREAM
    * familiy が struct sock のコンストラクとなる
      * PF_INET inet_create
-       * sock->ops の初期化
+       * sock->ops     の初期化
        * sock->sk = sk の初期化
-     * PF_UNIX
+       * struct inet_sock の初期化
    * ops struct proto_ops
    * sk  struct sock
      * sk_receive_queue, sk_write_queue, ...
      * sk_data_ready 等のコールバック
-     * バッファ
-     * sk->sk_sock = socket
-
-## sock_create
-
-struct socket を作る
+     * ソケットのバッファ
+     * sk->sk_sock = socket 互いに参照
+   * state
+     * SS_ prefix (SS_CONNECTED, ...)
 
 ```c
 /**
@@ -52,6 +53,8 @@ struct socket {
 };
 ```
 
+struct socket を作るエントリポイント
+
 ```c
 sock_create(int family, int type, int protocol, struct socket **res)
 ```
@@ -67,7 +70,7 @@ struct net_proto_family {
 };
 ```
 
- * PF_INET の場合は inet_family_ops 
+ * PF_INET の場合は inet_family_ops が選ばれる
 ```c
 static struct net_proto_family inet_family_ops = {
 	.family = PF_INET,
@@ -76,7 +79,9 @@ static struct net_proto_family inet_family_ops = {
 };
 ```
 
- * INET なソケットを返す
+ * inet_create は INET なソケット初期化して返す
+   * sturct inet_sock
+   * struct sock
 ```c
 static int inet_create(struct net *net, struct socket *sock, int protocol,
 		       int kern)
