@@ -16,6 +16,7 @@ BSDソケット (struct socket) を作るカーネル内API を辿る
    * sk  __struct sock__
      * sk_receive_queue, sk_write_queue, ...
        * __struct sk_buff__ のキュー(実装はリスト)
+       * skb_queue_len, skb_dequeue, とかでいじるやつ
      * sk_data_ready 等のコールバック
      * ソケットのバッファ
      * sk->sk_sock = socket 互いに参照
