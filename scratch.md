@@ -12,7 +12,7 @@ check_timeout で io_timeout が使われる
  * 最後の read
  * 最後の write
 
- でそれぞれの時刻と time(NULL) が比較される
+でそれぞれの時刻と time(NULL) が比較される
 
 ```c
 // last_io_in  最後に write した time(NULL)
