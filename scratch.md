@@ -52,8 +52,12 @@ static void check_timeout(void)
 io_timeout は --timeout で指定した値である
 
 ```c
-  {"timeout",          0,  POPT_ARG_INT,    &io_timeout, 0, 0, 0 }, 
+  {"timeout",          0,  POPT_ARG_INT,    &io_timeout, 0, 0, 0 },
+```
 
+io_timeout, select_timeout は set_io_timeout でセットされる
+
+```
 void set_io_timeout(int secs)
 {
         io_timeout = secs;
