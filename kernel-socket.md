@@ -284,3 +284,87 @@ struct proto_ops {
 				       struct pipe_inode_info *pipe, size_t len, unsigned int flags);
 };
 ```
+
+## connect と 起床関数
+
+```c
+static long inet_wait_for_connect(struct sock *sk, long timeo)
+{
+	DEFINE_WAIT(wait);
+
+	prepare_to_wait(sk->sk_sleep, &wait, TASK_INTERRUPTIBLE);
+
+	/* Basic assumption: if someone sets sk->sk_err, he _must_
+	 * change state of the socket from TCP_SYN_*.
+	 * Connect() does not allow to get error notifications
+	 * without closing the socket.
+	 */
+	while ((1 << sk->sk_state) & (TCPF_SYN_SENT | TCPF_SYN_RECV)) {
+		release_sock(sk);
+		timeo = schedule_timeout(timeo);
+		lock_sock(sk);
+		if (signal_pending(current) || !timeo)
+			break;
+		prepare_to_wait(sk->sk_sleep, &wait, TASK_INTERRUPTIBLE);
+	}
+	finish_wait(sk->sk_sleep, &wait);
+	return timeo;
+}
+```
+
+コールバックが呼ばれた際に sk->sk_sleep で待っているプロセスを起床さえる
+
+
+
+```c
+/*
+ *	Default Socket Callbacks
+ */
+
+static void sock_def_wakeup(struct sock *sk)
+{
+	read_lock(&sk->sk_callback_lock);
+	if (sk_has_sleeper(sk))
+		wake_up_interruptible_all(sk->sk_sleep);
+	read_unlock(&sk->sk_callback_lock);
+}
+
+static void sock_def_error_report(struct sock *sk)
+{
+	read_lock(&sk->sk_callback_lock);
+	if (sk_has_sleeper(sk))
+		wake_up_interruptible_poll(sk->sk_sleep, POLLERR);
+	sk_wake_async(sk, SOCK_WAKE_IO, POLL_ERR);
+	read_unlock(&sk->sk_callback_lock);
+}
+
+static void sock_def_readable(struct sock *sk, int len)
+{
+	read_lock(&sk->sk_callback_lock);
+	if (sk_has_sleeper(sk))
+		wake_up_interruptible_sync_poll(sk->sk_sleep, POLLIN | POLLPRI |
+						POLLRDNORM | POLLRDBAND);
+	sk_wake_async(sk, SOCK_WAKE_WAITD, POLL_IN);
+	read_unlock(&sk->sk_callback_lock);
+}
+
+static void sock_def_write_space(struct sock *sk)
+{
+	read_lock(&sk->sk_callback_lock);
+
+	/* Do not wake up a writer until he can make "significant"
+	 * progress.  --DaveM
+	 */
+	if ((atomic_read(&sk->sk_wmem_alloc) << 1) <= sk->sk_sndbuf) {
+		if (sk_has_sleeper(sk))
+			wake_up_interruptible_sync_poll(sk->sk_sleep, POLLOUT |
+						POLLWRNORM | POLLWRBAND);
+
+		/* Should agree with poll, otherwise some programs break */
+		if (sock_writeable(sk))
+			sk_wake_async(sk, SOCK_WAKE_SPACE, POLL_OUT);
+	}
+
+	read_unlock(&sk->sk_callback_lock);
+}
+```
