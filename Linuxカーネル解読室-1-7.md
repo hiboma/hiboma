@@ -105,6 +105,7 @@ static int try_to_wake_up(task_t *p, unsigned int state, int sync)
 	rq = task_rq_lock(p, &flags);
 	old_state = p->state;
     // ???
+    // TASK_RUNNING な場合?
 	if (!(old_state & state))
 		goto out;
 
@@ -122,8 +123,11 @@ static int try_to_wake_up(task_t *p, unsigned int state, int sync)
 
 	new_cpu = cpu;
 
+    // Try To Wake Up Count
 	schedstat_inc(rq, ttwu_cnt);
 	if (cpu == this_cpu) {
+        // Try To Wake Up Count Local
+        // 起床したCPUが変わらない場合
 		schedstat_inc(rq, ttwu_local);
 		goto out_set_cpu;
 	}
