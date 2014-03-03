@@ -350,6 +350,8 @@ int inet_stream_connect(struct socket *sock, struct sockaddr *uaddr,
 		if (sk->sk_state != TCP_CLOSE)
 			goto out;
 
+        // ???
+        // ここから SYN_SENT に繋がるはず
 		err = sk->sk_prot->connect(sk, uaddr, addr_len);
 		if (err < 0)
 			goto out;
@@ -366,6 +368,7 @@ int inet_stream_connect(struct socket *sock, struct sockaddr *uaddr,
 
     // connect の timeout を決める
     // O_NONBLOCK だったら 0, ブロッキングだったら sk->sk_sndtimeo を使う
+    // SO_SNDTIMEO で指定する値
 	timeo = sock_sndtimeo(sk, flags & O_NONBLOCK);
 
 	if ((1 << sk->sk_state) & (TCPF_SYN_SENT | TCPF_SYN_RECV)) {
