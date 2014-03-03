@@ -381,7 +381,9 @@ static long inet_wait_for_connect(struct sock *sk, long timeo)
 }
 ```
 
-割り込みコンテキスト(Top Half? Bottom Half?) から sk->sk_sleep で待っているプロセスを起床させるのは以下のコールバック群らしい
+## 割り込みコンテキスト側
+
+(Top Half? Bottom Half?) から sk->sk_sleep で待っているプロセスを起床させるのは以下のコールバック群らしい
 
 ```c
 struct sock {
@@ -447,6 +449,8 @@ static void sock_def_write_space(struct sock *sk)
 }
 ```
 
+## コールバックを呼び出す箇所
+
 TCP の場合 tcp_rcv_established の中で sk_data_ready を呼び、 connect(2) を呼んだプロセスを起床させている
 
 ```
@@ -462,6 +466,54 @@ int tcp_rcv_established(struct sock *sk, struct sk_buff *skb,
 		}
 	}
     
+```
+
+UDPの場合 sock_queue_rcv_skb の中で呼び出している
+
+```
+int sock_queue_rcv_skb(struct sock *sk, struct sk_buff *skb)
+{
+	int err = 0;
+	int skb_len;
+	unsigned long flags;
+	struct sk_buff_head *list = &sk->sk_receive_queue;
+
+	if (atomic_read(&sk->sk_rmem_alloc) >= sk->sk_rcvbuf) {
+		err = -ENOMEM;
+		trace_sock_rcvqueue_full(sk, skb);
+		goto out;
+	}
+
+	err = sk_filter(sk, skb);
+	if (err)
+		goto out;
+
+	if (!sk_rmem_schedule(sk, skb->truesize)) {
+		err = -ENOBUFS;
+		goto out;
+	}
+
+	skb->dev = NULL;
+	skb_set_owner_r(skb, sk);
+
+	/* Cache the SKB length before we tack it onto the receive
+	 * queue.  Once it is added it no longer belongs to us and
+	 * may be freed by other threads of control pulling packets
+	 * from the queue.
+	 */
+	skb_len = skb->len;
+
+	spin_lock_irqsave(&list->lock, flags);
+	skb->dropcount = atomic_read(&sk->sk_drops);
+	__skb_queue_tail(list, skb);
+	spin_unlock_irqrestore(&list->lock, flags);
+
+	if (!sock_flag(sk, SOCK_DEAD))
+		sk->sk_data_ready(sk, skb_len);
+out:
+	return err;
+}
+EXPORT_SYMBOL(sock_queue_rcv_skb);
 ```
 
 ```c
