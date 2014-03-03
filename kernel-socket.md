@@ -287,6 +287,48 @@ struct proto_ops {
 
 ## connect と 起床関数
 
+AF_INET の connect(2) は inet_stream_connect である
+
+```c
+const struct proto_ops inet_stream_ops = {
+//...
+	.connect	   = inet_stream_connect,
+```
+
+inet_stream_connect は sk->sk_prot->connect を呼び出し後 inet_wait_for_connect で待つ
+
+```
+/*
+ *	Connect to a remote host. There is regrettably still a little
+ *	TCP 'magic' in here.
+ */
+int inet_stream_connect(struct socket *sock, struct sockaddr *uaddr,
+			int addr_len, int flags)
+{
+
+//...
+
+	case SS_UNCONNECTED:
+		err = -EISCONN;
+		if (sk->sk_state != TCP_CLOSE)
+			goto out;
+
+		err = sk->sk_prot->connect(sk, uaddr, addr_len);
+		if (err < 0)
+			goto out;
+// ...
+
+	if ((1 << sk->sk_state) & (TCPF_SYN_SENT | TCPF_SYN_RECV)) {
+		/* Error code is set above */
+		if (!timeo || !inet_wait_for_connect(sk, timeo))
+			goto out;
+```
+
+inet_wait_for_connect
+
+ * prepare_to_wait + schedule_timeout で待つ
+ * signal_pending でシグナルを受信していないか見る
+            
 ```c
 static long inet_wait_for_connect(struct sock *sk, long timeo)
 {
@@ -313,8 +355,6 @@ static long inet_wait_for_connect(struct sock *sk, long timeo)
 ```
 
 コールバックが呼ばれた際に sk->sk_sleep で待っているプロセスを起床さえる
-
-
 
 ```c
 /*
@@ -367,4 +407,15 @@ static void sock_def_write_space(struct sock *sk)
 
 	read_unlock(&sk->sk_callback_lock);
 }
+```
+
+curl は poll_schedule_timeout で待ちに入っていた
+
+```
+[vagrant@vagrant-centos65 ~]$ cat /proc/4874/stack 
+[<ffffffff8119fce9>] poll_schedule_timeout+0x39/0x60
+[<ffffffff811a0487>] do_sys_poll+0x457/0x520
+[<ffffffff811a0741>] sys_poll+0x71/0x100
+[<ffffffff8100b072>] system_call_fastpath+0x16/0x1b
+[<ffffffffffffffff>] 0xffffffffffffffff
 ```
