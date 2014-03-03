@@ -136,8 +136,10 @@ lookup_protocol:
 			 * Be more specific, e.g. net-pf-2-proto-132-type-1
 			 * (net-pf-PF_INET-proto-IPPROTO_SCTP-type-SOCK_STREAM)
 			 */
-             // 動的にモジュールを読み込むこともできるようだ
+             // 動的にモジュールを読み込むこともできる
 			if (++try_loading_module == 1)
+                // call_usermodehelper で modprobe を呼び出す
+                // call_modprobe は call_usermodehelper の良サンプル
 				request_module("net-pf-%d-proto-%d-type-%d",
 					       PF_INET, protocol, sock->type);
 			/*
@@ -160,6 +162,7 @@ lookup_protocol:
 	if (!inet_netns_ok(net, protocol))
 		goto out_rcu_unlock;
 
+    // メソッドの初期化
 	sock->ops = answer->ops;
 	answer_prot = answer->prot;
 	answer_no_check = answer->no_check;
