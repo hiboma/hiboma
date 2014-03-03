@@ -1,5 +1,4 @@
-## rsync の io timeout 
-
+## rsync の io timeout
 
 ```
 io timeout after 3604 seconds -- exiting
@@ -42,6 +41,14 @@ static void check_timeout(void)
 }
 ```
 
+ * check_timeout が 使われている箇所
+   * writefd_unbuffered
+   * read_line
+   * read_timeout
+ * いずれも select(2) を呼び出した後に check_timeout を見ている
+   * select_timeout は io_timeout の半分の数値
+   * select(2) がタイムアウトを繰り返して last_io_in, last_io_out が更新されていないと check_timeout() で死ぬ様子
+
 io_timeout は --timeout で指定した値である
 
 ```c
@@ -52,6 +59,7 @@ void set_io_timeout(int secs)
         io_timeout = secs;
         allowed_lull = (io_timeout + 1) / 2;
 
+        // select(2) のタイムアウト
         if (!io_timeout || allowed_lull > SELECT_TIMEOUT)
                 select_timeout = SELECT_TIMEOUT;
         else
@@ -61,6 +69,8 @@ void set_io_timeout(int secs)
                 allowed_lull = 0;
 }
 ```
+
+#### おまけ
 
 keepalive なんてのもあるらしい
 
