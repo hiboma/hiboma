@@ -1002,8 +1002,15 @@ go_idle:
 		rq->best_expired_prio = MAX_PRIO;
 	}
 
-    //  active
-    //  array
+    //
+    // bitmap から最初にたっているビットを探す
+    //
+    //     bitmap ------*---*------*-------*--
+    //
+    // ビット位置を array のインデックスにして list を取る
+    //
+    //  active->queue
+    //
     //  +---+
     //  |---|
     //  |---| => task_t <=> task_t ... <= idx
@@ -1108,6 +1115,9 @@ EXPORT_SYMBOL(schedule);
 
 ***sched_find_first_bit(array->bitmap)*** のコードのこと
 
+ * struct prio_array の bitmap を走査する ffs命令がプロセス数に寄らず計算量が一定
+   * 故に O(1) ?
+
 ```c
 /*
  * Every architecture must define this function. It's the fastest
@@ -1120,7 +1130,9 @@ static inline int sched_find_first_bit(const unsigned long *b)
     // ffs - find first bit set
     // bsfl命令で32bitずつ探索できるので
     // オフセットを32bitにして繰り返す
-
+    //
+    // 最初の 100bit がセットされてることはあんまないらしい
+    // => リアルタイムプロセス???
 	if (unlikely(b[0]))
 		return __ffs(b[0]);
 	if (unlikely(b[1]))
@@ -1272,5 +1284,52 @@ static int recalc_task_prio(task_t *p, unsigned long long now)
 	}
 
 	return effective_prio(p);
+}
+```
+
+ * runqueue への dequeue/enqueue
+   * nr_active の数が増減される
+
+```
+/*
+ * Adding/removing a task to/from a priority array:
+ */
+static void dequeue_task(struct task_struct *p, prio_array_t *array)
+{
+	array->nr_active--;
+	list_del(&p->run_list);
+    // 固定優先度をインデックスとして list の配列を選択
+    // ruby 風に書くとこんなん
+    //
+    //   list = array.queue[ p->prio ]
+    //   list.remove(p)
+    //   array.bitmap[ p->prio ]
+    //
+    // リストが空になったらビットのクリア
+	if (list_empty(array->queue + p->prio))
+		__clear_bit(p->prio, array->bitmap);
+}
+
+static void enqueue_task(struct task_struct *p, prio_array_t *array)
+{
+	sched_info_queued(p);
+    // 末尾に追加
+	list_add_tail(&p->run_list, array->queue + p->prio);
+	__set_bit(p->prio, array->bitmap);
+	array->nr_active++;
+	p->array = array;
+}
+```c
+
+優先度を変えずに dequeue/enqueue し直し
+
+```c
+/*
+ * Put task to the end of the run list without the overhead of dequeue
+ * followed by enqueue.
+ */
+static void requeue_task(struct task_struct *p, prio_array_t *array)
+{
+	list_move_tail(&p->run_list, array->queue + p->prio);
 }
 ```
