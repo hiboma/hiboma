@@ -1,3 +1,10 @@
+## TODO
+
+ * /proc/sys/vm/dirty_background_ratio
+ * /proc/sys/vm/dirty_ratio
+
+どこで参照されてんの?
+
 ## rsync の io timeout
 
 ```
