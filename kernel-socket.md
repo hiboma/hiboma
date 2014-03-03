@@ -351,7 +351,7 @@ int inet_stream_connect(struct socket *sock, struct sockaddr *uaddr,
 			goto out;
 ```
 
-inet_wait_for_connect の中身
+inet_wait_for_connect の中身は 待ちキュー + タイムアウト
 
  * sk_sleep を wait_queue_t として prepare_to_wait + schedule_timeout で待つ
  * 定期的に起床して signal_pending でシグナルを受信していないか見る
@@ -381,7 +381,18 @@ static long inet_wait_for_connect(struct sock *sk, long timeo)
 }
 ```
 
-sk->sk_sleep で待っているプロセスを起床させるのは以下のコールバック群らしい
+割り込みコンテキスト(Top Half? Bottom Half?) から sk->sk_sleep で待っているプロセスを起床させるのは以下のコールバック群らしい
+
+```c
+struct sock {
+
+	void			(*sk_state_change)(struct sock *sk);
+	void			(*sk_data_ready)(struct sock *sk, int bytes);
+	void			(*sk_write_space)(struct sock *sk);
+	void			(*sk_error_report)(struct sock *sk);
+```
+
+実装のサンプルは以下の通り
 
 ```c
 /*
