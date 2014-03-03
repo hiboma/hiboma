@@ -6,8 +6,15 @@ socket を作るカーネル内API を辿る
    * type = SOCK_DGRAM || SOCK_STREAM
    * familiy が struct sock のコンストラクとなる
      * PF_INET inet_create
+       * sock->ops の初期化
+       * sock->sk = sk の初期化
      * PF_UNIX
-   * struct proto_ops
+   * ops struct proto_ops
+   * sk  struct sock
+     * sk_receive_queue, sk_write_queue, ...
+     * sk_data_ready 等のコールバック
+     * バッファ
+     * sk->sk_sock = socket
 
 ## sock_create
 
