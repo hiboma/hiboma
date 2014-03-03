@@ -2,6 +2,13 @@
 
 socket を作るカーネル内API を辿る
 
+ * struct socket
+   * type = SOCK_DGRAM || SOCK_STREAM
+   * familiy が struct sock のコンストラクとなる
+     * PF_INET inet_create
+     * PF_UNIX
+   * struct proto_ops
+
 ## sock_create
 
 struct socket を作る
