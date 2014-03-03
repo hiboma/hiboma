@@ -463,3 +463,32 @@ int tcp_rcv_established(struct sock *sk, struct sk_buff *skb,
 	}
     
 ```
+
+```c
+static const struct net_protocol udp_protocol = {
+	.handler =	udp_rcv,
+	.err_handler =	udp_err,
+	.no_policy =	1,
+	.netns_ok =	1,
+};
+
+// udp_rcv
+// __udp4_lib_rcv
+//   sk_add_backlog
+// udp_queue_rcv_skb
+// __udp_queue_rcv_skb
+// sock_queue_rcv_skb
+//    __skb_queue_tail
+// sk->sk_data_ready(sk, skb_len);
+
+static const struct net_protocol tcp_protocol = {
+	.handler =	tcp_v4_rcv,
+	.err_handler =	tcp_v4_err,
+	.no_policy =	1,
+	.netns_ok =	1,
+};
+
+// tcp_v4_rcv
+// tcp_v4_do_rcv
+// tcp_rcv_established
+```
