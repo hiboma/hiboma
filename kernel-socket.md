@@ -334,6 +334,17 @@ int inet_stream_connect(struct socket *sock, struct sockaddr *uaddr,
 
 //...
 
+	switch (sock->state) {
+	default:
+		err = -EINVAL;
+		goto out;
+	case SS_CONNECTED:
+		err = -EISCONN;
+		goto out;
+	case SS_CONNECTING:
+		err = -EALREADY;
+		/* Fall out of switch with err, set for this state */
+		break;
 	case SS_UNCONNECTED:
 		err = -EISCONN;
 		if (sk->sk_state != TCP_CLOSE)
@@ -343,12 +354,56 @@ int inet_stream_connect(struct socket *sock, struct sockaddr *uaddr,
 		if (err < 0)
 			goto out;
 
-// ...
+		sock->state = SS_CONNECTING;
+
+		/* Just entered SS_CONNECTING state; the only
+		 * difference is that return value in non-blocking
+		 * case is EINPROGRESS, rather than EALREADY.
+		 */
+		err = -EINPROGRESS;
+		break;
+	}
+
+    // connect の timeout を決める
+    // O_NONBLOCK だったら 0, ブロッキングだったら sk->sk_sndtimeo を使う
+	timeo = sock_sndtimeo(sk, flags & O_NONBLOCK);
 
 	if ((1 << sk->sk_state) & (TCPF_SYN_SENT | TCPF_SYN_RECV)) {
 		/* Error code is set above */
+        // SYN_ACK 待ち
 		if (!timeo || !inet_wait_for_connect(sk, timeo))
 			goto out;
+
+		err = sock_intr_errno(timeo);
+		if (signal_pending(current))
+			goto out;
+	}
+
+	/* Connection was closed by RST, timeout, ICMP error
+	 * or another process disconnected us.
+	 */
+	if (sk->sk_state == TCP_CLOSE)
+		goto sock_error;
+
+	/* sk->sk_err may be not zero now, if RECVERR was ordered by user
+	 * and error was received after socket entered established state.
+	 * Hence, it is handled normally after connect() return successfully.
+	 */
+
+	sock->state = SS_CONNECTED;
+	err = 0;
+out:
+	release_sock(sk);
+	return err;
+
+sock_error:
+	err = sock_error(sk) ? : -ECONNABORTED;
+	sock->state = SS_UNCONNECTED;
+	if (sk->sk_prot->disconnect(sk, flags))
+		sock->state = SS_DISCONNECTING;
+	goto out;
+}
+EXPORT_SYMBOL(inet_stream_connect);
 ```
 
 inet_wait_for_connect の中身は 待ちキュー + タイムアウト
