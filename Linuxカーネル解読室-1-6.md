@@ -1073,7 +1073,9 @@ switch_tasks:
 		++*switch_count;
 
 		prepare_task_switch(rq, next);
+        // @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
         // ここで コンテキストスイッチ してプロセス切り替え
+        // @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 		prev = context_switch(rq, prev, next);
 		barrier();
 		/*
@@ -1085,8 +1087,9 @@ switch_tasks:
 	} else
 		spin_unlock_irq(&rq->lock);
 
-    // ここはもう入れ替わってる?
+    // context sowitch 済みなので current が次のプロセスに入れ替わってる
 	prev = current;
+    
 	if (unlikely(reacquire_kernel_lock(prev) < 0))
 		goto need_resched_nonpreemptible;
     // プリエンプション禁止を解除するけど、 resched() しない?
@@ -1115,7 +1118,8 @@ EXPORT_SYMBOL(schedule);
 
 ***sched_find_first_bit(array->bitmap)*** のコードのこと
 
- * struct prio_array の bitmap を走査する ffs命令がプロセス数に寄らず計算量が一定
+ * struct prio_array の bitmap を走査する ffs 命令の計算量がプロセス数に関係ない
+ * ffs で求めたビットをインデックスとして優先度キューにアクセスして リスト走査もプロセス数に関係ない
    * 故に O(1) ?
 
 ```c
@@ -1144,7 +1148,9 @@ static inline int sched_find_first_bit(const unsigned long *b)
 	return __ffs(b[4]) + 128;
 }
 
+// ffs とは???
 // http://en.wikipedia.org/wiki/Find_first_set
+// アーキテクチャのビットサイズによって走査できるビット幅が決まるぽい
 
 /**
  * ffs - find first bit set
