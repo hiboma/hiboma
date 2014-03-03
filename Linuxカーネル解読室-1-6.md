@@ -1026,7 +1026,12 @@ go_idle:
 	next = list_entry(queue->next, task_t, run_list);
 
     // TASK_INTERRUPTIBLE からの起床の場合
-    // activated の数値の意味が分からんなー
+    // 優先度がちょい高い
+    //
+    // -1 は TASK_UNINTERRUPTIBLE からの起床の場合
+    // 1  は通常コンテキスト? から起床された場合
+    // 2  は割り込みコンテキストから起床された場合
+    //
 	if (!rt_task(next) && next->activated > 0) {
 		unsigned long long delta = now - next->timestamp;
 		if (unlikely((long long)(now - next->timestamp) < 0))
