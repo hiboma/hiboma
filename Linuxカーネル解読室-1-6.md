@@ -1002,6 +1002,15 @@ go_idle:
 		rq->best_expired_prio = MAX_PRIO;
 	}
 
+    //  active
+    //  array
+    //  +---+
+    //  |---|
+    //  |---| => task_t <=> task_t ... <= idx
+    //  |---|
+    //  |---| => task_t <=> task_t ...
+    //  +---+
+    //
     // 140bitのビットマップ(優先度別キュー)で最初にたってるビットを探す
 	idx = sched_find_first_bit(array->bitmap);
     // ビットマップからインデックスを求めてキュー(list_head)を取る
@@ -1024,6 +1033,7 @@ go_idle:
 		new_prio = recalc_task_prio(next, next->timestamp + delta);
 
 		if (unlikely(next->prio != new_prio)) {
+            // 優先度が変わった場合にはキューイングをやり直す
 			dequeue_task(next, array);
 			next->prio = new_prio;
 			enqueue_task(next, array);
