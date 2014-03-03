@@ -285,7 +285,33 @@ struct proto_ops {
 };
 ```
 
-## connect と 起床関数
+## connect(2) と 起床関数
+
+```
+$ strace telnet 192.0.0.1 8080
+$ strace curl   192.0.0.1 8080
+```
+
+telnet は inet_stream_connect で待ちに入る
+
+```
+[vagrant@vagrant-centos65 ~]$ cat /proc/4920/stack 
+[<ffffffff814c6acc>] inet_stream_connect+0x18c/0x2c0
+[<ffffffff81448867>] sys_connect+0xd7/0xf0
+[<ffffffff8100b072>] system_call_fastpath+0x16/0x1b
+[<ffffffffffffffff>] 0xffffffffffffffff
+```
+
+curl は poll_schedule_timeout で待ちに入っていた
+
+```
+[vagrant@vagrant-centos65 ~]$ cat /proc/4874/stack 
+[<ffffffff8119fce9>] poll_schedule_timeout+0x39/0x60
+[<ffffffff811a0487>] do_sys_poll+0x457/0x520
+[<ffffffff811a0741>] sys_poll+0x71/0x100
+[<ffffffff8100b072>] system_call_fastpath+0x16/0x1b
+[<ffffffffffffffff>] 0xffffffffffffffff
+```
 
 AF_INET の connect(2) は inet_stream_connect である
 
@@ -326,8 +352,8 @@ int inet_stream_connect(struct socket *sock, struct sockaddr *uaddr,
 
 inet_wait_for_connect
 
- * prepare_to_wait + schedule_timeout で待つ
- * signal_pending でシグナルを受信していないか見る
+ * sk_sleep を wait_queue_t として prepare_to_wait + schedule_timeout で待つ
+ * 定期的に起床して signal_pending でシグナルを受信していないか見る
             
 ```c
 static long inet_wait_for_connect(struct sock *sk, long timeo)
@@ -409,13 +435,3 @@ static void sock_def_write_space(struct sock *sk)
 }
 ```
 
-curl は poll_schedule_timeout で待ちに入っていた
-
-```
-[vagrant@vagrant-centos65 ~]$ cat /proc/4874/stack 
-[<ffffffff8119fce9>] poll_schedule_timeout+0x39/0x60
-[<ffffffff811a0487>] do_sys_poll+0x457/0x520
-[<ffffffff811a0741>] sys_poll+0x71/0x100
-[<ffffffff8100b072>] system_call_fastpath+0x16/0x1b
-[<ffffffffffffffff>] 0xffffffffffffffff
-```
