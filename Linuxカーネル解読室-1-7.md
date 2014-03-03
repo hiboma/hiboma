@@ -212,6 +212,9 @@ out_set_cpu:
 
 out_activate:
 #endif /* CONFIG_SMP */
+
+    // TASK_UNINTERRUPTIBLE なプロセスを起床させた場合
+    // activated が -1 になる
 	if (old_state == TASK_UNINTERRUPTIBLE) {
 		rq->nr_uninterruptible--;
 		/*
@@ -228,8 +231,16 @@ out_activate:
 	 * boost and no penalty.)
 	 */
 	if (old_state & TASK_NONINTERACTIVE)
+        // enqueue_task する
 		__activate_task(p, rq);
 	else
+       // 対話型プロセスの場合
+       //
+       //   recalc_task_prio で優先度の再計算をする  
+       //   割り込みコンテキストの場合は p->activated = 2 にする
+       //   TASK_INTERRUPTIBLE の場合は  p->activated = 1 にする
+       //
+       // p->timestamp が更新される
 		activate_task(p, rq, cpu == this_cpu);
 	/*
 	 * Sync wakeups (i.e. those types of wakeups where the waker
