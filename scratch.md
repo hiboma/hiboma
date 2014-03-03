@@ -1,3 +1,89 @@
+## rsync の io timeout 
+
+
+```
+io timeout after 3604 seconds -- exiting
+rsync error: timeout in data send/receive (code 30) at io.c(200) [receiver=3.0.6]
+rsync: connection unexpectedly closed (697 bytes received so far) [generator]
+rsync error: error in rsync protocol data stream (code 12) at io.c(600) [generator=3.0.6]
+```
+
+check_timeout で io_timeout が使われる
+
+ * 最後の read
+ * 最後の write
+
+ でそれぞれの時刻と time(NULL) が比較される
+
+```c
+// last_io_in  最後に write した time(NULL)
+// last_io_out 最後に read  した time(NULL
+
+static void check_timeout(void)
+{
+        time_t t, chk; 
+
+        if (!io_timeout || ignore_timeout)
+                return;
+
+        t = time(NULL);
+
+        if (!last_io_in)
+                last_io_in = t; 
+
+        chk = MAX(last_io_out, last_io_in);
+        if (t - chk >= io_timeout) {
+                if (am_server || am_daemon)
+                        exit_cleanup(RERR_TIMEOUT);
+                rprintf(FERROR, "[%s] io timeout after %d seconds -- exiting\n",
+                        who_am_i(), (int)(t-chk));
+                exit_cleanup(RERR_TIMEOUT);
+        }    
+}
+```
+
+io_timeout は --timeout で指定した値である
+
+```c
+  {"timeout",          0,  POPT_ARG_INT,    &io_timeout, 0, 0, 0 }, 
+
+void set_io_timeout(int secs)
+{
+        io_timeout = secs;
+        allowed_lull = (io_timeout + 1) / 2;
+
+        if (!io_timeout || allowed_lull > SELECT_TIMEOUT)
+                select_timeout = SELECT_TIMEOUT;
+        else
+                select_timeout = allowed_lull;
+
+        if (read_batch)
+                allowed_lull = 0;
+}
+```
+
+keepalive なんてのもあるらしい
+
+```c
+void maybe_send_keepalive(void)
+{
+        if (time(NULL) - last_io_out >= allowed_lull) {
+                if (!iobuf_out || !iobuf_out_cnt) {
+                        if (protocol_version < 29)
+                                send_msg(MSG_DATA, "", 0, 0);
+                        else if (protocol_version >= 30)
+                                send_msg(MSG_NOOP, "", 0, 0);
+                        else {
+                                write_int(sock_f_out, cur_flist->used);
+                                write_shortint(sock_f_out, ITEM_IS_NEW);
+                        }    
+                }    
+                if (iobuf_out)
+                        io_flush(NORMAL_FLUSH);
+        }    
+}
+```
+
 ## nagios/plugins/check_disk.c
 
 inode の空き容量表示が分かりにくい奴
@@ -7,6 +93,10 @@ $ yumdownloader --source nagios-plugins
 $ rpm -ivh nagios-plugins-1.4.16-10.el6.src.rpm
 $ cd ~/rpmbuild/SOURCES
 $ tar xvfz nagios-plugins-1.4.16.tar.gz
+```
+
+```c
+  preamble = strdup (" - free space:");
 ```
 
 ```c
