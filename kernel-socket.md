@@ -5,16 +5,17 @@
 
 BSDソケット (struct socket) を作るカーネル内API を辿る
 
- * struct socket
+ * __struct socket__
    * type = SOCK_DGRAM || SOCK_STREAM
    * familiy が struct sock のコンストラクとなる
      * PF_INET inet_create
        * sock->ops     の初期化
        * sock->sk = sk の初期化
-       * struct inet_sock の初期化
-   * ops struct proto_ops
-   * sk  struct sock
+       * __struct inet_sock__ の初期化
+   * ops __struct proto_ops__
+   * sk  __struct sock__
      * sk_receive_queue, sk_write_queue, ...
+       * __struct sk_buff__ のキュー(実装はリスト)
      * sk_data_ready 等のコールバック
      * ソケットのバッファ
      * sk->sk_sock = socket 互いに参照
