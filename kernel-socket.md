@@ -30,6 +30,11 @@ static struct net_proto_family inet_family_ops = {
 };
 ```
 
+ * INET なソケットを返す
+```
+static int inet_create(struct net *net, struct socket *sock, int protocol,
+		       int kern)
+```               
 
 
 
