@@ -208,7 +208,7 @@ unsigned long zap_page_range(struct vm_area_struct *vma, unsigned long address,
 
 ## pthread と madvise
 
- * pthread_exit する際に madvise( ..., MADV_DONTNEED )を呼び出してスタックのページフレームを破棄する
+ * pthread_exit する際に madvise( ..., MADV_DONTNEED )を呼び出してスタックのページフレームを reclaim する
 
 ```c
 // glibc/nptl/pthread_create.c
