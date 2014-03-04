@@ -11,6 +11,14 @@ int madvise(void *addr, size_t length, int advice);
 
 ## mmap した 無名メモリリージョンのページフレームを解放する
 
+コードの概要
+
+ * mmap で無名メモリリージョンを割り当て
+ * memset で 0 初期化 (マイナーページフォルトを起こす)
+ * pmap を取る
+ * madvise( ..., MADV_DONTNEED) する
+ * 再度 pmap を取る
+
 ```c
 #if 0
 #!/bin/bash
@@ -56,7 +64,7 @@ int main(){
 }
 ```
 
-実行結果
+#### 実行結果
 
 ```
 [vagrant@vagrant-centos65 vagrant]$ bash mmap.c 
@@ -104,4 +112,96 @@ ffffffffff600000       4       0       0 r-x--    [ anon ]
 total kB            8016     452      76
 ```
 
- * munmap と違って、ページフレーム (private dirty) が 0 になった
+ * ページフレーム (private dirty) のサイズが 0 になった
+ * 仮想アドレスは残る ( vm_area_struct ?)
+
+いわゆる「メモリ解放」として機能している
+
+## MADV_DONTNEED のカーネルコード 2.6.32
+
+```c 
+static long
+madvise_vma(struct vm_area_struct *vma, struct vm_area_struct **prev,
+		unsigned long start, unsigned long end, int behavior)
+{
+	switch (behavior) {
+	case MADV_REMOVE:
+		return madvise_remove(vma, prev, start, end);
+	case MADV_WILLNEED:
+		return madvise_willneed(vma, prev, start, end);
+	case MADV_DONTNEED:
+		return madvise_dontneed(vma, prev, start, end);
+	default:
+		return madvise_behavior(vma, prev, start, end, behavior);
+	}
+}
+```
+
+madvise_dontneed の中身
+
+```c
+/*
+ * Application no longer needs these pages.  If the pages are dirty,
+ * it's OK to just throw them away.  The app will be more careful about
+ * data it wants to keep.  Be sure to free swap resources too.  The
+ * zap_page_range call sets things up for shrink_active_list to actually free
+ * these pages later if no one else has touched them in the meantime,
+ * although we could add these pages to a global reuse list for
+ * shrink_active_list to pick up before reclaiming other pages.
+ *
+ * NB: This interface discards data rather than pushes it out to swap,
+ * as some implementations do.  This has performance implications for
+ * applications like large transactional databases which want to discard
+ * pages in anonymous maps after committing to backing store the data
+ * that was kept in them.  There is no reason to write this data out to
+ * the swap area if the application is discarding it.
+ *
+ * An interface that causes the system to free clean pages and flush
+ * dirty pages is already available as msync(MS_INVALIDATE).
+ */
+static long madvise_dontneed(struct vm_area_struct * vma,
+			     struct vm_area_struct ** prev,
+			     unsigned long start, unsigned long end)
+{
+	*prev = vma;
+	if (vma->vm_flags & (VM_LOCKED|VM_HUGETLB|VM_PFNMAP))
+		return -EINVAL;
+
+	if (unlikely(vma->vm_flags & VM_NONLINEAR)) {
+		struct zap_details details = {
+			.nonlinear_vma = vma,
+			.last_index = ULONG_MAX,
+		};
+		zap_page_range(vma, start, end - start, &details);
+	} else
+		zap_page_range(vma, start, end - start, NULL);
+	return 0;
+}
+```
+
+zap_page_range は munmap の過程でも呼ばれている
+
+```c
+/**
+ * zap_page_range - remove user pages in a given range
+ * @vma: vm_area_struct holding the applicable pages
+ * @address: starting address of pages to zap
+ * @size: number of bytes to zap
+ * @details: details of nonlinear truncation or shared cache invalidation
+ */
+unsigned long zap_page_range(struct vm_area_struct *vma, unsigned long address,
+		unsigned long size, struct zap_details *details)
+{
+	struct mm_struct *mm = vma->vm_mm;
+	struct mmu_gather *tlb;
+	unsigned long end = address + size;
+	unsigned long nr_accounted = 0;
+
+	lru_add_drain();
+	update_hiwater_rss(mm);
+	end = unmap_vmas(&tlb, vma, address, end, &nr_accounted, details, 0);
+	if (tlb)
+		tlb_finish_mmu(tlb, address, end);
+	return end;
+}
+``` 
