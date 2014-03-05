@@ -80,7 +80,7 @@ unsigned long vma_mmu_pagesize(struct vm_area_struct *vma)
 		   mss.swap >> 10,
 		   vma_kernel_pagesize(vma) >> 10,
 		   vma_mmu_pagesize(vma) >> 10);
-``
+```
 
  * pte_present
    * pte_flags(a) & (_PAGE_PRESENT | _PAGE_PROTNONE);
@@ -90,11 +90,39 @@ unsigned long vma_mmu_pagesize(struct vm_area_struct *vma)
    * !pte.pte;
  * is_swap_pte = !pte_none(pte) && !pte_present(pte) && !pte_file(pte);
  * pte_dirty
+   * pte_flags(pte) & (_PAGE_DIRTY | _PAGE_SOFTDIRTY); 
  * pte_young
    * pte_flags(pte) & _PAGE_ACCESSED;
  * PageAnon
+   * ((unsigned long)page->mapping & PAGE_MAPPING_ANON) != 0;
  * PageDirty
+   * ?
  * PageReferenced
+   * ?
+
+``` c
+#define _PAGE_BIT_PRESENT	0	/* is present */
+#define _PAGE_BIT_RW		1	/* writeable */
+#define _PAGE_BIT_USER		2	/* userspace addressable */
+#define _PAGE_BIT_PWT		3	/* page write through */
+#define _PAGE_BIT_PCD		4	/* page cache disabled */
+#define _PAGE_BIT_ACCESSED	5	/* was accessed (raised by CPU) */
+#define _PAGE_BIT_DIRTY		6	/* was written to (raised by CPU) */
+#define _PAGE_BIT_PSE		7	/* 4 MB (or 2MB) page */
+#define _PAGE_BIT_PAT		7	/* on 4KB pages */
+#define _PAGE_BIT_GLOBAL	8	/* Global TLB entry PPro+ */
+#define _PAGE_BIT_UNUSED1	9	/* available for programmer */
+#define _PAGE_BIT_IOMAP		10	/* flag used to indicate IO mapping */
+#define _PAGE_BIT_HIDDEN	11	/* hidden by kmemcheck */
+#define _PAGE_BIT_PAT_LARGE	12	/* On 2MB or 1GB pages */
+#define _PAGE_BIT_SPECIAL	_PAGE_BIT_UNUSED1
+#define _PAGE_BIT_CPA_TEST	_PAGE_BIT_UNUSED1
+#define _PAGE_BIT_SOFTDIRTY	_PAGE_BIT_HIDDEN
+#define _PAGE_BIT_SPLITTING	_PAGE_BIT_UNUSED1 /* only valid on a PSE pmd */
+#define _PAGE_BIT_NX           63       /* No execute: only valid after cpuid check */
+```
+
+pte_t からページの利用種別に統計を取る
 
 ```c
 static void smaps_pte_entry(pte_t ptent, unsigned long addr,
@@ -105,11 +133,13 @@ static void smaps_pte_entry(pte_t ptent, unsigned long addr,
 	struct page *page;
 	int mapcount;
 
+    // ページテーブルの内容は swap されている
 	if (is_swap_pte(ptent)) {
 		mss->swap += ptent_size;
 		return;
 	}
 
+    // ページテーブルエントリが無いので加算されない
 	if (!pte_present(ptent))
 		return;
 
@@ -124,7 +154,10 @@ static void smaps_pte_entry(pte_t ptent, unsigned long addr,
 	/* Accumulate the size in pages that have been accessed. */
 	if (pte_young(ptent) || PageReferenced(page))
 		mss->referenced += ptent_size;
+
+    // atomic_read(&(page)->_mapcount) + 1;        
 	mapcount = page_mapcount(page);
+
 	if (mapcount >= 2) {
         // mapcount が 2 == 複数プロセスで shared なページ
 		if (pte_dirty(ptent) || PageDirty(page))
