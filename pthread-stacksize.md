@@ -100,7 +100,7 @@ Address           Kbytes     RSS   Dirty Mode   Mapping
 00007f73e8000000     132       4       4 rw---    [ anon ]
 00007f73e8021000   65404       0       0 -----    [ anon ]
 00007f73ecdb4000       4       0       0 -----    [ anon ]
-00007f73ecdb5000   10240       8       8 rw---    [ anon ]
+00007f73ecdb5000   10240       8       8 rw---    [ anon ]         # スレッドのスタック
 00007f73ed7b5000    1580     320       0 r-x--  libc-2.12.so
 00007f73ed940000    2044       0       0 -----  libc-2.12.so
 00007f73edb3f000      16      16      16 r----  libc-2.12.so
@@ -131,7 +131,7 @@ Address           Kbytes     RSS   Dirty Mode   Mapping
 00007f73e8000000     132       4       4 rw---    [ anon ]
 00007f73e8021000   65404       0       0 -----    [ anon ]
 00007f73ecdb4000       4       0       0 -----    [ anon ]
-00007f73ecdb5000   10240   10240   10240 rw---    [ anon ]
+00007f73ecdb5000   10240   10240   10240 rw---    [ anon ]         # RSS が 10240KB に増えた
 00007f73ed7b5000    1580     324       0 r-x--  libc-2.12.so
 00007f73ed940000    2044       0       0 -----  libc-2.12.so
 00007f73edb3f000      16      16      16 r----  libc-2.12.so
@@ -162,7 +162,7 @@ Address           Kbytes     RSS   Dirty Mode   Mapping
 00007f73e8000000     132       4       4 rw---    [ anon ]
 00007f73e8021000   65404       0       0 -----    [ anon ]
 00007f73ecdb4000       4       0       0 -----    [ anon ]
-00007f73ecdb5000   10240   10240   10240 rw---    [ anon ]
+00007f73ecdb5000   10240   10240   10240 rw---    [ anon ]         # run_out_stack_space を抜けても RSS の数値は変わらない
 00007f73ed7b5000    1580     324       0 r-x--  libc-2.12.so
 00007f73ed940000    2044       0       0 -----  libc-2.12.so
 00007f73edb3f000      16      16      16 r----  libc-2.12.so
@@ -193,7 +193,7 @@ Address           Kbytes     RSS   Dirty Mode   Mapping
 00007f73e8000000     132       4       4 rw---    [ anon ]
 00007f73e8021000   65404       0       0 -----    [ anon ]
 00007f73ecdb4000       4       0       0 -----    [ anon ]
-00007f73ecdb5000   10240      24      24 rw---    [ anon ]
+00007f73ecdb5000   10240      24      24 rw---    [ anon ]        # pthread_exit すると RSS の数値が下がる
 00007f73ed7b5000    1580     328       0 r-x--  libc-2.12.so
 00007f73ed940000    2044       0       0 -----  libc-2.12.so
 00007f73edb3f000      16      16      16 r----  libc-2.12.so
