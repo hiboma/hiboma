@@ -1,11 +1,12 @@
 ## pthread のスタックサイズについて
 
+スタックが伸縮する際にページフレームは破棄 (relcaim) されるのか?
+
  * pthread のスタックは mmap で作られる
    * http://d.hatena.ne.jp/hiboma/20130310/1362926275
- * スタックが伸縮する際にページフレームは relcaim されるのか? が疑問
-   * => 結論されない
-   * pthread_exit する際に madvise( ..., MADV_DONTNEED) でページフレームを reclaim する
-   * munmap するかと思いきやそうではなかった
+ * pthread_exit する際に madvise( ..., MADV_DONTNEED) でページフレームを reclaim する
+
+pthread_exit するまで スタックに割り当てられたページフレームは relcaim されない
 
 ## 検証コード
 
@@ -14,6 +15,8 @@
  * スタックを使いきってすぐに、pmap を見る
  * スタックを使い切った関数を抜けて pmap を見る
  * スレッドが pthread_exit さい後に pmap を見る
+
+pmap の RSS の数値の増減を見て、ページフレームの割り当てを確認できる
 
 ```c
 #if 0
