@@ -213,6 +213,8 @@ unsigned long zap_page_range(struct vm_area_struct *vma, unsigned long address,
     -> Page Table Entry
 ```
 
+ディレクトリからページテーブルエントリまでを辿る
+
  * unmap_page_range
  * zap_pud_range
    * pud_none
@@ -220,8 +222,12 @@ unsigned long zap_page_range(struct vm_area_struct *vma, unsigned long address,
    * pmd_none
    * Huge Page が出て来る
  * zap_pte_range
-   * pte_none 
+   * pte_none
+   * pte_dirty
+   * pte_file
    * pte_t *pte
+   * pte_present
+     * ページブレームの有無?
 
 ## pthread と madvise
 
