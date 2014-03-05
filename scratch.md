@@ -1,3 +1,10 @@
+
+## スタックポインタと __builtin_frame_address
+
+```
+ 35 #define CURRENT_STACK_FRAME     __builtin_frame_address (0)
+```
+
 ## TODO
 
  * /proc/sys/vm/dirty_background_ratio
