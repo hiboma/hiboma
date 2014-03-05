@@ -52,11 +52,25 @@ unsigned long vma_mmu_pagesize(struct vm_area_struct *vma)
 
 ## fs/proc/task_mmu.c
 
+### Proportional Set Size(PSS)
+
+PSS x share しているプロセス数 = プロセス群のRSS
+
+```
+/*
+ * Proportional Set Size(PSS): my share of RSS.
+ *
+ * PSS of a process is the count of pages it has in memory, where each
+ * page is divided by the number of processes sharing it.  So if a
+ * process has 1000 pages all to itself, and 1000 shared with one other
+ * process, its PSS will be 1500.
+```
+
 ```c
 	seq_printf(m,
 		   "Size:           %8lu kB\n"
-		   "Rss:            %8lu kB\n"
-		   "Pss:            %8lu kB\n"
+		   "Rss:            %8lu kB\n" 
+		   "Pss:            %8lu kB\n"   // Proportional Set Size
 		   "Shared_Clean:   %8lu kB\n"
 		   "Shared_Dirty:   %8lu kB\n"
 		   "Private_Clean:  %8lu kB\n"
@@ -124,6 +138,8 @@ unsigned long vma_mmu_pagesize(struct vm_area_struct *vma)
 
 pte_t からページの利用種別に統計を取る
 
+ * ptent_size が複数の項目で加算されてるのに注意だぞう
+
 ```c
 static void smaps_pte_entry(pte_t ptent, unsigned long addr,
 		unsigned long ptent_size, struct mm_walk *walk)
@@ -147,8 +163,10 @@ static void smaps_pte_entry(pte_t ptent, unsigned long addr,
 	if (!page)
 		return;
 
+    // 無名ページ        
 	if (PageAnon(page))
 		mss->anonymous += ptent_size;
+
 	mss->resident += ptent_size;
 
 	/* Accumulate the size in pages that have been accessed. */
