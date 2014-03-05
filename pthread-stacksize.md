@@ -8,6 +8,8 @@
    * CentOS6.5 で確認
    * CentOS4(!) では madvise していなかった。 pthread_exit してもページフレームは reclaim されない
 
+[madvise-MADV_DONTNEED.md](https://github.com/hiboma/hiboma/blob/master/madvise-MADV_DONTNEED.md) も読もう
+
 ## 検証コード
 
  * スレッドを一本はやして、SIGSEGV を起こすギリギリまでスタック領域を使う
@@ -216,3 +218,4 @@ ffffffffff600000       4       0       0 r-x--    [ anon ]
 ----------------  ------  ------  ------
 total kB           81996     624     124
 ```
+
