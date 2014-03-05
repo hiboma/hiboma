@@ -254,6 +254,144 @@ unsigned long zap_page_range(struct vm_area_struct *vma, unsigned long address,
     madvise (pd->stackblock, freesize - PTHREAD_STACK_MIN, MADV_DONTNEED);
 ```
 
+libc のパッチ (git clone git://sourceware.org/git/glibc.git git show b42a214c)
+
+```diff
+commit b42a214c1807dc596cf3647fc35a0eb42ccc7e68
+Author: Ulrich Drepper <drepper@redhat.com>
+Date:   Mon Aug 24 16:23:47 2009 -0700
+
+    Hint to kernel that thread stack memory can be removed.
+
+diff --git a/nptl/ChangeLog b/nptl/ChangeLog
+index 098ef3b..3887969 100644
+--- a/nptl/ChangeLog
++++ b/nptl/ChangeLog
+@@ -1,3 +1,9 @@
++2009-08-24  Ulrich Drepper  <drepper@redhat.com>
++
++	* pthread_create.c (start_thread): Hint to the kernel that memory for
++	the stack can be reused.  We do not mark all the memory.  The part
++	still in use and some reserve are kept.
++
+ 2009-08-23  Ulrich Drepper  <drepper@redhat.com>
+ 
+ 	* sysdeps/unix/sysv/linux/bits/posix_opt.h: Clean up namespace.
+@@ -1847,9 +1853,9 @@
+ 	* sysdeps/unix/sysv/linux/sh/bits/pthreadtypes.h: Include endian.h.
+ 	Split __flags into __flags, __shared, __pad1 and __pad2.
+ 	* sysdeps/unix/sysv/linux/sh/libc-lowlevellock.S: Use private
+-        futexes if they are available.
++	futexes if they are available.
+ 	* sysdeps/unix/sysv/linux/sh/lowlevellock.S: Adjust so that change
+-        in libc-lowlevellock.S allow using private futexes.
++	in libc-lowlevellock.S allow using private futexes.
+ 	* sysdeps/unix/sysv/linux/sh/lowlevellock.h: Define
+ 	FUTEX_PRIVATE_FLAG.  Add additional parameter to lll_futex_wait,
+ 	lll_futex_timed_wait and lll_futex_wake.  Change lll_futex_wait
+@@ -1857,12 +1863,12 @@
+ 	lll_private_futex_timed_wait and lll_private_futex_wake.
+ 	(lll_robust_mutex_unlock): Fix typo.
+ 	* sysdeps/unix/sysv/linux/sh/pthread_barrier_wait.S: Use private
+-        field in futex command setup.
++	field in futex command setup.
+ 	* sysdeps/unix/sysv/linux/sh/pthread_cond_timedwait.S: Use
+ 	COND_NWAITERS_SHIFT instead of COND_CLOCK_BITS.
+ 	* sysdeps/unix/sysv/linux/sh/pthread_cond_wait.S: Likewise.
+ 	* sysdeps/unix/sysv/linux/sh/pthread_once.S: Use private futexes
+-        if they are available.  Remove clear_once_control.
++	if they are available.  Remove clear_once_control.
+ 	* sysdeps/unix/sysv/linux/sh/pthread_rwlock_rdlock.S: Use private
+ 	futexes if they are available.
+ 	* sysdeps/unix/sysv/linux/sh/pthread_rwlock_timedrdlock.S: Likewise.
+@@ -1873,7 +1879,7 @@
+ 	Wake only when there are waiters.
+ 	* sysdeps/unix/sysv/linux/sh/sem_wait.S: Add private futex
+ 	support.  Indicate that there are waiters.  Remove unnecessary
+-        extra cancellation test.
++	extra cancellation test.
+ 	* sysdeps/unix/sysv/linux/sh/sem_timedwait.S: Likewise.  Removed
+ 	left-over duplication of __sem_wait_cleanup.
+ 
+@@ -2587,14 +2593,14 @@
+ 	* tst-cancel25.c: New file.
+ 
+ 2006-09-05  Jakub Jelinek  <jakub@redhat.com>
+-            Ulrich Drepper  <drepper@redhat.com>
++	    Ulrich Drepper  <drepper@redhat.com>
+ 
+ 	* sysdeps/pthread/gai_misc.h (GAI_MISC_NOTIFY): Don't decrement
+ 	counterp if it is already zero.
+ 	* sysdeps/pthread/aio_misc.h (AIO_MISC_NOTIFY): Likewise..
+ 
+ 2006-03-04  Jakub Jelinek  <jakub@redhat.com>
+-            Roland McGrath  <roland@redhat.com>
++	    Roland McGrath  <roland@redhat.com>
+ 
+ 	* sysdeps/unix/sysv/linux/i386/lowlevellock.h
+ 	(LLL_STUB_UNWIND_INFO_START, LLL_STUB_UNWIND_INFO_END,
+@@ -2608,7 +2614,7 @@
+ 	* sysdeps/unix/sysv/linux/i386/i486/lowlevelrobustlock.S: Likewise.
+ 
+ 2006-03-03  Jakub Jelinek  <jakub@redhat.com>
+-            Roland McGrath  <roland@redhat.com>
++	    Roland McGrath  <roland@redhat.com>
+ 
+ 	* sysdeps/unix/sysv/linux/x86_64/lowlevellock.h
+ 	(LLL_STUB_UNWIND_INFO_START, LLL_STUB_UNWIND_INFO_END,
+@@ -3181,7 +3187,7 @@
+ 	* sysdeps/pthread/pthread.h: Adjust mutex initializers.
+ 
+ 	* sysdeps/unix/sysv/linux/i386/not-cancel.h: Define openat_not_cancel,
+-        openat_not_cancel_3, openat64_not_cancel, and openat64_not_cancel_3.
++	openat_not_cancel_3, openat64_not_cancel, and openat64_not_cancel_3.
+ 
+ 2006-02-08  Jakub Jelinek  <jakub@redhat.com>
+ 
+@@ -3603,7 +3609,7 @@
+ 	* Makefile ($(test-modules)): Remove static pattern rule.
+ 
+ 2005-10-14  Jakub Jelinek  <jakub@redhat.com>
+-            Ulrich Drepper  <drepper@redhat.com>
++	    Ulrich Drepper  <drepper@redhat.com>
+ 
+ 	* sysdeps/unix/sysv/linux/x86_64/pthread_once.S: Fix stack
+ 	alignment in callback function.
+@@ -3621,7 +3627,7 @@
+ 	atomic_compare_and_exchange_bool_acq.
+ 
+ 2005-10-01  Ulrich Drepper  <drepper@redhat.com>
+-            Jakub Jelinek  <jakub@redhat.com>
++	    Jakub Jelinek  <jakub@redhat.com>
+ 
+ 	* descr.h: Define SETXID_BIT and SETXID_BITMASK.  Adjust
+ 	CANCEL_RESTMASK.
+diff --git a/nptl/pthread_create.c b/nptl/pthread_create.c
+index c693979..89938b3 100644
+--- a/nptl/pthread_create.c
++++ b/nptl/pthread_create.c
+@@ -377,6 +377,19 @@ start_thread (void *arg)
+     }
+ #endif
+ 
++  /* Mark the memory of the stack as usable to the kernel.  We free
++     everything except for the space used for the TCB itself.  */
++  size_t pagesize_m1 = __getpagesize () - 1;
++#ifdef _STACK_GROWS_DOWN
++  char *sp = CURRENT_STACK_FRAME;
++  size_t freesize = (sp - (char *) pd->stackblock) & ~pagesize_m1;
++#else
++# error "to do"
++#endif
++  assert (freesize < pd->stackblock_size);
++  if (freesize > PTHREAD_STACK_MIN)
++    madvise (pd->stackblock, freesize - PTHREAD_STACK_MIN, MADV_DONTNEED);
++
+   /* If the thread is detached free the TCB.  */
+   if (IS_DETACHED (pd))
+     /* Free the TCB.  */
+```
+
 [pthread-stacksize.md](https://github.com/hiboma/hiboma/blob/master/pthread-stacksize.md) を読もう
 
 ### CentOS5.10 glibc-2.5 から
