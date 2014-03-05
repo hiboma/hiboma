@@ -1,5 +1,7 @@
 ## KernelPageSize, KernelPageSize
 
+___/proc/<pid>/smaps___ 
+
  * vm_area_struct に割り当てた ページサイズなのかな?
  * だいたいは PTE = ページテーブルエントリのサイズと一緒とのこと
 
