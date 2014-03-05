@@ -1,5 +1,8 @@
 ## KernelPageSize, KernelPageSize
 
+ * vm_area_struct に割り当てた ページサイズなのかな?
+ * だいたいは PTE = ページテーブルエントリのサイズと一緒とのこと
+
 ```
 		   "KernelPageSize: %8lu kB\n"
 		   "MMUPageSize:    %8lu kB\n",
@@ -27,6 +30,8 @@ unsigned long vma_kernel_pagesize(struct vm_area_struct *vma)
 }
 EXPORT_SYMBOL_GPL(vma_kernel_pagesize);
 ```
+
+vm_area_struct + MMU 
 
 ```c
 /*
