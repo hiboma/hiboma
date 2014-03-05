@@ -232,8 +232,8 @@ unsigned long zap_page_range(struct vm_area_struct *vma, unsigned long address,
 ## pthread と madvise
 
  * pthread_exit する際に madvise( ..., MADV_DONTNEED )を呼び出してスタックのページフレームを reclaim する
-   * CentOS6.*系 glibc-2.12
-   * 
+   * CentOS6.4 glibc-2.12
+   * CentOS4.8 glibc-2.3.4 だと実装されていない
 
 ```c
 // glibc/nptl/pthread_create.c
