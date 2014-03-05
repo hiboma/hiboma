@@ -1,3 +1,84 @@
+
+```
+	seq_printf(m,
+		   "Size:           %8lu kB\n"
+		   "Rss:            %8lu kB\n"
+		   "Pss:            %8lu kB\n"
+		   "Shared_Clean:   %8lu kB\n"
+		   "Shared_Dirty:   %8lu kB\n"
+		   "Private_Clean:  %8lu kB\n"
+		   "Private_Dirty:  %8lu kB\n"
+		   "Referenced:     %8lu kB\n"
+		   "Anonymous:      %8lu kB\n"
+		   "AnonHugePages:  %8lu kB\n"
+		   "Swap:           %8lu kB\n"
+		   "KernelPageSize: %8lu kB\n"
+		   "MMUPageSize:    %8lu kB\n",
+		   (vma->vm_end - vma->vm_start) >> 10,
+		   mss.resident >> 10,
+		   (unsigned long)(mss.pss >> (10 + PSS_SHIFT)),
+		   mss.shared_clean  >> 10,
+		   mss.shared_dirty  >> 10,
+		   mss.private_clean >> 10,
+		   mss.private_dirty >> 10,
+		   mss.referenced >> 10,
+		   mss.anonymous >> 10,
+		   mss.anonymous_thp >> 10,
+		   mss.swap >> 10,
+		   vma_kernel_pagesize(vma) >> 10,
+		   vma_mmu_pagesize(vma) >> 10);
+``
+
+```c
+static void smaps_pte_entry(pte_t ptent, unsigned long addr,
+		unsigned long ptent_size, struct mm_walk *walk)
+{
+	struct mem_size_stats *mss = walk->private;
+	struct vm_area_struct *vma = mss->vma;
+	struct page *page;
+	int mapcount;
+
+	if (is_swap_pte(ptent)) {
+		mss->swap += ptent_size;
+		return;
+	}
+
+	if (!pte_present(ptent))
+		return;
+
+	page = vm_normal_page(vma, addr, ptent);
+	if (!page)
+		return;
+
+	if (PageAnon(page))
+		mss->anonymous += ptent_size;
+	mss->resident += ptent_size;
+
+	/* Accumulate the size in pages that have been accessed. */
+	if (pte_young(ptent) || PageReferenced(page))
+		mss->referenced += ptent_size;
+	mapcount = page_mapcount(page);
+	if (mapcount >= 2) {
+        // mapcount が 2 == 複数プロセスで shared なページ
+		if (pte_dirty(ptent) || PageDirty(page))
+			mss->shared_dirty += ptent_size;
+		else
+			mss->shared_clean += ptent_size;
+
+        // 1プロセス分に換算して足し算
+		mss->pss += (ptent_size << PSS_SHIFT) / mapcount;
+	} else {
+        // mapcount が 1 
+		if (pte_dirty(ptent) || PageDirty(page))
+			mss->private_dirty += ptent_size;
+		else
+			mss->private_clean += ptent_size;
+		mss->pss += (ptent_size << PSS_SHIFT);
+	}
+}
+```
+
+
 ## KernelPageSize, KernelPageSize
 
 ___/proc/<pid>/smaps___ 
@@ -49,3 +130,4 @@ unsigned long vma_mmu_pagesize(struct vm_area_struct *vma)
 }
 #endif
 ```
+
