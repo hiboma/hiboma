@@ -206,6 +206,23 @@ unsigned long zap_page_range(struct vm_area_struct *vma, unsigned long address,
 }
 ```
 
+```
+ Page Global Directroy
+  -> Page Upper Directory
+   -> Page Middle Directory
+    -> Page Table Entry
+```
+
+ * unmap_page_range
+ * zap_pud_range
+   * pud_none
+ * zap_pmd_range
+   * pmd_none
+   * Huge Page が出て来る
+ * zap_pte_range
+   * pte_none 
+   * pte_t *pte
+
 ## pthread と madvise
 
  * pthread_exit する際に madvise( ..., MADV_DONTNEED )を呼び出してスタックのページフレームを reclaim する
