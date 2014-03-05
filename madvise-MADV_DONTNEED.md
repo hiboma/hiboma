@@ -232,7 +232,9 @@ unsigned long zap_page_range(struct vm_area_struct *vma, unsigned long address,
 ## pthread と madvise
 
  * pthread_exit する際に madvise( ..., MADV_DONTNEED )を呼び出してスタックのページフレームを reclaim する
-   * CentOS6.4 glibc-2.12
+   * CentOS6.4  glibc-2.12
+   * CentOS5.10 glibc-2.5 でも実装されていない
+      * 下記に補足
    * CentOS4.8 glibc-2.3.4 だと実装されていない
 
 ```c
@@ -253,3 +255,33 @@ unsigned long zap_page_range(struct vm_area_struct *vma, unsigned long address,
 ```
 
 [pthread-stacksize.md](https://github.com/hiboma/hiboma/blob/master/pthread-stacksize.md) を読もう
+
+### CentOS5.10 glibc-2.5 から
+
+ * madvise の MADV_DONTNEED はページの内容をディスクに書き戻さない
+ * POSIX の POSIX_MADV_DONTNEED の挙動と違う
+ * posix_madvise(2) では MADV_DONTNEED を指定するとシステムコールを呼び出さず無視される
+
+
+```c
++#include <sysdep.h>
++#include <sys/mman.h>
++
++
++int
++posix_madvise (void *addr, size_t len, int advice)
++{
++  /* We have one problem: the kernel's MADV_DONTNEED does not
++     correspond to POSIX's POSIX_MADV_DONTNEED.  The former simply
++     discards changes made to the memory without writing it back to
++     disk, if this would be necessary.  The POSIX behavior does not
++     allow this.  There is no functionality mapping the POSIX behavior
++     so far so we ignore that advice for now.  */
++  if (advice == POSIX_MADV_DONTNEED)
++    return 0;
++
++  INTERNAL_SYSCALL_DECL (err);
++  int result = INTERNAL_SYSCALL (madvise, err, 3, addr, len, advice);
++  return INTERNAL_SYSCALL_ERRNO (result, err);
++}
+```
