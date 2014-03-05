@@ -251,3 +251,5 @@ unsigned long zap_page_range(struct vm_area_struct *vma, unsigned long address,
   if (freesize > PTHREAD_STACK_MIN)
     madvise (pd->stackblock, freesize - PTHREAD_STACK_MIN, MADV_DONTNEED);
 ```
+
+[pthread-stacksize.md](https://github.com/hiboma/hiboma/blob/master/pthread-stacksize.md) を読もう
