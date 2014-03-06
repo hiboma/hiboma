@@ -460,6 +460,7 @@ static unsigned long shrink_inactive_list(unsigned long max_scan,
 		nr_scanned += nr_scan;
 
         // shrink_page_list 強い ...
+        // dirty なページの書き出しなど
 		nr_freed = shrink_page_list(&page_list, sc, mz,
 					PAGEOUT_IO_ASYNC, priority,
 					&nr_dirty, &nr_writeback);
@@ -749,7 +750,9 @@ static unsigned long shrink_page_list(struct list_head *page_list,
 				goto activate_locked;
 			if (!mapping && page_count(page) == 1) {
 				unlock_page(page);
+                // page->_count == 0 にする
 				if (put_page_testzero(page))
+                    // 回収された
 					goto free_it;
 				else {
 					/*
@@ -759,6 +762,7 @@ static unsigned long shrink_page_list(struct list_head *page_list,
 					 * increment nr_reclaimed here (and
 					 * leave it off the LRU).
 					 */
+                    // 回収された
 					nr_reclaimed++;
 					continue;
 				}
