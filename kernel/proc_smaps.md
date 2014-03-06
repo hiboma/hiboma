@@ -68,6 +68,8 @@ PSS x share しているプロセス数 = プロセス群のRSS
 
 /proc/<pid>/smaps のコード
 
+ * PTEを全部走査して、フラグに応じて利用種別のサイズを出す
+
 ```c
 	seq_printf(m,
 		   "Size:           %8lu kB\n"
@@ -225,7 +227,8 @@ static int show_smap(struct seq_file *m, void *v)
 		walk_page_range(vma->vm_start, vma->vm_end, &smaps_walk);
 ```
 
- * PGD -> PUD -> PMD -> PTE,PTE,...,
+ * walk_page_range -> walk_pud_range -> walk_pmd_range -> smaps_pte_range
+   * PGD -> PUD -> PMD -> PTE,PTE,..., のディレクトリ走査
  * 特定の MD以下の PTE を順番に走査していいく
 
 ```c
@@ -265,6 +268,14 @@ static int smaps_pte_range(pmd_t *pmd, unsigned long addr, unsigned long end,
 	 * in here.
 	 */
     // PTEテーブルを順番に走査
+    //
+    // +---+
+    // |---|
+    // |---|
+    // |---|\_ PAGE_SIZE のオフセット
+    // |---|
+    // +---+
+    //
 	pte = pte_offset_map_lock(vma->vm_mm, pmd, addr, &ptl);
     // PAGE_SIZE ごとにアドレスをインクリメント
 	for (; addr != end; pte++, addr += PAGE_SIZE)
