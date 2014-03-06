@@ -202,16 +202,16 @@ restart:
 					  &reclaim_stat->nr_saved_scan[l]);
 	}
 
-	while (nr[LRU_INACTIVE_ANON] || nr[LRU_ACTIVE_FILE] ||
-					nr[LRU_INACTIVE_FILE]) {
+	while (nr[LRU_INACTIVE_ANON] || nr[LRU_ACTIVE_FILE] || nr[LRU_INACTIVE_FILE]) {
 		for_each_evictable_lru(l) {
 			if (nr[l]) {
-				nr_to_scan = min_t(unsigned long,
-						   nr[l], SWAP_CLUSTER_MAX);
+
+                // 走査するページ数
+				nr_to_scan = min_t(unsigned long, nr[l], SWAP_CLUSTER_MAX);
 				nr[l] -= nr_to_scan;
 
-				nr_reclaimed += shrink_list(l, nr_to_scan,
-							    mz, sc, priority);
+                // ページ回収
+				nr_reclaimed += shrink_list(l, nr_to_scan, mz, sc, priority);
 			}
 		}
 		/*
