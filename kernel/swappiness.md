@@ -163,7 +163,7 @@ static void shrink_mem_cgroup_zone(int priority, struct mem_cgroup_zone *mz,
 	enum lru_list l;
 	unsigned long nr_reclaimed, nr_scanned;
     
-    // 回収したいページの目標値
+    // 
 	unsigned long nr_to_reclaim = sc->nr_to_reclaim;
 	struct zone_reclaim_stat *reclaim_stat = get_reclaim_stat(mz);
 	int noswap = 0;
@@ -257,4 +257,106 @@ restart:
 	throttle_vm_writeout(sc->gfp_mask);
 }
 ```
-  
+
+## shrink_list
+
+ * shrink_active_list
+ * shrink_inactive_list
+
+```c
+static void shrink_active_list(unsigned long nr_pages,
+			       struct mem_cgroup_zone *mz,
+			       struct scan_control *sc,
+			       int priority, int file)
+{
+	unsigned long nr_taken;
+	unsigned long pgscanned;
+	unsigned long vm_flags;
+	LIST_HEAD(l_hold);	/* The pages which were snipped off */
+	LIST_HEAD(l_active);
+	LIST_HEAD(l_inactive);
+	struct page *page;
+	struct zone_reclaim_stat *reclaim_stat = get_reclaim_stat(mz);
+	unsigned long nr_rotated = 0;
+	int order = 0;
+	struct zone *zone = mz->zone;
+
+	if (!COMPACTION_BUILD)
+		order = sc->order;
+
+	lru_add_drain();
+	spin_lock_irq(&zone->lru_lock);
+
+	nr_taken = isolate_pages(nr_pages, mz, &l_hold,
+				 &pgscanned, order,
+				 ISOLATE_ACTIVE, 1, file);
+
+	if (global_reclaim(sc))
+		zone->pages_scanned += pgscanned;
+
+	reclaim_stat->recent_scanned[file] += nr_taken;
+
+	__count_zone_vm_events(PGREFILL, zone, pgscanned);
+	if (file)
+		__mod_zone_page_state(zone, NR_ACTIVE_FILE, -nr_taken);
+	else
+		__mod_zone_page_state(zone, NR_ACTIVE_ANON, -nr_taken);
+	__mod_zone_page_state(zone, NR_ISOLATED_ANON + file, nr_taken);
+	spin_unlock_irq(&zone->lru_lock);
+
+	while (!list_empty(&l_hold)) {
+		cond_resched();
+
+        // LRUからページを取り出す
+		page = lru_to_page(&l_hold);
+		list_del(&page->lru);
+
+        // evictable で無いので元に戻す
+		if (unlikely(!page_evictable(page, NULL))) {
+			putback_lru_page(page);
+			continue;
+		}
+
+		if (page_referenced(page, 0, sc->target_mem_cgroup,
+				    &vm_flags)) {
+			nr_rotated += hpage_nr_pages(page);
+			/*
+			 * Identify referenced, file-backed active pages and
+			 * give them one more trip around the active list. So
+			 * that executable code get better chances to stay in
+			 * memory under moderate memory pressure.  Anon pages
+			 * are not likely to be evicted by use-once streaming
+			 * IO, plus JVM can create lots of anon VM_EXEC pages,
+			 * so we ignore them here.
+			 */
+			if ((vm_flags & VM_EXEC) && page_is_file_cache(page)) {
+				list_add(&page->lru, &l_active);
+				continue;
+			}
+		}
+
+		ClearPageActive(page);	/* we are de-activating */
+		list_add(&page->lru, &l_inactive);
+	}
+
+	/*
+	 * Move pages back to the lru list.
+	 */
+	spin_lock_irq(&zone->lru_lock);
+	/*
+	 * Count referenced pages from currently used mappings as rotated,
+	 * even though only some of them are actually re-activated.  This
+	 * helps balance scan pressure between file and anonymous pages in
+	 * get_scan_ratio.
+	 */
+	reclaim_stat->recent_rotated[file] += nr_rotated;
+
+	move_active_pages_to_lru(zone, &l_active,
+						LRU_ACTIVE + file * LRU_FILE);
+	move_active_pages_to_lru(zone, &l_inactive,
+						LRU_BASE   + file * LRU_FILE);
+	__mod_zone_page_state(zone, NR_ISOLATED_ANON + file, -nr_taken);
+	spin_unlock_irq(&zone->lru_lock);
+	trace_mm_pagereclaim_shrinkactive(pgscanned, file, priority);  
+}
+```
