@@ -319,6 +319,7 @@ static void shrink_active_list(unsigned long nr_pages,
 
 		if (page_referenced(page, 0, sc->target_mem_cgroup,
 				    &vm_flags)) {
+            // 直近で参照されてるページ
 			nr_rotated += hpage_nr_pages(page);
 			/*
 			 * Identify referenced, file-backed active pages and
@@ -330,11 +331,13 @@ static void shrink_active_list(unsigned long nr_pages,
 			 * so we ignore them here.
 			 */
 			if ((vm_flags & VM_EXEC) && page_is_file_cache(page)) {
+                // active リストの先頭? に戻す = rotated 
 				list_add(&page->lru, &l_active);
 				continue;
 			}
 		}
 
+        // Active フラグを落として Inactive の先頭に入れる
 		ClearPageActive(page);	/* we are de-activating */
 		list_add(&page->lru, &l_inactive);
 	}
