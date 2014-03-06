@@ -171,7 +171,7 @@ restart:
 	nr_scanned = sc->nr_scanned;
 	/* If we have no swap space, do not bother scanning anon pages. */
     // swap が無ければ無名ページのスキャンをしない
-    //
+    // nr_swap_pages スワップできるページ数
 	if (!sc->may_swap || (nr_swap_pages <= 0)) {
 		noswap = 1;
 		percent[0] = 0;
