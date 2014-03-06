@@ -62,6 +62,8 @@ $ unlink 100mb.txt
 ```
 
  * 1回目のマイナーページフォルト時に Active(anon) に繋がっていた
+ * Inactive(anon) を増えるのはどういう手順?
+ 
 ```c
 #if 0
 #!/bin/bash
@@ -102,6 +104,11 @@ int main()
 	printf("second reference\n");
 	for (int i = 0; i < mmap_size; i++)
 		p[i] = '\0';
+
+	/* うーん */
+	printf("mlock allocated pages for current\n");
+	mlockall(MCL_CURRENT|MCL_FUTURE);
+	sleep(5);
 
 	exit(0);
 }
