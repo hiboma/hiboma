@@ -363,3 +363,174 @@ static void shrink_active_list(unsigned long nr_pages,
 	trace_mm_pagereclaim_shrinkactive(pgscanned, file, priority);  
 }
 ```
+
+shrink_inactive_list
+
+```c
+/*
+ * shrink_inactive_list() is a helper for shrink_zone().  It returns the number
+ * of reclaimed pages
+ */
+static unsigned long shrink_inactive_list(unsigned long max_scan,
+			struct mem_cgroup_zone *mz, struct scan_control *sc,
+			int priority, int file)
+{
+	LIST_HEAD(page_list);
+	struct pagevec pvec;
+	unsigned long nr_scanned = 0;
+	unsigned long nr_reclaimed = 0;
+        unsigned long nr_dirty = 0;
+        unsigned long nr_writeback = 0;
+	struct zone_reclaim_stat *reclaim_stat = get_reclaim_stat(mz);
+	struct zone *zone = mz->zone;
+	int order = 0;
+
+	if (!COMPACTION_BUILD)
+		order = sc->order;
+
+	while (unlikely(too_many_isolated(zone, file, sc))) {
+		congestion_wait(BLK_RW_ASYNC, HZ/10);
+
+		/* We are about to die and free our memory. Return now. */
+        // SIGKILL受けてたらプロセスを止めてメモリを解放するのを優先
+		if (fatal_signal_pending(current))
+			return SWAP_CLUSTER_MAX;
+	}
+
+	pagevec_init(&pvec, 1);
+
+    // ?
+	lru_add_drain();
+	spin_lock_irq(&zone->lru_lock);
+	do {
+		struct page *page;
+		unsigned long nr_taken;
+		unsigned long nr_scan;
+		unsigned long nr_freed;
+		unsigned long nr_active;
+		unsigned int count[NR_LRU_LISTS] = { 0, };
+		unsigned long nr_anon;
+		unsigned long nr_file;
+
+		nr_taken = isolate_pages(SWAP_CLUSTER_MAX, mz, &page_list,
+					 &nr_scan, order,
+					 ISOLATE_INACTIVE, 0, file);
+		if (global_reclaim(sc)) {
+			zone->pages_scanned += nr_scan;
+			if (current_is_kswapd())
+				__count_zone_vm_events(PGSCAN_KSWAPD, zone,
+						       nr_scan);
+			else
+				__count_zone_vm_events(PGSCAN_DIRECT, zone,
+						       nr_scan);
+		}
+
+		if (nr_taken == 0)
+			goto done;
+
+		nr_active = clear_active_flags(&page_list, count);
+		__count_vm_events(PGDEACTIVATE, nr_active);
+
+		__mod_zone_page_state(zone, NR_ACTIVE_FILE,
+						-count[LRU_ACTIVE_FILE]);
+		__mod_zone_page_state(zone, NR_INACTIVE_FILE,
+						-count[LRU_INACTIVE_FILE]);
+		__mod_zone_page_state(zone, NR_ACTIVE_ANON,
+						-count[LRU_ACTIVE_ANON]);
+		__mod_zone_page_state(zone, NR_INACTIVE_ANON,
+						-count[LRU_INACTIVE_ANON]);
+
+		nr_anon = count[LRU_ACTIVE_ANON] + count[LRU_INACTIVE_ANON];
+		nr_file = count[LRU_ACTIVE_FILE] + count[LRU_INACTIVE_FILE];
+		__mod_zone_page_state(zone, NR_ISOLATED_ANON, nr_anon);
+		__mod_zone_page_state(zone, NR_ISOLATED_FILE, nr_file);
+
+		reclaim_stat->recent_scanned[0] += count[LRU_INACTIVE_ANON];
+		reclaim_stat->recent_scanned[0] += count[LRU_ACTIVE_ANON];
+		reclaim_stat->recent_scanned[1] += count[LRU_INACTIVE_FILE];
+		reclaim_stat->recent_scanned[1] += count[LRU_ACTIVE_FILE];
+
+		spin_unlock_irq(&zone->lru_lock);
+
+		nr_scanned += nr_scan;
+		nr_freed = shrink_page_list(&page_list, sc, mz,
+					PAGEOUT_IO_ASYNC, priority,
+					&nr_dirty, &nr_writeback);
+
+		nr_reclaimed += nr_freed;
+
+		local_irq_disable();
+		if (current_is_kswapd())
+			__count_vm_events(KSWAPD_STEAL, nr_freed);
+		__count_zone_vm_events(PGSTEAL, zone, nr_freed);
+
+		spin_lock(&zone->lru_lock);
+		/*
+		 * Put back any unfreeable pages.
+		 */
+		while (!list_empty(&page_list)) {
+			int lru;
+			page = lru_to_page(&page_list);
+			VM_BUG_ON(PageLRU(page));
+			list_del(&page->lru);
+			if (unlikely(!page_evictable(page, NULL))) {
+				spin_unlock_irq(&zone->lru_lock);
+				putback_lru_page(page);
+				spin_lock_irq(&zone->lru_lock);
+				continue;
+			}
+			SetPageLRU(page);
+			lru = page_lru(page);
+			add_page_to_lru_list(zone, page, lru);
+			if (is_active_lru(lru)) {
+				int file = is_file_lru(lru);
+				int numpages = hpage_nr_pages(page);
+				reclaim_stat->recent_rotated[file] += numpages;
+			}
+			if (!pagevec_add(&pvec, page)) {
+				spin_unlock_irq(&zone->lru_lock);
+				__pagevec_release(&pvec);
+				spin_lock_irq(&zone->lru_lock);
+			}
+		}
+		__mod_zone_page_state(zone, NR_ISOLATED_ANON, -nr_anon);
+		__mod_zone_page_state(zone, NR_ISOLATED_FILE, -nr_file);
+
+		/*
+		 * If reclaim is isolating dirty pages under writeback, it implies
+		 * that the long-lived page allocation rate is exceeding the page
+		 * laundering rate. Either the global limits are not being effective
+		 * at throttling processes due to the page distribution throughout
+		 * zones or there is heavy usage of a slow backing device. The
+		 * only option is to throttle from reclaim context which is not ideal
+		 * as there is no guarantee the dirtying process is throttled in the
+		 * same way balance_dirty_pages() manages.
+		 *
+		 * This scales the number of dirty pages that must be under writeback
+		 * before throttling depending on priority. It is a simple backoff
+		 * function that has the most effect in the range DEF_PRIORITY to
+		 * DEF_PRIORITY-2 which is the priority reclaim is considered to be
+		 * in trouble and reclaim is considered to be in trouble.
+		 *
+		 * DEF_PRIORITY   100% isolated pages must be PageWriteback to throttle
+		 * DEF_PRIORITY-1  50% must be PageWriteback
+		 * DEF_PRIORITY-2  25% must be PageWriteback, kswapd in trouble
+		 * ...
+		 * DEF_PRIORITY-6 For SWAP_CLUSTER_MAX isolated pages, throttle if any
+		 *                     isolated page is PageWriteback
+		 */
+		if (nr_writeback && nr_writeback >=
+			(nr_taken >> (DEF_PRIORITY-priority))) {
+			spin_unlock_irq(&zone->lru_lock);
+			wait_iff_congested(zone, BLK_RW_ASYNC, HZ/10);
+			spin_lock_irq(&zone->lru_lock);
+		}
+  	} while (nr_scanned < max_scan);
+
+done:
+	spin_unlock_irq(&zone->lru_lock);
+	pagevec_release(&pvec);
+	trace_mm_pagereclaim_shrinkinactive(nr_scanned, file, 
+				nr_reclaimed, priority);
+	return nr_reclaimed;
+```
