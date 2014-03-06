@@ -59,6 +59,7 @@ $ cat 100mb.txt >/dev/null
 $ unlink 100mb.txt
 ```
 
+ * 1回目のマイナーページフォルト時に Active(anon) に繋がっていた
 ```c
 #if 0
 #!/bin/bash
