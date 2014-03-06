@@ -129,7 +129,6 @@ static void get_scan_ratio(struct mem_cgroup_zone *mz, struct scan_control *sc,
 
     // anon と ファイるページの pressure の量は
     // references で active でスキャンされたページ割合に反比例する
-
 	/*
 	 * The amount of pressure on anon vs file pages is inversely
 	 * proportional to the fraction of recently scanned pages on
@@ -142,7 +141,96 @@ static void get_scan_ratio(struct mem_cgroup_zone *mz, struct scan_control *sc,
 	fp /= reclaim_stat->recent_rotated[1] + 1;
 
 	/* Normalize to percentages */
-	percent[0] = 100 * ap / (ap + fp + 1);
-	percent[1] = 100 - percent[0];
+	percent[0] = 100 * ap / (ap + fp + 1); // ram/swap への pressure 
+	percent[1] = 100 - percent[0];         // 残り
 }
 ```
+
+## get_reclaim_stat
+
+get_scan_ratio が使われている箇所
+
+```c
+/*
+ * This is a basic per-zone page freer.  Used by both kswapd and direct reclaim.
+ */
+static void shrink_mem_cgroup_zone(int priority, struct mem_cgroup_zone *mz,
+				   struct scan_control *sc)
+{
+	unsigned long nr[NR_LRU_LISTS];
+	unsigned long nr_to_scan;
+	unsigned long percent[2];	/* anon @ 0; file @ 1 */
+	enum lru_list l;
+	unsigned long nr_reclaimed, nr_scanned;
+	unsigned long nr_to_reclaim = sc->nr_to_reclaim;
+	struct zone_reclaim_stat *reclaim_stat = get_reclaim_stat(mz);
+	int noswap = 0;
+
+restart:
+	nr_reclaimed = 0;
+	nr_scanned = sc->nr_scanned;
+	/* If we have no swap space, do not bother scanning anon pages. */
+	if (!sc->may_swap || (nr_swap_pages <= 0)) {
+		noswap = 1;
+		percent[0] = 0;
+		percent[1] = 100;
+	} else
+		get_scan_ratio(mz, sc, percent);
+
+	for_each_evictable_lru(l) {
+		int file = is_file_lru(l);
+		unsigned long scan;
+
+		scan = zone_nr_lru_pages(mz, l);
+		if (priority || noswap || !sc->swappiness) {
+			scan >>= priority;
+			scan = (scan * percent[file]) / 100;
+		}
+		nr[l] = nr_scan_try_batch(scan,
+					  &reclaim_stat->nr_saved_scan[l]);
+	}
+
+	while (nr[LRU_INACTIVE_ANON] || nr[LRU_ACTIVE_FILE] ||
+					nr[LRU_INACTIVE_FILE]) {
+		for_each_evictable_lru(l) {
+			if (nr[l]) {
+				nr_to_scan = min_t(unsigned long,
+						   nr[l], SWAP_CLUSTER_MAX);
+				nr[l] -= nr_to_scan;
+
+				nr_reclaimed += shrink_list(l, nr_to_scan,
+							    mz, sc, priority);
+			}
+		}
+		/*
+		 * On large memory systems, scan >> priority can become
+		 * really large. This is fine for the starting priority;
+		 * we want to put equal scanning pressure on each zone.
+		 * However, if the VM has a harder time of freeing pages,
+		 * with multiple processes reclaiming pages, the total
+		 * freeing target can get unreasonably large.
+		 */
+		if (nr_reclaimed >= nr_to_reclaim && priority < DEF_PRIORITY)
+			break;
+	}
+
+	sc->nr_reclaimed += nr_reclaimed;
+	trace_mm_pagereclaim_shrinkzone(nr_reclaimed, priority);
+
+	/*
+	 * Even if we did not try to evict anon pages at all, we want to
+	 * rebalance the anon lru active/inactive ratio.
+	 */
+	if (inactive_anon_is_low(mz) && nr_swap_pages > 0)
+		shrink_active_list(SWAP_CLUSTER_MAX, mz, sc, priority, 0);
+
+	/* reclaim/compaction might need reclaim to continue */
+	if (should_continue_reclaim(mz, nr_reclaimed,
+					sc->nr_scanned - nr_scanned,
+					priority, sc))
+		goto restart;
+
+	throttle_vm_writeout(sc->gfp_mask);
+}
+```
+  
