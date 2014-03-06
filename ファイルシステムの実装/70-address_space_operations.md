@@ -386,7 +386,7 @@ int sf_write_begin(struct file *file, struct address_space *mapping, loff_t pos,
 }
 ```
 
-```
+```c
 static inline void zero_user_segments(struct page *page,
 	unsigned start1, unsigned end1,
 	unsigned start2, unsigned end2)
