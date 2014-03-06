@@ -415,8 +415,10 @@ static unsigned long shrink_inactive_list(unsigned long max_scan,
 		nr_taken = isolate_pages(SWAP_CLUSTER_MAX, mz, &page_list,
 					 &nr_scan, order,
 					 ISOLATE_INACTIVE, 0, file);
+
 		if (global_reclaim(sc)) {
 			zone->pages_scanned += nr_scan;
+            // 実行スレッドが kswapd スレッドか否か
 			if (current_is_kswapd())
 				__count_zone_vm_events(PGSCAN_KSWAPD, zone,
 						       nr_scan);
@@ -429,6 +431,8 @@ static unsigned long shrink_inactive_list(unsigned long max_scan,
 			goto done;
 
 		nr_active = clear_active_flags(&page_list, count);
+
+        // ?
 		__count_vm_events(PGDEACTIVATE, nr_active);
 
 		__mod_zone_page_state(zone, NR_ACTIVE_FILE,
@@ -440,6 +444,7 @@ static unsigned long shrink_inactive_list(unsigned long max_scan,
 		__mod_zone_page_state(zone, NR_INACTIVE_ANON,
 						-count[LRU_INACTIVE_ANON]);
 
+                       
 		nr_anon = count[LRU_ACTIVE_ANON] + count[LRU_INACTIVE_ANON];
 		nr_file = count[LRU_ACTIVE_FILE] + count[LRU_INACTIVE_FILE];
 		__mod_zone_page_state(zone, NR_ISOLATED_ANON, nr_anon);
@@ -453,6 +458,8 @@ static unsigned long shrink_inactive_list(unsigned long max_scan,
 		spin_unlock_irq(&zone->lru_lock);
 
 		nr_scanned += nr_scan;
+
+        // shrink_page_list 強い ...
 		nr_freed = shrink_page_list(&page_list, sc, mz,
 					PAGEOUT_IO_ASYNC, priority,
 					&nr_dirty, &nr_writeback);
@@ -473,15 +480,19 @@ static unsigned long shrink_inactive_list(unsigned long max_scan,
 			page = lru_to_page(&page_list);
 			VM_BUG_ON(PageLRU(page));
 			list_del(&page->lru);
+
+            // 非 evictable は元のリストに戻すよ
 			if (unlikely(!page_evictable(page, NULL))) {
 				spin_unlock_irq(&zone->lru_lock);
 				putback_lru_page(page);
 				spin_lock_irq(&zone->lru_lock);
 				continue;
 			}
+
 			SetPageLRU(page);
 			lru = page_lru(page);
 			add_page_to_lru_list(zone, page, lru);
+
 			if (is_active_lru(lru)) {
 				int file = is_file_lru(lru);
 				int numpages = hpage_nr_pages(page);
@@ -533,4 +544,269 @@ done:
 	trace_mm_pagereclaim_shrinkinactive(nr_scanned, file, 
 				nr_reclaimed, priority);
 	return nr_reclaimed;
+```
+
+```c
+/*
+ * shrink_page_list() returns the number of reclaimed pages
+ */
+static unsigned long shrink_page_list(struct list_head *page_list,
+					struct scan_control *sc,
+					struct mem_cgroup_zone *mz,
+					enum pageout_io sync_writeback,
+					int priority,
+					unsigned long *ret_nr_dirty,
+					unsigned long *ret_nr_writeback)
+{
+	LIST_HEAD(ret_pages);
+	struct pagevec freed_pvec;
+	int pgactivate = 0;
+	unsigned long nr_dirty = 0;
+	unsigned long nr_congested = 0;
+	unsigned long nr_reclaimed = 0;
+	unsigned long nr_writeback = 0;
+
+	cond_resched();
+
+	pagevec_init(&freed_pvec, 1);
+	while (!list_empty(page_list)) {
+		enum page_references references;
+		struct address_space *mapping;
+		struct page *page;
+		int may_enter_fs;
+
+		cond_resched();
+
+		page = lru_to_page(page_list);
+		list_del(&page->lru);
+
+		if (!trylock_page(page))
+			goto keep;
+
+		VM_BUG_ON(PageActive(page));
+		VM_BUG_ON(page_zone(page) != mz->zone);
+
+		sc->nr_scanned++;
+
+		if (unlikely(!page_evictable(page, NULL)))
+			goto cull_mlocked;
+
+		if (!sc->may_unmap && page_mapped(page))
+			goto keep_locked;
+
+		/* Double the slab pressure for mapped and swapcache pages */
+		if (page_mapped(page) || PageSwapCache(page))
+			sc->nr_scanned++;
+
+		may_enter_fs = (sc->gfp_mask & __GFP_FS) ||
+			(PageSwapCache(page) && (sc->gfp_mask & __GFP_IO));
+
+		if (PageWriteback(page)) {
+			nr_writeback++;
+			/*
+			 * Synchronous reclaim cannot queue pages for
+			 * writeback due to the possibility of stack overflow
+			 * but if it encounters a page under writeback, wait
+			 * for the IO to complete.
+			 */
+			if (sync_writeback == PAGEOUT_IO_SYNC && may_enter_fs)
+				wait_on_page_writeback(page);
+			else
+				goto keep_locked;
+		}
+
+		references = page_check_references(page, mz, sc);
+		switch (references) {
+		case PAGEREF_ACTIVATE:
+			goto activate_locked;
+		case PAGEREF_KEEP:
+			goto keep_locked;
+		case PAGEREF_RECLAIM:
+		case PAGEREF_RECLAIM_CLEAN:
+			; /* try to reclaim the page below */
+		}
+
+		/*
+		 * Anonymous process memory has backing store?
+		 * Try to allocate it some swap space here.
+		 */
+		if (PageAnon(page) && !PageSwapCache(page)) {
+			if (!(sc->gfp_mask & __GFP_IO))
+				goto keep_locked;
+			if (!add_to_swap(page))
+				goto activate_locked;
+			may_enter_fs = 1;
+		}
+
+		mapping = page_mapping(page);
+
+		/*
+		 * The page is mapped into the page tables of one or more
+		 * processes. Try to unmap it here.
+		 */
+		if (page_mapped(page) && mapping) {
+			switch (try_to_unmap(page, TTU_UNMAP)) {
+			case SWAP_FAIL:
+				goto activate_locked;
+			case SWAP_AGAIN:
+				goto keep_locked;
+			case SWAP_MLOCK:
+				goto cull_mlocked;
+			case SWAP_SUCCESS:
+				; /* try to free the page below */
+			}
+		}
+
+		if (PageDirty(page)) {
+			nr_dirty++;
+
+			/*
+			 * Only kswapd can writeback filesystem pages to
+			 * avoid risk of stack overflow but do not writeback
+			 * unless under significant pressure.
+			 */
+			if (page_is_file_cache(page) &&
+					(!current_is_kswapd() || priority >= DEF_PRIORITY - 2)) {
+				/*
+				 * Immediately reclaim when written back.
+				 * Similar in principal to deactivate_page()
+				 * except we already have the page isolated
+				 * and know it's dirty
+				 */
+				SetPageReclaim(page);
+
+				goto keep_locked;
+			}
+
+			if (references == PAGEREF_RECLAIM_CLEAN)
+				goto keep_locked;
+			if (!may_enter_fs)
+				goto keep_locked;
+			if (!sc->may_writepage)
+				goto keep_locked;
+
+			/* Page is dirty, try to write it out here */
+			switch (pageout(page, mapping, sync_writeback)) {
+			case PAGE_KEEP:
+				nr_congested++;
+				goto keep_locked;
+			case PAGE_ACTIVATE:
+				goto activate_locked;
+			case PAGE_SUCCESS:
+				if (PageWriteback(page) || PageDirty(page))
+					goto keep;
+				/*
+				 * A synchronous write - probably a ramdisk.  Go
+				 * ahead and try to reclaim the page.
+				 */
+				if (!trylock_page(page))
+					goto keep;
+				if (PageDirty(page) || PageWriteback(page))
+					goto keep_locked;
+				mapping = page_mapping(page);
+			case PAGE_CLEAN:
+				; /* try to free the page below */
+			}
+		}
+
+		/*
+		 * If the page has buffers, try to free the buffer mappings
+		 * associated with this page. If we succeed we try to free
+		 * the page as well.
+		 *
+		 * We do this even if the page is PageDirty().
+		 * try_to_release_page() does not perform I/O, but it is
+		 * possible for a page to have PageDirty set, but it is actually
+		 * clean (all its buffers are clean).  This happens if the
+		 * buffers were written out directly, with submit_bh(). ext3
+		 * will do this, as well as the blockdev mapping.
+		 * try_to_release_page() will discover that cleanness and will
+		 * drop the buffers and mark the page clean - it can be freed.
+		 *
+		 * Rarely, pages can have buffers and no ->mapping.  These are
+		 * the pages which were not successfully invalidated in
+		 * truncate_complete_page().  We try to drop those buffers here
+		 * and if that worked, and the page is no longer mapped into
+		 * process address space (page_count == 1) it can be freed.
+		 * Otherwise, leave the page on the LRU so it is swappable.
+		 */
+		if (page_has_private(page)) {
+			if (!try_to_release_page(page, sc->gfp_mask))
+				goto activate_locked;
+			if (!mapping && page_count(page) == 1) {
+				unlock_page(page);
+				if (put_page_testzero(page))
+					goto free_it;
+				else {
+					/*
+					 * rare race with speculative reference.
+					 * the speculative reference will free
+					 * this page shortly, so we may
+					 * increment nr_reclaimed here (and
+					 * leave it off the LRU).
+					 */
+					nr_reclaimed++;
+					continue;
+				}
+			}
+		}
+
+		if (!mapping || !__remove_mapping(mapping, page))
+			goto keep_locked;
+
+		/*
+		 * At this point, we have no other references and there is
+		 * no way to pick any more up (removed from LRU, removed
+		 * from pagecache). Can use non-atomic bitops now (and
+		 * we obviously don't have to worry about waking up a process
+		 * waiting on the page lock, because there are no references.
+		 */
+		__clear_page_locked(page);
+free_it:
+		nr_reclaimed++;
+		if (!pagevec_add(&freed_pvec, page)) {
+			__pagevec_free(&freed_pvec);
+			pagevec_reinit(&freed_pvec);
+		}
+		continue;
+
+cull_mlocked:
+		if (PageSwapCache(page))
+			try_to_free_swap(page);
+		unlock_page(page);
+		putback_lru_page(page);
+		continue;
+
+activate_locked:
+		/* Not a candidate for swapping, so reclaim swap space. */
+		if (PageSwapCache(page) && vm_swap_full())
+			try_to_free_swap(page);
+		VM_BUG_ON(PageActive(page));
+		SetPageActive(page);
+		pgactivate++;
+keep_locked:
+		unlock_page(page);
+keep:
+		list_add(&page->lru, &ret_pages);
+		VM_BUG_ON(PageLRU(page) || PageUnevictable(page));
+	}
+
+	/*
+	 * Tag a zone as congested if all the dirty pages encountered were
+	 * backed by a congested BDI. In this case, reclaimers should just
+	 * back off and wait for congestion to clear because further reclaim
+	 * will encounter the same problem
+	 */
+	if (nr_dirty && nr_dirty == nr_congested && global_reclaim(sc))
+		zone_set_flag(mz->zone, ZONE_CONGESTED);
+
+	list_splice(&ret_pages, page_list);
+	if (pagevec_count(&freed_pvec))
+		__pagevec_free(&freed_pvec);
+	count_vm_events(PGACTIVATE, pgactivate);
+	trace_mm_pagereclaim_free(nr_reclaimed);
+        *ret_nr_dirty += nr_dirty;
+        *ret_nr_writeback += nr_writeback;
+	return nr_reclaimed;
+}
 ```
