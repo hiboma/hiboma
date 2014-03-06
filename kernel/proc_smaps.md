@@ -1,6 +1,6 @@
-## KernelPageSize, KernelPageSize
+## ___/proc/\<pid\>/smaps___
 
-___/proc/<pid>/smaps___ 
+## KernelPageSize, KernelPageSize
 
  * vm_area_struct に割り当てた ページサイズなのかな?
  * だいたいは PTE = ページテーブルエントリのサイズと一緒とのこと
@@ -33,7 +33,7 @@ unsigned long vma_kernel_pagesize(struct vm_area_struct *vma)
 EXPORT_SYMBOL_GPL(vma_kernel_pagesize);
 ```
 
-vm_area_struct + MMU 
+vm_area_struct + MMU 用に割り当てたページ
 
 ```c
 /*
