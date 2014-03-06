@@ -228,8 +228,8 @@ static int show_smap(struct seq_file *m, void *v)
 ```
 
  * walk_page_range -> walk_pud_range -> walk_pmd_range -> smaps_pte_range
-   * PGD -> PUD -> PMD -> PTE,PTE,..., のディレクトリ走査
- * 特定の MD以下の PTE を順番に走査していいく
+   * PGD -> PUD -> PMD -> PTE,PTE,..., のディレクトリ/テーブル走査
+ * smaps_pte_range は特定の PMD以下の PTE を順番に走査する
 
 ```c
 static int smaps_pte_range(pmd_t *pmd, unsigned long addr, unsigned long end,
@@ -279,6 +279,7 @@ static int smaps_pte_range(pmd_t *pmd, unsigned long addr, unsigned long end,
 	pte = pte_offset_map_lock(vma->vm_mm, pmd, addr, &ptl);
     // PAGE_SIZE ごとにアドレスをインクリメント
 	for (; addr != end; pte++, addr += PAGE_SIZE)
+        // PTEがどんな用途で使われているか計算
 		smaps_pte_entry(*pte, addr, PAGE_SIZE, walk);
 	pte_unmap_unlock(pte - 1, ptl);
 	cond_resched();
