@@ -651,6 +651,7 @@ static unsigned long shrink_page_list(struct list_head *page_list,
 		 * The page is mapped into the page tables of one or more
 		 * processes. Try to unmap it here.
 		 */
+        // ページテーブルにマップされている
 		if (page_mapped(page) && mapping) {
 			switch (try_to_unmap(page, TTU_UNMAP)) {
 			case SWAP_FAIL:
@@ -742,6 +743,7 @@ static unsigned long shrink_page_list(struct list_head *page_list,
 		 * process address space (page_count == 1) it can be freed.
 		 * Otherwise, leave the page on the LRU so it is swappable.
 		 */
+         // バッファーの場合
 		if (page_has_private(page)) {
 			if (!try_to_release_page(page, sc->gfp_mask))
 				goto activate_locked;
