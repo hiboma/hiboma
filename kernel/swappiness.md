@@ -49,10 +49,10 @@ static inline int page_is_file_cache(struct page *page)
 ## a verification script
 
 ```
-# Inactive +100MB ( PageReferenced = 0 )
+# Inactive(file) +100MB ( PageReferenced = 0 )
 $ perl -e 'print 1 x 1024 x 1024 x 100' >100mb.txt
 
-# Inactive -100MB -> Active +100MB ( PageReferenced = 1 )
+# Inactive(file) -100MB -> Active(file) +100MB ( PageReferenced = 1 )
 $ cat 100mb.txt >/dev/null
 
 # Active -100MB
