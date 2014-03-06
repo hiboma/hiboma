@@ -175,8 +175,8 @@ restart:
 		percent[0] = 0;
 		percent[1] = 100;
 	} else
-        // percent[0] ... ram/swap pressure 
-        // percent[1] ... file page pressure
+        // percent[0] ... ram/swap pressure  RAMのスワプのしやすさ
+        // percent[1] ... file page pressure ページキャッシュの破棄のしやすさ
 		get_scan_ratio(mz, sc, percent);
 
 	for_each_evictable_lru(l) {
