@@ -126,7 +126,9 @@ static void get_scan_ratio(struct mem_cgroup_zone *mz, struct scan_control *sc,
     // swappiness が大きいと     anon_prio >>>> file_prio になる
 	anon_prio = sc->swappiness;
 	file_prio = 200 - sc->swappiness;
-    
+
+    // anon と ファイるページの pressure の量は
+    // references で active でスキャンされたページ割合に反比例する
 
 	/*
 	 * The amount of pressure on anon vs file pages is inversely
