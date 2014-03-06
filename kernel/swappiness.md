@@ -162,6 +162,8 @@ static void shrink_mem_cgroup_zone(int priority, struct mem_cgroup_zone *mz,
 	unsigned long percent[2];	/* anon @ 0; file @ 1 */
 	enum lru_list l;
 	unsigned long nr_reclaimed, nr_scanned;
+    
+    // 回収したいページの目標値
 	unsigned long nr_to_reclaim = sc->nr_to_reclaim;
 	struct zone_reclaim_stat *reclaim_stat = get_reclaim_stat(mz);
 	int noswap = 0;
@@ -220,6 +222,7 @@ restart:
 				nr[l] -= nr_to_scan;
 
                 // ページ回収
+                // shrink_active_list, shrink_inactive_list
 				nr_reclaimed += shrink_list(l, nr_to_scan, mz, sc, priority);
 			}
 		}
