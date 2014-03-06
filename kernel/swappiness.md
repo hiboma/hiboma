@@ -181,6 +181,13 @@ restart:
         // percent[1] ... file page pressure ページキャッシュの破棄のしやすさ
 		get_scan_ratio(mz, sc, percent);
 
+    //
+    //  0 LRU_INACTIVE_ANON
+    //  1 LRU_ACTIVE_ANON
+    //  2 LRU_INACTIVE_FILE
+    //  3 LRU_ACTIVE_FILE 
+    //
+    // を順番にイテレートする
 	for_each_evictable_lru(l) {
 		int file = is_file_lru(l);
 		unsigned long scan;
