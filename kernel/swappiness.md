@@ -75,24 +75,30 @@ gcc ${CFLAGS} -o $o $0 && ./$o $*; exit
 #include <sys/mman.h>
 #include <err.h>
 
+/* mmap(p, '\0', mmap_size ); */
+
 int main()
 {
-	ssize_t mmap_size = sysconf(_SC_PAGESIZE) * 10000;
+	ssize_t mmap_size = sysconf(_SC_PAGESIZE) * 100000;
 	char *p = mmap(NULL, mmap_size, PROT_READ|PROT_WRITE,
 		       MAP_PRIVATE|MAP_ANONYMOUS, 0,0);
 	if (p == MAP_FAILED)
 		err(1, "mmap");
 
-	printf("mmap-ed\n");
+	// CommmitedAS ++
+	printf("just after mmap\n");
 	sleep(5);
 
-    /* ここで Anon(Active) が増えていた */
-	printf("first time\n");
-	memset(p, '1', mmap_size);
+	// Active(anon) ++
+	printf("first reference\n");
+	for (int i = 0; i < mmap_size; i++)
+		p[i] = '\0';
 	sleep(5);
 
-	printf("second time\n");
-	memset(p, '1', mmap_size);
+	// nothing happened ++
+	printf("second reference\n");
+	for (int i = 0; i < mmap_size; i++)
+		p[i] = '\0';
 
 	exit(0);
 }
