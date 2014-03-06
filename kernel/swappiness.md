@@ -13,6 +13,8 @@
        * pageout が vm_area_opetaions の .writepage でディスクにページを書き出し
        * swap でなくとも I/O を伴う
 
+Inactive(file) より Active(file) が高い状態 => well cached 
+
 ```c
 # FREE is どこ?
 
