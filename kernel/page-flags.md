@@ -12,6 +12,7 @@
    * クリアされるのは writeback が始まるとき or read が終わった時
  * PG_writeback
    * writeback が始まる前にセット、終わった時にクリア
+   * ディスクに書き出し中ということ ( see. shrink_page_list )
  * PG_locked
    * ページキャッシュに pin する
    * ブロック truncation されないようにする (削除?)

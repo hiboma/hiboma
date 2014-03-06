@@ -604,7 +604,7 @@ static unsigned long shrink_page_list(struct list_head *page_list,
 		may_enter_fs = (sc->gfp_mask & __GFP_FS) ||
 			(PageSwapCache(page) && (sc->gfp_mask & __GFP_IO));
 
-         // dirty なページ
+         // dirty なページ でディスクに書き出し中
 		if (PageWriteback(page)) {
 			nr_writeback++;
 			/*
@@ -663,7 +663,8 @@ static unsigned long shrink_page_list(struct list_head *page_list,
 				; /* try to free the page below */
 			}
 		}
-
+        
+        // dirty なページ
 		if (PageDirty(page)) {
 			nr_dirty++;
 
@@ -672,8 +673,9 @@ static unsigned long shrink_page_list(struct list_head *page_list,
 			 * avoid risk of stack overflow but do not writeback
 			 * unless under significant pressure.
 			 */
-			if (page_is_file_cache(page) &&
-					(!current_is_kswapd() || priority >= DEF_PRIORITY - 2)) {
+             // ページキャッシュで swapbackend で無い (ファイル, tmpfs,ramfs のページ) kswapd が書き出しする
+             // stack overflow の危険性があるらしい
+			if (page_is_file_cache(page) &&					(!current_is_kswapd() || priority >= DEF_PRIORITY - 2)) {
 				/*
 				 * Immediately reclaim when written back.
 				 * Similar in principal to deactivate_page()
