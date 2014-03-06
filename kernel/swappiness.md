@@ -498,6 +498,7 @@ static unsigned long shrink_inactive_list(unsigned long max_scan,
 				int numpages = hpage_nr_pages(page);
 				reclaim_stat->recent_rotated[file] += numpages;
 			}
+
 			if (!pagevec_add(&pvec, page)) {
 				spin_unlock_irq(&zone->lru_lock);
 				__pagevec_release(&pvec);
@@ -545,6 +546,8 @@ done:
 				nr_reclaimed, priority);
 	return nr_reclaimed;
 ```
+
+shrink_list -> shrink_inactive_list -> **shrink_page_list**
 
 ```c
 /*
@@ -601,6 +604,7 @@ static unsigned long shrink_page_list(struct list_head *page_list,
 		may_enter_fs = (sc->gfp_mask & __GFP_FS) ||
 			(PageSwapCache(page) && (sc->gfp_mask & __GFP_IO));
 
+         // dirty なページ
 		if (PageWriteback(page)) {
 			nr_writeback++;
 			/*
@@ -609,6 +613,9 @@ static unsigned long shrink_page_list(struct list_head *page_list,
 			 * but if it encounters a page under writeback, wait
 			 * for the IO to complete.
 			 */
+            // dirty なページの書き戻し
+            // anon, file に限らず dirty ならファイルに書き出しが必要
+            // TASK_UNINTERRUPTIBLE ?
 			if (sync_writeback == PAGEOUT_IO_SYNC && may_enter_fs)
 				wait_on_page_writeback(page);
 			else
