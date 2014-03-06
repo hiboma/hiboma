@@ -1,3 +1,51 @@
+## TODO
+
+ * shrink_list
+   * shrink_active_list
+     * 非 evictable なページは何もしない
+     * page_referenced なページは Active リストの先頭に繋ぎ直し (rotate と呼ぶ)
+     * その他は PG_Activeフラグを落として Inactive の先頭に繋ぐ
+     * active -> inactive の移動では I/O発行 は伴わない
+ * shrink_inactive_list
+   * shrink_page_list 強い
+     * 無名メモリが backing store を持つかどうかで挙動が変わる
+     * PageDirty(page) であれば swapやファイルシステムに書き出す必要がある
+       * pageout が vm_area_opetaions の .writepage でディスクにページを書き出し
+       * swap でなくとも I/O を伴う
+
+```c
+# FREE is どこ?
+
+enum lru_list {
+	LRU_INACTIVE_ANON = LRU_BASE,
+	LRU_ACTIVE_ANON   = LRU_BASE + LRU_ACTIVE,
+	LRU_INACTIVE_FILE = LRU_BASE + LRU_FILE,
+	LRU_ACTIVE_FILE   = LRU_BASE + LRU_FILE + LRU_ACTIVE,
+	LRU_UNEVICTABLE,  // reclaim されない
+	NR_LRU_LISTS
+};
+```
+
+```c
+/**
+ * page_is_file_cache - should the page be on a file LRU or anon LRU?
+ * @page: the page to test
+ *
+ * Returns 1 if @page is page cache page backed by a regular filesystem,
+ * or 0 if @page is anonymous, tmpfs or otherwise ram or swap backed.
+ * Used by functions that manipulate the LRU lists, to sort a page
+ * onto the right LRU list.
+ *
+ * We would like to get this info without a page flag, but the state
+ * needs to survive until the page is last deleted from the LRU, which
+ * could be as far down as __page_cache_release.
+ */
+static inline int page_is_file_cache(struct page *page)
+{
+	return !PageSwapBacked(page);
+}
+```
+
 ## swappiness
 
 定義されているのは kernel/sysctl.c。デフォルトは 60 よ
