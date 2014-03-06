@@ -192,6 +192,7 @@ restart:
 		int file = is_file_lru(l);
 		unsigned long scan;
 
+        // ?
 		scan = zone_nr_lru_pages(mz, l);
 		if (priority || noswap || !sc->swappiness) {
 			scan >>= priority;
