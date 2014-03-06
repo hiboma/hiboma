@@ -16,6 +16,9 @@
  * PG_locked
    * ページキャッシュに pin する
    * ブロック truncation されないようにする (削除?)
+ * PG_reclaim
+   * `/* To be reclaimed asap */`
+   * なるはやで reclaim されるページ (see. shrink_page_list )
  * page_waitqueue(page)
    * ページが unlock されるのを待つqueue
  * PG_uptodate

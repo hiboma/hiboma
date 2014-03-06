@@ -673,8 +673,8 @@ static unsigned long shrink_page_list(struct list_head *page_list,
 			 * avoid risk of stack overflow but do not writeback
 			 * unless under significant pressure.
 			 */
-             // ページキャッシュで swapbackend で無い (ファイル, tmpfs,ramfs のページ) kswapd が書き出しする
-             // stack overflow の危険性があるらしい
+             // ページキャッシュ (swapbackendで無い=ファイル,tmpfs,ramfsのページ) で
+             // kswapでない???
 			if (page_is_file_cache(page) &&					(!current_is_kswapd() || priority >= DEF_PRIORITY - 2)) {
 				/*
 				 * Immediately reclaim when written back.
@@ -682,6 +682,7 @@ static unsigned long shrink_page_list(struct list_head *page_list,
 				 * except we already have the page isolated
 				 * and know it's dirty
 				 */
+                // 
 				SetPageReclaim(page);
 
 				goto keep_locked;
@@ -695,6 +696,8 @@ static unsigned long shrink_page_list(struct list_head *page_list,
 				goto keep_locked;
 
 			/* Page is dirty, try to write it out here */
+            // dirty なページの書き出しだー!!!
+            // vm_area_operations の .writepage が呼ばれる
 			switch (pageout(page, mapping, sync_writeback)) {
 			case PAGE_KEEP:
 				nr_congested++;
