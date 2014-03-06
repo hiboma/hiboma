@@ -104,13 +104,17 @@ PSS x share しているプロセス数 = プロセス群のRSS
    * `PTE contains a translation */` と説明
  * pte_file
    * pte_flags(pte) & _PAGE_FILE;
+   * `/* - set: nonlinear file mapping, saved PTE; unset:swap */`
+   * ?
  * pte_none
    * !pte.pte;
+   * ページフレームが割り当てられていない。物理アドレスを保持していない
  * is_swap_pte = !pte_none(pte) && !pte_present(pte) && !pte_file(pte);
  * pte_dirty
    * pte_flags(pte) & (_PAGE_DIRTY | _PAGE_SOFTDIRTY); 
  * pte_young
    * pte_flags(pte) & _PAGE_ACCESSED;
+   * 参照ビットが立っている
  * PageAnon
    * ((unsigned long)page->mapping & PAGE_MAPPING_ANON) != 0;
  * PageDirty
