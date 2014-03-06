@@ -111,16 +111,16 @@ PSS x share しているプロセス数 = プロセス群のRSS
    * ページフレームが割り当てられていない。物理アドレスを保持していない
  * is_swap_pte = !pte_none(pte) && !pte_present(pte) && !pte_file(pte);
  * pte_dirty
-   * pte_flags(pte) & (_PAGE_DIRTY | _PAGE_SOFTDIRTY); 
+   * pte_flags(pte) & (_PAGE_DIRTY | _PAGE_SOFTDIRTY);
+   * PageDirty
+     * ?
  * pte_young
    * pte_flags(pte) & _PAGE_ACCESSED;
    * 参照ビットが立っている
+   * PageReferenced
+     * ?
  * PageAnon
    * ((unsigned long)page->mapping & PAGE_MAPPING_ANON) != 0;
- * PageDirty
-   * ?
- * PageReferenced
-   * ?
 
 ``` c
 #define _PAGE_BIT_PRESENT	0	/* is present */
@@ -144,9 +144,10 @@ PSS x share しているプロセス数 = プロセス群のRSS
 #define _PAGE_BIT_NX           63       /* No execute: only valid after cpuid check */
 ```
 
-pte_t からページの利用種別に統計を取る
+pte_t からページの利用種別に統計を取る計算
 
  * ptent_size が複数の項目で加算されてるのに注意だぞう
+ * page->_mapcount > 1 でプロセス間で共有されているかどうかを判定できる
 
 ```c
 static void smaps_pte_entry(pte_t ptent, unsigned long addr,
@@ -204,3 +205,63 @@ static void smaps_pte_entry(pte_t ptent, unsigned long addr,
 }
 ```
 
+smaps_pte_entry は walk_page_range の smaps_walkコールバック内で使われている
+
+```
+static int show_smap(struct seq_file *m, void *v)
+
+// ...
+
+	struct mm_walk smaps_walk = {
+		.pmd_entry = smaps_pte_range,
+		.mm = vma->vm_mm,
+		.private = &mss,
+	};
+
+	memset(&mss, 0, sizeof mss);
+	mss.vma = vma;
+	/* mmap_sem is held in m_start */
+	if (vma->vm_mm && !is_vm_hugetlb_page(vma))
+		walk_page_range(vma->vm_start, vma->vm_end, &smaps_walk);
+```
+
+```
+static int smaps_pte_range(pmd_t *pmd, unsigned long addr, unsigned long end,
+			   struct mm_walk *walk)
+{
+	struct mem_size_stats *mss = walk->private;
+	struct vm_area_struct *vma = mss->vma;
+	pte_t *pte;
+	spinlock_t *ptl;
+
+	spin_lock(&walk->mm->page_table_lock);
+	if (pmd_trans_huge(*pmd)) {
+		if (pmd_trans_splitting(*pmd)) {
+			spin_unlock(&walk->mm->page_table_lock);
+			wait_split_huge_page(vma->anon_vma, pmd);
+		} else {
+			smaps_pte_entry(*(pte_t *)pmd, addr,
+					HPAGE_PMD_SIZE, walk);
+			spin_unlock(&walk->mm->page_table_lock);
+			mss->anonymous_thp += HPAGE_PMD_SIZE;
+			return 0;
+		}
+	} else {
+		spin_unlock(&walk->mm->page_table_lock);
+	}
+
+	if (pmd_trans_unstable(pmd))
+		return 0;
+	/*
+	 * The mmap_sem held all the way back in m_start() is what
+	 * keeps khugepaged out of here and from collapsing things
+	 * in here.
+	 */
+	pte = pte_offset_map_lock(vma->vm_mm, pmd, addr, &ptl);
+	for (; addr != end; pte++, addr += PAGE_SIZE)
+		smaps_pte_entry(*pte, addr, PAGE_SIZE, walk);
+	pte_unmap_unlock(pte - 1, ptl);
+	cond_resched();
+	return 0;
+}
+```
