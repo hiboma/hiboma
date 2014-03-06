@@ -205,15 +205,15 @@ static void smaps_pte_entry(pte_t ptent, unsigned long addr,
 }
 ```
 
-smaps_pte_entry は walk_page_range の smaps_walkコールバック内で使われている
+smaps_pte_entry は walk_page_range の smaps_pte_range コールバック内で使われている
 
-```
+```c
 static int show_smap(struct seq_file *m, void *v)
 
 // ...
 
 	struct mm_walk smaps_walk = {
-		.pmd_entry = smaps_pte_range,
+		.pmd_entry = smaps_pte_range, // コールバック
 		.mm = vma->vm_mm,
 		.private = &mss,
 	};
@@ -225,7 +225,7 @@ static int show_smap(struct seq_file *m, void *v)
 		walk_page_range(vma->vm_start, vma->vm_end, &smaps_walk);
 ```
 
-```
+```c
 static int smaps_pte_range(pmd_t *pmd, unsigned long addr, unsigned long end,
 			   struct mm_walk *walk)
 {
@@ -235,11 +235,14 @@ static int smaps_pte_range(pmd_t *pmd, unsigned long addr, unsigned long end,
 	spinlock_t *ptl;
 
 	spin_lock(&walk->mm->page_table_lock);
+    // Page Middle Directory が HugePage (4MB or 2MB) かどうか
 	if (pmd_trans_huge(*pmd)) {
+        // ? 
 		if (pmd_trans_splitting(*pmd)) {
 			spin_unlock(&walk->mm->page_table_lock);
 			wait_split_huge_page(vma->anon_vma, pmd);
 		} else {
+
 			smaps_pte_entry(*(pte_t *)pmd, addr,
 					HPAGE_PMD_SIZE, walk);
 			spin_unlock(&walk->mm->page_table_lock);
