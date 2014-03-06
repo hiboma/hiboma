@@ -167,8 +167,12 @@ static void shrink_mem_cgroup_zone(int priority, struct mem_cgroup_zone *mz,
 	int noswap = 0;
 
 restart:
+    // 回収したページ数
 	nr_reclaimed = 0;
+    
+    // スキャンしたページ数
 	nr_scanned = sc->nr_scanned;
+
 	/* If we have no swap space, do not bother scanning anon pages. */
     // swap が無ければ無名ページのスキャンをしない
     // nr_swap_pages スワップできるページ数
@@ -198,6 +202,11 @@ restart:
 			scan >>= priority;
 			scan = (scan * percent[file]) / 100;
 		}
+        
+        // scan する量を再調整
+        // SWAP_CLUSTER_MAX = 32 を超えない値に調整されんのかな
+        // anon なページを reclaim しようとすると swap するけど、 
+        // 一度にでかい単位で reclaim は大変なので SWAP_CLUSTER_MAX が定められてる?
 		nr[l] = nr_scan_try_batch(scan,
 					  &reclaim_stat->nr_saved_scan[l]);
 	}
