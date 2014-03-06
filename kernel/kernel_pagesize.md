@@ -225,6 +225,9 @@ static int show_smap(struct seq_file *m, void *v)
 		walk_page_range(vma->vm_start, vma->vm_end, &smaps_walk);
 ```
 
+ * PGD -> PUD -> PMD -> PTE,PTE,...,
+ * 特定の MD以下の PTE を順番に走査していいく
+
 ```c
 static int smaps_pte_range(pmd_t *pmd, unsigned long addr, unsigned long end,
 			   struct mm_walk *walk)
@@ -242,10 +245,11 @@ static int smaps_pte_range(pmd_t *pmd, unsigned long addr, unsigned long end,
 			spin_unlock(&walk->mm->page_table_lock);
 			wait_split_huge_page(vma->anon_vma, pmd);
 		} else {
-
 			smaps_pte_entry(*(pte_t *)pmd, addr,
 					HPAGE_PMD_SIZE, walk);
 			spin_unlock(&walk->mm->page_table_lock);
+
+            // "AnonHugePages:  %8lu kB\n"
 			mss->anonymous_thp += HPAGE_PMD_SIZE;
 			return 0;
 		}
@@ -260,7 +264,9 @@ static int smaps_pte_range(pmd_t *pmd, unsigned long addr, unsigned long end,
 	 * keeps khugepaged out of here and from collapsing things
 	 * in here.
 	 */
+    // PTEテーブルを順番に走査
 	pte = pte_offset_map_lock(vma->vm_mm, pmd, addr, &ptl);
+    // PAGE_SIZE ごとにアドレスをインクリメント
 	for (; addr != end; pte++, addr += PAGE_SIZE)
 		smaps_pte_entry(*pte, addr, PAGE_SIZE, walk);
 	pte_unmap_unlock(pte - 1, ptl);
