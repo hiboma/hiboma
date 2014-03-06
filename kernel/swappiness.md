@@ -59,6 +59,45 @@ $ cat 100mb.txt >/dev/null
 $ unlink 100mb.txt
 ```
 
+```c
+#if 0
+#!/bin/bash
+o=`basename $0`
+o="__${o%.*}"
+CFLAGS="-O2 -std=gnu99 -W -Wall -fPIE -D_FORTIFY_SOURCE=2"
+gcc ${CFLAGS} -o $o $0 && ./$o $*; exit
+#endif
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/mman.h>
+#include <err.h>
+
+int main()
+{
+	ssize_t mmap_size = sysconf(_SC_PAGESIZE) * 10000;
+	char *p = mmap(NULL, mmap_size, PROT_READ|PROT_WRITE,
+		       MAP_PRIVATE|MAP_ANONYMOUS, 0,0);
+	if (p == MAP_FAILED)
+		err(1, "mmap");
+
+	printf("mmap-ed\n");
+	sleep(5);
+
+    /* ここで Anon(Active) が増えていた */
+	printf("first time\n");
+	memset(p, '1', mmap_size);
+	sleep(5);
+
+	printf("second time\n");
+	memset(p, '1', mmap_size);
+
+	exit(0);
+}
+```
+
 ## swappiness
 
 定義されているのは kernel/sysctl.c。デフォルトは 60 よ
