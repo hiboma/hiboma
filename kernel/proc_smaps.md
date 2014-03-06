@@ -146,6 +146,10 @@ PSS x share しているプロセス数 = プロセス群のRSS
 #define _PAGE_BIT_NX           63       /* No execute: only valid after cpuid check */
 ```
 
+## PTEの走査
+
+![oreilly-device-drivers-linux-page-tables-ldr2_1302](https://f.cloud.github.com/assets/172456/2341729/309c90fe-a4e2-11e3-9083-d42e46cfa687.gif)
+
 pte_t からページの利用種別に統計を取る計算
 
  * ptent_size が複数の項目で加算されてるのに注意だぞう
