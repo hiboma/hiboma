@@ -84,9 +84,11 @@ static void get_scan_ratio(struct mem_cgroup_zone *mz, struct scan_control *sc,
 		free  = zone_page_state(mz->zone, NR_FREE_PAGES);
 		/* If we have very few page cache pages,
 		   force-scan anon pages. */
+
+        // ファイルページ + 空きページ <= high_wmark_pages 以下
 		if (unlikely(file + free <= high_wmark_pages(mz->zone))) {
-			percent[0] = 100;
-			percent[1] = 0;
+			percent[0] = 100; // ram/swap への pressuer
+			percent[1] = 0;   // file LRU への pressuern
 			return;
 		}
 	}
@@ -111,7 +113,7 @@ static void get_scan_ratio(struct mem_cgroup_zone *mz, struct scan_control *sc,
 
 	if (unlikely(reclaim_stat->recent_scanned[1] > file / 4)) {
 		spin_lock_irq(&mz->zone->lru_lock);
-		reclaim_stat->recent_scanned[1] /= 2;
+		reclaim_stat->recent_scanned[1] /= 2;   
 		reclaim_stat->recent_rotated[1] /= 2;
 		spin_unlock_irq(&mz->zone->lru_lock);
 	}
@@ -120,8 +122,11 @@ static void get_scan_ratio(struct mem_cgroup_zone *mz, struct scan_control *sc,
 	 * With swappiness at 100, anonymous and file have the same priority.
 	 * This scanning priority is essentially the inverse of IO cost.
 	 */
+    // swappiness が小さいほどと anon_prio <<<< file_prio になる
+    // swappiness が大きいと     anon_prio >>>> file_prio になる
 	anon_prio = sc->swappiness;
 	file_prio = 200 - sc->swappiness;
+    
 
 	/*
 	 * The amount of pressure on anon vs file pages is inversely
