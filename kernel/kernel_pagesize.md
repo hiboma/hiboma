@@ -66,6 +66,8 @@ PSS x share しているプロセス数 = プロセス群のRSS
  * process, its PSS will be 1500.
 ```
 
+/proc/<pid>/smaps のコード
+
 ```c
 	seq_printf(m,
 		   "Size:           %8lu kB\n"
@@ -98,6 +100,8 @@ PSS x share しているプロセス数 = プロセス群のRSS
 
  * pte_present
    * pte_flags(a) & (_PAGE_PRESENT | _PAGE_PROTNONE);
+   * PTE は 仮想メモリ => 物理メモリのアドレスを保持する
+   * `PTE contains a translation */` と説明
  * pte_file
    * pte_flags(pte) & _PAGE_FILE;
  * pte_none
