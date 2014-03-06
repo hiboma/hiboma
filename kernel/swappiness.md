@@ -337,7 +337,7 @@ static void shrink_active_list(unsigned long nr_pages,
 			}
 		}
 
-        // Active フラグを落として Inactive の先頭に入れる
+        // Active フラグを落として Inactive の先頭に繋ぐ
 		ClearPageActive(page);	/* we are de-activating */
 		list_add(&page->lru, &l_inactive);
 	}
