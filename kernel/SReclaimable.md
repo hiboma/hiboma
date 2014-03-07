@@ -22,6 +22,21 @@ __vm_enough_memory
 		free += global_page_state(NR_SLAB_RECLAIMABLE);
 ```
 
+## kmem_cache
+
+SLAB_RECLAIM_ACCOUNT の有無で分類される
+
+```
+struct kmem_cache {
+	unsigned int size, align;
+	unsigned long flags;
+	const char *name;
+	void (*ctor)(void *);
+};
+```
+
+kmem_cache_create に渡すフラグで変更できる様子
+
 ## NR_SLAB_RECLAIMABLE, NR_SLAB_UNRECLAIMABLE の減算
 
 kmem_cache_shrink -> discard_slab -> free_slab -> **__free_slab**
@@ -59,7 +74,7 @@ static void __free_slab(struct kmem_cache *s, struct page *page)
 
 ## NR_SLAB_RECLAIMABLE, NR_SLAB_UNRECLAIMABLE の加算
 
-early_kmem_cache_node_alloc -> new_slab -> **allocate_slab**
+kmem_cache_alloc -> slab_alloc __slab_alloc -> new_slab -> **allocate_slab**
 
 ```c
 static struct page *allocate_slab(struct kmem_cache *s, gfp_t flags, int node)
