@@ -10,7 +10,7 @@
 				global_page_state(NR_SLAB_UNRECLAIMABLE)),
 ```
 
-__vm_enough_memory 
+__vm_enough_memory で参照されている
         
 ```c
 		/*
@@ -21,6 +21,8 @@ __vm_enough_memory
 		 */
 		free += global_page_state(NR_SLAB_RECLAIMABLE);
 ```
+
+slab (kmem_cache等) で reclaim できるもの/できないもののサイズを指している
 
 ## kmem_cache
 
