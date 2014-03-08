@@ -18,8 +18,6 @@ request_irq(unsigned int irq, irqreturn_t (*handler)(int, void *, struct pt_regs
 
  * http://wiki.bit-hive.com/linuxkernelmemo/pg/%C1%F7%BC%F5%BF%AE
  * [Interl PRO/1000](http://www.amazon.co.jp/dp/B000BMZHX2)
- * CONFIG_E1000_MQ
-   * Multiple Queue
 
 ```c
 int
@@ -36,6 +34,14 @@ e1000_up(struct e1000_adapter *adapter)
 
 ハードウェア割り込みハンドラの実装
 
+ * 実装の詳細はさておき IRQ番号の扱い, softirq に繋がる部分を読む
+ * ハンドラの実行を終えたら IRQ_HANDLED を返す
+ * CONFIG_E1000_MQ
+   * Multiple Queue
+   * 割り込み処理を複数CPUに分散させるやつ
+ * __netif_rx_schedule -> __raise_softirq_irqoff(NET_RX_SOFTIRQ);
+   * polling のリストを追加
+   
 ```c
 /**
  * e1000_intr - Interrupt Handler
@@ -115,6 +121,39 @@ e1000_intr(int irq, void *data, struct pt_regs *regs)
 #endif /* CONFIG_E1000_NAPI */
 
 	return IRQ_HANDLED;
+}
+```
+
+割り込みの on / off の切り替え
+
+```c
+
+/**
+ * e1000_irq_disable - Mask off interrupt generation on the NIC
+ * @adapter: board private structure
+ **/
+
+static inline void
+e1000_irq_disable(struct e1000_adapter *adapter)
+{
+	atomic_inc(&adapter->irq_sem);
+	E1000_WRITE_REG(&adapter->hw, IMC, ~0);
+	E1000_WRITE_FLUSH(&adapter->hw);
+	synchronize_irq(adapter->pdev->irq);
+}
+
+/**
+ * e1000_irq_enable - Enable default interrupt generation settings
+ * @adapter: board private structure
+ **/
+
+static inline void
+e1000_irq_enable(struct e1000_adapter *adapter)
+{
+	if(likely(atomic_dec_and_test(&adapter->irq_sem))) {
+		E1000_WRITE_REG(&adapter->hw, IMS, IMS_ENABLE_MASK);
+		E1000_WRITE_FLUSH(&adapter->hw);
+	}
 }
 ```
 
