@@ -219,6 +219,72 @@ static inline void __netif_rx_schedule(struct net_device *dev)
 }
 ```
 
+NET_RX_SOFTIRQ は下記でコールバックが登録されている
+
+```c
+/*
+ *       This is called single threaded during boot, so no need
+ *       to take the rtnl semaphore.
+ */
+static int __init net_dev_init(void)
+{
+	int i, rc = -ENOMEM;
+
+	BUG_ON(!dev_boot_phase);
+
+	net_random_init();
+
+	if (dev_proc_init())
+		goto out;
+
+	if (netdev_sysfs_init())
+		goto out;
+
+	INIT_LIST_HEAD(&ptype_all);
+	for (i = 0; i < 16; i++) 
+		INIT_LIST_HEAD(&ptype_base[i]);
+
+	for (i = 0; i < ARRAY_SIZE(dev_name_head); i++)
+		INIT_HLIST_HEAD(&dev_name_head[i]);
+
+	for (i = 0; i < ARRAY_SIZE(dev_index_head); i++)
+		INIT_HLIST_HEAD(&dev_index_head[i]);
+
+	/*
+	 *	Initialise the packet receive queues.
+	 */
+
+	for (i = 0; i < NR_CPUS; i++) {
+		struct softnet_data *queue;
+
+		queue = &per_cpu(softnet_data, i);
+        // パケット受信キュー
+		skb_queue_head_init(&queue->input_pkt_queue);
+		queue->completion_queue = NULL;
+		INIT_LIST_HEAD(&queue->poll_list);
+		set_bit(__LINK_STATE_START, &queue->backlog_dev.state);
+		queue->backlog_dev.weight = weight_p;
+		queue->backlog_dev.poll = process_backlog;
+		atomic_set(&queue->backlog_dev.refcnt, 1);
+	}
+
+	dev_boot_phase = 0;
+
+    // Array に データと関数ポインタぶっこむだけ
+    //	softirq_vec[nr].data = data;
+    //	softirq_vec[nr].action = action;
+	open_softirq(NET_TX_SOFTIRQ, net_tx_action, NULL);
+	open_softirq(NET_RX_SOFTIRQ, net_rx_action, NULL);
+
+	hotcpu_notifier(dev_cpu_callback, 0);
+	dst_init();
+	dev_mcast_init();
+	rc = 0;
+out:
+	return rc;
+}
+```
+
 ## SCSIホストバスアダプタドライバ処理
 
 ## シリアルドライバ処理	
