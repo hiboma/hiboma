@@ -254,6 +254,7 @@ static int __init net_dev_init(void)
 	 *	Initialise the packet receive queues.
 	 */
 
+    // 受信キューは CPU ごとに用意されている
 	for (i = 0; i < NR_CPUS; i++) {
 		struct softnet_data *queue;
 
