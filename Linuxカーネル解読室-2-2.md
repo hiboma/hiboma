@@ -2,8 +2,11 @@
 
 > 伝統UNIXでは、応答性を確保するために割り込みレベルという考え方を採用していました
 
-高優先度の割り込みがネストすることを許可する
- 
+高優先度の割り込みによるネストを許可する
+
+  * 優先度高い割り込み
+    * 時計?
+    * 電源?
   * Linux
     * 応答性が必要     ... ハードゥエア割り込みハンドラ
     * 応答性が必要ない ... 遅延実行、ソフト割り込み (ソフトIRQ)
@@ -16,8 +19,12 @@ request_irq(unsigned int irq, irqreturn_t (*handler)(int, void *, struct pt_regs
 
 ## イーサネットドライバ処理
 
+ハードウェア割り込みハンドラへ IRQ を配送するコードはどこ?
+
  * http://wiki.bit-hive.com/linuxkernelmemo/pg/%C1%F7%BC%F5%BF%AE
- * [Interl PRO/1000](http://www.amazon.co.jp/dp/B000BMZHX2)
+ * [Interl PRO/1000](http://www.amazon.co.jp/dp/B000BMZHX2) のドライバをサンプルに見てみよう
+
+IRQの割り当てとハードウェア割り込みハンドラの登録
 
 ```c
 int
@@ -35,10 +42,12 @@ e1000_up(struct e1000_adapter *adapter)
 ハードウェア割り込みハンドラの実装
 
  * 実装の詳細はさておき IRQ番号の扱い, softirq に繋がる部分を読む
+ * ハンドラの実行中は IRQ が disabled
+ * 関係ない割り込みの場合は IRQ_NONE を返しとく?
  * ハンドラの実行を終えたら IRQ_HANDLED を返す
  * CONFIG_E1000_MQ
    * Multiple Queue
-   * 割り込み処理を複数CPUに分散させるやつ
+   * 割り込み処理を複数CPUに分散させるやつ?
  * __netif_rx_schedule -> __raise_softirq_irqoff(NET_RX_SOFTIRQ);
    * polling のリストを追加
    
@@ -106,6 +115,7 @@ e1000_intr(int irq, void *data, struct pt_regs *regs)
 	   in dead lock. Writing IMC forces 82547 into
 	   de-assertion state.
 	*/
+
     /* Intel® 82547 Gigabit Ethernet Controller のことを指すらしい */
 	if(hw->mac_type == e1000_82547 || hw->mac_type == e1000_82547_rev_2){
 		atomic_inc(&adapter->irq_sem);
