@@ -66,6 +66,7 @@ e1000_intr(int irq, void *data, struct pt_regs *regs)
 
 	if(unlikely(icr & (E1000_ICR_RXSEQ | E1000_ICR_LSC))) {
 		hw->get_link_status = 1;
+        // 割り込みを処理 => watchdog_timer を更新しておく
 		mod_timer(&adapter->watchdog_timer, jiffies);
 	}
 
@@ -105,6 +106,7 @@ e1000_intr(int irq, void *data, struct pt_regs *regs)
 	   in dead lock. Writing IMC forces 82547 into
 	   de-assertion state.
 	*/
+    /* Intel® 82547 Gigabit Ethernet Controller のことを指すらしい */
 	if(hw->mac_type == e1000_82547 || hw->mac_type == e1000_82547_rev_2){
 		atomic_inc(&adapter->irq_sem);
 		E1000_WRITE_REG(hw, IMC, ~0);
@@ -151,10 +153,37 @@ static inline void
 e1000_irq_enable(struct e1000_adapter *adapter)
 {
 	if(likely(atomic_dec_and_test(&adapter->irq_sem))) {
+       // レジスタへの書き込み
+       // レジスタの中身は drivers/net/e1000/e1000_hw.h をみる
 		E1000_WRITE_REG(&adapter->hw, IMS, IMS_ENABLE_MASK);
 		E1000_WRITE_FLUSH(&adapter->hw);
 	}
 }
+```
+
+```
+#ifdef CONFIG_E1000_MQ
+void
+e1000_rx_schedule(void *data)
+{
+	struct net_device *poll_dev, *netdev = data;
+	struct e1000_adapter *adapter = netdev->priv;
+	int this_cpu = get_cpu();
+
+	poll_dev = *per_cpu_ptr(adapter->cpu_netdev, this_cpu);
+	if (poll_dev == NULL) {
+		put_cpu();
+		return;
+	}
+
+	if (likely(netif_rx_schedule_prep(poll_dev)))
+		__netif_rx_schedule(poll_dev);
+	else
+		e1000_irq_enable(adapter);
+
+	put_cpu();
+}
+#endif
 ```
 
 ## SCSIホストバスアダプタドライバ処理
