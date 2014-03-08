@@ -16,7 +16,10 @@ request_irq(unsigned int irq, irqreturn_t (*handler)(int, void *, struct pt_regs
 
 ## イーサネットドライバ処理
 
-[Interl PRO/1000](http://www.amazon.co.jp/dp/B000BMZHX2)
+ * http://wiki.bit-hive.com/linuxkernelmemo/pg/%C1%F7%BC%F5%BF%AE
+ * [Interl PRO/1000](http://www.amazon.co.jp/dp/B000BMZHX2)
+ * CONFIG_E1000_MQ
+   * Multiple Queue
 
 ```c
 int
