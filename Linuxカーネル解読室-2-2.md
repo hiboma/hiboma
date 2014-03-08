@@ -11,11 +11,11 @@
     * 応答性が必要     ... ハードゥエア割り込みハンドラ
     * 応答性が必要ない ... 遅延実行、ソフト割り込み (ソフトIRQ)
 
-```    
+```c
 int
 request_irq(unsigned int irq, irqreturn_t (*handler)(int, void *, struct pt_regs *),
 	    unsigned long irqflags, const char * devname, void *dev_id)
-```    
+```
 
 ## イーサネットドライバ処理
 
