@@ -196,6 +196,29 @@ e1000_rx_schedule(void *data)
 #endif
 ```
 
+__netif_rx_schedule を呼び出すと softirq へ繋がる
+
+```c
+/* Add interface to tail of rx poll list. This assumes that _prep has
+ * already been called and returned 1.
+ */
+
+static inline void __netif_rx_schedule(struct net_device *dev)
+{
+	unsigned long flags;
+
+	local_irq_save(flags);
+	dev_hold(dev);
+	list_add_tail(&dev->poll_list, &__get_cpu_var(softnet_data).poll_list);
+	if (dev->quota < 0)
+		dev->quota += dev->weight;
+	else
+		dev->quota = dev->weight;
+	__raise_softirq_irqoff(NET_RX_SOFTIRQ);
+	local_irq_restore(flags);
+}
+```
+
 ## SCSIホストバスアダプタドライバ処理
 
 ## シリアルドライバ処理	
@@ -208,6 +231,8 @@ e1000_rx_schedule(void *data)
 
 ## request_irq
 
+ * struct irqaction
+ * struct irq_desc
  * /proc/irq/<IRQ番号>
 
 ```c
@@ -233,4 +258,17 @@ typedef struct irq_desc {
 } ____cacheline_aligned irq_desc_t;
 
 extern irq_desc_t irq_desc [NR_IRQS];
+```
+
+```c
+struct irqaction {
+	irqreturn_t (*handler)(int, void *, struct pt_regs *);
+	unsigned long flags;
+	cpumask_t mask;
+	const char *name;
+	void *dev_id;
+	struct irqaction *next;
+	int irq;
+	struct proc_dir_entry *dir;
+};
 ```
