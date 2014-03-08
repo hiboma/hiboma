@@ -206,5 +206,31 @@ e1000_rx_schedule(void *data)
 
 ## 端末制御処理    
 
+## request_irq
 
+ * /proc/irq/<IRQ番号>
 
+```c
+/*
+ * This is the "IRQ descriptor", which contains various information
+ * about the irq, including what kind of hardware handling it has,
+ * whether it is disabled etc etc.
+ *
+ * Pad this out to 32 bytes for cache and indexing reasons.
+ */
+typedef struct irq_desc {
+	hw_irq_controller *handler;
+	void *handler_data;
+	struct irqaction *action;	/* IRQ action list */
+	unsigned int status;		/* IRQ status */
+	unsigned int depth;		/* nested irq disables */
+	unsigned int irq_count;		/* For detecting broken interrupts */
+	unsigned int irqs_unhandled;
+	spinlock_t lock;
+#if defined (CONFIG_GENERIC_PENDING_IRQ) || defined (CONFIG_IRQBALANCE)
+	unsigned int move_irq;		/* Flag need to re-target intr dest*/
+#endif
+} ____cacheline_aligned irq_desc_t;
+
+extern irq_desc_t irq_desc [NR_IRQS];
+```
