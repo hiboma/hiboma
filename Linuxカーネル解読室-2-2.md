@@ -343,6 +343,106 @@ job_done:
 }
 ```
 
+ * dev_add_pack でパケットのハンドラを追加する
+
+```c
+int netif_receive_skb(struct sk_buff *skb)
+{
+	struct packet_type *ptype, *pt_prev;
+	struct net_device *orig_dev;
+	int ret = NET_RX_DROP;
+	unsigned short type;
+
+	/* if we've gotten here through NAPI, check netpoll */
+	if (skb->dev->poll && netpoll_rx(skb))
+		return NET_RX_DROP;
+
+	if (!skb->tstamp.off_sec)
+		net_timestamp(skb);
+
+	if (!skb->input_dev)
+		skb->input_dev = skb->dev;
+
+	orig_dev = skb_bond(skb);
+
+	__get_cpu_var(netdev_rx_stat).total++;
+
+	skb->h.raw = skb->nh.raw = skb->data;
+	skb->mac_len = skb->nh.raw - skb->mac.raw;
+
+	pt_prev = NULL;
+
+	rcu_read_lock();
+
+#ifdef CONFIG_NET_CLS_ACT
+	if (skb->tc_verd & TC_NCLS) {
+		skb->tc_verd = CLR_TC_NCLS(skb->tc_verd);
+		goto ncls;
+	}
+#endif
+
+	list_for_each_entry_rcu(ptype, &ptype_all, list) {
+		if (!ptype->dev || ptype->dev == skb->dev) {
+			if (pt_prev) 
+				ret = deliver_skb(skb, pt_prev, orig_dev);
+			pt_prev = ptype;
+		}
+	}
+
+#ifdef CONFIG_NET_CLS_ACT
+	if (pt_prev) {
+		ret = deliver_skb(skb, pt_prev, orig_dev);
+		pt_prev = NULL; /* noone else should process this after*/
+	} else {
+		skb->tc_verd = SET_TC_OK2MUNGE(skb->tc_verd);
+	}
+
+	ret = ing_filter(skb);
+
+	if (ret == TC_ACT_SHOT || (ret == TC_ACT_STOLEN)) {
+		kfree_skb(skb);
+		goto out;
+	}
+
+	skb->tc_verd = 0;
+ncls:
+#endif
+
+	handle_diverter(skb);
+
+	if (handle_bridge(&skb, &pt_prev, &ret, orig_dev))
+		goto out;
+
+    // パケットのプロトコル?
+	type = skb->protocol;
+    // プロトコルに応じたハンドラを探す
+    // ハンドラは static struct list_head ptype_base[16];	/* 16 way hashed list */ に登録されている
+    //  
+	list_for_each_entry_rcu(ptype, &ptype_base[ntohs(type)&15], list) {
+		if (ptype->type == type &&
+		    (!ptype->dev || ptype->dev == skb->dev)) {
+			if (pt_prev) 
+				ret = deliver_skb(skb, pt_prev, orig_dev);
+			pt_prev = ptype;
+		}
+	}
+
+	if (pt_prev) {
+		ret = pt_prev->func(skb, skb->dev, pt_prev, orig_dev);
+	} else {
+		kfree_skb(skb);
+		/* Jamal, now you will not able to escape explaining
+		 * me how you were going to use this. :-)
+		 */
+		ret = NET_RX_DROP;
+	}
+
+out:
+	rcu_read_unlock();
+	return ret;
+}
+```
+
 ## TCP/IPプロトコル処理 (softirq)
 
 ## SCSIホストバスアダプタドライバ処理
