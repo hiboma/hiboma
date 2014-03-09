@@ -136,10 +136,64 @@ struct __wait_queue {
    * enqueue_task
  * resched_task()
    * 再スケジューリング要求 = 他プロセスからのプリエンプション要求
+   * TIF_NEED_RESCHED の有無
 
 > ほかのCPUのプロセススケジューラに対して要求する場合は、プロセッサ間割り込みを利用します
 
-try_to_wake_up の実装
+resched_task の smp_send_reschedule の事を指す
+
+```c
+/*
+ * resched_task - mark a task 'to be rescheduled now'.
+ *
+ * On UP this means the setting of the need_resched flag, on SMP it
+ * might also involve a cross-CPU call to trigger the scheduler on
+ * the target CPU.
+ */
+#ifdef CONFIG_SMP
+static void resched_task(task_t *p)
+{
+	int cpu;
+
+	assert_spin_locked(&task_rq(p)->lock);
+
+    // TIF_NEED_RESCHED が立っている == 再スケジューリング要求が出ている
+	if (unlikely(test_tsk_thread_flag(p, TIF_NEED_RESCHED)))
+		return;
+
+	set_tsk_thread_flag(p, TIF_NEED_RESCHED);
+
+    // 実行CPU がプロセスのCPUと一緒かどうか
+	cpu = task_cpu(p);
+	if (cpu == smp_processor_id())
+		return;
+
+	/* NEED_RESCHED must be visible before we test POLLING_NRFLAG */
+	smp_mb();
+	if (!test_tsk_thread_flag(p, TIF_POLLING_NRFLAG))
+		smp_send_reschedule(cpu);
+}
+#else
+```
+
+smp_send_reschedule の中身
+
+ * IPI = Inter Processor Interrupts の略称
+
+```c
+/*
+ * this function sends a 'reschedule' IPI to another CPU.
+ * it goes straight through and wastes no time serializing
+ * anything. Worst case is that we lose a reschedule ...
+ */
+
+void smp_send_reschedule(int cpu)
+{
+	send_IPI_mask(cpumask_of_cpu(cpu), RESCHEDULE_VECTOR);
+}
+```
+
+## try_to_wake_up の実装
 
 ```c
 /***
