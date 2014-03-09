@@ -48,7 +48,7 @@ e1000_up(struct e1000_adapter *adapter)
  * CONFIG_E1000_MQ
    * Multiple Queue
    * 割り込み処理を複数CPUに分散させるやつ?
- * __netif_rx_schedule -> __raise_softirq_irqoff(NET_RX_SOFTIRQ);
+ * __netif_rx_schedule -> __raise_softirq_irqoff(NET_RX_SOFTIRQ) で softirq に繋がる
    * polling のリストを追加
    
 ```c
@@ -290,10 +290,59 @@ out:
 }
 ```
 
+## TCP/IPプロトコル処理 (softirq)
+
+```c
+static void net_rx_action(struct softirq_action *h)
+{
+	struct softnet_data *queue = &__get_cpu_var(softnet_data);
+	unsigned long start_time = jiffies;
+	int budget = netdev_budget;
+	void *have;
+
+	local_irq_disable();
+
+	while (!list_empty(&queue->poll_list)) {
+		struct net_device *dev;
+
+		if (budget <= 0 || jiffies - start_time > 1)
+			goto softnet_break;
+
+		local_irq_enable();
+
+		dev = list_entry(queue->poll_list.next,
+				 struct net_device, poll_list);
+		have = netpoll_poll_lock(dev);
+
+		if (dev->quota <= 0 || dev->poll(dev, &budget)) {
+			netpoll_poll_unlock(have);
+			local_irq_disable();
+			list_del(&dev->poll_list);
+			list_add_tail(&dev->poll_list, &queue->poll_list);
+			if (dev->quota < 0)
+				dev->quota += dev->weight;
+			else
+				dev->quota = dev->weight;
+		} else {
+			netpoll_poll_unlock(have);
+			dev_put(dev);
+			local_irq_disable();
+		}
+	}
+out:
+	local_irq_enable();
+	return;
+
+softnet_break:
+	__get_cpu_var(netdev_rx_stat).time_squeeze++;
+	__raise_softirq_irqoff(NET_RX_SOFTIRQ);
+	goto out;
+}
+
 process_backlog
 
  * polling 
- * sk_buffer を取り出して netif_receive_skb でごにょごにょ
+ * sk_buffer __skb_dequeue で取り出して netif_receive_skb でごにょごにょ
 ```c
 static int process_backlog(struct net_device *backlog_dev, int *budget)
 {
@@ -343,8 +392,10 @@ job_done:
 }
 ```
 
- * dev_add_pack でパケットのハンドラを追加する
-
+ * sk_buff でパケットの中身を見て、プロトコルに応じたハンドラに繋げる
+   * dev_add_pack でパケットのハンドラを追加する
+     * `dev_add_pack(&ip_packet_type);`
+     * `dev_add_pack(&arp_packet_type);`
 ```c
 int netif_receive_skb(struct sk_buff *skb)
 {
@@ -443,7 +494,6 @@ out:
 }
 ```
 
-## TCP/IPプロトコル処理 (softirq)
 
 ## SCSIホストバスアダプタドライバ処理
 
