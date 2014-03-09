@@ -33,6 +33,25 @@ request_irq(unsigned int irq, irqreturn_t (*handler)(int, void *, struct pt_regs
    * CPUキャッシュ
  * ハードゥエア割り込みを特定のCPUに affinity できる
    * [RedHat のドキュメント](https://access.redhat.com/site/documentation/ja-JP/Red_Hat_Enterprise_Linux/6/html/Performance_Tuning_Guide/s-cpu-irq.html)
+```
+[vagrant@vagrant-centos65 ~]$ ls -hal /proc/irq/0/
+total 0
+dr-xr-xr-x  2 root root 0 Mar  8 11:23 .
+dr-xr-xr-x 21 root root 0 Mar  8 11:23 ..
+-r--------  1 root root 0 Mar  8 11:23 affinity_hint
+-r--r--r--  1 root root 0 Mar  8 11:23 node
+-rw-------  1 root root 0 Mar  8 11:23 smp_affinity
+-rw-------  1 root root 0 Mar  8 11:23 smp_affinity_list
+-r--r--r--  1 root root 0 Mar  8 11:23 spurious
+```
+
+## 2.2.3 割り込みスタック
+
+ * 割り込みハンドラ用のスタック
+ * ハードウェア割り込みハンドラ、softirq は current のカーネルスタックを利用する
+   * カーネルスタックのサイズが大きめに取られている理由
+   * workqueue はカーネルスレッドがあるので そのスタック
+   * tasklet は?
  
 ## イーサネットドライバ処理
 
