@@ -632,6 +632,17 @@ static irqreturn_t serial8250_interrupt(int irq, void *dev_id, struct pt_regs *r
 
 ## 端末制御処理
 
+serial8250_handle_port -> tty_flip_buffer_push -> schedule_delayed_work
+
+work_struct 呼び出しに繋がる
+
+```c
+int fastcall schedule_delayed_work(struct work_struct *work, unsigned long delay)
+{
+	return queue_delayed_work(keventd_wq, work, delay);
+}
+```
+
 ## request_irq
 
  * struct irqaction
