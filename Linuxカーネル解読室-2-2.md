@@ -9,12 +9,17 @@
 ---- softirq プロセスコンテキスト ------------------------
 
   raise_softirq -> wakeup_softirqd で ksoftirqd を起床させる
+
+--- ksoftirqd --------------------------------------------
+
   [ksoftirqd] が pending している sotirq を処理する
+    do_softirq
+    __do_softirq
 
 ---- softirq 割り込みコンテキスト ------------------------
 
-sotirq
-  raise_softirq -> raise_softirq_irqoff で softirq を pending
+  raise_softirq
+    raise_softirq_irqoff で softirq を pending
 
 ---- ハードウェア割り込みハンドラ(ドライバ) ----
 
@@ -979,6 +984,8 @@ EXPORT_SYMBOL(do_softirq);
 #endif
 ```
 
+__do_softirq で pending している sofirq のハンドラを呼び出して具体的な処理に繋がる
+
 ```c
 asmlinkage void __do_softirq(void)
 {
@@ -1018,7 +1025,7 @@ restart:
 		goto restart;
 
     // まだ pending してたらもういっぺん起床させる
-    / スケジューリングを挟むので
+    / ただし、スケジューリングを挟むので ksoftirqd がずっと動くって訳じゃない?
 	if (pending)
 		wakeup_softirqd();
 
