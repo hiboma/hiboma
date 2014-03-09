@@ -11,7 +11,8 @@
 
 ### 待機状態を観察
 
-***ps ax -opid,state,wchan:25,cmd*** で確認してみる
+ * **/proc/<pid>/wchan**
+ * ***ps ax -opid,state,wchan:25,cmd*** で確認してみる
 
 ```
    32 S worker_thread             [aio/0]
@@ -64,6 +65,27 @@ typedef struct __wait_queue_head wait_queue_head_t;
 ```
 
 **sleep_on**
+
+ただのリスト
+
+```
+struct __wait_queue_head {
+	spinlock_t lock;
+	struct list_head task_list;
+};
+```
+
+wait_queue_t の定義
+
+```c
+struct __wait_queue {
+	unsigned int flags;
+#define WQ_FLAG_EXCLUSIVE	0x01 // 1プロセスずつ起床させるか否かのフラグ
+	void *private;
+	wait_queue_func_t func;      // try_to_wake_up など起床用のコールバック
+	struct list_head task_list;
+};
+```
 
 ```c
  void sleep_on(wait_queue_head_t *q)
