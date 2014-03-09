@@ -13,7 +13,10 @@
   irqaction->handler で割り込みハンドラ呼び出し
     e1000_intr, serial8250_interrupt, ...
 
-# ---- IRQ 層 ----
+                     request_irq で登録
+                    /
+                   ｜  local_irq_enable, local_irq_disable
+# ---- IRQ 層 ---- ↓ ---- ↑ ---------------------------
 
   handle_IRQ_event
   __do_IRQ
