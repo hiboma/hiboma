@@ -100,6 +100,8 @@ struct __wait_queue {
 };
 ```
 
+> WAITキューからプロセスを外すのは、実は起床したプロセス自身です <55>
+
 ```c
  void sleep_on(wait_queue_head_t *q)
  {
@@ -130,9 +132,12 @@ struct __wait_queue {
 
 ## 1.7.2 起床処理
 
-> WAITキューからプロセスを外すのは、実は起床したプロセス自身です <55>
+ * activate_task
+   * enqueue_task
+ * resched_task()
+   * 再スケジューリング要求 = 他プロセスからのプリエンプション要求
 
-> もし起床させたプロセスのほうが、現在実行中のプロセスより実行優先度が高かった場合、プロセススケジューラに対してプリエンプト要求も送ります。
+> ほかのCPUのプロセススケジューラに対して要求する場合は、プロセッサ間割り込みを利用します
 
 try_to_wake_up の実装
 
@@ -319,7 +324,7 @@ out_activate:
 
         // #define TASK_PREEMPTS_CURR(p, rq) \
         //	((p)->prio < (rq)->curr->prio)
-        // 起床したプロセスの方が優先度が高い場合 は再スケジューリング要求を出す
+        // 起床したプロセスの方が優先度が高い場合 は再スケジューリング要求 (プリエンプション要求) を出す
         // prio の値が低い方が優先度高い
 		if (TASK_PREEMPTS_CURR(p, rq))
 			resched_task(rq->curr);
@@ -373,18 +378,31 @@ static void activate_task(task_t *p, runqueue_t *rq, int local)
 		 * on a CPU, first time around:
 		 */
 		if (in_interrupt())
+           // 割り込みコンテキストからの起床
 			p->activated = 2;
 		else {
 			/*
 			 * Normal first-time wakeups get a credit too for
 			 * on-runqueue time, but it will be weighted down:
 			 */
+            // 通常コンテキスト? からの起床
 			p->activated = 1;
 		}
 	}
+
+    // timestamp は runqueue に繋がれた際の時刻
 	p->timestamp = now;
 
     // enqueue_task で runqueue の active キューに繋ぐ
+    // enqueue_task は 優先度 Array の末尾に繋ぐ (実行待ち状態)
+    //
+    //  +---+
+    //  |---|
+    //  |---| => task_t <=> task_t <=> <= enqueue_task
+    //  |---|
+    //  |---| => task_t <=> task_t ...
+    //  +---+
+    //
 	__activate_task(p, rq);
 }
 
