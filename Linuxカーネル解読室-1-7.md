@@ -579,6 +579,7 @@ EXPORT_SYMBOL(wake_up_process);
 
 >　事象の成立条件が単純なときは、wait_event/wait_event_interruptibleマクロ関数を利用しても、上記処理を簡単に記述できます。
 
+https://github.com/hiboma/kernel_module_scratch/tree/master/wait_queue_head_t で書いた
 
 >　ところで、もう1つ実装上の疑問点を持たれた方もおられると思います。プロセスが待機状態になったとき、そのプロセス用のtask_struct構造体をWAITキューに直接登録しないのはなぜなのでしょうか？　実はこの構造には面白い特徴があり、プロセスを同時に複数のWAITキューに登録できます。複数の事象を同時に待ち合わせ、いずれかの事象が成立したら起床できます（図1-15）。この仕組みはselectシステムコールやpollシステムコールの実現に利用しています。
 
