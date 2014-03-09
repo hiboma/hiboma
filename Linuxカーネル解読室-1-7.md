@@ -579,6 +579,92 @@ EXPORT_SYMBOL(wake_up_process);
 
 >　ところで、もう1つ実装上の疑問点を持たれた方もおられると思います。プロセスが待機状態になったとき、そのプロセス用のtask_struct構造体をWAITキューに直接登録しないのはなぜなのでしょうか？　実はこの構造には面白い特徴があり、プロセスを同時に複数のWAITキューに登録できます。複数の事象を同時に待ち合わせ、いずれかの事象が成立したら起床できます（図1-15）。この仕組みはselectシステムコールやpollシステムコールの実現に利用しています。
 
+select や poll は複数のファイルデスクリプタの監視ができるので複数の waitqueue に繋いでる状態にを取りうる
+
+## poll を覗き見
+
+select(2) は do_select の中で file_operations の .poll を呼び出す
+
+```
+int do_select(int n, fd_set_bits *fds, long *timeout)
+{
+	struct poll_wqueues table;
+	poll_table *wait;
+	int retval, i;
+	long __timeout = *timeout;
+
+	rcu_read_lock();
+	retval = max_select_fd(n, fds);
+	rcu_read_unlock();
+
+	if (retval < 0)
+		return retval;
+	n = retval;
+
+	poll_initwait(&table);
+	wait = &table.pt;
+	if (!__timeout)
+		wait = NULL;
+	retval = 0;
+	for (;;) {
+		unsigned long *rinp, *routp, *rexp, *inp, *outp, *exp;
+
+		set_current_state(TASK_INTERRUPTIBLE);
+
+		inp = fds->in; outp = fds->out; exp = fds->ex;
+		rinp = fds->res_in; routp = fds->res_out; rexp = fds->res_ex;
+
+		for (i = 0; i < n; ++rinp, ++routp, ++rexp) {
+			unsigned long in, out, ex, all_bits, bit = 1, mask, j;
+			unsigned long res_in = 0, res_out = 0, res_ex = 0;
+			struct file_operations *f_op = NULL;
+			struct file *file = NULL;
+
+			in = *inp++; out = *outp++; ex = *exp++;
+			all_bits = in | out | ex;
+			if (all_bits == 0) {
+				i += __NFDBITS;
+				continue;
+			}
+
+			for (j = 0; j < __NFDBITS; ++j, ++i, bit <<= 1) {
+				if (i >= n)
+					break;
+				if (!(bit & all_bits))
+					continue;
+				file = fget(i);
+				if (file) {
+					f_op = file->f_op;
+					mask = DEFAULT_POLLMASK;
+					if (f_op && f_op->poll)
+						mask = (*f_op->poll)(file, retval ? NULL : wait);
+```
+
+ソケットの場合 file_operations の正体は socket_file_ops
+
+```c
+/*
+ *      Socket files have a set of 'special' operations as well as the generic file ones. These don't appear
+ *      in the operation structures but are done directly via the socketcall() multiplexor.
+ */
+
+static struct file_operations socket_file_ops = {
+        .owner =        THIS_MODULE,
+        .llseek =       no_llseek,
+        .aio_read =     sock_aio_read,
+        .aio_write =    sock_aio_write,
+        .poll =         sock_poll,
+        .unlocked_ioctl = sock_ioctl,
+        .mmap =         sock_mmap,
+        .open =         sock_no_open,   /* special open code to disallow open via /proc */
+        .release =      sock_close,
+        .fasync =       sock_fasync,
+        .readv =        sock_readv,
+        .writev =       sock_writev,
+        .sendpage =     sock_sendpage
+};
+```
+
 tcp の poll は tcp_poll -> poll_wait と繋がる
 
 ```c
@@ -679,6 +765,8 @@ static void __pollwait(struct file *filp, wait_queue_head_t *wait_address,
 
         // ここで waitqueue に繋ぐ
 		init_waitqueue_entry(&entry->wait, current);
+        // WQ_FLAG_EXCLUSIVE 無し
+        // waitqueue に繋ぐだけで schedule() は呼び出さずプロセスは続行する
 		add_wait_queue(wait_address,&entry->wait);
 	}
 }
