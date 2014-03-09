@@ -852,8 +852,8 @@ SMP (CPU) の初期化?時に作成されるカーネルスレッド
 
  * kthread_create でCPUごとに作成される
  * kthread_bind で実行CPUを固定している
+   * task_struct の cpus_allowd をセットしてるだけ
    * 固定したCPUからのハードウェア割り込み -> raise_softirq を扱う(はず)
-
 ```c
 static int __devinit cpu_callback(struct notifier_block *nfb,
 				  unsigned long action,
@@ -877,4 +877,60 @@ static int __devinit cpu_callback(struct notifier_block *nfb,
 	case CPU_ONLINE:
 		wake_up_process(per_cpu(ksoftirqd, hotcpu));
 		break;
+```
+
+ksoftirqd のループは下記の通り
+
+ * nice = 20 にセット
+
+```c
+static int ksoftirqd(void * __bind_cpu)
+{
+	set_user_nice(current, 19);
+	current->flags |= PF_NOFREEZE;
+
+	set_current_state(TASK_INTERRUPTIBLE);
+
+	while (!kthread_should_stop()) {
+		preempt_disable();
+
+        // 起床されるまで待つ
+        // wakeup_softirqd を呼ぶと ksoftirqd が起床する
+        // https://github.com/hiboma/kernel_module_scratch/tree/master/wake_up_process を読もう
+		if (!local_softirq_pending()) {
+			preempt_enable_no_resched();
+			schedule();
+			preempt_disable();
+		}
+
+		__set_current_state(TASK_RUNNING);
+
+		while (local_softirq_pending()) {
+			/* Preempt disable stops cpu going offline.
+			   If already offline, we'll be on wrong CPU:
+			   don't process */
+			if (cpu_is_offline((long)__bind_cpu))
+				goto wait_to_die;
+			do_softirq();
+			preempt_enable_no_resched();
+			cond_resched();
+			preempt_disable();
+		}
+		preempt_enable();
+		set_current_state(TASK_INTERRUPTIBLE);
+	}
+	__set_current_state(TASK_RUNNING);
+	return 0;
+
+wait_to_die:
+	preempt_enable();
+	/* Wait for kthread_stop */
+	set_current_state(TASK_INTERRUPTIBLE);
+	while (!kthread_should_stop()) {
+		schedule();
+		set_current_state(TASK_INTERRUPTIBLE);
+	}
+	__set_current_state(TASK_RUNNING);
+	return 0;
+}
 ```
