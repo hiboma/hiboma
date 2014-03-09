@@ -496,7 +496,39 @@ out:
 
 ## SCSIホストバスアダプタドライバ処理
 
+どれみたらいいか分からん
+
 ## SCSIプロトコル処理
+
+drivers/scsi/scsi.c ?
+
+```c
+/* Private entry to scsi_done() to complete a command when the timer
+ * isn't running --- used by scsi_times_out */
+void __scsi_done(struct scsi_cmnd *cmd)
+{
+        unsigned long flags;
+
+        /*   
+         * Set the serial numbers back to zero
+         */
+        cmd->serial_number = 0; 
+
+        atomic_inc(&cmd->device->iodone_cnt);
+        if (cmd->result)
+                atomic_inc(&cmd->device->ioerr_cnt);
+
+        /*   
+         * Next, enqueue the command into the done queue.
+         * It is a per-CPU queue, so we just disable local interrupts
+         * and need no spinlock.
+         */
+        local_irq_save(flags);
+        list_add_tail(&cmd->eh_entry, &__get_cpu_var(scsi_done_q));
+        raise_softirq_irqoff(SCSI_SOFTIRQ);
+        local_irq_restore(flags);
+}
+```
 
 ## シリアルドライバ処理
 
