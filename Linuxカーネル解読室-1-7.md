@@ -55,6 +55,8 @@
 
 >　待機の対象となる可能性のあるカーネルオブジェクト（ファイルや、実ページ、端末など）は、それぞれWAITキュー（wait_queue_head_t型のリストヘッド）を用意しています。
 
+[wait_queue_head_t](https://github.com/hiboma/kernel_module_scratch/tree/master/wait_queue_head_t) をメンバに持つカーネルオブジェクト
+
  * struct semaphore
  * struct kioctx
  * struct request_list
@@ -63,10 +65,10 @@
  * struct super_block
  * struct semaphore で wait_queue_head_t を持っているもの
    * struct block_device
-   * 
+   * struct inode
+   * struct super_block
+   * .. 一杯
   
-[wait_queue_head_t](https://github.com/hiboma/kernel_module_scratch/tree/master/wait_queue_head_t)
-
 ```c
 struct __wait_queue_head {
 	spinlock_t lock;
