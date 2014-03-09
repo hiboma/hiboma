@@ -132,11 +132,21 @@ struct __wait_queue {
 
 ## 1.7.2 起床処理
 
+ * in_interrupt
+ ```c
+#define in_interrupt()		(irq_count())
+#define irq_count()	(preempt_count() & (HARDIRQ_MASK | SOFTIRQ_MASK))
+#define preempt_count()	(current_thread_info()->preempt_count)
+```
  * activate_task
    * enqueue_task
  * resched_task()
    * 再スケジューリング要求 = 他プロセスからのプリエンプション要求
    * TIF_NEED_RESCHED の有無
+   * プロセッサ間割り込み
+     * runqueue はCPUごとに用意されているので、別のCPUに再スケジューリング用キュを出すには割り込みを書ける必要がある
+
+## IPI Inter Processor Interrupt
 
 > ほかのCPUのプロセススケジューラに対して要求する場合は、プロセッサ間割り込みを利用します
 
@@ -446,7 +456,6 @@ out:
  * calculation, priority modifiers, etc.)
  */
 static void activate_task(task_t *p, runqueue_t *rq, int local)
-    
 {
 	unsigned long long now;
 
