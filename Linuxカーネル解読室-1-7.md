@@ -580,6 +580,42 @@ EXPORT_SYMBOL(wake_up_process);
 >　ところで、もう1つ実装上の疑問点を持たれた方もおられると思います。プロセスが待機状態になったとき、そのプロセス用のtask_struct構造体をWAITキューに直接登録しないのはなぜなのでしょうか？　実はこの構造には面白い特徴があり、プロセスを同時に複数のWAITキューに登録できます。複数の事象を同時に待ち合わせ、いずれかの事象が成立したら起床できます（図1-15）。この仕組みはselectシステムコールやpollシステムコールの実現に利用しています。
 
 
+### udp_poll -> datagram_poll
+
+ * poll_wait
+
+```c
+/**
+ * 	datagram_poll - generic datagram poll
+ *	@file: file struct
+ *	@sock: socket
+ *	@wait: poll table
+ *
+ *	Datagram poll: Again totally generic. This also handles
+ *	sequenced packet sockets providing the socket receive queue
+ *	is only ever holding data ready to receive.
+ *
+ *	Note: when you _don't_ use this routine for this protocol,
+ *	and you use a different write policy from sock_writeable()
+ *	then please supply your own write_space callback.
+ */
+unsigned int datagram_poll(struct file *file, struct socket *sock,
+			   poll_table *wait)
+{
+	struct sock *sk = sock->sk;
+	unsigned int mask;
+
+	poll_wait(file, sk->sk_sleep, wait);
+	mask = 0;
+
+	/* exceptional events? */
+	if (sk->sk_err || !skb_queue_empty(&sk->sk_error_queue))
+		mask |= POLLERR;
+	if (sk->sk_shutdown == SHUTDOWN_MASK)
+		mask |= POLLHUP;
+```
+
+
 ## 1.7.4　子プロセスのスケジューリング
 
 >forkシステムコールによって子プロセスが生成されたときは、この子プロセスを実行状態としてスケジューリング対象に加えます（wake_up_forked_process関数）
