@@ -139,7 +139,6 @@ e1000_intr(int irq, void *data, struct pt_regs *regs)
 割り込みの on / off の切り替え
 
 ```c
-
 /**
  * e1000_irq_disable - Mask off interrupt generation on the NIC
  * @adapter: board private structure
@@ -197,6 +196,7 @@ e1000_rx_schedule(void *data)
 ```
 
 __netif_rx_schedule を呼び出すと softirq へ繋がる
+ * poll_list への追加
 
 ```c
 /* Add interface to tail of rx poll list. This assumes that _prep has
@@ -219,7 +219,7 @@ static inline void __netif_rx_schedule(struct net_device *dev)
 }
 ```
 
-NET_RX_SOFTIRQ は下記でコールバックが登録されている
+NET_RX_SOFTIRQ に対応するハンドらは net_dev_init で登録されている
 
 ```c
 /*
@@ -285,6 +285,8 @@ out:
 	return rc;
 }
 ```
+
+
 
 ## SCSIホストバスアダプタドライバ処理
 
