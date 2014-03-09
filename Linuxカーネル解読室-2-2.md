@@ -900,17 +900,21 @@ static int ksoftirqd(void * __bind_cpu)
 		if (!local_softirq_pending()) {
 			preempt_enable_no_resched();
 			schedule();
+
+            // wakeup_process で起床〜
 			preempt_disable();
 		}
 
 		__set_current_state(TASK_RUNNING);
 
+        // pending している sotirq を処理ってく
 		while (local_softirq_pending()) {
 			/* Preempt disable stops cpu going offline.
 			   If already offline, we'll be on wrong CPU:
 			   don't process */
 			if (cpu_is_offline((long)__bind_cpu))
 				goto wait_to_die;
+
 			do_softirq();
 			preempt_enable_no_resched();
 			cond_resched();
@@ -933,4 +937,90 @@ wait_to_die:
 	__set_current_state(TASK_RUNNING);
 	return 0;
 }
+```
+
+```c
+asmlinkage void do_softirq(void)
+{
+	unsigned long flags;
+	struct thread_info *curctx;
+	union irq_ctx *irqctx;
+	u32 *isp;
+
+	if (in_interrupt())
+		return;
+
+	local_irq_save(flags);
+
+	if (local_softirq_pending()) {
+		curctx = current_thread_info();
+		irqctx = softirq_ctx[smp_processor_id()];
+		irqctx->tinfo.task = curctx->task;
+		irqctx->tinfo.previous_esp = current_stack_pointer;
+
+        // スタックポインタをごにょごにょ ...
+		/* build the stack frame on the softirq stack */
+		isp = (u32*) ((char*)irqctx + sizeof(*irqctx));
+
+		asm volatile(
+			"       xchgl   %%ebx,%%esp     \n"   // スタックポインタと ebx を交換
+			"       call    __do_softirq    \n"   // __do_softirq 呼び出しだ !
+			"       movl    %%ebx,%%esp     \n"   // スタックポインタと ebx を元に戻す
+			: "=b"(isp)
+			: "0"(isp)
+			: "memory", "cc", "edx", "ecx", "eax"
+		);
+	}
+
+	local_irq_restore(flags);
+}
+
+EXPORT_SYMBOL(do_softirq);
+#endif
+```
+
+```c
+asmlinkage void __do_softirq(void)
+{
+	struct softirq_action *h;
+	__u32 pending;
+	int max_restart = MAX_SOFTIRQ_RESTART;
+	int cpu;
+
+	pending = local_softirq_pending();
+
+    // bottom half を disable ...
+	local_bh_disable();
+	cpu = smp_processor_id();
+restart:
+	/* Reset the pending bitmask before enabling irqs */
+	set_softirq_pending(0);
+
+	local_irq_enable();
+
+	h = softirq_vec;
+
+	do {
+		if (pending & 1) {
+            // softirq のハンドラを呼び出して処理
+			h->action(h);
+			rcu_bh_qsctr_inc(cpu);
+		}
+		h++;
+		pending >>= 1;
+	} while (pending);
+
+	local_irq_disable();
+
+	pending = local_softirq_pending();
+    // pending している間はループ。 MAX_SOFTIRQ_RESTART 回だけ繰り返す可能性がある
+	if (pending && --max_restart)
+		goto restart;
+
+    // まだ pending してたらもういっぺん起床させる
+    / スケジューリングを挟むので
+	if (pending)
+		wakeup_softirqd();
+
+	__local_bh_enable();
 ```
