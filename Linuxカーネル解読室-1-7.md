@@ -132,7 +132,10 @@ struct __wait_queue {
 
 ## 1.7.2 起床処理
 
+起床すると TASK_RUNNING にはなるが、優先度の次第ですぐに実行権を得て再開する訳でないのが注意
+
  * in_interrupt
+   * 割り込みコンテキストかどうかのフラグが current_thread_info にセットされている
  ```c
 #define in_interrupt()		(irq_count())
 #define irq_count()	(preempt_count() & (HARDIRQ_MASK | SOFTIRQ_MASK))
@@ -205,10 +208,11 @@ void smp_send_reschedule(int cpu)
 {
 	send_IPI_mask(cpumask_of_cpu(cpu), RESCHEDULE_VECTOR);
 }
+```
 
-// asm-i386/mach-default/irq_vectors にベクタが羅列されている
-//
- 
+asm-i386/mach-default/irq_vectors にベクタが羅列されている
+
+```c
 /*
  * Special IRQ vectors used by the SMP architecture, 0xf0-0xff
  *
@@ -223,9 +227,11 @@ void smp_send_reschedule(int cpu)
 #define INVALIDATE_TLB_VECTOR	0xfd
 #define RESCHEDULE_VECTOR	0xfc
 #define CALL_FUNCTION_VECTOR	0xfb
+```
 
-// 割り込みベクタと割り込みハンドラは SMP の初期化で設定されている
+割り込みベクタと割り込みハンドラは SMP の初期化で設定されている
 
+```c
 void __init smp_intr_init(void)
 {
 	/*
@@ -247,6 +253,8 @@ void __init smp_intr_init(void)
 	set_intr_gate(CALL_FUNCTION_VECTOR, call_function_interrupt);
 }
 ```
+
+invalidate_interrupt, reschedule_interrupt の実装は長いので省略
 
 ## try_to_wake_up の実装
 
@@ -408,17 +416,18 @@ out_activate:
 	 */
     // バッチ形プロセスの場合
 	if (old_state & TASK_NONINTERACTIVE)
-        // enqueue_task するだけ
+        // enqueue_task するだけで優先度を変更しない
         // activate_task との違いを確認するとよい
 		__activate_task(p, rq);
 	else
-       // 対話型プロセスの場合 activate_task を呼ぶ
-       //
-       //   __activate_task と違って、recalc_task_prio で優先度の再計算をする
-       //   割り込みコンテキストの場合は p->activated = 2 にする
-       //   TASK_INTERRUPTIBLE の場合は  p->activated = 1 にする
-       //
-       // p->timestamp が更新される
+        // 対話型プロセスの場合 activate_task を呼ぶ
+        //
+        //   __activate_task に加えて recalc_task_prio で優先度の再計算をする
+        //   割り込みコンテキストの場合は p->activated = 2 にする
+        //   TASK_INTERRUPTIBLE の場合は  p->activated = 1 にする
+        //
+        // p->timestamp が更新される
+        // activate_task によって優先度が更新され resched_task される可能性が高くなる
 		activate_task(p, rq, cpu == this_cpu);
 	/*
 	 * Sync wakeups (i.e. those types of wakeups where the waker
@@ -433,7 +442,7 @@ out_activate:
 
         // #define TASK_PREEMPTS_CURR(p, rq) \
         //	((p)->prio < (rq)->curr->prio)
-        // 起床したプロセスの方が優先度が高い場合 は再スケジューリング要求 (プリエンプション要求) を出す
+        // 起床したプロセスの方が current より優先度が高い場合 は再スケジューリング要求 (プリエンプション要求) を出す
         // prio の値が低い方が優先度高い
 		if (TASK_PREEMPTS_CURR(p, rq))
 			resched_task(rq->curr);
