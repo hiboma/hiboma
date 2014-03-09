@@ -579,10 +579,26 @@ EXPORT_SYMBOL(wake_up_process);
 
 >　ところで、もう1つ実装上の疑問点を持たれた方もおられると思います。プロセスが待機状態になったとき、そのプロセス用のtask_struct構造体をWAITキューに直接登録しないのはなぜなのでしょうか？　実はこの構造には面白い特徴があり、プロセスを同時に複数のWAITキューに登録できます。複数の事象を同時に待ち合わせ、いずれかの事象が成立したら起床できます（図1-15）。この仕組みはselectシステムコールやpollシステムコールの実現に利用しています。
 
+tcp の poll は tcp_poll -> poll_wait と繋がる
 
-### udp_poll -> datagram_poll
+```c
+/*
+ *	Wait for a TCP event.
+ *
+ *	Note that we don't need to lock the socket, as the upper poll layers
+ *	take care of normal races (between the test and the event) and we don't
+ *	go look at any of the socket buffers directly.
+ */
+unsigned int tcp_poll(struct file *file, struct socket *sock, poll_table *wait)
+{
+	unsigned int mask;
+	struct sock *sk = sock->sk;
+	struct tcp_sock *tp = tcp_sk(sk);
 
- * poll_wait
+	poll_wait(file, sk->sk_sleep, wait);
+```
+
+udp の poll は udp_poll -> datagram_poll -> poll_wait と繋がる
 
 ```c
 /**
@@ -609,12 +625,91 @@ unsigned int datagram_poll(struct file *file, struct socket *sock,
 	mask = 0;
 
 	/* exceptional events? */
+
+    // select(2), poll(2) でどんなイベントが発生したかを確認するための
+    // mask がセットされている
 	if (sk->sk_err || !skb_queue_empty(&sk->sk_error_queue))
 		mask |= POLLERR;
 	if (sk->sk_shutdown == SHUTDOWN_MASK)
 		mask |= POLLHUP;
 ```
 
+poll_wait の中身はどんなんか?
+
+
+```c
+static inline void poll_wait(struct file * filp, wait_queue_head_t * wait_address, poll_table *p)
+{
+	if (p && wait_address)
+		p->qproc(filp, wait_address, p);
+}
+```
+
+select / poll は __pollwait で qproc を実装している
+
+```c
+static void __pollwait(struct file *filp, wait_queue_head_t *wait_address,
+		       poll_table *_p)
+{
+	struct poll_wqueues *p = container_of(_p, struct poll_wqueues, pt);
+	struct poll_table_page *table = p->table;
+
+	if (!table || POLL_TABLE_FULL(table)) {
+		struct poll_table_page *new_table;
+
+		new_table = (struct poll_table_page *) __get_free_page(GFP_KERNEL);
+		if (!new_table) {
+			p->error = -ENOMEM;
+			__set_current_state(TASK_RUNNING);
+			return;
+		}
+		new_table->entry = new_table->entries;
+		new_table->next = table;
+		p->table = new_table;
+		table = new_table;
+	}
+
+	/* Add a new entry */
+	{
+		struct poll_table_entry * entry = table->entry;
+		table->entry = entry+1;
+	 	get_file(filp);
+	 	entry->filp = filp;
+		entry->wait_address = wait_address;
+
+        // ここで waitqueue に繋ぐ
+		init_waitqueue_entry(&entry->wait, current);
+		add_wait_queue(wait_address,&entry->wait);
+	}
+}
+```
+
+epoll は ep_ptable_queue_proc で qproc を実装している
+
+```c
+/*
+ * This is the callback that is used to add our wait queue to the
+ * target file wakeup lists.
+ */
+static void ep_ptable_queue_proc(struct file *file, wait_queue_head_t *whead,
+				 poll_table *pt)
+{
+	struct epitem *epi = ep_item_from_epqueue(pt);
+	struct eppoll_entry *pwq;
+
+	if (epi->nwait >= 0 && (pwq = kmem_cache_alloc(pwq_cache, SLAB_KERNEL))) {
+		init_waitqueue_func_entry(&pwq->wait, ep_poll_callback);
+		pwq->whead = whead;
+		pwq->base = epi;
+		add_wait_queue(whead, &pwq->wait);
+		list_add_tail(&pwq->llink, &epi->pwqlist);
+		epi->nwait++;
+	} else {
+		/* We have to signal that an error occurred */
+		epi->nwait = -1;
+	}
+}
+```
 
 ## 1.7.4　子プロセスのスケジューリング
 
