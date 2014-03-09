@@ -634,9 +634,33 @@ static irqreturn_t serial8250_interrupt(int irq, void *dev_id, struct pt_regs *r
 
 serial8250_handle_port -> tty_flip_buffer_push -> schedule_delayed_work
 
-work_struct 呼び出しに繋がる
+work_struct, workqueue_struct 呼び出しに繋がる
 
 ```c
+/**
+ *	tty_flip_buffer_push	-	terminal
+ *	@tty: tty to push
+ *
+ *	Queue a push of the terminal flip buffers to the line discipline. This
+ *	function must not be called from IRQ context if tty->low_latency is set.
+ *
+ *	In the event of the queue being busy for flipping the work will be
+ *	held off and retried later.
+ */
+
+void tty_flip_buffer_push(struct tty_struct *tty)
+{
+	if (tty->low_latency)
+		flush_to_ldisc((void *) tty);
+	else
+		schedule_delayed_work (&tty->flip.work, 1);
+}
+
+EXPORT_SYMBOL(tty_flip_buffer_push);
+```
+
+```c
+// プロセスコンテキで遅延実行する奴
 int fastcall schedule_delayed_work(struct work_struct *work, unsigned long delay)
 {
 	return queue_delayed_work(keventd_wq, work, delay);
