@@ -294,12 +294,13 @@ out_activate:
 	 */
     // バッチ形プロセスの場合
 	if (old_state & TASK_NONINTERACTIVE)
-        // enqueue_task する
+        // enqueue_task するだけ
+        // activate_task との違いを確認するとよい
 		__activate_task(p, rq);
 	else
-       // 対話型プロセスの場合
+       // 対話型プロセスの場合 activate_task を呼ぶ
        //
-       //   recalc_task_prio で優先度の再計算をする  
+       //   __activate_task と違って、recalc_task_prio で優先度の再計算をする
        //   割り込みコンテキストの場合は p->activated = 2 にする
        //   TASK_INTERRUPTIBLE の場合は  p->activated = 1 にする
        //
@@ -315,6 +316,11 @@ out_activate:
 	 */
      // 同期 wakeup
 	if (!sync || cpu != this_cpu) {
+
+        // #define TASK_PREEMPTS_CURR(p, rq) \
+        //	((p)->prio < (rq)->curr->prio)
+        // 起床したプロセスの方が優先度が高い場合 は再スケジューリング要求を出す
+        // prio の値が低い方が優先度高い
 		if (TASK_PREEMPTS_CURR(p, rq))
 			resched_task(rq->curr);
 	}
@@ -326,6 +332,60 @@ out:
 	task_rq_unlock(rq, &flags);
 
 	return success;
+}
+
+/*
+ * activate_task - move a task to the runqueue and do priority recalculation
+ *
+ * Update all the scheduling statistics stuff. (sleep average
+ * calculation, priority modifiers, etc.)
+ */
+static void activate_task(task_t *p, runqueue_t *rq, int local)
+    
+{
+	unsigned long long now;
+
+	now = sched_clock();
+#ifdef CONFIG_SMP
+	if (!local) {
+		/* Compensate for drifting sched_clock */
+		runqueue_t *this_rq = this_rq();
+		now = (now - this_rq->timestamp_last_tick)
+			+ rq->timestamp_last_tick;
+	}
+#endif
+
+	if (!rt_task(p))
+        // 優先度の再計算
+        // 長いこと待機状態だったプロセスの方が高い優先度になる
+		p->prio = recalc_task_prio(p, now);
+
+	/*
+	 * This checks to make sure it's not an uninterruptible task
+	 * that is now waking up.
+	 */
+	if (!p->activated) {
+		/*
+		 * Tasks which were woken up by interrupts (ie. hw events)
+		 * are most likely of interactive nature. So we give them
+		 * the credit of extending their sleep time to the period
+		 * of time they spend on the runqueue, waiting for execution
+		 * on a CPU, first time around:
+		 */
+		if (in_interrupt())
+			p->activated = 2;
+		else {
+			/*
+			 * Normal first-time wakeups get a credit too for
+			 * on-runqueue time, but it will be weighted down:
+			 */
+			p->activated = 1;
+		}
+	}
+	p->timestamp = now;
+
+    // enqueue_task で runqueue の active キューに繋ぐ
+	__activate_task(p, rq);
 }
 
 int fastcall wake_up_process(task_t *p)
