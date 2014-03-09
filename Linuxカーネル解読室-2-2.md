@@ -6,21 +6,22 @@
 ## TODO
 
 ```
-  sotirq
+sotirq
+  raise_softirq -> raise_softirq_irqoff -> wakeup_softirqd
 
 # ---- ハードウェア割り込みハンドラ(ドライバ) ---
 
-  irqaction->handler で割り込みハンドラ呼び出し
-    e1000_intr, serial8250_interrupt, ...
+irqaction->handler で割り込みハンドラ呼び出し
+  e1000_intr, serial8250_interrupt, ...
 
                      request_irq で登録
                     /
                    ｜  local_irq_enable, local_irq_disable
 # ---- IRQ 層 ---- ↓ ---- ↑ ---------------------------
 
-  handle_IRQ_event
-  __do_IRQ
-  do_IRQ
+handle_IRQ_event
+__do_IRQ
+do_IRQ
 
 # ---- CPUアーキテクチャ依存層 (i386/kernel/entry.S) ----
 
