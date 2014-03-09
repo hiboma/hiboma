@@ -66,7 +66,7 @@ typedef struct __wait_queue_head wait_queue_head_t;
 
 **sleep_on**
 
-ただのリスト
+wait_queue_head_t はただのリスト
 
 ```
 struct __wait_queue_head {
@@ -108,6 +108,7 @@ struct __wait_queue {
          // runqueue から外される
          schedule(); ――<54>
 
+         // 起床後 キューから外す
          spin_lock_irq(&q->lock);
          __remove_wait_queue(q, &wait); ――<55>
          spin_unlock_irqrestore(&q->lock, flags);
