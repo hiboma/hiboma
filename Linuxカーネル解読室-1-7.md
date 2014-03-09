@@ -711,6 +711,7 @@ unsigned int tcp_poll(struct file *file, struct socket *sock, poll_table *wait)
 
 udp の poll は udp_poll -> datagram_poll -> poll_wait と繋がる
 
+ * UDP といってもデータグラムを扱うやつ意外にもあるので注意
 ```c
 /**
  * 	datagram_poll - generic datagram poll
@@ -747,7 +748,7 @@ unsigned int datagram_poll(struct file *file, struct socket *sock,
 // 略
 ```
 
-poll_wait の中身はどんなんか?
+tcp_poll, datagram_poll で使われている poll_wait の中身はどんなんか?
 
 
 ```c
@@ -757,6 +758,8 @@ static inline void poll_wait(struct file * filp, wait_queue_head_t * wait_addres
 		p->qproc(filp, wait_address, p);
 }
 ```
+
+poll_table の .qproc コールバックを呼び出している
 
 select / poll は __pollwait で qproc を実装している
 
@@ -790,7 +793,8 @@ static void __pollwait(struct file *filp, wait_queue_head_t *wait_address,
 	 	entry->filp = filp;
 		entry->wait_address = wait_address;
 
-        // ここで waitqueue に繋ぐ
+        // ここで waitqueue に繋いで 待ちキューを形成する
+        // init_waitqueue_entry の 起床用の関数は default_wake_function
 		init_waitqueue_entry(&entry->wait, current);
         // WQ_FLAG_EXCLUSIVE 無し
         // waitqueue に繋ぐだけで schedule() は呼び出さずプロセスは続行する
@@ -813,10 +817,15 @@ static void ep_ptable_queue_proc(struct file *file, wait_queue_head_t *whead,
 	struct eppoll_entry *pwq;
 
 	if (epi->nwait >= 0 && (pwq = kmem_cache_alloc(pwq_cache, SLAB_KERNEL))) {
+
+        // ep_poll_callback を起床用関数としている
 		init_waitqueue_func_entry(&pwq->wait, ep_poll_callback);
 		pwq->whead = whead;
 		pwq->base = epi;
+
+        // ここで waitqueue に登録登録
 		add_wait_queue(whead, &pwq->wait);
+        // 別の待ちキューっぽいリンクにも繋げてる
 		list_add_tail(&pwq->llink, &epi->pwqlist);
 		epi->nwait++;
 	} else {
