@@ -641,6 +641,8 @@ int do_select(int n, fd_set_bits *fds, long *timeout)
 ```
 
 ソケットの場合 file_operations の正体は socket_file_ops
+  * 下位のプロトコルを隠蔽するジェネリックなインタフェースになっている
+  * ソケットがファイルとして操作できるのも file_operations を挟んでいるから?
 
 ```c
 /*
@@ -665,6 +667,27 @@ static struct file_operations socket_file_ops = {
 };
 ```
 
+sock_poll の実装を見てみる
+
+ * file->private_data に struct socket が入れてある!!!
+ * sock->ops は struct proto_ops
+   * TCP なら ient_stream_ops に繋がる
+   * UDP なら inet_dgram_ops  に繋がる
+
+```c
+/* No kernel lock held - perfect */
+static unsigned int sock_poll(struct file *file, poll_table * wait)
+{
+	struct socket *sock;
+
+	/*
+	 *	We can't return errors to poll, so it's either yes or no. 
+	 */
+	sock = file->private_data;
+	return sock->ops->poll(file, sock, wait);
+}
+```
+
 tcp の poll は tcp_poll -> poll_wait と繋がる
 
 ```c
@@ -682,6 +705,8 @@ unsigned int tcp_poll(struct file *file, struct socket *sock, poll_table *wait)
 	struct tcp_sock *tp = tcp_sk(sk);
 
 	poll_wait(file, sk->sk_sleep, wait);
+
+// 略
 ```
 
 udp の poll は udp_poll -> datagram_poll -> poll_wait と繋がる
@@ -718,6 +743,8 @@ unsigned int datagram_poll(struct file *file, struct socket *sock,
 		mask |= POLLERR;
 	if (sk->sk_shutdown == SHUTDOWN_MASK)
 		mask |= POLLHUP;
+
+// 略
 ```
 
 poll_wait の中身はどんなんか?
