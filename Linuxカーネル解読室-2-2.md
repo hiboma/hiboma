@@ -7,7 +7,7 @@
 
 ```
 sotirq
-  raise_softirq -> raise_softirq_irqoff -> wakeup_softirqd
+  raise_softirq -> raise_softirq_irqoff -> wakeup_softirqd で ksoftirqd を起床させる
 
 # ---- ハードウェア割り込みハンドラ(ドライバ) ---
 
