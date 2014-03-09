@@ -186,6 +186,8 @@ e1000_rx_schedule(void *data)
 	}
 
 	if (likely(netif_rx_schedule_prep(poll_dev)))
+        // すでに softirq が発行済?で polling させる場合
+        // softirq から process_backlog に繋がる
 		__netif_rx_schedule(poll_dev);
 	else
 		e1000_irq_enable(adapter);
@@ -259,19 +261,21 @@ static int __init net_dev_init(void)
 		struct softnet_data *queue;
 
 		queue = &per_cpu(softnet_data, i);
-        // パケット受信キュー
+        // パケット受信キューの初期化
+        // sk_buff_head, sk_buff のリスト
 		skb_queue_head_init(&queue->input_pkt_queue);
 		queue->completion_queue = NULL;
 		INIT_LIST_HEAD(&queue->poll_list);
 		set_bit(__LINK_STATE_START, &queue->backlog_dev.state);
 		queue->backlog_dev.weight = weight_p;
+        // polling の際に呼び出されるハンドラ?
 		queue->backlog_dev.poll = process_backlog;
 		atomic_set(&queue->backlog_dev.refcnt, 1);
 	}
 
 	dev_boot_phase = 0;
 
-    // Array に データと関数ポインタぶっこむだけ
+    // softirq の静的な Array に IRQ番号に応じたデータと関数ポインタぶっこむだけ
     //	softirq_vec[nr].data = data;
     //	softirq_vec[nr].action = action;
 	open_softirq(NET_TX_SOFTIRQ, net_tx_action, NULL);
@@ -286,13 +290,64 @@ out:
 }
 ```
 
+process_backlog
 
+ * polling 
+ * sk_buffer を取り出して netif_receive_skb でごにょごにょ
+```c
+static int process_backlog(struct net_device *backlog_dev, int *budget)
+{
+	int work = 0;
+	int quota = min(backlog_dev->quota, *budget);
+	struct softnet_data *queue = &__get_cpu_var(softnet_data);
+	unsigned long start_time = jiffies;
+
+	backlog_dev->weight = weight_p;
+	for (;;) {
+		struct sk_buff *skb;
+		struct net_device *dev;
+
+		local_irq_disable();
+		skb = __skb_dequeue(&queue->input_pkt_queue);
+		if (!skb)
+			goto job_done;
+		local_irq_enable();
+
+		dev = skb->dev;
+
+		netif_receive_skb(skb);
+
+		dev_put(dev);
+
+		work++;
+
+		if (work >= quota || jiffies - start_time > 1)
+			break;
+
+	}
+
+	backlog_dev->quota -= work;
+	*budget -= work;
+	return -1;
+
+job_done:
+	backlog_dev->quota -= work;
+	*budget -= work;
+
+	list_del(&backlog_dev->poll_list);
+	smp_mb__before_clear_bit();
+	netif_poll_enable(backlog_dev);
+
+	local_irq_enable();
+	return 0;
+}
+```
+
+## TCP/IPプロトコル処理 (softirq)
 
 ## SCSIホストバスアダプタドライバ処理
 
 ## シリアルドライバ処理	
-
-## TCP/IPプロトコル処理
 
 ## SCSIプロトコル処理
 
