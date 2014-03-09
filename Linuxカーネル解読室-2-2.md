@@ -503,6 +503,8 @@ out:
 どのドライバを読んだら良いか分からんので drivers/serial/8250.c
 
  * uart_ops の .startup の中で request_irq が 呼び出されていた
+ * レジスタの初期化などを行ってから request_irq を呼び出す
+   * 初期化されていないのに割り込みされたら意図しない挙動を招くから?
 
 ```c
 static struct uart_ops serial8250_pops = {
@@ -526,12 +528,16 @@ static struct uart_ops serial8250_pops = {
 };
 ```
 
+serial8250_startup -> **serial_link_irq_chain** の中で request_irq
+
 ```c
 static int serial_link_irq_chain(struct uart_8250_port *up)
 {
 	struct irq_info *i = irq_lists + up->port.irq;
 	int ret, irq_flags = up->port.flags & UPF_SHARE_IRQ ? SA_SHIRQ : 0;
 
+    // local_irq_disable
+    // prempt_disable
 	spin_lock_irq(&i->lock);
 
 	if (i->head) {
@@ -543,6 +549,8 @@ static int serial_link_irq_chain(struct uart_8250_port *up)
 		INIT_LIST_HEAD(&up->list);
 		i->head = &up->list;
 		spin_unlock_irq(&i->lock);
+        // local_irq_enable
+        // prempt_enable
 
         // ここ
 		ret = request_irq(up->port.irq, serial8250_interrupt,
