@@ -563,6 +563,73 @@ static int serial_link_irq_chain(struct uart_8250_port *up)
 }
 ```
 
+ハードウェア割り込みハンドラの実装は serial8250_interrupt
+
+```c
+/*
+ * This is the serial driver's interrupt routine.
+ *
+ * Arjan thinks the old way was overly complex, so it got simplified.
+ * Alan disagrees, saying that need the complexity to handle the weird
+ * nature of ISA shared interrupts.  (This is a special exception.)
+ *
+ * In order to handle ISA shared interrupts properly, we need to check
+ * that all ports have been serviced, and therefore the ISA interrupt
+ * line has been de-asserted.
+ *
+ * This means we need to loop through all ports. checking that they
+ * don't have an interrupt pending.
+ */
+static irqreturn_t serial8250_interrupt(int irq, void *dev_id, struct pt_regs *regs)
+{
+	struct irq_info *i = dev_id;
+	struct list_head *l, *end = NULL;
+	int pass_counter = 0, handled = 0;
+
+	DEBUG_INTR("serial8250_interrupt(%d)...", irq);
+
+	spin_lock(&i->lock);
+
+	l = i->head;
+	do {
+        // 「ポート」をイテレートして割り込みが無いかを確認
+		struct uart_8250_port *up;
+		unsigned int iir;
+
+		up = list_entry(l, struct uart_8250_port, list);
+
+        // Interrupt ID Register から読み込み
+        // 割り込みがあったかどうかを判定できるのかな?
+		iir = serial_in(up, UART_IIR);
+		if (!(iir & UART_IIR_NO_INT)) {
+			spin_lock(&up->port.lock);
+			serial8250_handle_port(up, regs);
+			spin_unlock(&up->port.lock);
+
+			handled = 1;
+
+			end = NULL;
+		} else if (end == NULL)
+			end = l;
+
+		l = l->next;
+
+		if (l == i->head && pass_counter++ > PASS_LIMIT) {
+			/* If we hit this, we're dead. */
+			printk(KERN_ERR "serial8250: too much work for "
+				"irq%d\n", irq);
+			break;
+		}
+	} while (l != end);
+
+	spin_unlock(&i->lock);
+
+	DEBUG_INTR("end.\n");
+
+	return IRQ_RETVAL(handled);
+}
+```
+
 ## 端末制御処理
 
 ## request_irq
