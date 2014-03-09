@@ -6,24 +6,31 @@
 ## TODO
 
 ```
-sotirq
-  raise_softirq -> raise_softirq_irqoff -> wakeup_softirqd で ksoftirqd を起床させる
+---- softirq プロセスコンテキスト ------------------------
 
-# ---- ハードウェア割り込みハンドラ(ドライバ) ---
+  raise_softirq -> wakeup_softirqd で ksoftirqd を起床させる
+  [ksoftirqd] が pending している sotirq を処理する
+
+---- softirq 割り込みコンテキスト ------------------------
+
+sotirq
+  raise_softirq -> raise_softirq_irqoff で softirq を pending
+
+---- ハードウェア割り込みハンドラ(ドライバ) ----
 
 irqaction->handler で割り込みハンドラ呼び出し
   e1000_intr, serial8250_interrupt, ...
 
-                     request_irq で登録
-                    /
-                   ｜  local_irq_enable, local_irq_disable
-# ---- IRQ 層 ---- ↓ ---- ↑ ---------------------------
+                   request_irq で登録
+                  /
+                 ｜  local_irq_enable, local_irq_disable
+---- IRQ 層 ---- ↓ ---- ↑ ------------------------------
 
 handle_IRQ_event
 __do_IRQ
 do_IRQ
 
-# ---- CPUアーキテクチャ依存層 (i386/kernel/entry.S) ----
+---- CPUアーキテクチャ依存層 (i386/kernel/entry.S) -------
 
 ENTRY(interrupt)
 .text
@@ -839,3 +846,35 @@ struct irqaction {
 };
 ```
 
+## ksoftirqd
+
+SMP (CPU) の初期化?時に作成されるカーネルスレッド
+
+ * kthread_create でCPUごとに作成される
+ * kthread_bind で実行CPUを固定している
+   * 固定したCPUからのハードウェア割り込み -> raise_softirq を扱う(はず)
+
+```c
+static int __devinit cpu_callback(struct notifier_block *nfb,
+				  unsigned long action,
+				  void *hcpu)
+{
+	int hotcpu = (unsigned long)hcpu;
+	struct task_struct *p;
+
+	switch (action) {
+	case CPU_UP_PREPARE:
+		BUG_ON(per_cpu(tasklet_vec, hotcpu).list);
+		BUG_ON(per_cpu(tasklet_hi_vec, hotcpu).list);
+		p = kthread_create(ksoftirqd, hcpu, "ksoftirqd/%d", hotcpu);
+		if (IS_ERR(p)) {
+			printk("ksoftirqd for %i failed\n", hotcpu);
+			return NOTIFY_BAD;
+		}
+		kthread_bind(p, hotcpu);
+  		per_cpu(ksoftirqd, hotcpu) = p;
+ 		break;
+	case CPU_ONLINE:
+		wake_up_process(per_cpu(ksoftirqd, hotcpu));
+		break;
+```
