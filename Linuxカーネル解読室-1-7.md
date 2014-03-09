@@ -130,31 +130,11 @@ struct __wait_queue {
 
 ## 1.7.2 起床処理
 
+> WAITキューからプロセスを外すのは、実は起床したプロセス自身です
+
 > もし起床させたプロセスのほうが、現在実行中のプロセスより実行優先度が高かった場合、プロセススケジューラに対してプリエンプト要求も送ります。
 
- * wake_up_*_sync 群はプリエンプトしない (実行中のプロセスが継続される)
- * try_to_wake_up で プリエンプトするか否かを決定する
-
- ```c
-// try_to_wake_up
-
-	/*
-	 * Sync wakeups (i.e. those types of wakeups where the waker
-	 * has indicated that it will leave the CPU in short order)
-	 * don't trigger a preemption, if the woken up task will run on
-	 * this cpu. (in this case the 'I will reschedule' promise of
-	 * the waker guarantees that the freshly woken up task is going
-	 * to be considered on this CPU.)
-	 */
-    // 1. sync が立ってなければプリエンプションする
-    // 2. 別のCPU ならプリエンプションする
-	if (!sync || cpu != this_cpu) {
-       // ((p)->prio < (rq)->curr->prio) 優先度の比較
-		if (TASK_PREEMPTS_CURR(p, rq))
-            // TIF_NEED_RESCHED を立てる
-			resched_task(rq->curr);
-	}
-```
+try_to_wake_up の実装
 
 ```c
 /***
@@ -353,6 +333,30 @@ int fastcall wake_up_process(task_t *p)
 }
 
 EXPORT_SYMBOL(wake_up_process);
+```
+
+ * wake_up_*_sync 群はプリエンプトしない (実行中のプロセスが継続される)
+   * try_to_wake_up で プリエンプトするか否かを決定している
+
+ ```c
+// try_to_wake_up
+
+	/*
+	 * Sync wakeups (i.e. those types of wakeups where the waker
+	 * has indicated that it will leave the CPU in short order)
+	 * don't trigger a preemption, if the woken up task will run on
+	 * this cpu. (in this case the 'I will reschedule' promise of
+	 * the waker guarantees that the freshly woken up task is going
+	 * to be considered on this CPU.)
+	 */
+    // 1. sync が立ってなければプリエンプションする
+    // 2. 別のCPU ならプリエンプションする
+	if (!sync || cpu != this_cpu) {
+       // ((p)->prio < (rq)->curr->prio) 優先度の比較
+		if (TASK_PREEMPTS_CURR(p, rq))
+            // TIF_NEED_RESCHED を立てる
+			resched_task(rq->curr);
+	}
 ```
 
 ## 1.7.4　子プロセスのスケジューリング
