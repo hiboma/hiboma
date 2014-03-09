@@ -79,6 +79,8 @@ typedef struct __wait_queue_head wait_queue_head_t;
 
 ## sleep_on の実装
 
+https://github.com/hiboma/kernel_module_scratch/tree/master/wait_queue_head_t を読もう
+
 wait_queue_head_t はただのリスト
 
 ```

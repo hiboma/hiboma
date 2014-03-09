@@ -800,9 +800,11 @@ EXPORT_SYMBOL(tty_flip_buffer_push);
 ```
 
 ```c
-// プロセスコンテキで遅延実行する奴
+// プロセスコンテキトで遅延実行する奴
 int fastcall schedule_delayed_work(struct work_struct *work, unsigned long delay)
 {
+    // 他にも使われている可能性がある
+    // http://wiki.bit-hive.com/north/pg/%A5%EF%A1%BC%A5%AF%A5%AD%A5%E5%A1%BC
 	return queue_delayed_work(keventd_wq, work, delay);
 }
 ```
