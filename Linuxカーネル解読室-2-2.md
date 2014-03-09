@@ -199,6 +199,8 @@ e1000_rx_schedule(void *data)
 
 __netif_rx_schedule を呼び出すと softirq へ繋がる
  * poll_list への追加
+ * softirq は 各々のCPUで実行されるので ローカルIRQ を disable する
+ * スピンロックはいらん
 
 ```c
 /* Add interface to tail of rx poll list. This assumes that _prep has
@@ -502,6 +504,10 @@ out:
 
 drivers/scsi/scsi.c ?
 
+ * softirq は CPUごとの処理
+   * ローカル割り込みは diable
+   * スピンロックはいらない
+
 ```c
 /* Private entry to scsi_done() to complete a command when the timer
  * isn't running --- used by scsi_times_out */
@@ -529,6 +535,8 @@ void __scsi_done(struct scsi_cmnd *cmd)
         local_irq_restore(flags);
 }
 ```
+
+list_add_tail + __get_cpu_var のやり方は イーサネットドライバ処理 似ている
 
 ## シリアルドライバ処理
 
