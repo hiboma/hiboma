@@ -53,8 +53,19 @@
 
 ## 1.7.1 待機処理
 
- * ___待機の対象となる可能性のあるカーネルオブジェクト___
-   * [wait_queue_head_t](https://github.com/hiboma/kernel_module_scratch/tree/master/wait_queue_head_t)
+>　待機の対象となる可能性のあるカーネルオブジェクト（ファイルや、実ページ、端末など）は、それぞれWAITキュー（wait_queue_head_t型のリストヘッド）を用意しています。
+
+ * struct semaphore
+ * struct kioctx
+ * struct request_list
+ * struct completion
+ * struct file_lock
+ * struct super_block
+ * struct semaphore で wait_queue_head_t を持っているもの
+   * struct block_device
+   * 
+  
+[wait_queue_head_t](https://github.com/hiboma/kernel_module_scratch/tree/master/wait_queue_head_t)
 
 ```c
 struct __wait_queue_head {
