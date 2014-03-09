@@ -121,7 +121,7 @@ struct __wait_queue {
          // runqueue から外される
          schedule(); ――<54>
 
-         // 起床後 キューから外す
+         // 起床後 自分でキューから外す
          spin_lock_irq(&q->lock);
          __remove_wait_queue(q, &wait); ――<55>
          spin_unlock_irqrestore(&q->lock, flags);
@@ -130,7 +130,7 @@ struct __wait_queue {
 
 ## 1.7.2 起床処理
 
-> WAITキューからプロセスを外すのは、実は起床したプロセス自身です
+> WAITキューからプロセスを外すのは、実は起床したプロセス自身です <55>
 
 > もし起床させたプロセスのほうが、現在実行中のプロセスより実行優先度が高かった場合、プロセススケジューラに対してプリエンプト要求も送ります。
 
@@ -163,6 +163,7 @@ static int try_to_wake_up(task_t *p, unsigned int state, int sync)
 	int new_cpu;
 #endif
 
+    // 起床するプロセスの runqueue をロック
 	rq = task_rq_lock(p, &flags);
 	old_state = p->state;
     // ???
@@ -291,6 +292,7 @@ out_activate:
 	 * sleep is handled in a priority-neutral manner, no priority
 	 * boost and no penalty.)
 	 */
+    // バッチ形プロセスの場合
 	if (old_state & TASK_NONINTERACTIVE)
         // enqueue_task する
 		__activate_task(p, rq);
