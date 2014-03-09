@@ -1,4 +1,11 @@
+## 用語
+
+ * IRQ interrupt request
+ * ISR interrupt service routine
+
 ## 2.2.1 応答性の確保
+
+
 
 > 伝統UNIXでは、応答性を確保するために割り込みレベルという考え方を採用していました
 
@@ -17,6 +24,16 @@ request_irq(unsigned int irq, irqreturn_t (*handler)(int, void *, struct pt_regs
 	    unsigned long irqflags, const char * devname, void *dev_id)
 ```
 
+## 2.2.2 マルチプロセッサへの対応
+
+ * どの CPU でも ハードウェア割り込みハンドラを処理できる
+   * IRQ が異なっていれば並列に処理できる
+ * どの CPU でも softirq を処理できる
+   * softirq はハードウェア割り込みハンドラを受けたCPUで実行される
+   * CPUキャッシュ
+ * ハードゥエア割り込みを特定のCPUに affinity できる
+   * [RedHat のドキュメント](https://access.redhat.com/site/documentation/ja-JP/Red_Hat_Enterprise_Linux/6/html/Performance_Tuning_Guide/s-cpu-irq.html)
+ 
 ## イーサネットドライバ処理
 
 ハードウェア割り込みハンドラへ IRQ を配送するコードはどこ?
@@ -750,3 +767,4 @@ struct irqaction {
 	struct proc_dir_entry *dir;
 };
 ```
+
