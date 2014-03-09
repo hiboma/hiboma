@@ -515,7 +515,7 @@ int fastcall wake_up_process(task_t *p)
 EXPORT_SYMBOL(wake_up_process);
 ```
 
- * wake_up_*_sync 群はプリエンプトしない (実行中のプロセスが継続される)
+ * wake_up_*_sync 群はプリエンプト要求を出さない (起床後も実行中のプロセスが継続される)
    * try_to_wake_up で プリエンプトするか否かを決定している
 
  ```c
