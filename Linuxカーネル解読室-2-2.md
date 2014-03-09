@@ -8,15 +8,18 @@
 ```
   sotirq
 
-  ハードウェア割り込みハンドラ
+# ---- ハードウェア割り込みハンドラ(ドライバ) ---
 
-# IRQ 層
+  irqaction->handler で割り込みハンドラ呼び出し
+    e1000_intr, serial8250_interrupt, ...
+
+# ---- IRQ 層 ----
 
   handle_IRQ_event
   __do_IRQ
   do_IRQ
 
-# CPUアーキテクチャ依存 (i386/kernel/entry.S)
+# ---- CPUアーキテクチャ依存層 (i386/kernel/entry.S) ----
 
 ENTRY(interrupt)
 .text
@@ -27,6 +30,7 @@ ENTRY(irq_entries_start)
 /* 224 の割り込みベクタを common_interrupt で処理 ?*/
 .rept NR_IRQS
         ALIGN
+        # 224 - 256 = -32 = IRQの数?
 1:      pushl $vector-256
         jmp common_interrupt
 .data
@@ -41,8 +45,13 @@ common_interrupt:
         movl %esp,%eax
         call do_IRQ
         jmp ret_from_intr
-```
 
+# ---- ハードウェア ----
+
+ * ローカルタイマ
+ * グローバルタイマ
+ * 外部デバイス (ディスク, イーサーネットカード, ... )
+```
 
 ## 2.2.1 応答性の確保
 
