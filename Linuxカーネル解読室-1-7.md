@@ -171,6 +171,7 @@ static void resched_task(task_t *p)
 	/* NEED_RESCHED must be visible before we test POLLING_NRFLAG */
 	smp_mb();
 	if (!test_tsk_thread_flag(p, TIF_POLLING_NRFLAG))
+        // 指定したCPUに IPI で再スケジューリングを飛ばす
 		smp_send_reschedule(cpu);
 }
 #else
@@ -178,8 +179,8 @@ static void resched_task(task_t *p)
 
 smp_send_reschedule の中身
 
- * IPI = Inter Processor Interrupts の略称
-   * プロセッサ間割り込みを利用して、他のCPUに再スケジューリング要求を出す
+ * プロセッサ間割り込みを利用して、他のCPUに再スケジューリング要求を出す
+   * IPI = Inter Processor Interrupts の略称
    * RESCHEDULE_VECTOR は再スケジューリングを要求する割り込み番号のこと
      * 他にも INVALIDATE_TLB_VECTOR (TLBのフラッシュ) ... などがある
 
@@ -195,7 +196,8 @@ void smp_send_reschedule(int cpu)
 	send_IPI_mask(cpumask_of_cpu(cpu), RESCHEDULE_VECTOR);
 }
 
-// asm-i386/mach-default/irq_vectors
+// asm-i386/mach-default/irq_vectors にベクタが羅列されている
+//
  
 /*
  * Special IRQ vectors used by the SMP architecture, 0xf0-0xff
@@ -211,6 +213,8 @@ void smp_send_reschedule(int cpu)
 #define INVALIDATE_TLB_VECTOR	0xfd
 #define RESCHEDULE_VECTOR	0xfc
 #define CALL_FUNCTION_VECTOR	0xfb
+
+// 割り込みベクタと割り込みハンドラは SMP の初期化で設定されている
 
 void __init smp_intr_init(void)
 {
@@ -427,6 +431,7 @@ out_activate:
 	success = 1;
 
 out_running:
+    // runqueue に繋いだので TASK_RUNNING にしておく
 	p->state = TASK_RUNNING;
 out:
 	task_rq_unlock(rq, &flags);
