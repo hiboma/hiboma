@@ -494,14 +494,68 @@ out:
 }
 ```
 
-
 ## SCSIホストバスアダプタドライバ処理
-
-## シリアルドライバ処理	
 
 ## SCSIプロトコル処理
 
-## 端末制御処理    
+## シリアルドライバ処理
+
+どのドライバを読んだら良いか分からんので drivers/serial/8250.c
+
+ * uart_ops の .startup の中で request_irq が 呼び出されていた
+
+```c
+static struct uart_ops serial8250_pops = {
+	.tx_empty	= serial8250_tx_empty,
+	.set_mctrl	= serial8250_set_mctrl,
+	.get_mctrl	= serial8250_get_mctrl,
+	.stop_tx	= serial8250_stop_tx,
+	.start_tx	= serial8250_start_tx,
+	.stop_rx	= serial8250_stop_rx,
+	.enable_ms	= serial8250_enable_ms,
+	.break_ctl	= serial8250_break_ctl,
+	.startup	= serial8250_startup,    // これ
+	.shutdown	= serial8250_shutdown,
+	.set_termios	= serial8250_set_termios,
+	.pm		= serial8250_pm,
+	.type		= serial8250_type,
+	.release_port	= serial8250_release_port,
+	.request_port	= serial8250_request_port,
+	.config_port	= serial8250_config_port,
+	.verify_port	= serial8250_verify_port,
+};
+```
+
+```c
+static int serial_link_irq_chain(struct uart_8250_port *up)
+{
+	struct irq_info *i = irq_lists + up->port.irq;
+	int ret, irq_flags = up->port.flags & UPF_SHARE_IRQ ? SA_SHIRQ : 0;
+
+	spin_lock_irq(&i->lock);
+
+	if (i->head) {
+		list_add(&up->list, i->head);
+		spin_unlock_irq(&i->lock);
+
+		ret = 0;
+	} else {
+		INIT_LIST_HEAD(&up->list);
+		i->head = &up->list;
+		spin_unlock_irq(&i->lock);
+
+        // ここ
+		ret = request_irq(up->port.irq, serial8250_interrupt,
+				  irq_flags, "serial", i);
+		if (ret < 0)
+			serial_do_unlink(i, up);
+	}
+
+	return ret;
+}
+```
+
+## 端末制御処理
 
 ## request_irq
 
