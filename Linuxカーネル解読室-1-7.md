@@ -5,6 +5,45 @@
  * 待機状態
    * TASK_INTERRUPTIBLE, TASK_UNINTERRUPTIBLE
 
+***ps ax -opid,state,wchan:25,cmd*** で確認してみる
+
+```
+   32 S worker_thread             [aio/0]
+   33 S worker_thread             [crypto/0]
+   38 S worker_thread             [kthrotld/0]
+   40 S worker_thread             [kpsmoused]
+   41 S worker_thread             [usbhid_resumer]
+   71 S worker_thread             [kstriped]
+  133 S scsi_error_handler        [scsi_eh_0]
+  134 S scsi_error_handler        [scsi_eh_1]
+  200 S kjournald2                [jbd2/sda1-8]
+  201 S worker_thread             [ext4-dio-unwrit]
+  275 S poll_schedule_timeout     /sbin/udevd -d
+  298 S worker_thread             [virtio-net]
+  300 S worker_thread             [iprt/0]
+  484 S bdi_writeback_task        [flush-8:0]
+  498 S poll_schedule_timeout     /sbin/udevd -d
+  576 S kauditd_thread            [kauditd]
+  824 S ep_poll                   auditd
+  974 S poll_schedule_timeout     /usr/sbin/sshd
+ 1050 S ep_poll                   /usr/libexec/postfix/master
+ 1060 S hrtimer_nanosleep         crond
+ 1075 S n_tty_read                /sbin/agetty /dev/ttyS0 9600 vt100-nav
+ 1076 S n_tty_read                /sbin/mingetty /dev/tty1
+ 1078 S n_tty_read                /sbin/mingetty /dev/tty2
+ 1080 S n_tty_read                /sbin/mingetty /dev/tty3
+ 1082 S n_tty_read                /sbin/mingetty /dev/tty4
+ 1084 S poll_schedule_timeout     /sbin/udevd -d
+ 1085 S n_tty_read                /sbin/mingetty /dev/tty5
+ 1087 S n_tty_read                /sbin/mingetty /dev/tty6
+ 1943 S ep_poll                   qmgr -l -t fifo -u
+ 2262 S ep_poll                   pickup -l -t fifo -u
+ 2326 S unix_stream_recvmsg       sshd: vagrant [priv]
+ 2328 S poll_schedule_timeout     sshd: vagrant@pts/0
+ 2329 S wait                      -bash
+ 2348 R -                         ps ax -opid,state,wchan:25,cmd
+```
+
 ## 1.7.1 待機処理
 
  * ___待機の対象となる可能性のあるカーネルオブジェクト___
