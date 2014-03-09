@@ -3,6 +3,47 @@
  * IRQ interrupt request
  * ISR interrupt service routine
 
+## TODO
+
+```
+  sotirq
+
+  ハードウェア割り込みハンドラ
+
+# IRQ 層
+
+  handle_IRQ_event
+  __do_IRQ
+  do_IRQ
+
+# CPUアーキテクチャ依存 (i386/kernel/entry.S)
+
+ENTRY(interrupt)
+.text
+
+vector=0
+ENTRY(irq_entries_start)
+/* i386 では NR_IRQS = 224 */
+/* 224 の割り込みベクタを common_interrupt で処理 ?*/
+.rept NR_IRQS
+        ALIGN
+1:      pushl $vector-256
+        jmp common_interrupt
+.data
+        .long 1b
+.text
+vector=vector+1
+.endr
+
+        ALIGN
+common_interrupt:
+        SAVE_ALL
+        movl %esp,%eax
+        call do_IRQ
+        jmp ret_from_intr
+```
+
+
 ## 2.2.1 応答性の確保
 
 > 伝統UNIXでは、応答性を確保するために割り込みレベルという考え方を採用していました
