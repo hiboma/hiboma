@@ -77,7 +77,7 @@ struct __wait_queue_head {
 typedef struct __wait_queue_head wait_queue_head_t;
 ```
 
-**sleep_on**
+## sleep_on の実装
 
 wait_queue_head_t はただのリスト
 
@@ -538,6 +538,28 @@ EXPORT_SYMBOL(wake_up_process);
 			resched_task(rq->curr);
 	}
 ```
+
+> ところでLinuxカーネル内のコードでは、プロセスを待機状態に遷移させるとき、sleep_on関数やsleep_on_interruptible関数を利用せず、その関数と同等のこと（WAITキュー操作とプロセススケジューラの呼び出し）を直接行っている個所があちこちにあります
+
+サンプルが欲しいな
+
+```
+1 目的の事象が成立しているか調べる
+  < ここでイベントが発火する可能性がある>
+2 成立していなければ、sleep_on関数を呼び出す
+  2-1 プロセスをWAITキューに登録
+  2-2 プロセススケジューラ（schedule関数）を呼び出す
+  2-3 プロセスが起床したら、プロセスをWAITキューから外す
+```
+
+```
+1 プロセスをWAITキューに登録（prepare_to_wait関数、またはprepare_to_wait_exclusive関数）
+2 目的の事象が成立しているか調べる
+3 成立していなければ、プロセススケジューラ（schedule関数）を呼び出す
+4 プロセスが起床したら、プロセスをWAITキューから外す（finish_wait関数）
+```
+
+> ところで、もう1つ実装上の疑問点を持たれた方もおられると思います。プロセスが待機状態になったとき、そのプロセス用のtask_struct構造体をWAITキューに直接登録しないのはなぜなのでしょうか？　
 
 ## 1.7.4　子プロセスのスケジューリング
 
