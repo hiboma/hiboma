@@ -36,7 +36,7 @@ __do_IRQ
 do_IRQ
 
 ---- CPUアーキテクチャ依存層 (i386/kernel/entry.S) -------
-
+2
 ENTRY(interrupt)
 .text
 
@@ -392,7 +392,9 @@ out:
 }
 ```
 
-## TCP/IPプロトコル処理 (softirq)
+## TCP/IPプロトコル処理 (softirq ハンドラ)
+
+__do_softirq の softirq_action->action で呼び出し
 
 ```c
 static void net_rx_action(struct softirq_action *h)
@@ -441,7 +443,7 @@ softnet_break:
 	goto out;
 }
 
-process_backlog
+polling の際に呼び出しされる process_backlog
 
  * polling 
  * sk_buffer __skb_dequeue で取り出して netif_receive_skb でごにょごにょ
@@ -459,6 +461,8 @@ static int process_backlog(struct net_device *backlog_dev, int *budget)
 		struct net_device *dev;
 
 		local_irq_disable();
+        // CPUごとのキューから dequeue
+        // CPUごとに独立しているのでロックがいらない
 		skb = __skb_dequeue(&queue->input_pkt_queue);
 		if (!skb)
 			goto job_done;
