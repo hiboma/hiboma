@@ -612,6 +612,7 @@ int do_select(int n, fd_set_bits *fds, long *timeout)
 	if (!__timeout)
 		wait = NULL;
 	retval = 0;
+
 	for (;;) {
 		unsigned long *rinp, *routp, *rexp, *inp, *outp, *exp;
 
@@ -620,6 +621,7 @@ int do_select(int n, fd_set_bits *fds, long *timeout)
 		inp = fds->in; outp = fds->out; exp = fds->ex;
 		rinp = fds->res_in; routp = fds->res_out; rexp = fds->res_ex;
 
+        // select に指定したビットを一個ずつ見ていく
 		for (i = 0; i < n; ++rinp, ++routp, ++rexp) {
 			unsigned long in, out, ex, all_bits, bit = 1, mask, j;
 			unsigned long res_in = 0, res_out = 0, res_ex = 0;
@@ -628,11 +630,13 @@ int do_select(int n, fd_set_bits *fds, long *timeout)
 
 			in = *inp++; out = *outp++; ex = *exp++;
 			all_bits = in | out | ex;
+            // どのビットもたっていない = デスクリプタが無い
 			if (all_bits == 0) {
 				i += __NFDBITS;
 				continue;
 			}
 
+            // __NFDBITS = 64
 			for (j = 0; j < __NFDBITS; ++j, ++i, bit <<= 1) {
 				if (i >= n)
 					break;
@@ -643,8 +647,10 @@ int do_select(int n, fd_set_bits *fds, long *timeout)
 					f_op = file->f_op;
 					mask = DEFAULT_POLLMASK;
 					if (f_op && f_op->poll)
+                        // 待っているイベントが発生いないかどうか
 						mask = (*f_op->poll)(file, retval ? NULL : wait);
 					fput(file);
+                    // mask に イベントの内容が入ってる
 					if ((mask & POLLIN_SET) && (in & bit)) {
 						res_in |= bit;
 						retval++;
@@ -660,6 +666,7 @@ int do_select(int n, fd_set_bits *fds, long *timeout)
 				}
 				cond_resched();
 			}
+            
 			if (res_in)
 				*rinp = res_in;
 			if (res_out)
