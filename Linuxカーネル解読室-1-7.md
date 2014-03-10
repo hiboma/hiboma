@@ -644,6 +644,48 @@ int do_select(int n, fd_set_bits *fds, long *timeout)
 					mask = DEFAULT_POLLMASK;
 					if (f_op && f_op->poll)
 						mask = (*f_op->poll)(file, retval ? NULL : wait);
+					fput(file);
+					if ((mask & POLLIN_SET) && (in & bit)) {
+						res_in |= bit;
+						retval++;
+					}
+					if ((mask & POLLOUT_SET) && (out & bit)) {
+						res_out |= bit;
+						retval++;
+					}
+					if ((mask & POLLEX_SET) && (ex & bit)) {
+						res_ex |= bit;
+						retval++;
+					}
+				}
+				cond_resched();
+			}
+			if (res_in)
+				*rinp = res_in;
+			if (res_out)
+				*routp = res_out;
+			if (res_ex)
+				*rexp = res_ex;
+		}
+		wait = NULL;
+		if (retval || !__timeout || signal_pending(current))
+			break;
+		if(table.error) {
+			retval = table.error;
+			break;
+		}
+		__timeout = schedule_timeout(__timeout);
+	}
+	__set_current_state(TASK_RUNNING);
+
+	poll_freewait(&table);
+
+	/*
+	 * Up-to-date the caller timeout.
+	 */
+	*timeout = __timeout;
+	return retval;
+}
 ```
 
 ソケットの場合 file_operations の正体は socket_file_ops
