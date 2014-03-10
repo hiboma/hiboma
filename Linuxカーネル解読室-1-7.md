@@ -589,9 +589,9 @@ select や poll は複数のファイルデスクリプタの監視ができる�
 
 do_select の場合
 
- * ファイルデスクリプタに対して .poll を複数回呼び出して、複数の wait_queue_head_t に繋ぐ
+ * システムコールを呼び出したファイルデスクリプタに対して .poll を複数回呼び出し、複数の wait_queue_head_t に繋ぐ
  * schedule_timeout でタイムアウトを待つ
-   * 一つのプロセスが複数の事象待ちの状態になる
+   * 一つのプロセスが複数の事象待ちの状態になる ( schedule_timeout() は wait_queue_head_t には繋がない )
 
 ## poll を覗き見
 
