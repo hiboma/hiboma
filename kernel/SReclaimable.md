@@ -230,7 +230,7 @@ static struct page *allocate_slab(struct kmem_cache *s, gfp_t flags, int node)
 
 ## inode cache と SLAB_RECLAIM_ACCOUNT
 
-### ext4
+### ext4_inode_cachep
 
 ```c
 static int init_inodecache(void)
@@ -245,3 +245,22 @@ static int init_inodecache(void)
 	return 0;
 }
 ```
+
+### inode_cache
+
+```
+void __init inode_init(void)
+{
+	int loop;
+
+	/* inode slab cache */
+	inode_cachep = kmem_cache_create("inode_cache",
+					 sizeof(struct inode),
+					 0,
+					 (SLAB_RECLAIM_ACCOUNT|SLAB_PANIC|
+					 SLAB_MEM_SPREAD),
+					 init_once);
+	register_shrinker(&icache_shrinker);
+```
+
+icache_shrinker を kmem_cache_shrink のコールバックとする
