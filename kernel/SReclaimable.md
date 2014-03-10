@@ -109,6 +109,30 @@ struct kmem_cache {
 };
 ```
 
+## TODO
+
+```
+drivers/base/node.c:		       nid, K(node_page_state(nid, NR_SLAB_RECLAIMABLE) +
+drivers/base/node.c:		       nid, K(node_page_state(nid, NR_SLAB_RECLAIMABLE)),
+fs/proc/meminfo.c:		K(global_page_state(NR_SLAB_RECLAIMABLE) +
+fs/proc/meminfo.c:		K(global_page_state(NR_SLAB_RECLAIMABLE)),
+include/linux/mmzone.h:	NR_SLAB_RECLAIMABLE,
+kernel/power/snapshot.c:	size = global_page_state(NR_SLAB_RECLAIMABLE)
+mm/mmap.c:		free += global_page_state(NR_SLAB_RECLAIMABLE);
+mm/nommu.c:		free += global_page_state(NR_SLAB_RECLAIMABLE);
+mm/page_alloc.c:		global_page_state(NR_SLAB_RECLAIMABLE),
+mm/page_alloc.c:			K(zone_page_state(zone, NR_SLAB_RECLAIMABLE)),
+mm/slab.c:			NR_SLAB_RECLAIMABLE, nr_pages);
+mm/slab.c:				NR_SLAB_RECLAIMABLE, nr_freed);
+mm/slub.c:		NR_SLAB_RECLAIMABLE : NR_SLAB_UNRECLAIMABLE,
+mm/slub.c:		NR_SLAB_RECLAIMABLE : NR_SLAB_UNRECLAIMABLE,
+mm/vmscan.c:	nr_slab = global_page_state(NR_SLAB_RECLAIMABLE);
+mm/vmscan.c:	slab_reclaimable = zone_page_state(zone, NR_SLAB_RECLAIMABLE);
+mm/vmscan.c:			zone_page_state(zone, NR_SLAB_RECLAIMABLE) >
+mm/vmscan.c:			zone_page_state(zone, NR_SLAB_RECLAIMABLE);
+mm/vmscan.c:	    zone_page_state(zone, NR_SLAB_RECLAIMABLE) <= zone->min_slab_pages)
+```
+
 ## NR_SLAB_RECLAIMABLE, NR_SLAB_UNRECLAIMABLE の減算される場所
 
 kmem_cache_shrink -> discard_slab -> free_slab -> **__free_slab**
@@ -131,6 +155,7 @@ static void __free_slab(struct kmem_cache *s, struct page *page)
 
 	kmemcheck_free_shadow(page, compound_order(page));
 
+    // ここで加算されるぞう
 	mod_zone_page_state(page_zone(page),
 		(s->flags & SLAB_RECLAIM_ACCOUNT) ?
 		NR_SLAB_RECLAIMABLE : NR_SLAB_UNRECLAIMABLE,
@@ -200,5 +225,23 @@ static struct page *allocate_slab(struct kmem_cache *s, gfp_t flags, int node)
 		1 << oo_order(oo));
 
 	return page;
+}
+```
+
+## inode cache と SLAB_RECLAIM_ACCOUNT
+
+### ext4
+
+```c
+static int init_inodecache(void)
+{
+	ext4_inode_cachep = kmem_cache_create("ext4_inode_cache",
+					     sizeof(struct ext4_inode_info),
+					     0, (SLAB_RECLAIM_ACCOUNT|
+						SLAB_MEM_SPREAD),
+					     init_once);
+	if (ext4_inode_cachep == NULL)
+		return -ENOMEM;
+	return 0;
 }
 ```
