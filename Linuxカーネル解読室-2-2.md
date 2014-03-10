@@ -604,6 +604,17 @@ out:
 }
 ```
 
+arp_packet_type の場合はこんなん
+
+```c
+static struct packet_type arp_packet_type = {
+	.type =	__constant_htons(ETH_P_ARP),
+	.func =	arp_rcv,
+};
+```
+
+arp_rcv を辿っていくと arp のパケットを受信した際のアクションが辿れる
+
 ## SCSIホストバスアダプタドライバ処理
 
 どれみたらいいか分からん
