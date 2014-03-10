@@ -587,6 +587,12 @@ https://github.com/hiboma/kernel_module_scratch/tree/master/wait_queue_head_t �
 
 select や poll は複数のファイルデスクリプタの監視ができるので複数の waitqueue に繋いでる状態にを取りうる
 
+do_select の場合
+
+ * ファイルデスクリプタに対して .poll を複数回呼び出して、複数の wait_queue_head_t に繋ぐ
+ * schedule_timeout でタイムアウトを待つ
+   * 一つのプロセスが複数の事象待ちの状態になる
+
 ## poll を覗き見
 
 select(2) は do_select の中で file_operations の .poll を呼び出す
@@ -674,6 +680,10 @@ int do_select(int n, fd_set_bits *fds, long *timeout)
 			if (res_ex)
 				*rexp = res_ex;
 		}
+
+        // f_op->poll でイベントが発生していた   か
+        // タイムアウトの指定がない(すぐ return) か
+        // シグナルを受信していたら break してループを抜ける
 		wait = NULL;
 		if (retval || !__timeout || signal_pending(current))
 			break;
@@ -681,6 +691,8 @@ int do_select(int n, fd_set_bits *fds, long *timeout)
 			retval = table.error;
 			break;
 		}
+
+        // タイムアウトするまで待つ
 		__timeout = schedule_timeout(__timeout);
 	}
 	__set_current_state(TASK_RUNNING);
@@ -814,9 +826,7 @@ static inline void poll_wait(struct file * filp, wait_queue_head_t * wait_addres
 }
 ```
 
-poll_table の .qproc コールバックを呼び出している
-
-select / poll は __pollwait で qproc を実装している
+poll_table の .qproc コールバックを呼び出している。select / poll は __pollwait で qproc を実装している
 
 ```c
 static void __pollwait(struct file *filp, wait_queue_head_t *wait_address,
