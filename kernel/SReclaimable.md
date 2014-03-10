@@ -30,7 +30,7 @@ slab (kmem_cache等) で reclaim できるもの/できないもののサイズ�
 
 ## kmem_cache
 
-SLAB_RECLAIM_ACCOUNT の有無で分類される
+SReclaimable/SUnreclaim かどうかは kmem_cache flags の SLAB_RECLAIM_ACCOUNT の有無で分類される
 
 ```c
 struct kmem_cache {
@@ -108,8 +108,6 @@ struct kmem_cache {
 	 */
 };
 ```
-
-kmem_cache_create に渡すフラグで変更できる様子
 
 ## NR_SLAB_RECLAIMABLE, NR_SLAB_UNRECLAIMABLE の減算される場所
 
