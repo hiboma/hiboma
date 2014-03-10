@@ -293,3 +293,13 @@ static void __init dcache_init(void)
 SLAB_RECLAIM_ACCOUNT, SLAB_PANIC, SLAB_MEM_SPREAD とフラグがたっている
 
 dcache_shrinker を kmem_cache_shrink のコールバックとする
+
+## register_shrinker
+
+register_shrinker で struct shrinker を登録しておくと /proc/sys/vm/drop_caches に 2 を write した際に呼び出される
+
+```
+echo 2 | sudo tee /proc/sys/vm/drop_caches
+```
+
+inode_cache, dentry_cache を破棄するコマンドとして知られているけど、shrink_slab を呼び出すインタフェースとして見るのが正しそう
