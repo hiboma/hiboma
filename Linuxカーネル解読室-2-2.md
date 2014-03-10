@@ -499,7 +499,7 @@ job_done:
 }
 ```
 
- * sk_buff でパケットの中身を見て、プロトコルに応じたハンドラに繋げる
+ * sk_buff でパケットの中身を見て、プロトコルに応じたハンドラ (packet_type) に繋げる
    * dev_add_pack でパケットのハンドラを追加する
      * `dev_add_pack(&ip_packet_type);`
      * `dev_add_pack(&arp_packet_type);`
@@ -539,9 +539,12 @@ int netif_receive_skb(struct sk_buff *skb)
 	}
 #endif
 
+    // パケットタイプを探すぞー
+    // パケットタイプの net_device と sk_buff の dev が一致するかどうからしい
 	list_for_each_entry_rcu(ptype, &ptype_all, list) {
 		if (!ptype->dev || ptype->dev == skb->dev) {
-			if (pt_prev) 
+			if (pt_prev)
+                      // packet_type の .func を呼び出しする
 				ret = deliver_skb(skb, pt_prev, orig_dev);
 			pt_prev = ptype;
 		}
