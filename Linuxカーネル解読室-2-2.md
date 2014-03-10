@@ -463,6 +463,7 @@ static int process_backlog(struct net_device *backlog_dev, int *budget)
 		local_irq_disable();
         // CPUごとのキューから dequeue
         // CPUごとに独立しているのでロックがいらない
+        // input_pkt_queue は struct sk_buff_head
 		skb = __skb_dequeue(&queue->input_pkt_queue);
 		if (!skb)
 			goto job_done;
