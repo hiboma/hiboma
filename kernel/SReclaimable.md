@@ -232,6 +232,8 @@ static struct page *allocate_slab(struct kmem_cache *s, gfp_t flags, int node)
 
 ### ext4_inode_cachep
 
+SLAB_RECLAIM_ACCOUNT を指定して ext4_inode_cachep を作ってるのが分かる
+
 ```c
 static int init_inodecache(void)
 {
@@ -247,6 +249,8 @@ static int init_inodecache(void)
 ```
 
 ### inode_cache
+
+こちらも同様
 
 ```
 void __init inode_init(void)
@@ -264,3 +268,28 @@ void __init inode_init(void)
 ```
 
 icache_shrinker を kmem_cache_shrink のコールバックとする
+
+### dentry
+
+dentry はマクロで覆われていた
+
+```c
+static void __init dcache_init(void)
+{
+	int loop;
+
+	/* 
+	 * A constructor could be added for stable state like the lists,
+	 * but it is probably not worth it because of the cache nature
+	 * of the dcache. 
+	 */
+	dentry_cache = KMEM_CACHE(dentry,
+		SLAB_RECLAIM_ACCOUNT|SLAB_PANIC|SLAB_MEM_SPREAD);
+
+	register_shrinker(&dcache_shrinker);
+// ...
+```
+
+SLAB_RECLAIM_ACCOUNT, SLAB_PANIC, SLAB_MEM_SPREAD とフラグがたっている
+
+dcache_shrinker を kmem_cache_shrink のコールバックとする
