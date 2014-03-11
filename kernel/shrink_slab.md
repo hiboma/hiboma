@@ -39,8 +39,7 @@
      * もういっぺん最後に試してみる
    * page 割り当てできなかったら `pr_warning("%s: page allocation failure. order:%d, mode:0x%x\n"`
 
-
-get_page_from_freelist より下の呼び出し
+## get_page_from_freelist より下の呼び出し
 
 ```
 get_page_from_freelist
