@@ -13,10 +13,8 @@
 
 ## alloc_page 群
 
-```c
-static inline struct page *alloc_pages(gfp_t gfp_mask, unsigned int order)
-```
-
+ * alloc_page_vma
+   * vm_area_struct 用のページを割り当てる
  * alloc_pages_current
    * NUMA な構成の場合に current プロセスのメモリポリシーに従ってメモリを配置する
    * alloc_page_interleave もしくは __alloc_pages_nodemask を呼ぶ
@@ -25,11 +23,11 @@ static inline struct page *alloc_pages(gfp_t gfp_mask, unsigned int order)
  * __alloc_pages
    * __alloc_pages_nodemask を呼ぶ
  * alloc_page_buffers
- * __alloc_pages_direct_compact
- * __alloc_pages_direct_reclaim
- * __alloc_pages_high_priority
- * __alloc_pages_may_oom
  * __alloc_pages_slowpath
+   * __alloc_pages_direct_compact
+   * __alloc_pages_direct_reclaim
+   * __alloc_pages_high_priority
+   * __alloc_pages_may_oom
    * wake_all_kswapd で kswapd を起床させておく
      * __GFP_NO_KSWAPD なる gtp_mask があるなぁ
    * get_page_from_freelist
