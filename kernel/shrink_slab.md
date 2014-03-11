@@ -25,19 +25,18 @@
    * __alloc_pages を呼ぶ
  * __alloc_pages
    * __alloc_pages_nodemask を呼ぶ
- * __alloc_pages_nodemask を呼ぶ
+ * __alloc_pages_nodemask
    * get_page_from_freelist で freelist からページを確保できなかったら __alloc_pages_slowpath を呼ぶ
-     * zone の watermark を閾値とする
- * **__alloc_pages_slowpath**
-   * __alloc_pages_direct_compact
-   * __alloc_pages_direct_reclaim
-   * __alloc_pages_high_priority
-   * __alloc_pages_may_oom
-   * wake_all_kswapd で kswapd を起床させておく
-     * __GFP_NO_KSWAPD なる gtp_mask があるなぁ
-   * get_page_from_freelist
-     * もういっぺん最後に試してみる
-   * page 割り当てできなかったら `pr_warning("%s: page allocation failure. order:%d, mode:0x%x\n"`
+   * **__alloc_pages_slowpath**
+     * __alloc_pages_direct_compact
+     * __alloc_pages_direct_reclaim
+     * __alloc_pages_high_priority
+     * __alloc_pages_may_oom
+     * wake_all_kswapd で kswapd を起床させておく
+       * __GFP_NO_KSWAPD が立ってない場合だけ
+     * get_page_from_freelist
+       * もういっぺん最後に試してみる
+     * page 割り当てできなかったら `pr_warning("%s: page allocation failure. order:%d, mode:0x%x\n"`
 
 ## get_page_from_freelist より下の呼び出し
 
