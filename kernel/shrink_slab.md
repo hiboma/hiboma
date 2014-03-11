@@ -30,7 +30,6 @@
      * zone_reclaim
        * __zone_reclaim
          * shrink_slab
-
    * **__alloc_pages_slowpath**
      * __alloc_pages_direct_compact
      * __alloc_pages_direct_reclaim
