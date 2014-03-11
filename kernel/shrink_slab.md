@@ -39,8 +39,7 @@ static inline struct page *alloc_pages(gfp_t gfp_mask, unsigned int order)
 
 ## __zone_reclaim
 
- * NR_SLAB_RECLAIMABLE を元に shrink_slab を投げる
-
+ * NR_SLAB_RECLAIMABLE の数値をスキャンすべきエントリ数に指定して shrink_slab を投げる
 ```c
 static int __zone_reclaim(struct zone *zone, gfp_t gfp_mask, unsigned int order)
 
@@ -72,15 +71,17 @@ static int __zone_reclaim(struct zone *zone, gfp_t gfp_mask, unsigned int order)
 	}
 ```
 
-## 
+buffer 用のページを割り当てる際にも shrink_slab を呼ぶケースがある
 
 ```
+alloc_page_buffers
 free_more_memory
 try_to_release_page
 do_try_to_free_pages
+ ...
 ```
 
-##
+__alloc 群から shrink_slab に至るパス
 
 ```
 [ 
@@ -103,8 +104,10 @@ wakeup_flusher_threads
 
 ## kswapd
 
+__alloc_pages_slowpath -> wake_all_kswapd -> wakeup_kswapd で起床する
+
  * kswapd
  * balance_pgdat
    * free_pges <= high_wmark_pages(zone).
-     * highmem -> normal -> DMW
-  
+     * highmem -> normal -> DMA の順番でノード
+
