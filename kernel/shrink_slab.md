@@ -42,14 +42,17 @@
 
 ```
 get_page_from_freelist
-zone_reclaim
-__zone_reclaim
-do_try_to_free_pages
-wakeup_flusher_threads
-  # dirty なページを書き出すスレッドを起床させる
-  __bdi_start_writeback
-  bdi_queue_work
-  # dirty な inode, superblock の書き出しを追う際はここを見る
+  # zone の中で再利用できるページが無いかを探す
+  zone_reclaim
+  __zone_reclaim
+    # SReclaimable から回収
+    shrink_slab
+    do_try_to_free_pages
+    wakeup_flusher_threads
+   # dirty なページを書き出すスレッドを起床させる
+    __bdi_start_writeback
+    bdi_queue_work
+    # dirty な inode, superblock の書き出しを追う際はここを見る
 ```
 
 buffer 用のページを割り当てる際にも shrink_slab を呼ぶケースがある
