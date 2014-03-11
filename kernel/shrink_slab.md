@@ -27,33 +27,35 @@
    * __alloc_pages_nodemask を呼ぶ
  * __alloc_pages_nodemask
    * get_page_from_freelist で freelist からページを確保できなかったら __alloc_pages_slowpath を呼ぶ
+     * zone_reclaim
+       * __zone_reclaim
+         * shrink_slab
+
    * **__alloc_pages_slowpath**
      * __alloc_pages_direct_compact
      * __alloc_pages_direct_reclaim
+       * try_to_free_pages
+         * do_try_to_free_pages
+           * wakeup_flusher_threads
+             * __bdi_start_writeback
+               * dirty なページを書き出すスレッドを起床させる
+               * bdi_queue_work
      * __alloc_pages_high_priority
      * __alloc_pages_may_oom
      * wake_all_kswapd で kswapd を起床させておく
        * __GFP_NO_KSWAPD が立ってない場合だけ
      * get_page_from_freelist
        * もういっぺん最後に試してみる
+       * zone_reclaim
+         * __zone_reclaim
+           * shrink_slab
      * page 割り当てできなかったら `pr_warning("%s: page allocation failure. order:%d, mode:0x%x\n"`
 
-## get_page_from_freelist より下の呼び出し
+## try_to 群
 
-```
-get_page_from_freelist
-  # zone の中で再利用できるページが無いかを探す
-  zone_reclaim
-  __zone_reclaim
-    # SReclaimable から回収
-    shrink_slab
-    do_try_to_free_pages
-    wakeup_flusher_threads
-   # dirty なページを書き出すスレッドを起床させる
-    __bdi_start_writeback
-    bdi_queue_work
-    # dirty な inode, superblock の書き出しを追う際はここを見る
-```
+ * try_to_free_pages
+ * try_to_free_swap
+ * try_to_free_buffers
 
 buffer 用のページを割り当てる際にも shrink_slab を呼ぶケースがある
 
