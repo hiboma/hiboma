@@ -40,6 +40,20 @@
    * page 割り当てできなかったら `pr_warning("%s: page allocation failure. order:%d, mode:0x%x\n"`
 
 
+get_page_from_freelist より下の呼び出し
+
+```
+get_page_from_freelist
+zone_reclaim
+__zone_reclaim
+do_try_to_free_pages
+wakeup_flusher_threads
+  # dirty なページを書き出すスレッドを起床させる
+  __bdi_start_writeback
+  bdi_queue_work
+  # dirty な inode, superblock の書き出しを追う際はここを見る
+```
+
 buffer 用のページを割り当てる際にも shrink_slab を呼ぶケースがある
 
 ```
@@ -48,20 +62,6 @@ free_more_memory
 try_to_release_page
 do_try_to_free_pages
  ...
-```
-
-get_page_from_freelist 以下の
-
-```
-get_page_from_freelist
-zone_reclaim
-__zone_reclaim
-do_try_to_free_pages
-wakeup_flusher_threads
-  dirty なページを書き出すスレッドを起床させる
-  __bdi_start_writeback
-  bdi_queue_work
-    dirty な inode, superblock の書き出しを追う際はここを見る
 ```
 
 ## __zone_reclaim
