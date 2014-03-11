@@ -1,0 +1,110 @@
+## shrink_slab
+
+ * slabキャッシュを破棄する
+   * inode_cache, dentry が大半を占める
+   * kswapd, 任意のプロセス, 割り込みコンテキスト? の alloc_page 群から呼び出される
+
+## SEE ALSO
+
+ * https://github.com/hiboma/hiboma/blob/master/kernel/SReclaimable.md
+ * https://github.com/hiboma/hiboma/blob/master/kernel/dentry_cache.md
+ * https://github.com/hiboma/hiboma/blob/master/kernel/swappiness.md
+   * shrink_list 周りとごっちゃにしないように
+
+## alloc_page 群
+
+```c
+static inline struct page *alloc_pages(gfp_t gfp_mask, unsigned int order)
+```
+
+ * alloc_pages_current
+   * NUMA な構成の場合に current プロセスのメモリポリシーに従ってメモリを配置する
+   * alloc_page_interleave もしくは __alloc_pages_nodemask を呼ぶ
+ * alloc_page_interleave
+   * __alloc_pages_nodemask を呼ぶ
+ * __alloc_pages
+   * __alloc_pages_nodemask を呼ぶ
+ * alloc_page_buffers
+ * __alloc_pages_direct_compact
+ * __alloc_pages_direct_reclaim
+ * __alloc_pages_high_priority
+ * __alloc_pages_may_oom
+ * __alloc_pages_slowpath
+   * wake_all_kswapd で kswapd を起床させておく
+     * __GFP_NO_KSWAPD なる gtp_mask があるなぁ
+   * get_page_from_freelist
+     * zone の watermark を閾値とする
+   * page 割り当てできなかったら `pr_warning("%s: page allocation failure. order:%d, mode:0x%x\n"`
+ * **__alloc_pages_nodemask**
+
+## __zone_reclaim
+
+ * NR_SLAB_RECLAIMABLE を元に shrink_slab を投げる
+
+```c
+static int __zone_reclaim(struct zone *zone, gfp_t gfp_mask, unsigned int order)
+
+//...
+
+	slab_reclaimable = zone_page_state(zone, NR_SLAB_RECLAIMABLE);
+	if (slab_reclaimable > zone->min_slab_pages) {
+		/*
+		 * shrink_slab() does not currently allow us to determine how
+		 * many pages were freed in this zone. So we take the current
+		 * number of slab pages and shake the slab until it is reduced
+		 * by the same nr_pages that we used for reclaiming unmapped
+		 * pages.
+		 *
+		 * Note that shrink_slab will free memory on all zones and may
+		 * take a long time.
+		 */
+		while (shrink_slab(sc.nr_scanned, gfp_mask, order) &&
+			zone_page_state(zone, NR_SLAB_RECLAIMABLE) >
+				slab_reclaimable - nr_pages)
+			;
+
+		/*
+		 * Update nr_reclaimed by the number of slab pages we
+		 * reclaimed from this zone.
+		 */
+		sc.nr_reclaimed += slab_reclaimable -
+			zone_page_state(zone, NR_SLAB_RECLAIMABLE);
+	}
+```
+
+## 
+
+```
+free_more_memory
+try_to_release_page
+do_try_to_free_pages
+```
+
+##
+
+```
+[ 
+  __alloc_pages_direct_compact,
+  __alloc_pages_direct_reclaim,
+  __alloc_pages_high_priority,
+  __alloc_pages_slowpath,
+  __alloc_pages_nodemask,
+]
+get_page_from_freelist
+zone_reclaim
+__zone_reclaim
+do_try_to_free_pages
+wakeup_flusher_threads
+  dirty なページを書き出すスレッドを起床させる
+  __bdi_start_writeback
+  bdi_queue_work
+    dirty な inode, superblock の書き出しを追う際はここを見る
+```
+
+## kswapd
+
+ * kswapd
+ * balance_pgdat
+   * free_pges <= high_wmark_pages(zone).
+     * highmem -> normal -> DMW
+  

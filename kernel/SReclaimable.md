@@ -1,9 +1,7 @@
 ## SReclaimable, SUnreclaim
 
- * Slab Reclaimable
- * Slab Unreclaim
-
 ```c
+        // Slab Reclaimable
 		"SReclaimable:   %8lu kB\n"
 		"SUnreclaim:     %8lu kB\n"
 
@@ -294,6 +292,35 @@ SLAB_RECLAIM_ACCOUNT, SLAB_PANIC, SLAB_MEM_SPREAD とフラグがたっている
 
 dcache_shrinker を kmem_cache_shrink のコールバックとする
 
+```c
+static struct shrinker dcache_shrinker = {
+	.shrink = shrink_dcache_memory,
+	.seeks = DEFAULT_SEEKS,
+};
+```
+
+.shrink の shrink_dcache_memory の実装
+
+```c
+static int shrink_dcache_memory(struct shrinker *shrink, int nr, gfp_t gfp_mask)
+{
+	if (nr) {
+		if (!(gfp_mask & __GFP_FS))
+			return -1;
+		prune_dcache(nr);
+	}
+	return (dentry_stat.nr_unused / 100) * sysctl_vfs_cache_pressure;
+}
+```
+
+dentry は super_block ごとに保持されているので、super_block でイテレート
+
+__shrink_dcache_sb で指定した super_block の dcache を破棄
+
+ * LRU 順番で破棄される
+ * dentry_lru_del_init
+ * prune_one_dentry
+
 ## register_shrinker
 
 register_shrinker で struct shrinker を登録しておくと /proc/sys/vm/drop_caches に 2 を write した際に呼び出される
@@ -303,3 +330,8 @@ echo 2 | sudo tee /proc/sys/vm/drop_caches
 ```
 
 inode_cache, dentry_cache を破棄するコマンドとして知られているけど、shrink_slab を呼び出すインタフェースとして見るのが正しそう
+
+## kswapd と shrink_slab
+
+```
+   29 root      20   0     0    0    0 R 45.6  0.0   0:17.99 [kswapd0]                    ```
