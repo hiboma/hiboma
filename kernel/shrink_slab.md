@@ -13,17 +13,22 @@
 
 ## alloc_page 群
 
+ * alloc_page_buffers
+   * バッファ用のページを割り当てる
  * alloc_page_vma
    * vm_area_struct 用のページを割り当てる
  * alloc_pages_current
    * NUMA な構成の場合に current プロセスのメモリポリシーに従ってメモリを配置する
    * alloc_page_interleave もしくは __alloc_pages_nodemask を呼ぶ
  * alloc_page_interleave
-   * __alloc_pages_nodemask を呼ぶ
+   * NUMA で interleave するポリシーになるように page を割り当てる
+   * __alloc_pages を呼ぶ
  * __alloc_pages
    * __alloc_pages_nodemask を呼ぶ
- * alloc_page_buffers
- * __alloc_pages_slowpath
+ * __alloc_pages_nodemask を呼ぶ
+   * get_page_from_freelist で freelist からページを確保できなかったら __alloc_pages_slowpath を呼ぶ
+     * zone の watermark を閾値とする
+ * **__alloc_pages_slowpath**
    * __alloc_pages_direct_compact
    * __alloc_pages_direct_reclaim
    * __alloc_pages_high_priority
@@ -31,9 +36,33 @@
    * wake_all_kswapd で kswapd を起床させておく
      * __GFP_NO_KSWAPD なる gtp_mask があるなぁ
    * get_page_from_freelist
-     * zone の watermark を閾値とする
+     * もういっぺん最後に試してみる
    * page 割り当てできなかったら `pr_warning("%s: page allocation failure. order:%d, mode:0x%x\n"`
- * **__alloc_pages_nodemask**
+
+
+buffer 用のページを割り当てる際にも shrink_slab を呼ぶケースがある
+
+```
+alloc_page_buffers
+free_more_memory
+try_to_release_page
+do_try_to_free_pages
+ ...
+```
+
+get_page_from_freelist 以下の
+
+```
+get_page_from_freelist
+zone_reclaim
+__zone_reclaim
+do_try_to_free_pages
+wakeup_flusher_threads
+  dirty なページを書き出すスレッドを起床させる
+  __bdi_start_writeback
+  bdi_queue_work
+    dirty な inode, superblock の書き出しを追う際はここを見る
+```
 
 ## __zone_reclaim
 
@@ -68,38 +97,6 @@ static int __zone_reclaim(struct zone *zone, gfp_t gfp_mask, unsigned int order)
 			zone_page_state(zone, NR_SLAB_RECLAIMABLE);
 	}
 ```
-
-buffer 用のページを割り当てる際にも shrink_slab を呼ぶケースがある
-
-```
-alloc_page_buffers
-free_more_memory
-try_to_release_page
-do_try_to_free_pages
- ...
-```
-
-__alloc 群から shrink_slab に至るパス
-
-```
-[ 
-  __alloc_pages_direct_compact,
-  __alloc_pages_direct_reclaim,
-  __alloc_pages_high_priority,
-  __alloc_pages_slowpath,
-  __alloc_pages_nodemask,
-]
-get_page_from_freelist
-zone_reclaim
-__zone_reclaim
-do_try_to_free_pages
-wakeup_flusher_threads
-  dirty なページを書き出すスレッドを起床させる
-  __bdi_start_writeback
-  bdi_queue_work
-    dirty な inode, superblock の書き出しを追う際はここを見る
-```
-
 ## kswapd
 
 __alloc_pages_slowpath -> wake_all_kswapd -> wakeup_kswapd で起床する
