@@ -11,15 +11,17 @@
  * https://github.com/hiboma/hiboma/blob/master/kernel/swappiness.md
    * shrink_list 周りとごっちゃにしないように
 
-## alloc_page 群
+## alloc_page を利用する API
 
  * pgd_alloc
    * __get_free_pages
  * pud_alloc_one, pmd_alloc_one, pte_alloc_one
    * get_zeroed_page
- * get_zeroed_page
-   * __get_free_pages
-     * alloc_pages
+     * __get_free_pages
+       * alloc_pages
+
+## alloc_page 群
+
  * alloc_page_buffers
    * バッファ用のページ ( struct buffer_head *) を割り当てる (__getblk)
    * __bread_slow で submit_bh で bio を発行 -> wait_on_buffer(TASK_UNINTERRUPTIBLE) I/O完了を待つ
@@ -32,13 +34,17 @@
  * alloc_page_interleave
    * NUMA で interleave するポリシーになるように page を割り当てる
    * __alloc_pages を呼ぶ
+
+## __alloc_pages 群
+
  * __alloc_pages
    * __alloc_pages_nodemask を呼ぶ
  * __alloc_pages_nodemask
-   * get_page_from_freelist で freelist からページを確保できなかったら __alloc_pages_slowpath を呼ぶ
-     * zone_reclaim
+   * get_page_from_freelist
+     * freelist からページを確保できなかったら __alloc_pages_slowpath を呼ぶ
+     * zone_reclaim で zone ごとに reclaim できるページを探す
        * __zone_reclaim
-         * shrink_slab
+         * **shrink_slab**
    * **__alloc_pages_slowpath**
      * __alloc_pages_direct_compact
      * __alloc_pages_direct_reclaim
