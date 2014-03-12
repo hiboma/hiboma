@@ -19,7 +19,7 @@
    * fork(2) で mm_struct の .pgd を初期化される際に呼ばれる ( mm_alloc_pgd )
      * コケたら -ENOMEM
      * mm_struct は kmem_cache_alloc を使っていた ( allocate_mm )
- * pud_alloc_one, pmd_alloc_one, pte_alloc_one
+ * pud_alloc_one, pmd_alloc_one, pte_alloc_one, __pte_alloc
    * get_zeroed_page
      * __get_free_pages
        * alloc_pages
@@ -30,6 +30,9 @@
          * pud_alloc_one, pmd_alloc_one, __pte_alloc
          * handle_pte_fault
             * alloc_zeroed_user_highpage_movable
+
+ * ページフォルトが起きた際に PUD, PMD, PTE のページが無ければ都度割り当てる
+   * PGD は fork した際に mm->pgd で確保されていて必ず存在する?
 
 ## alloc_page 群
 
@@ -47,6 +50,9 @@
    * __alloc_pages を呼ぶ
 
 ## __alloc_pages 群
+
+node の選択
+zone の選択
 
  * __alloc_pages
    * nodemask_t を NULL 指定で __alloc_pages_nodemask を呼ぶだけのラッパー
