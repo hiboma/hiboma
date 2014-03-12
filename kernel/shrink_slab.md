@@ -18,6 +18,7 @@
    * __bread_slow で submit_bh で bio を発行 -> wait_on_buffer(TASK_UNINTERRUPTIBLE) I/O完了を待つ
  * alloc_page_vma
    * vm_area_struct 用のページを割り当てる
+   * alloc_page_interleave __alloc_pages_nodemask のいずれかを呼んで page を確保している
  * alloc_pages_current
    * NUMA な構成の場合に current プロセスのメモリポリシーに従ってメモリを配置する
    * alloc_page_interleave もしくは __alloc_pages_nodemask を呼ぶ
