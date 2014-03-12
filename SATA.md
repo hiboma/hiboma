@@ -60,6 +60,19 @@ end
 /var/log/messages にはこんなんログが並びまくる
 
 ```
+Mar 12 14:05:59 vagrant-centos65 kernel: ahci 0000:00:0d.0: AHCI 0001.0100 32 slots 30 ports 3 Gbps 0x3fffffff impl SATA mode
+Mar 12 14:05:59 vagrant-centos65 kernel: ahci 0000:00:0d.0: flags: 64bit ncq stag only ccc 
+Mar 12 14:05:59 vagrant-centos65 kernel: scsi0 : ahci
+Mar 12 14:05:59 vagrant-centos65 kernel: scsi1 : ahci
+Mar 12 14:05:59 vagrant-centos65 kernel: scsi2 : ahci
+
+// ...
+
+Mar 12 14:05:59 vagrant-centos65 kernel: ata1: SATA max UDMA/133 abar m8192@0xf0404000 port 0xf0404100 irq 11
+Mar 12 14:05:59 vagrant-centos65 kernel: ata2: SATA max UDMA/133 abar m8192@0xf0404000 port 0xf0404180 irq 11
+
+// ...
+
 Mar 12 14:05:59 vagrant-centos65 kernel: scsi 28:0:0:0: Direct-Access     ATA      VBOX HARDDISK    1.0  PQ: 0 ANSI: 5
 Mar 12 14:05:59 vagrant-centos65 kernel: ata30: SATA link up 3.0 Gbps (SStatus 123 SControl 300)
 Mar 12 14:05:59 vagrant-centos65 kernel: ata30.00: ATA-6: VBOX HARDDISK, 1.0, max UDMA/133
@@ -85,35 +98,16 @@ Mar 12 14:05:59 vagrant-centos65 kernel: sdad:
 
 Mar 12 14:05:59 vagrant-centos65 kernel: sd 0:0:0:0: Attached scsi generic sg0 type 0
 Mar 12 14:05:59 vagrant-centos65 kernel: sd 1:0:0:0: Attached scsi generic sg1 type 0
-Mar 12 14:05:59 vagrant-centos65 kernel: sd 2:0:0:0: Attached scsi generic sg2 type 0
-Mar 12 14:05:59 vagrant-centos65 kernel: sd 3:0:0:0: Attached scsi generic sg3 type 0
-Mar 12 14:05:59 vagrant-centos65 kernel: sd 4:0:0:0: Attached scsi generic sg4 type 0
-Mar 12 14:05:59 vagrant-centos65 kernel: sd 5:0:0:0: Attached scsi generic sg5 type 0
-Mar 12 14:05:59 vagrant-centos65 kernel: sd 6:0:0:0: Attached scsi generic sg6 type 0
-Mar 12 14:05:59 vagrant-centos65 kernel: sd 7:0:0:0: Attached scsi generic sg7 type 0
-Mar 12 14:05:59 vagrant-centos65 kernel: sd 8:0:0:0: Attached scsi generic sg8 type 0
-Mar 12 14:05:59 vagrant-centos65 kernel: sd 9:0:0:0: Attached scsi generic sg9 type 0
-Mar 12 14:05:59 vagrant-centos65 kernel: sd 10:0:0:0: Attached scsi generic sg10 type 0
-Mar 12 14:05:59 vagrant-centos65 kernel: sd 11:0:0:0: Attached scsi generic sg11 type 0
-Mar 12 14:05:59 vagrant-centos65 kernel: sd 12:0:0:0: Attached scsi generic sg12 type 0
-Mar 12 14:05:59 vagrant-centos65 kernel: sd 13:0:0:0: Attached scsi generic sg13 type 0
-Mar 12 14:05:59 vagrant-centos65 kernel: sd 14:0:0:0: Attached scsi generic sg14 type 0
-Mar 12 14:05:59 vagrant-centos65 kernel: sd 15:0:0:0: Attached scsi generic sg15 type 0
-Mar 12 14:05:59 vagrant-centos65 kernel: sd 16:0:0:0: Attached scsi generic sg16 type 0
-Mar 12 14:05:59 vagrant-centos65 kernel: sd 17:0:0:0: Attached scsi generic sg17 type 0
-Mar 12 14:05:59 vagrant-centos65 kernel: sd 18:0:0:0: Attached scsi generic sg18 type 0
-Mar 12 14:05:59 vagrant-centos65 kernel: sd 19:0:0:0: Attached scsi generic sg19 type 0
-Mar 12 14:05:59 vagrant-centos65 kernel: sd 20:0:0:0: Attached scsi generic sg20 type 0
-Mar 12 14:05:59 vagrant-centos65 kernel: sd 21:0:0:0: Attached scsi generic sg21 type 0
-Mar 12 14:05:59 vagrant-centos65 kernel: sd 22:0:0:0: Attached scsi generic sg22 type 0
-Mar 12 14:05:59 vagrant-centos65 kernel: sd 23:0:0:0: Attached scsi generic sg23 type 0
-Mar 12 14:05:59 vagrant-centos65 kernel: sd 24:0:0:0: Attached scsi generic sg24 type 0
-Mar 12 14:05:59 vagrant-centos65 kernel: sd 25:0:0:0: Attached scsi generic sg25 type 0
-Mar 12 14:05:59 vagrant-centos65 kernel: sd 26:0:0:0: Attached scsi generic sg26 type 0
-Mar 12 14:05:59 vagrant-centos65 kernel: sd 27:0:0:0: Attached scsi generic sg27 type 0
+
+// ...
+
 Mar 12 14:05:59 vagrant-centos65 kernel: sd 28:0:0:0: Attached scsi generic sg28 type 0
 Mar 12 14:05:59 vagrant-centos65 kernel: sd 29:0:0:0: Attached scsi generic sg29 type 0
 ```
+
+## /dev/sd*** の命名しているコード
+
+drivers/scsi/sd.c
 
 ```c
 /**
