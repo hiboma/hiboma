@@ -25,6 +25,8 @@
      * __do_page_fault
        * handle_mm_fault
          * pud_alloc_one, pmd_alloc_one, __pte_alloc
+         * handle_pte_fault
+            * alloc_zeroed_user_highpage_movable
 
 ## alloc_page 群
 
