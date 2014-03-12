@@ -46,6 +46,8 @@
        * __zone_reclaim
          * **shrink_slab**
    * **__alloc_pages_slowpath**
+     * wake_all_kswapd で kswapd を起床させておく
+       * __GFP_NO_KSWAPD が立ってない場合だけ
      * __alloc_pages_direct_compact
      * __alloc_pages_direct_reclaim
        * try_to_free_pages
@@ -56,14 +58,18 @@
                * bdi_queue_work
      * __alloc_pages_high_priority
      * __alloc_pages_may_oom
-     * wake_all_kswapd で kswapd を起床させておく
-       * __GFP_NO_KSWAPD が立ってない場合だけ
-     * get_page_from_freelist
-       * もういっぺん最後に試してみる
+     * get_page_from_freelist もういっぺん最後に試してページを確保できないか試す
        * zone_reclaim
          * __zone_reclaim
-           * shrink_slab
+           * **shrink_slab**
      * page 割り当てできなかったら `pr_warning("%s: page allocation failure. order:%d, mode:0x%x\n"`
+       * __GFP_NOWARN が立ってない場合にだけ pr_warning 出る
+
+#### freelist
+
+ * memory compaction で確保
+   * zone_reclaim_compact
+ * 
 
 ## try_to 群
 
