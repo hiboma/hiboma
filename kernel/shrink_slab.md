@@ -16,6 +16,8 @@
 
  * pgd_alloc
    * __get_free_pages
+   * fork(2) で mm_struct の .pgd を初期化される際に呼ばれる
+   * mm_struct は kmem_cache_alloc を使う
  * pud_alloc_one, pmd_alloc_one, pte_alloc_one
    * get_zeroed_page
      * __get_free_pages
