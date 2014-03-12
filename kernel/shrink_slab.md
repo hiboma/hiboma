@@ -24,9 +24,7 @@
    * do_page_fault
      * __do_page_fault
        * handle_mm_fault
-         * pud_alloc_one
-         * pmd_alloc_one
-         * __pte_alloc
+         * pud_alloc_one, pmd_alloc_one, __pte_alloc
 
 ## alloc_page 群
 
