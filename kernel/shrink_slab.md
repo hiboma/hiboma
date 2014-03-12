@@ -38,7 +38,7 @@
 ## __alloc_pages 群
 
  * __alloc_pages
-   * __alloc_pages_nodemask を呼ぶ
+   * nodemask_t を NULL 指定で __alloc_pages_nodemask を呼ぶだけのラッパー
  * __alloc_pages_nodemask
    * get_page_from_freelist
      * freelist からページを確保できなかったら __alloc_pages_slowpath を呼ぶ
