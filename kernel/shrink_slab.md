@@ -92,8 +92,8 @@ zone_water_mark
 
 ## get_page_from_freelist
 
-   * shrink_mem_cgroup_zone
-     * shrink_list
+ * shrink_mem_cgroup_zone
+   * shrink_list
  * shrink_zone
  * shrink_slab
 
