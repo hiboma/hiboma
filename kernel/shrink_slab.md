@@ -3,6 +3,7 @@
  * slabキャッシュを破棄する
    * inode_cache, dentry が大半を占める
    * kswapd, 任意のプロセス, 割り込みコンテキスト? の alloc_page 群から呼び出される
+ * node と zone 
 
 ## SEE ALSO
 
@@ -19,6 +20,13 @@
    * get_zeroed_page
      * __get_free_pages
        * alloc_pages
+ * page_fault
+   * do_page_fault
+     * __do_page_fault
+       * handle_mm_fault
+         * pud_alloc_one
+         * pmd_alloc_one
+         * __pte_alloc
 
 ## alloc_page 群
 
