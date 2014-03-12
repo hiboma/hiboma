@@ -13,6 +13,9 @@
 
 ## alloc_page 群
 
+ * get_zeroed_page
+   * __get_free_pages
+     * alloc_pages
  * alloc_page_buffers
    * バッファ用のページ ( struct buffer_head *) を割り当てる (__getblk)
    * __bread_slow で submit_bh で bio を発行 -> wait_on_buffer(TASK_UNINTERRUPTIBLE) I/O完了を待つ
