@@ -126,7 +126,9 @@ lseek(4, 0, SEEK_SET)                   = 0
 read(4, "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"..., 8192) = 8192
 ```
 
-block デバイス用 file_operations が登録されている
+## struct block_device
+
+カーネルのソースを追う。block デバイス用に file_operations が登録されている
 
 ```c
 const struct file_operations def_blk_fops = {
@@ -147,6 +149,10 @@ const struct file_operations def_blk_fops = {
 	.splice_write	= generic_file_splice_write,
 };
 ```
+
+.unlocked_ioctl で ioctl 用のメソッドが定義されている
+
+## blkdev_ioctl
 
 BLKGETSIZE64, BLKSSZGET などは 下記で取れる。 struct block_device bdev に格納されてる情報読んでるだけだった
 
