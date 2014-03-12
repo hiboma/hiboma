@@ -14,8 +14,8 @@
 ## alloc_page 群
 
  * alloc_page_buffers
-   * バッファ用のページ ( struct buffer_head *) を割り当てる
-   * submit_bh -> wait_on_buffer で TASK_UNINTERRUPTIBLE で待つ
+   * バッファ用のページ ( struct buffer_head *) を割り当てる (__getblk)
+   * __bread_slow で submit_bh で bio を発行 -> wait_on_buffer(TASK_UNINTERRUPTIBLE) I/O完了を待つ
  * alloc_page_vma
    * vm_area_struct 用のページを割り当てる
  * alloc_pages_current
