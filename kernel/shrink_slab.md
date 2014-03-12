@@ -13,6 +13,10 @@
 
 ## alloc_page 群
 
+ * pgd_alloc
+   * __get_free_pages
+ * pud_alloc_one, pmd_alloc_one, pte_alloc_one
+   * get_zeroed_page
  * get_zeroed_page
    * __get_free_pages
      * alloc_pages
