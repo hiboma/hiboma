@@ -62,6 +62,7 @@ zone_water_mark
      * freelist からページを確保できなかったら __alloc_pages_slowpath を呼ぶ
      * zone_reclaim で zone ごとに reclaim できるページを探す
        * __zone_reclaim
+         * **shrink_zone**
          * **shrink_slab**
    * **__alloc_pages_slowpath**
      * wake_all_kswapd で kswapd を起床させておく
@@ -87,6 +88,8 @@ zone_water_mark
 ## get_page_from_freelist
 
  * shrink_zone
+   * shrink_mem_cgroup_zone
+     * shrink_list
  * shrink_slab
 
 #### freelist の対象となるページ
