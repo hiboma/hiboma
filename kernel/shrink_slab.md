@@ -79,9 +79,15 @@ zone_water_mark
      * get_page_from_freelist もういっぺん最後に試してページを確保できないか試す
        * zone_reclaim
          * __zone_reclaim
+           * **vm_swappiness** 
            * **shrink_slab**
      * page 割り当てできなかったら `pr_warning("%s: page allocation failure. order:%d, mode:0x%x\n"`
        * __GFP_NOWARN が立ってない場合にだけ pr_warning 出る
+
+## get_page_from_freelist
+
+ * shrink_zone
+ * shrink_slab
 
 #### freelist の対象となるページ
 
