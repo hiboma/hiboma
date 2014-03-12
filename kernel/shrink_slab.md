@@ -53,6 +53,7 @@
 
 node の選択
 zone の選択
+zone_water_mark
 
  * __alloc_pages
    * nodemask_t を NULL 指定で __alloc_pages_nodemask を呼ぶだけのラッパー
