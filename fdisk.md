@@ -43,9 +43,7 @@ sd 1:0:0:0: [sdb] Write cache: enabled, read cache: enabled, doesn't support DPO
 sd 1:0:0:0: [sdb] Attached SCSI disk
 ```
 
-## fdisk
-
-#### usage
+## usage
 
 デバイスのデータとパーティション情報が参照できる
 
@@ -76,6 +74,55 @@ Units = cylinders of 16065 * 512 = 8225280 bytes
 Sector size (logical/physical): 512 bytes / 512 bytes
 I/O size (minimum/optimal): 512 bytes / 512 bytes
 Disk identifier: 0x00000000
+```
+
+パーティションを作ってみる
+
+```
+$ sudo fdisk /dev/sdb
+Device contains neither a valid DOS partition table, nor Sun, SGI or OSF disklabel
+Building a new DOS disklabel with disk identifier 0x1035cf6e.
+Changes will remain in memory only, until you decide to write them.
+After that, of course, the previous content won't be recoverable.
+
+Warning: invalid flag 0x0000 of partition table 4 will be corrected by w(rite)
+
+WARNING: DOS-compatible mode is deprecated. It's strongly recommended to
+         switch off the mode (command 'c') and change display units to
+         sectors (command 'u').
+
+Command (m for help): n
+Command action
+   e   extended
+   p   primary partition (1-4)
+p
+Partition number (1-4): 1
+First cylinder (1-130, default 1): 
+Using default value 1
+Last cylinder, +cylinders or +size{K,M,G} (1-130, default 130): 
+Using default value 130
+
+Command (m for help): w
+The partition table has been altered!
+
+Calling ioctl() to re-read partition table.
+Syncing disks.
+```
+
+作られた
+
+```
+[vagrant@vagrant-centos65 ~]$ sudo fdisk -l /dev/sdb
+
+Disk /dev/sdb: 1073 MB, 1073741824 bytes
+255 heads, 63 sectors/track, 130 cylinders
+Units = cylinders of 16065 * 512 = 8225280 bytes
+Sector size (logical/physical): 512 bytes / 512 bytes
+I/O size (minimum/optimal): 512 bytes / 512 bytes
+Disk identifier: 0x1035cf6e
+
+   Device Boot      Start         End      Blocks   Id  System
+/dev/sdb1               1         130     1044193+  83  Linux
 ```
 
 ## how to get partition info ?
@@ -154,11 +201,10 @@ const struct file_operations def_blk_fops = {
 
 ## blkdev_ioctl
 
-  * BLKGETSIZE64, BLKSSZGET などは 下記で取れる。 struct block_device bdev に格納されてる情報読んでるだけだった
-  * default: で __blkdev_driver_ioctl 読んでるので、デバイスドライバの ioctl も呼び出してるな
-    * struct gendisk の disk->fops->ioctl, disk->fops->locked_ioctl を呼ぶ
-    * locked_ioctl は BKL = locked_kernel() 付の ioctl
-
+ * BLKGETSIZE64, BLKSSZGET などは 下記で取れる。 struct block_device bdev に格納されてる情報読んでるだけだった
+ * default: で __blkdev_driver_ioctl 読んでるので、デバイスドライバの ioctl も呼び出してるな
+   * struct gendisk の disk->fops->ioctl, disk->fops->locked_ioctl を呼ぶ
+   * locked_ioctl は BKL = locked_kernel() 付の ioctl
 ```c
 /*
  * always keep this in sync with compat_blkdev_ioctl() and
