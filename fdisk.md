@@ -154,7 +154,10 @@ const struct file_operations def_blk_fops = {
 
 ## blkdev_ioctl
 
-BLKGETSIZE64, BLKSSZGET などは 下記で取れる。 struct block_device bdev に格納されてる情報読んでるだけだった
+  * BLKGETSIZE64, BLKSSZGET などは 下記で取れる。 struct block_device bdev に格納されてる情報読んでるだけだった
+  * default: で __blkdev_driver_ioctl 読んでるので、デバイスドライバの ioctl も呼び出してるな
+    * struct gendisk の disk->fops->ioctl, disk->fops->locked_ioctl を呼ぶ
+    * locked_ioctl は BKL = locked_kernel() 付の ioctl
 
 ```c
 /*
@@ -313,6 +316,8 @@ int blkdev_ioctl(struct block_device *bdev, fmode_t mode, unsigned cmd,
 }
 EXPORT_SYMBOL_GPL(blkdev_ioctl);
 ```
+
+## mkfs しておしまい
 
 ```
 $ sudo mkfs -t ext4 /dev/sdb1
