@@ -105,9 +105,10 @@
  * shrink_page_list で reclaim する
    * PageWriteback な ページを writeback して reclaim
    * PageDirty なページを pageout でディスクに書き出して reclaim
-     * swap, file page が reclaim される
-     * swapout な I/O はここで発生する
+     * swapcahe, file mapped page? が reclaim される
    * unevictable なページは reclaim されない
+ * out_of_memory -> oom_kill_process プロセスから reclaim
+   * anon, stack, mapped file
 
 ## try_to 群
 
