@@ -93,7 +93,8 @@
  * shrink_slab で SReclaimable なページを破棄して reclaim する
    * (ほぼ) inode_cache, dentry の slab が reclaim される
  * shrink_page_list で reclaim する
-   * dirty な ページキャッシュを writeback して reclaim
+   * PageWriteback な ページを writeback して reclaim
+   * PageDirty なページを pageout でディスクに書き出して reclaim
 
 ## try_to 群
 
