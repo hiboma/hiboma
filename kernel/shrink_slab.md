@@ -71,6 +71,13 @@
      * wake_all_kswapd で kswapd を起床させておく
        * __GFP_NO_KSWAPD が立ってない場合だけ
      * __alloc_pages_direct_compact
+       * compact_zone_order
+         * compact_zone
+           * migrate_pages
+             * unmap_and_move
+                * __unmap_and_move
+                  * PageWriteback な場合 wait_on_page_writeback で I/O
+                  * ...
      * __alloc_pages_direct_reclaim
        * try_to_free_pages
          * do_try_to_free_pages
@@ -78,6 +85,8 @@
              * __bdi_start_writeback
                * dirty なページを書き出すスレッドを起床させる
                * bdi_queue_work
+       * get_page_from_freelist
+         * ...
      * __alloc_pages_high_priority
      * __alloc_pages_may_oom
      * get_page_from_freelist もういっぺん最後に試してページを確保できないか試す
