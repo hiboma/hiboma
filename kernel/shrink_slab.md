@@ -32,6 +32,8 @@
               * __alloc_zeroed_user_highpage
                 * alloc_page_vma ...
 
+----
+
  * ページフォルトが起きた際に PUD, PMD, PTE のページが無ければ都度割り当てる
    * PGD は fork した際に mm->pgd で確保されていて必ず存在する?
 
