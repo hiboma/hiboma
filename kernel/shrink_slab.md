@@ -19,15 +19,14 @@
    * fork(2) で mm_struct の .pgd を初期化される際に呼ばれる ( mm_alloc_pgd )
      * コケたら -ENOMEM
      * mm_struct は kmem_cache_alloc を使っていた ( allocate_mm )
- * pud_alloc_one, pmd_alloc_one, pte_alloc_one, __pte_alloc
-   * get_zeroed_page
-     * __get_free_pages
-       * alloc_pages ...
  * page_fault
    * do_page_fault
      * __do_page_fault
        * handle_mm_fault
          * pud_alloc_one, pmd_alloc_one, __pte_alloc
+            * get_zeroed_page
+              * __get_free_pages
+                 * alloc_pages ...
          * handle_pte_fault
             * alloc_zeroed_user_highpage_movable
               * __alloc_zeroed_user_highpage
@@ -95,8 +94,7 @@
        * wait_iff_congested
          * io_schedule_timeout
      * **__alloc_pages_may_oom**
-       * get_page_from_freelist
-         * ...
+       * get_page_from_freelist ...
        * __GFP_NOFAIL が立っていたら out_of_memory で プロセスのページを reclaim
      * get_page_from_freelist もういっぺん最後に試してページを確保できないか試す
      * page 割り当てできなかったら `pr_warning("%s: page allocation failure. order:%d, mode:0x%x\n"`
