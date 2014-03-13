@@ -90,21 +90,13 @@ zone_water_mark
      * page 割り当てできなかったら `pr_warning("%s: page allocation failure. order:%d, mode:0x%x\n"`
        * __GFP_NOWARN が立ってない場合にだけ pr_warning 出る
 
-#### freelist の対象となるページ
-
-zone ごとに以下を見る
-
- * memory compaction で確保
-   * zone_reclaim_compact
- * NR_INACTIVE_FILE, NR_ACTIVE_FILE で NR_FILE_MAPPED の数を引いたもの
- * shrink_zone
- * shrink_slab
-
 ## try_to 群
 
  * try_to_free_pages
  * try_to_free_swap
  * try_to_free_buffers
+ * try_to_low
+ * try_to_free_mem_cgroup_pages
 
 buffer 用のページを割り当てる際にも shrink_slab を呼ぶケースがある
 
