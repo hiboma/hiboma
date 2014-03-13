@@ -51,7 +51,6 @@
 
 ## __alloc_pages 群
 
-
  * __alloc_pages
    * nodemask_t を NULL 指定で __alloc_pages_nodemask を呼ぶだけのラッパー
  * __alloc_pages_nodemask
@@ -59,6 +58,7 @@
      * freelist からページを確保できなかったら __alloc_pages_slowpath を呼ぶ
      * zone_reclaim で zone ごとに reclaim できるページを探す
        * __zone_reclaim
+         * **vm_swappiness**
          * **shrink_zone**
            * shrink_mem_cgroup_zone
              * shrink_list
@@ -81,10 +81,6 @@
      * __alloc_pages_high_priority
      * __alloc_pages_may_oom
      * get_page_from_freelist もういっぺん最後に試してページを確保できないか試す
-       * zone_reclaim
-         * __zone_reclaim
-           * **vm_swappiness** 
-           * **shrink_slab**
      * page 割り当てできなかったら `pr_warning("%s: page allocation failure. order:%d, mode:0x%x\n"`
        * __GFP_NOWARN が立ってない場合にだけ pr_warning 出る
 
@@ -95,7 +91,9 @@
  * shrink_page_list で reclaim する
    * PageWriteback な ページを writeback して reclaim
    * PageDirty なページを pageout でディスクに書き出して reclaim
-     * swap, file page が含まれる
+     * swap, file page が reclaim される
+     * swapout な I/O はここで発生する
+   * unevictable なページは reclaim されない
 
 ## try_to 群
 
