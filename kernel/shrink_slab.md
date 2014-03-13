@@ -29,7 +29,8 @@
                  * alloc_pages ...
          * handle_pte_fault
             * do_linear_fault
-              * vma->vm_ops->fault を呼ぶ
+              * __do_fault
+                * vma->vm_ops->fault を呼ぶ
             * do_anonymous_page
               * mem_cgroup_newpage_charge
                 * cgroup で使用量がチャージされる
@@ -38,6 +39,10 @@
                   * alloc_page_vma ...
             * do_nonlinear_fault
               * PTE が ファイルの場合
+              * __do_fault
+            * do_swap_page
+              * swapin ?
+              * swap されているアドレスで fault
 
 ----
 
