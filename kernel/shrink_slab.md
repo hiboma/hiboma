@@ -80,7 +80,7 @@
                 * __unmap_and_move
                   * PageWriteback な場合 wait_on_page_writeback で I/O
                   * ...
-     * __alloc_pages_direct_reclaim
+     * **__alloc_pages_direct_reclaim**
        * try_to_free_pages
          * do_try_to_free_pages
            * wakeup_flusher_threads
@@ -89,12 +89,12 @@
                * bdi_queue_work
        * get_page_from_freelist
          * ...
-     * __alloc_pages_high_priority
+     * **__alloc_pages_high_priority**
        * get_page_from_freelist
          * ...
        * wait_iff_congested
          * io_schedule_timeout
-     * __alloc_pages_may_oom
+     * **__alloc_pages_may_oom**
        * get_page_from_freelist
          * ...
        * __GFP_NOFAIL が立っていたら out_of_memory で プロセスのページを reclaim
@@ -102,7 +102,17 @@
      * page 割り当てできなかったら `pr_warning("%s: page allocation failure. order:%d, mode:0x%x\n"`
        * __GFP_NOWARN が立ってない場合にだけ pr_warning 出る
 
+## try_to 群
+
+ * try_to_free_pages
+ * try_to_free_swap
+ * try_to_free_buffers
+ * try_to_low
+ * try_to_free_mem_cgroup_pages
+
 ----
+
+最終的に reclaim されるページを整理
 
  * shrink_slab で SReclaimable なページを破棄して reclaim する
    * (ほぼ) inode_cache, dentry の slab が reclaim される
@@ -113,24 +123,6 @@
    * unevictable なページは reclaim されない
  * out_of_memory -> oom_kill_process プロセスから reclaim
    * anon, stack, mapped file
-
-## try_to 群
-
- * try_to_free_pages
- * try_to_free_swap
- * try_to_free_buffers
- * try_to_low
- * try_to_free_mem_cgroup_pages
-
-buffer 用のページを割り当てる際にも shrink_slab を呼ぶケースがある
-
-```
-alloc_page_buffers
-free_more_memory
-try_to_release_page
-do_try_to_free_pages
- ...
-```
 
 ## __zone_reclaim
 
