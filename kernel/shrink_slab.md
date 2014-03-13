@@ -64,6 +64,7 @@
              * shrink_list
                * shrink_active_list
                * shrink_inactive_list
+                 * shrink_page_list
                  * reclaim したページを返す
          * **shrink_slab**
    * **__alloc_pages_slowpath**
@@ -90,7 +91,9 @@
 ----
 
  * shrink_slab で SReclaimable なページを破棄して reclaim する
- * shrink_inactive_list で
+   * (ほぼ) inode_cache, dentry の slab が reclaim される
+ * shrink_page_list で reclaim する
+   * dirty な ページキャッシュを writeback して reclaim
 
 ## try_to 群
 
