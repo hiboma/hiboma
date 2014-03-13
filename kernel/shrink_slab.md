@@ -22,7 +22,7 @@
  * pud_alloc_one, pmd_alloc_one, pte_alloc_one, __pte_alloc
    * get_zeroed_page
      * __get_free_pages
-       * alloc_pages
+       * alloc_pages ...
  * page_fault
    * do_page_fault
      * __do_page_fault
@@ -30,6 +30,8 @@
          * pud_alloc_one, pmd_alloc_one, __pte_alloc
          * handle_pte_fault
             * alloc_zeroed_user_highpage_movable
+              * __alloc_zeroed_user_highpage
+                * alloc_page_vma ...
 
  * ページフォルトが起きた際に PUD, PMD, PTE のページが無ければ都度割り当てる
    * PGD は fork した際に mm->pgd で確保されていて必ず存在する?
