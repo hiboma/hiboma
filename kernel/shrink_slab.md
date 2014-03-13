@@ -88,7 +88,12 @@
        * get_page_from_freelist
          * ...
      * __alloc_pages_high_priority
+       * get_page_from_freelist
+       * wait_iff_congested
+         * io_schedule_timeout
      * __alloc_pages_may_oom
+       * get_page_from_freelist
+       * __GFP_NOFAIL が立っていたら out_of_memory で プロセスのページを reclaim
      * get_page_from_freelist もういっぺん最後に試してページを確保できないか試す
      * page 割り当てできなかったら `pr_warning("%s: page allocation failure. order:%d, mode:0x%x\n"`
        * __GFP_NOWARN が立ってない場合にだけ pr_warning 出る
