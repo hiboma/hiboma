@@ -28,16 +28,16 @@
               * __get_free_pages
                  * alloc_pages ...
          * handle_pte_fault
-            * alloc_zeroed_user_highpage_movable
-              * __alloc_zeroed_user_highpage
-                * alloc_page_vma ...
+            * do_anonymous_page
+              * alloc_zeroed_user_highpage_movable
+                * __alloc_zeroed_user_highpage
+                  * alloc_page_vma ...
 
 ----
 
-PUD, PMD, PTE のページを割り当てできなければ何もできないので OOM
-
  * ページフォルトが起きた際に PUD, PMD, PTE のページが無ければ都度割り当てる
    * PGD は fork した際に mm->pgd で確保されていて必ず存在する?
+   * PUD, PMD, PTE のページを割り当てできなければ何もできないので OOM
 
 ## alloc_page 群
 
