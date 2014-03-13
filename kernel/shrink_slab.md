@@ -28,10 +28,16 @@
               * __get_free_pages
                  * alloc_pages ...
          * handle_pte_fault
+            * do_linear_fault
+              * vma->vm_ops->fault を呼ぶ
             * do_anonymous_page
+              * mem_cgroup_newpage_charge
+                * cgroup で使用量がチャージされる
               * alloc_zeroed_user_highpage_movable
                 * __alloc_zeroed_user_highpage
                   * alloc_page_vma ...
+            * do_nonlinear_fault
+              * PTE が ファイルの場合
 
 ----
 
