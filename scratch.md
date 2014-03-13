@@ -1,3 +1,39 @@
+## vagrant sendfile
+
+期待した通りに動かん
+
+```c
+ssize_t sf_reg_splice_read(struct file *in, loff_t *ppos,
+                                 struct pipe_inode_info *pipe, size_t len,
+                                 unsigned int flags)
+{
+        int ret;
+        struct dentry *dentry = in->f_path.dentry;
+        struct inode *inode = dentry->d_inode;
+        struct sf_inode_info *sf_i = GET_INODE_INFO(inode);
+        struct timespec oldmtime;
+
+        oldmtime.tv_sec  = inode->i_mtime.tv_sec;
+        oldmtime.tv_nsec = inode->i_mtime.tv_nsec;
+
+        printk("@%s %d %s\n", __FUNCTION__, sf_i->force_restat, in->f_dentry->d_name.name);
+        printk("%s oldmtime %ld %ld\n", __FUNCTION__, oldmtime.tv_sec, oldmtime.tv_nsec);
+        printk("%s inode    %ld %ld\n", __FUNCTION__, inode->i_mtime.tv_sec, inode->i_mtime.tv_nsec);
+        printk("%s %lu\n", __FUNCTION__, dentry->d_time);
+        ret = sf_inode_revalidate(dentry);
+        if (ret)
+            return ret;
+
+        printk("%s oldmtime %ld %ld\n", __FUNCTION__, oldmtime.tv_sec, oldmtime.tv_nsec);
+        printk("%s inode    %ld %ld\n", __FUNCTION__, inode->i_mtime.tv_sec, inode->i_mtime.tv_nsec);
+        printk("%s %lu\n", __FUNCTION__, dentry->d_time);
+        if (timespec_compare(&oldmtime, &inode->i_mtime) < 0) {
+            printk("%s invlaidate \n", __FUNCTION__);
+            invalidate_mapping_pages(in->f_mapping, 0, -1);
+        }
+        return generic_file_splice_read(in, ppos, pipe, len, flags);
+}
+```
 
 ## スタックポインタと __builtin_frame_address
 
