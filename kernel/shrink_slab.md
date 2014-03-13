@@ -51,9 +51,6 @@
 
 ## __alloc_pages 群
 
-node の選択
-zone の選択
-zone_water_mark
 
  * __alloc_pages
    * nodemask_t を NULL 指定で __alloc_pages_nodemask を呼ぶだけのラッパー
@@ -89,6 +86,11 @@ zone_water_mark
            * **shrink_slab**
      * page 割り当てできなかったら `pr_warning("%s: page allocation failure. order:%d, mode:0x%x\n"`
        * __GFP_NOWARN が立ってない場合にだけ pr_warning 出る
+
+----
+
+ * shrink_slab で SReclaimable なページを破棄して reclaim する
+ * shrink_inactive_list で
 
 ## try_to 群
 
