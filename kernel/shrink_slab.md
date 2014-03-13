@@ -90,13 +90,6 @@ zone_water_mark
      * page 割り当てできなかったら `pr_warning("%s: page allocation failure. order:%d, mode:0x%x\n"`
        * __GFP_NOWARN が立ってない場合にだけ pr_warning 出る
 
-## get_page_from_freelist
-
- * shrink_mem_cgroup_zone
-   * shrink_list
- * shrink_zone
- * shrink_slab
-
 #### freelist の対象となるページ
 
 zone ごとに以下を見る
@@ -105,7 +98,6 @@ zone ごとに以下を見る
    * zone_reclaim_compact
  * NR_INACTIVE_FILE, NR_ACTIVE_FILE で NR_FILE_MAPPED の数を引いたもの
  * shrink_zone
-   * mem_cgroup
  * shrink_slab
 
 ## try_to 群
