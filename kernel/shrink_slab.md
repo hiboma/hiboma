@@ -95,6 +95,7 @@
  * shrink_page_list で reclaim する
    * PageWriteback な ページを writeback して reclaim
    * PageDirty なページを pageout でディスクに書き出して reclaim
+     * swap, file page が含まれる
 
 ## try_to 群
 
