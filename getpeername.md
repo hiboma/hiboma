@@ -21,9 +21,13 @@ $ LANG=C perl getpeername.pl
 Transport endpoint is not connected at getpeername.pl line 11.
 ```
 
+connect(2) してないとこうなるぽいな
+
 ## UDP で connect(2) を呼んだ際の副作用
 
  * http://www.kt.rim.or.jp/~ksk/sock-faq/unix-socket-faq-ja-5.html
+   * 受信できるデータグラムを限定できる
+   * ICMPエラーを受信できる
 
 ## ソースを読むぞ
 
