@@ -21,6 +21,10 @@ $ LANG=C perl getpeername.pl
 Transport endpoint is not connected at getpeername.pl line 11.
 ```
 
+## UDP で connect(2) を呼んだ際の副作用
+
+ * http://www.kt.rim.or.jp/~ksk/sock-faq/unix-socket-faq-ja-5.html
+
 ## ソースを読むぞ
 
 linux-2.6.32-431.el6.x86_64
