@@ -37,6 +37,8 @@
                 * vma->vm_ops->fault
                 * vma->vm_ops->page_mkwrite
                 * mem_cgroup_newpage_charge
+                  * __mem_cgroup_try_charge
+                  * __mem_cgroup_commit_charge
             * do_anonymous_page
               * mem_cgroup_newpage_charge
                 * cgroup で使用量がチャージされる
@@ -56,6 +58,31 @@
    * PGD は fork した際に mm->pgd で確保されていて必ず存在する?
      * fork の際に pgd_alloc が NULL を返したら -ENOMEM なので保証されそう
    * PUD, PMD, PTE のページを割り当てできなければ何もできないので OOM
+ * cgroup でチャージされるのはここだけ?
+
+```c
+int mem_cgroup_newpage_charge(struct page *page,
+			      struct mm_struct *mm, gfp_t gfp_mask)
+{
+	if (mem_cgroup_disabled())
+		return 0;
+	/*
+	 * If already mapped, we don't have to account.
+	 * If page cache, page->mapping has address_space.
+	 * But page->mapping may have out-of-use anon_vma pointer,
+	 * detecit it by PageAnon() check. newly-mapped-anon's page->mapping
+	 * is NULL.
+  	 */
+    // page_mapping pagetable に map されているかどうか
+    // page->mapping ... ページキャッシュの場合
+	if (page_mapped(page) || (page->mapping && !PageAnon(page)))
+		return 0;
+	if (unlikely(!mm))
+		mm = &init_mm;
+	return mem_cgroup_charge_common(page, mm, gfp_mask,
+					MEM_CGROUP_CHARGE_TYPE_MAPPED, NULL);
+}
+``` 
 
 ## alloc_page 群
 
