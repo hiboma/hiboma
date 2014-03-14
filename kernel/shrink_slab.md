@@ -22,6 +22,7 @@
    * preallocate_pmds
      * PMD を事前に __get_free_pages して割り当て
      * PAE = Page Address Extension が有効な場合のみ使う?
+   * pgd_t を pgd_list に繋ぐ
  * page_fault
    * do_page_fault
      * __do_page_fault
@@ -33,7 +34,9 @@
          * handle_pte_fault
             * do_linear_fault
               * __do_fault
-                * vma->vm_ops->fault を呼ぶ
+                * vma->vm_ops->fault
+                * vma->vm_ops->page_mkwrite
+                * mem_cgroup_newpage_charge
             * do_anonymous_page
               * mem_cgroup_newpage_charge
                 * cgroup で使用量がチャージされる
