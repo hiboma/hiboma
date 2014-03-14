@@ -38,10 +38,16 @@
                 * vma->vm_ops->page_mkwrite
                 * mem_cgroup_newpage_charge
                   * __mem_cgroup_try_charge
+                    * mem_cgroup_reclaim
+                    * mem_cgroup_handle_oom
+                      * mem_cgroup_out_of_memory
+                        * select_bad_process
+                        * oom_kill_process
                   * __mem_cgroup_commit_charge
             * do_anonymous_page
               * mem_cgroup_newpage_charge
                 * cgroup で使用量がチャージされる
+                * ...
               * alloc_zeroed_user_highpage_movable
                 * __alloc_zeroed_user_highpage
                   * alloc_page_vma ...
@@ -59,30 +65,6 @@
      * fork の際に pgd_alloc が NULL を返したら -ENOMEM なので保証されそう
    * PUD, PMD, PTE のページを割り当てできなければ何もできないので OOM
  * cgroup でチャージされるのはここだけ?
-
-```c
-int mem_cgroup_newpage_charge(struct page *page,
-			      struct mm_struct *mm, gfp_t gfp_mask)
-{
-	if (mem_cgroup_disabled())
-		return 0;
-	/*
-	 * If already mapped, we don't have to account.
-	 * If page cache, page->mapping has address_space.
-	 * But page->mapping may have out-of-use anon_vma pointer,
-	 * detecit it by PageAnon() check. newly-mapped-anon's page->mapping
-	 * is NULL.
-  	 */
-    // page_mapping pagetable に map されているかどうか
-    // page->mapping ... ページキャッシュの場合
-	if (page_mapped(page) || (page->mapping && !PageAnon(page)))
-		return 0;
-	if (unlikely(!mm))
-		mm = &init_mm;
-	return mem_cgroup_charge_common(page, mm, gfp_mask,
-					MEM_CGROUP_CHARGE_TYPE_MAPPED, NULL);
-}
-``` 
 
 ## alloc_page 群
 
