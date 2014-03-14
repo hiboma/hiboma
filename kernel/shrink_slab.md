@@ -19,6 +19,7 @@
    * fork(2) で mm_struct の .pgd を初期化される際に呼ばれる ( mm_alloc_pgd )
      * コケたら -ENOMEM
      * mm_struct は kmem_cache_alloc を使っていた ( allocate_mm )
+   * preallocate_pmds
  * page_fault
    * do_page_fault
      * __do_page_fault
@@ -48,6 +49,7 @@
 
  * ページフォルトが起きた際に PUD, PMD, PTE のページが無ければ都度割り当てる
    * PGD は fork した際に mm->pgd で確保されていて必ず存在する?
+     * fork の際に pgd_alloc が NULL を返したら -ENOMEM なので保証されそう
    * PUD, PMD, PTE のページを割り当てできなければ何もできないので OOM
 
 ## alloc_page 群
