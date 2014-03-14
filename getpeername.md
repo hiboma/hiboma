@@ -1,6 +1,8 @@
 ## getperrname
 
-## Transport endpoint is not connected 
+## -ENOTCONN = Transport endpoint is not connected
+
+検証用コード
 
 ```perl
 #!/usr/bin/perl
@@ -23,7 +25,7 @@ $ LANG=C perl getpeername.pl
 Transport endpoint is not connected at getpeername.pl line 11.
 ```
 
-### connec(2) を入れてみる
+### connec(2) を入れてみると出ない
 
 ```perl
 #!/usr/bin/perl
@@ -42,7 +44,7 @@ send($socket, '', 0, $sock_addr);
 my $peername  = getpeername($socket) or die $!;
 ```
 
-connect(2) してないと -ECONNECT 返すぽいな
+connect(2) してないと getpeername()  -ENOTCONN 返すぽいな
 
 ## UDP で connect(2) を呼んだ際の副作用
 
@@ -50,11 +52,13 @@ connect(2) してないと -ECONNECT 返すぽいな
    * 受信できるデータグラムを限定できる
    * ICMPエラーを受信できる
 
-## ソースを読むぞ
+との情報ほむほむ
 
-linux-2.6.32-431.el6.x86_64
+## getpeername の ソースを読むぞ
 
-struct socket の .proto_ops->getname に委譲している
+ * linux-2.6.32-431.el6.x86_64
+
+getpeername の実装は struct socket の .proto_ops->getname に委譲している
 
 ```c
 /*
@@ -137,6 +141,7 @@ int inet_getname(struct socket *sock, struct sockaddr *uaddr,
 
 	sin->sin_family = AF_INET;
 	if (peer) {
+         // connect(2) してたら inet->dport が定義されてそうだ
 		if (!inet->dport ||
 		    (((1 << sk->sk_state) & (TCPF_CLOSE | TCPF_SYN_SENT)) &&
 		     peer == 1))
