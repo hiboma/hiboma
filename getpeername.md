@@ -1,5 +1,28 @@
 ## getperrname
 
+## Transport endpoint is not connected 
+
+```perl
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+use Socket;
+
+socket(my $socket, PF_INET, SOCK_DGRAM, 0) or die $!;
+my $iaddr     = inet_aton('8.8.8.8');
+my $sock_addr = pack_sockaddr_in(53, $iaddr);
+send($socket, '', 0, $sock_addr);
+my $peername  = getpeername($socket) or die $!;
+```
+
+```
+$ LANG=C perl getpeername.pl
+Transport endpoint is not connected at getpeername.pl line 11.
+```
+
+## ソースを読むぞ
+
 linux-2.6.32-431.el6.x86_64
 
 struct socket の .proto_ops->getname に委譲している
