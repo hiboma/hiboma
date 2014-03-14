@@ -16,12 +16,33 @@ send($socket, '', 0, $sock_addr);
 my $peername  = getpeername($socket) or die $!;
 ```
 
+#### result
+
 ```
 $ LANG=C perl getpeername.pl
 Transport endpoint is not connected at getpeername.pl line 11.
 ```
 
-connect(2) してないとこうなるぽいな
+### connec(2) を入れてみる
+
+```perl
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+use Socket;
+
+socket(my $socket, PF_INET, SOCK_DGRAM, 0) or die $!;
+my $iaddr     = inet_aton('8.8.8.8');
+my $sock_addr = pack_sockaddr_in(53, $iaddr);
+
+connect($socket, $sock_addr) or die $!;
+
+send($socket, '', 0, $sock_addr);
+my $peername  = getpeername($socket) or die $!;
+```
+
+connect(2) してないと -ECONNECT 返すぽいな
 
 ## UDP で connect(2) を呼んだ際の副作用
 
