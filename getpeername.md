@@ -68,10 +68,10 @@ EXPORT_SYMBOL(inet_dgram_ops);
 ```
 
 inet_getname の実装は下記の通り
- * -ENOTCONN を返すのは一カ所
- * sk->sk_state で TCPF_CLOSE, TCPF_SYN_SENT かどうかを見てるけど これ TCP だよなぁ
- * UDP はどうなるんだろう?
 
+ * -ENOTCONN を返すのは一カ所
+   * sk->sk_state で TCPF_CLOSE, TCPF_SYN_SENT かどうかを見てるけど これ TCP だよなぁ
+   * UDP はどうなるんだろう? ( 1 << sk->sk_state ) が返すフラグがどうなるのかな?
 ```c
 /*
  *	This does both peername and sockname.
