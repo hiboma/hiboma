@@ -20,6 +20,8 @@
      * コケたら -ENOMEM
      * mm_struct は kmem_cache_alloc を使っていた ( allocate_mm )
    * preallocate_pmds
+     * PMD を事前に __get_free_pages して割り当て
+     * PAE = Page Address Extension が有効な場合のみ使う?
  * page_fault
    * do_page_fault
      * __do_page_fault
