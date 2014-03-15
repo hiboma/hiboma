@@ -164,6 +164,8 @@ EXPORT_SYMBOL(inet_getname);
 
 ## connect(2)
 
+BSD -> AF_INET
+
 ```c
 int inet_dgram_connect(struct socket *sock, struct sockaddr * uaddr,
 		       int addr_len, int flags)
@@ -178,4 +180,96 @@ int inet_dgram_connect(struct socket *sock, struct sockaddr * uaddr,
 	return sk->sk_prot->connect(sk, (struct sockaddr *)uaddr, addr_len);
 }
 EXPORT_SYMBOL(inet_dgram_connect);
+```
+
+BSD -> AF_INET -> UDP
+
+```c
+struct proto udp_prot = {
+	.name		   = "UDP",
+	.owner		   = THIS_MODULE,
+	.close		   = udp_lib_close,
+	.connect	   = ip4_datagram_connect,
+	.disconnect	   = udp_disconnect,
+	.ioctl		   = udp_ioctl,
+	.destroy	   = udp_destroy_sock,
+	.setsockopt	   = udp_setsockopt,
+	.getsockopt	   = udp_getsockopt,
+	.sendmsg	   = udp_sendmsg,
+	.recvmsg	   = udp_recvmsg,
+	.sendpage	   = udp_sendpage,
+	.backlog_rcv	   = __udp_queue_rcv_skb,
+	.hash		   = udp_lib_hash,
+	.unhash		   = udp_lib_unhash,
+	.get_port	   = udp_v4_get_port,
+	.memory_allocated  = &udp_memory_allocated,
+	.sysctl_mem	   = sysctl_udp_mem,
+	.sysctl_wmem	   = &sysctl_udp_wmem_min,
+	.sysctl_rmem	   = &sysctl_udp_rmem_min,
+	.obj_size	   = sizeof(struct udp_sock),
+	.slab_flags	   = SLAB_DESTROY_BY_RCU,
+	.h.udp_table	   = &udp_table,
+#ifdef CONFIG_COMPAT
+	.compat_setsockopt = compat_udp_setsockopt,
+	.compat_getsockopt = compat_udp_getsockopt,
+#endif
+};
+EXPORT_SYMBOL(udp_prot);
+```
+
+```c
+int ip4_datagram_connect(struct sock *sk, struct sockaddr *uaddr, int addr_len)
+{
+	struct inet_sock *inet = inet_sk(sk);
+	struct sockaddr_in *usin = (struct sockaddr_in *) uaddr;
+	struct rtable *rt;
+	__be32 saddr;
+	int oif;
+	int err;
+
+
+	if (addr_len < sizeof(*usin))
+		return -EINVAL;
+
+	if (usin->sin_family != AF_INET)
+		return -EAFNOSUPPORT;
+
+	sk_dst_reset(sk);
+
+	oif = sk->sk_bound_dev_if;
+	saddr = inet->saddr;
+	if (ipv4_is_multicast(usin->sin_addr.s_addr)) {
+		if (!oif)
+			oif = inet->mc_index;
+		if (!saddr)
+			saddr = inet->mc_addr;
+	}
+	err = ip_route_connect(&rt, usin->sin_addr.s_addr, saddr,
+			       RT_CONN_FLAGS(sk), oif,
+			       sk->sk_protocol,
+			       inet->sport, usin->sin_port, sk, 1);
+	if (err) {
+		if (err == -ENETUNREACH)
+			IP_INC_STATS_BH(sock_net(sk), IPSTATS_MIB_OUTNOROUTES);
+		return err;
+	}
+
+	if ((rt->rt_flags & RTCF_BROADCAST) && !sock_flag(sk, SOCK_BROADCAST)) {
+		ip_rt_put(rt);
+		return -EACCES;
+	}
+	if (!inet->saddr)
+		inet->saddr = rt->rt_src;	/* Update source address */
+	if (!inet->rcv_saddr)
+		inet->rcv_saddr = rt->rt_src;
+	inet->daddr = rt->rt_dst;
+	inet->dport = usin->sin_port;
+	sk->sk_state = TCP_ESTABLISHED;
+	inet->id = jiffies;
+
+	sk_dst_set(sk, &rt->u.dst);
+	return(0);
+}
+
+EXPORT_SYMBOL(ip4_datagram_connect);
 ```
