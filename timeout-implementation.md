@@ -8,8 +8,7 @@
 
  * プロトコルは TCP/IP だけ
  * /proc/sys/net/ipv4/tcp_syn_retries はデフォルト値
- * Vagrant
-   * CentOS6.5 2.6.32-431.el6.x86_64
+ * Vagrant - CentOS6.5 2.6.32-431.el6.x86_64
 
 ## 便利表
 
@@ -375,6 +374,8 @@ idle時間のタイムアウトを指定する。
  * idle = データを受信しない時間
  * connect(2) した後のデータ読む段階での select(2) でタイムアウトの時間を指す
 
+nc -l 8080 で accept(2) だけする疑似 httpd に向けて wget してテストする。下記はその結果
+
 ```
 $ wget --read-timeout=10 127.0.0.1:8080
 --2014-03-14 23:20:08--  http://127.0.0.1:8080/
@@ -385,8 +386,6 @@ Retrying.
 --2014-03-14 23:20:19--  (try: 2)  http://127.0.0.1:8080/
 Connecting to 127.0.0.1:8080... failed: Connection refused.
 ```
-
-テスト時は nc -l 8080 で accept(2) だけする疑似httpd を作れるので そこに向けて wget すればよい
 
 #### strace の結果
 
