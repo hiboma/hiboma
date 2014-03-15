@@ -1,8 +1,12 @@
 ## timeout あれこれ
 
+諸君、タイムアウトは ___意外に___ 難しいぞ
+
 ## 環境
 
- * プロトコルは TCP/IP だけで試験
+到達できない適当な IP を指定してタイムアウトの検証をした
+
+ * プロトコルは TCP/IP だけ
  * /proc/sys/net/ipv4/tcp_syn_retries はデフォルト値
  * Vagrant
    * CentOS6.5 2.6.32-431.el6.x86_64
@@ -220,6 +224,11 @@ Retrying.
 
 wget は勝手に retry するのであった
 
+ * wget 自身の retry
+ * SYN再送
+
+と2つのコンテキストで ___リトライ___ が行われることになる 
+
 #### strace の結果
 
 --connect-timeout の実体は setitimer(ITTIMER_REAL) 
@@ -242,9 +251,9 @@ close(3)                                = 0
 nc 192.168.100.1 80
 ```
 
-#### strace
+#### strace の結果
 
-nc はタイムアウト値がない
+nc はデフォルトではタイムアウト値を指定しない
 
 ```
 connect(3, {sa_family=AF_INET, sin_port=htons(80), sin_addr=inet_addr("192.168.100.1")}, 16) = -1 EINPROGRESS (Operation now in progress)
@@ -254,7 +263,7 @@ fcntl(3, F_SETFL, O_RDWR)               = 0
 close(3)                                = 0
 ```
 
-システムコール呼び出し側でタイムアウト値をしていしなくとも SYN の再送が先にタイムアウトにいたる
+しかし、システムコール呼び出し側でタイムアウト値をしていしなくとも SYN の再送が先にタイムアウトにいたる
 
 ```
 15:34:31.679754 IP 10.0.2.15.38186 > 192.168.100.1.http: Flags [S], seq 3071784278, win 14600, options [mss 1460,sackOK,TS val 84560732 ecr 0,nop,wscale 7], length 0
@@ -265,7 +274,7 @@ close(3)                                = 0
 15:35:02.683394 IP 10.0.2.15.38186 > 192.168.100.1.http: Flags [S], seq 3071784278, win 14600, options [mss 1460,sackOK,TS val 84591735 ecr 0,nop,wscale 7], length 0
 ```
 
-再送の間隔が ___1 -> 2 -> 4 -> 8 -> 16___ ですね ( http://d.hatena.ne.jp/rx7/20131129/p1 も読んでね )
+再送の間隔が ___1 -> 2 -> 4 -> 8 -> 16___ ( http://d.hatena.ne.jp/rx7/20131129/p1 も読んでね )
 
 ## nc -w 
 
@@ -273,7 +282,7 @@ close(3)                                = 0
 nc -w 10 192.168.100.0 80
 ```
 
-#### usage
+#### USAGE
 
 ```
      -w timeout
@@ -283,7 +292,7 @@ nc -w 10 192.168.100.0 80
 
 connection と stdin の idle 時間のタイムアウトらしい
 
-#### strace
+#### strace の結果
 
 connect(2) で待つ場合は select(2) の待ち時間を指すようだ
 
@@ -310,7 +319,7 @@ poll([{fd=3, events=POLLIN}, {fd=0, events=POLLIN}], 2, 10000) = 0 (Timeout)
 
 ## wget --dns-timeout
 
-#### usage
+#### USAGE
 
 ```
        --dns-timeout=seconds
@@ -328,7 +337,9 @@ poll([{fd=3, events=POLLIN}, {fd=0, events=POLLIN}], 2, 10000) = 0 (Timeout)
  * リゾルバのソケットを select(2) や poll(2) できない??? ので setitimer(2) でタイムアウトしている
    * 個別に見るの大変そうだし ...
 
-nameserver に適当に不達のIP を指定してタイムアウトのテストすると良い  
+nameserver に適当に不達のIP を指定してタイムアウトのテストすると良い
+
+#### strace の結果
 
 ```
 setitimer(ITIMER_REAL, {it_interval={0, 0}, it_value={999, 0}}, NULL) = 0
@@ -351,7 +362,7 @@ poll([{fd=3, events=POLLIN}], 1, 4999)  = ? ERESTART_RESTARTBLOCK (To be restart
 
 ## wget --read-timeout
 
-#### usage
+#### USAGE
 
 ```
        --read-timeout=seconds
@@ -377,7 +388,7 @@ Connecting to 127.0.0.1:8080... failed: Connection refused.
 
 テスト時は nc -l 8080 で accept(2) だけする疑似httpd を作れるので そこに向けて wget すればよい
 
-#### strace 
+#### strace の結果
 
 ```
 socket(PF_INET, SOCK_STREAM, IPPROTO_IP) = 3
@@ -391,6 +402,8 @@ select(4, [3], NULL, NULL, {10, 0})     = 0 (Timeout)
 ```
 
 ## wget --timeout=seconds
+
+### USAGE
 
 ```
        --timeout=seconds
