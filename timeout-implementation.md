@@ -80,9 +80,14 @@ echo 0 > /proc/sys/net/ipv4/tcp_syn_retries
 # 1秒後に再送
 01:31:04.100374 IP 10.0.2.15.48866 > 192.168.100.0.http: Flags [S], seq 3817435773, win 14600, options [mss 1460,sackOK,TS val 120353153 ecr 0,nop,wscale 7], length 0
 ```
- * tcp の再送は tcpdump などで見ておけばよい
-   * 他に何もプロセスいなければ `sudp tcpdump port 80` とかでおk 
-   * 再送の間隔については http://d.hatena.ne.jp/rx7/20131129/p1 も大事
+
+### tcp の再送を見る
+
+tcpdump などで見ておけばよい
+
+ * 他に何もプロセスいなければ `sudp tcpdump port 80` とかでおk
+   * 適当に IP 絞るとかしてください man tcpdump
+ * 再送の間隔については http://d.hatena.ne.jp/rx7/20131129/p1 も大事
 
 ### curl でSYN再送タイムアウトのテスト 
 
