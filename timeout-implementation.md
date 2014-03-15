@@ -6,7 +6,7 @@
 
 到達できない適当な IP を指定してタイムアウトの検証をした
 
- * プロトコルは TCP/IP だけ
+ * 調べたプロトコルは TCP/IP だけ
  * /proc/sys/net/ipv4/tcp_syn_retries はデフォルト値
  * Vagrant - CentOS6.5 2.6.32-431.el6.x86_64
 
@@ -16,8 +16,8 @@
 ----|:----:|:----:
 wget --dns-timeout | setitimer(2) + ITIMER_REAL | ホスト名前解決のタイムアウト (nscd, hosts, dns 等) |
 wget --connect-timeout | setitimer(2) + ITTIMER_REAL | connect(2) のタイムアウト
-wget --read-timeout | select(2) | connect(2)後、idle時間(= データを受信しない時間) でのタイムアウト
-wget --timeout | - | 上記三つをまとめセット | 
+wget --read-timeout | select(2) | connect(2)後、idle時間(= select(2)) のタイムアウト
+wget --timeout | - | 上記三つをまとめてセットするオプション | 
 curl --connect-timeout | fcntl(2) O_NONBLOCK + poll(2) | connect(2) のタイムアウト
 curl --max-time | alarm(2) | curl を実行してからの実時間でのタイムアウト
 nc | select(2) | タイムアウト値無し。TCPの再送回数が上限でタイムアウト | 
