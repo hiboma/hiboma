@@ -225,10 +225,13 @@ close(3)                                = 0
 15:35:02.683394 IP 10.0.2.15.38186 > 192.168.100.1.http: Flags [S], seq 3071784278, win 14600, options [mss 1460,sackOK,TS val 84591735 ecr 0,nop,wscale 7], length 0
 ```
 
+## nc -w 
 
 ```
-nc -w 5 192.168.100.0 80
+nc -w 10 192.168.100.0 80
 ```
+
+#### usage
 
 ```
      -w timeout
@@ -236,12 +239,18 @@ nc -w 5 192.168.100.0 80
              option, i.e. nc will listen forever for a connection, with or without the -w flag.  The default is no timeout.
 ```
 
+connection と stdin の idle 時間のタイムアウト
+
+#### strace
+
+select(2) の待ち時間を指すようだ
+
 ```
 socket(PF_INET, SOCK_STREAM, IPPROTO_TCP) = 3
 fcntl(3, F_GETFL)                       = 0x2 (flags O_RDWR)
 fcntl(3, F_SETFL, O_RDWR|O_NONBLOCK)    = 0
 connect(3, {sa_family=AF_INET, sin_port=htons(80), sin_addr=inet_addr("192.168.100.0")}, 16) = -1 EINPROGRESS (Operation now in progress)
-select(4, NULL, [3], NULL, {5, 0}^C <unfinished ...>
+select(4, NULL, [3], NULL, {10, 0})     = 0 (Timeout)
 ```
 
 ## wget --dns-timeout
@@ -285,6 +294,7 @@ poll([{fd=3, events=POLLIN}], 1, 4999)  = ? ERESTART_RESTARTBLOCK (To be restart
 
 ## wget --read-timeout
 
+#### usage
 
 ```
        --read-timeout=seconds
@@ -292,6 +302,10 @@ poll([{fd=3, events=POLLIN}], 1, 4999)  = ? ERESTART_RESTARTBLOCK (To be restart
            received for more than the specified number of seconds, reading fails and the download is restarted.  This option does not directly affect the duration
            of the entire download.
 ```
+
+idle時間のタイムアウトを指定する。
+ * idle = データを受信しない時間
+ * connect(2) した後のデータ読む段階での select(2) でタイムアウトの時間を指す
 
 ```
 $ wget --read-timeout=10 127.0.0.1:8080
@@ -304,15 +318,17 @@ Retrying.
 Connecting to 127.0.0.1:8080... failed: Connection refused.
 ```
 
+#### strace 
+
 ```
 socket(PF_INET, SOCK_STREAM, IPPROTO_IP) = 3
 connect(3, {sa_family=AF_INET, sin_port=htons(8080), sin_addr=inet_addr("127.0.0.1")}, 16) = 0
 write(2, "connected.\n", 11connected.
 )            = 11
-select(4, NULL, [3], NULL, {5, 0})      = 1 (out [3], left {4, 999998})
+select(4, NULL, [3], NULL, {10, 0})     = 1 (out [3], left {9, 999998})
 write(3, "GET / HTTP/1.0\r\nUser-Agent: Wget"..., 112) = 112
 write(2, "HTTP request sent, awaiting resp"..., 40HTTP request sent, awaiting response... ) = 40
-select(4, [3], NULL, NULL, {5, 0}^C <unfinished ...>
+select(4, [3], NULL, NULL, {10, 0}^C <unfinished ...>
 ```
 
 ## wget --timeout=seconds
@@ -323,4 +339,5 @@ select(4, [3], NULL, NULL, {5, 0}^C <unfinished ...>
            time.
 ```
 
-3つまとめてセットくん
+ * 3つまとめてセットくん
+ * 大雑把過ぎる気がするので、個別に指定した方がトラブル時の調査も楽なのかな?
