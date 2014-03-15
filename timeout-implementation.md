@@ -57,13 +57,21 @@ nc は select(2) のタイムアウトを指定しないのでずっとブロッ
 
 #### SYN再送の回数を減らしてタイムアウトを発生させる
 
-/proc/sys/net/ipv4/tcp_syn_retries をセットしよう
+/proc/sys/net/ipv4/tcp_syn_retries を変えてテストしてみよう
 
 ```sh
 echo 0 > /proc/sys/net/ipv4/tcp_syn_retries 
 ```
 
+0 にしたので SYN 再送回数が 0 に ... ならなかった
+
  * 0 にしても必ず一回の再送 ( 1回目の SYN 送信 -> 1秒 待つ -> 2回目の SYN 送信 -> 2秒待つ ) が行われて、実時間で __3秒以上___ かかるのだった
+```
+# 最初の SYN 送信
+01:31:03.101121 IP 10.0.2.15.48866 > 192.168.100.0.http: Flags [S], seq 3817435773, win 14600, options [mss 1460,sackOK,TS val 120352153 ecr 0,nop,wscale 7], length 0
+# 1秒後に再送
+01:31:04.100374 IP 10.0.2.15.48866 > 192.168.100.0.http: Flags [S], seq 3817435773, win 14600, options [mss 1460,sackOK,TS val 120353153 ecr 0,nop,wscale 7], length 0
+```
  * tcp の再送は tcpdump などで見ておけばよい
    * 他に何もプロセスいなければ `sudp tcpdump port 80` とかでおk 
    * 再送の間隔については http://d.hatena.ne.jp/rx7/20131129/p1 も大事
@@ -79,7 +87,7 @@ user    0m0.002s
 sys     0m0.001s
 ```
 
-poll が POLLERR|POLLHUP 返す
+3秒でタイムアウト。 poll が POLLERR|POLLHUP 返している
 
 ```
 connect(3, {sa_family=AF_INET, sin_port=htons(80), sin_addr=inet_addr("192.168.100.0")}, 16) = -1 EINPROGRESS (Operation now in progress)
@@ -101,7 +109,7 @@ user    0m0.001s
 sys     0m0.001s
 ```
 
-wget は connect(2) が ETIMEDOUT 返す
+3秒でタイムアウト。wget は connect(2) が ETIMEDOUT 返す
 
 ```
 setitimer(ITIMER_REAL, {it_interval={0, 0}, it_value={999, 0}}, NULL) = 0
@@ -116,7 +124,7 @@ connect(3, {sa_family=AF_INET, sin_port=htons(80), sin_addr=inet_addr("192.168.1
 curl --connect-timeout 5 192.168.100.1
 ```
 
-#### usage
+#### USAGE
 
 ```
        --connect-timeout <seconds>
@@ -124,6 +132,8 @@ curl --connect-timeout 5 192.168.100.1
               option is of no more use. See also the -m/--max-time option.
 
 ```
+
+#### strace の結果
 
 fcntl(2) O_NONBLOCK + poll(2) で待つ
 
@@ -145,6 +155,8 @@ close(3)                                = 0
 ```
 
 ## curl --max-time
+
+#### USAGE
 
 --max-time は実時間で curl の実行を制御する。「curlを実行してからN秒」でタイムアウトする
 
@@ -168,7 +180,7 @@ user	0m0.146s
 sys	0m0.100s
 ```
 
---max-time の実体は alarm(2)
+--max-time の実体は alarm(2) である
 
 ```
 alarm(5)                              = 0
@@ -181,7 +193,7 @@ alarm(5)                              = 0
 
 ## wget --connect-timeout
 
-#### usage
+#### USAGE
 
 ```
        --connect-timeout=seconds
@@ -189,7 +201,7 @@ alarm(5)                              = 0
            other than that implemented by system libraries.
 ```
 
-connect(2) のタイムアウトを指定する
+connect(2) のタイムアウトを指定してテスト
 
 ```
 $ wget --connect-timeout 5 192.168.100.1
@@ -206,6 +218,10 @@ Connecting to 192.168.0.90:80... failed: Connection timed out.
 Retrying.
 ```
 
+wget は勝手に retry するのであった
+
+#### strace の結果
+
 --connect-timeout の実体は setitimer(ITTIMER_REAL) 
 
 ```
@@ -219,7 +235,6 @@ rt_sigprocmask(SIG_SETMASK, [], NULL, 8) = 0
 rt_sigaction(SIGALRM, {SIG_DFL, [ALRM], SA_RESTORER|SA_RESTART, 0x7f0282b6e9a0}, {0x4291b0, [ALRM], SA_RESTORER|SA_RESTART, 0x7f0282b6e9a0}, 8) = 0
 close(3)                                = 0
 ```
-
 
 ## nc
 
