@@ -203,7 +203,11 @@ close(3)                                = 0
 ```
 
 
+## nc
+
+```
 nc 192.168.100.1 80
+```
 
 ```
 connect(3, {sa_family=AF_INET, sin_port=htons(80), sin_addr=inet_addr("192.168.100.1")}, 16) = -1 EINPROGRESS (Operation now in progress)
@@ -239,11 +243,11 @@ nc -w 10 192.168.100.0 80
              option, i.e. nc will listen forever for a connection, with or without the -w flag.  The default is no timeout.
 ```
 
-connection と stdin の idle 時間のタイムアウト
+connection と stdin の idle 時間のタイムアウトらしい
 
 #### strace
 
-select(2) の待ち時間を指すようだ
+connect(2) で待つ場合は select(2) の待ち時間を指すようだ
 
 ```
 socket(PF_INET, SOCK_STREAM, IPPROTO_TCP) = 3
@@ -251,6 +255,19 @@ fcntl(3, F_GETFL)                       = 0x2 (flags O_RDWR)
 fcntl(3, F_SETFL, O_RDWR|O_NONBLOCK)    = 0
 connect(3, {sa_family=AF_INET, sin_port=htons(80), sin_addr=inet_addr("192.168.100.0")}, 16) = -1 EINPROGRESS (Operation now in progress)
 select(4, NULL, [3], NULL, {10, 0})     = 0 (Timeout)
+```
+
+connect(2) した後は poll(2) で待つ時間を指すようだ。不思議
+
+```
+socket(PF_INET, SOCK_STREAM, IPPROTO_TCP) = 3
+fcntl(3, F_GETFL)                       = 0x2 (flags O_RDWR)
+fcntl(3, F_SETFL, O_RDWR|O_NONBLOCK)    = 0
+connect(3, {sa_family=AF_INET, sin_port=htons(8080), sin_addr=inet_addr("127.0.0.1")}, 16) = -1 EINPROGRESS (Operation now in progress)
+select(4, NULL, [3], NULL, {10, 0})     = 1 (out [3], left {9, 999998})
+getsockopt(3, SOL_SOCKET, SO_ERROR, [5936974387507888128], [4]) = 0
+fcntl(3, F_SETFL, O_RDWR)               = 0
+poll([{fd=3, events=POLLIN}, {fd=0, events=POLLIN}], 2, 10000) = 0 (Timeout)
 ```
 
 ## wget --dns-timeout
@@ -270,6 +287,8 @@ select(4, NULL, [3], NULL, {10, 0})     = 0 (Timeout)
   * タイムアウトの時間は /etc/resolv.conf に左右される (デフォルトでは５秒のタイムアウト timeout:<N> + リトライ attempts:<N> )
     * see also http://linuxjm.sourceforge.jp/html/LDP_man-pages/man5/resolver.5.html
   * リゾルバに左右されるので無闇に --dns-timeout を長くしても意味は無いことが分かる
+ * リゾルバのソケットを select(2) や poll(2) できない??? ので setitimer(2) でタイムアウトしている
+   * 個別に見るの大変そうだし ...
 
 nameserver に適当に不達のIP を指定してタイムアウトのテストすると良い  
 
@@ -318,6 +337,8 @@ Retrying.
 Connecting to 127.0.0.1:8080... failed: Connection refused.
 ```
 
+テスト時は nc -l 8080 で accept(2) だけする疑似httpd を作れるので そこに向けて wget すればよい
+
 #### strace 
 
 ```
@@ -328,7 +349,7 @@ write(2, "connected.\n", 11connected.
 select(4, NULL, [3], NULL, {10, 0})     = 1 (out [3], left {9, 999998})
 write(3, "GET / HTTP/1.0\r\nUser-Agent: Wget"..., 112) = 112
 write(2, "HTTP request sent, awaiting resp"..., 40HTTP request sent, awaiting response... ) = 40
-select(4, [3], NULL, NULL, {10, 0}^C <unfinished ...>
+select(4, [3], NULL, NULL, {10, 0})     = 0 (Timeout)
 ```
 
 ## wget --timeout=seconds
