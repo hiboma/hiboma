@@ -586,6 +586,13 @@ shutdown(3, 2 /* send and receive */)   = -1 ENOTCONN (Transport endpoint is not
 close(3)                                = 0
 ```
 
+## より道
+
+```
+#define ENOENT           2      /* No such file or directory */
+```
+
+
 ----
 
 tips
