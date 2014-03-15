@@ -16,7 +16,7 @@
 ## 便利表
 
 　| option | syscall | 何のタイムアウト? | 
-----|:----:|:----:
+----|:----:|:----:|:----:
 wget | --dns-timeout | setitimer(2) + ITIMER_REAL | ホスト名前解決のタイムアウト (nscd, hosts, dns 等) |
 wget | --connect-timeout | setitimer(2) + ITTIMER_REAL | connect(2) のタイムアウト
 wget | --read-timeout | select(2) | connect(2)後、idle時間(= select(2)) のタイムアウト
