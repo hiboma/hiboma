@@ -438,6 +438,10 @@ connect(2) でタイムアウト無し。TCP再送の上限までブロックす
 
 ```
 $ mysql -h 192.168.100.1
+
+# (110) = ETIMEDOUT
+#     #define ETIMEDOUT       110     /* Connection timed out */
+#
 ERROR 2003 (HY000): Can't connect to MySQL server on '192.168.100.1' (110)
 ```
 
@@ -499,12 +503,16 @@ read(3,
 
 SO_RCVTIMEO, SO_SNDTIMEO を指定しているけど、作用してない?
 
-## mysql —connect_timeout
+## mysql --connect_timeout
 
 nc -l 3306 で accept(2) だけするサーバーをたててテスト
 
 ```
 $ mysql -h 127.0.0.1 --connect_timeout=30
+
+# (4) = EINTR ? 
+#     #define EINTR            4      /* Interrupted system call */
+# 
 ERROR 2003 (HY000): Can't connect to MySQL server on '127.0.0.1' (4)
 ```
 
@@ -526,7 +534,7 @@ poll([{fd=3, events=POLLIN|POLLPRI}], 1, 30000
 ## mysql --connect_timeout の有無でエラーコードが違う
 
 3306 で listen(2) しているプロセスはいない状態で比較
-
+ * ECONNREFUSED を返されている
 ```
 [vagrant@vagrant-centos65 ~]$ mysql -h 127.0.0.1
 
@@ -536,8 +544,8 @@ poll([{fd=3, events=POLLIN|POLLPRI}], 1, 30000
 ERROR 2003 (HY000): Can't connect to MySQL server on '127.0.0.1' (111)
 ```
 
-connect_timeout を指定してるとなかなか見慣れないメッセージになるので戸惑いそう
-
+connect_timeout を指定してるとなかなか見慣れないメッセージになる。戸惑いそう
+  * errno が 111 = ECONNREFUSED なのを把握できればよさそ
 ```
 [vagrant@vagrant-centos65 ~]$ mysql -h 127.0.0.1 --connect_timeout=1
 ERROR 2013 (HY000): Lost connection to MySQL server at 'reading initial communication packet', system error: 111
@@ -545,9 +553,13 @@ ERROR 2013 (HY000): Lost connection to MySQL server at 'reading initial communic
 
 #### サーバ無し、mysql --connect_timeout の strace の結果
 
+O_NONBLOCK なので errno がややこしい
+
  * connect(2)  EINPROGRESS
  * read(2)     ECONNREFUSED
  * shutdown(2) ENOTCONN
+
+を返している 
 
 ```
 socket(PF_INET, SOCK_STREAM, IPPROTO_IP) = 3
@@ -568,6 +580,10 @@ read(3, 0x118eb90, 16384)               = -1 ECONNREFUSED (Connection refused)
 shutdown(3, 2 /* send and receive */)   = -1 ENOTCONN (Transport endpoint is not connected)
 close(3)                                = 0
 ```
+
+----
+
+tips
 
 ## loopback の tcpdump 
 
