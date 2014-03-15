@@ -3,12 +3,11 @@
 ## 環境
 
  * プロトコルは TCP/IP だけで試験
- * connect(2) 3way-hand-shake がタイムアウトするケースと、サーバーに accept(2) されてその後のデータ転送でのタイムアウトとで分けて見る必要がある
  * /proc/sys/net/ipv4/tcp_syn_retries はデフォルト値
  * Vagrant
    * CentOS6.5 2.6.32-431.el6.x86_64
 
-## 便利表 
+## 便利表
 
 　| syscall | 何のタイムアウト? | 
 ----|:----:|:----:
@@ -19,7 +18,16 @@ wget --timeout | - | 上記三つをまとめセット |
 curl --connect-timeout | fcntl(2) O_NONBLOCK + poll(2) | connect(2) のタイムアウト
 curl --max-time | alarm(2) | curl を実行してからの実時間でのタイムアウト
 nc | select(2) | タイムアウト値無し。TCPの再送回数が上限でタイムアウト | 
-nc -w | select(2) | connec(2)でタイムアウトした / idle 時間がになったらタイムアウトぽい 
+nc -w | select(2) | connec(2)でタイムアウトした / idle 時間がになったらタイムアウトぽい
+
+___タイムアウト___ と書いてもコンテキストが数種あることが分かる
+
+ * connect(2) = 3way-hand-shake のタイムアウト
+ * conncet(2) に成功し、その後のデータ転送のタイムアウト
+ * ホスト名解決のタイムアウト
+ * コマンド実行時間のタイムアウト
+
+ツールのオプション指定がどのタイムアウト値を変更しているのか把握しておくと捗る
 
 ## TCP の SYN再送でタイムアウトになるケース
 
