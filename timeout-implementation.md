@@ -4,9 +4,10 @@
 
 ## 環境
 
-到達できない適当な IP (例では 192.168.100.1 を使った) を指定してタイムアウトの検証をした
+到達できない適当な IP (例では 192.168.100.1 を使った) を指定して各種ツールの ___タイムアウト___ の検証をした
 
- * 調べたプロトコルは TCP/IP だけ
+ * 調べたプロトコルは TCP/IP だけ (一部 UDP)
+ * クライアントツールだけを検証
  * /proc/sys/net/ipv4/tcp_syn_retries はデフォルト値
  * Vagrant - CentOS6.5 2.6.32-431.el6.x86_64
 
@@ -412,3 +413,151 @@ select(4, [3], NULL, NULL, {10, 0})     = 0 (Timeout)
 
  * 3つまとめてセットくん
  * 大雑把過ぎる気がするので、個別に指定した方がトラブル時の調査も楽なのかな?
+
+# mysql
+
+```
+[vagrant@vagrant-centos65 ~]$ mysql --version
+mysql  Ver 14.14 Distrib 5.1.73, for redhat-linux-gnu (x86_64) using readline 5.1
+```
+
+## mysql オプション無し
+
+connect(2) でタイムアウト無し。TCP再送の上限までブロックする
+
+```
+$ mysql -h 192.168.100.1
+```
+
+```
+socket(PF_INET, SOCK_STREAM, IPPROTO_IP) = 3
+fcntl(3, F_SETFL, O_RDONLY)             = 0
+fcntl(3, F_GETFL)                       = 0x2 (flags O_RDWR)
+connect(3, {sa_family=AF_INET, sin_port=htons(3306), sin_addr=inet_addr("192.168.100.1")}, 16
+```
+
+## strace mysql ---connect_timeout=5
+
+```
+$ mysql -h 192.168.100.1 --connect_timeout=5
+ERROR 2003 (HY000): Can't connect to MySQL server on '192.168.100.1' (4)
+```
+
+#### strace の結果
+
+fcntl(2) O_NONBLOCK + poll(2) を使ってタイムアウトを実装している
+
+```
+socket(PF_INET, SOCK_STREAM, IPPROTO_IP) = 3
+fcntl(3, F_SETFL, O_RDONLY)             = 0
+fcntl(3, F_GETFL)                       = 0x2 (flags O_RDWR)
+fcntl(3, F_GETFL)                       = 0x2 (flags O_RDWR)
+fcntl(3, F_SETFL, O_RDWR|O_NONBLOCK)    = 0
+connect(3, {sa_family=AF_INET, sin_port=htons(3306), sin_addr=inet_addr("192.168.100.1")}, 16) = -1 EINPROGRESS (Operation now in progress)
+fcntl(3, F_SETFL, O_RDWR)               = 0
+poll([{fd=3, events=POLLIN|POLLPRI}], 1, 5000) = 0 (Timeout)
+shutdown(3, 2 /* send and receive */)   = 0
+close(3)                                = 0
+```
+
+## connect(2) 後のタイムアウト
+
+nc -l 3306 で accept(2) だけするサーバーをたててテスト。半永久的にブロックする
+
+```
+$ mysql -h127.0.0.1
+```
+
+#### strace の結果
+
+connect(2) 後の read(2) でブロックする。認証か何かするための read(2) かな?
+
+```
+socket(PF_INET, SOCK_STREAM, IPPROTO_IP) = 3
+fcntl(3, F_SETFL, O_RDONLY)             = 0
+fcntl(3, F_GETFL)                       = 0x2 (flags O_RDWR)
+connect(3, {sa_family=AF_INET, sin_port=htons(3306), sin_addr=inet_addr("127.0.0.1")}, 16) = 0
+setsockopt(3, SOL_SOCKET, SO_RCVTIMEO, "\2003\341\1\0\0\0\0\0\0\0\0\0\0\0\0", 16) = 0
+setsockopt(3, SOL_SOCKET, SO_SNDTIMEO, "\2003\341\1\0\0\0\0\0\0\0\0\0\0\0\0", 16) = 0
+setsockopt(3, SOL_IP, IP_TOS, [8], 4)   = 0
+setsockopt(3, SOL_TCP, TCP_NODELAY, [1], 4) = 0
+setsockopt(3, SOL_SOCKET, SO_KEEPALIVE, [1], 4) = 0
+read(3, 
+```
+
+SO_RCVTIMEO, SO_SNDTIMEO を指定しているけど、作用してない?
+
+## mysql —connect_timeout
+
+nc -l 3306 で accept(2) だけするサーバーをたててテスト
+
+```
+$ mysql -h 127.0.0.1 --connect_timeout=30
+ERROR 2003 (HY000): Can't connect to MySQL server on '127.0.0.1' (4)
+```
+
+connect(2) が成功したかどうかは確認せず poll(2) に入る 
+ * ノンブロッキングなので connect(2) の結果は見てないけど、ソケットは ESTABLISED になってる
+ * connect_timeout を指定しないと read(2) で永遠にブロックしてたけど、こちらはタイムアウトする
+
+```
+socket(PF_INET, SOCK_STREAM, IPPROTO_IP) = 3
+fcntl(3, F_SETFL, O_RDONLY)             = 0
+fcntl(3, F_GETFL)                       = 0x2 (flags O_RDWR)
+fcntl(3, F_GETFL)                       = 0x2 (flags O_RDWR)
+fcntl(3, F_SETFL, O_RDWR|O_NONBLOCK)    = 0
+connect(3, {sa_family=AF_INET, sin_port=htons(3306), sin_addr=inet_addr("127.0.0.1")}, 16) = -1 EINPROGRESS (Operation now in progress)
+fcntl(3, F_SETFL, O_RDWR)               = 0
+poll([{fd=3, events=POLLIN|POLLPRI}], 1, 30000
+```
+
+## mysql --connect_timeout の有無でエラーコードが違う
+
+3306 で listen(2) しているプロセスはいない状態で比較
+
+```
+[vagrant@vagrant-centos65 ~]$ mysql -h 127.0.0.1 
+ERROR 2003 (HY000): Can't connect to MySQL server on '127.0.0.1' (111)
+```
+
+connect_timeout を指定してるとなかなか見慣れないメッセージになるので戸惑いそう
+
+```
+[vagrant@vagrant-centos65 ~]$ mysql -h 127.0.0.1 --connect_timeout=1
+ERROR 2013 (HY000): Lost connection to MySQL server at 'reading initial communication packet', system error: 111
+```
+
+#### サーバ無し、mysql --connect_timeout の strace の結果
+
+ * connect(2)  EINPROGRESS
+ * read(2)     ECONNREFUSED
+ * shutdown(2) ENOTCONN
+
+```
+socket(PF_INET, SOCK_STREAM, IPPROTO_IP) = 3
+fcntl(3, F_SETFL, O_RDONLY)             = 0
+fcntl(3, F_GETFL)                       = 0x2 (flags O_RDWR)
+fcntl(3, F_GETFL)                       = 0x2 (flags O_RDWR)
+fcntl(3, F_SETFL, O_RDWR|O_NONBLOCK)    = 0
+connect(3, {sa_family=AF_INET, sin_port=htons(3306), sin_addr=inet_addr("127.0.0.1")}, 16) = -1 EINPROGRESS (Operation now in progress)
+fcntl(3, F_SETFL, O_RDWR)               = 0
+poll([{fd=3, events=POLLIN|POLLPRI}], 1, 1000) = 1 ([{fd=3, revents=POLLIN|POLLERR|POLLHUP}])
+setsockopt(3, SOL_SOCKET, SO_RCVTIMEO, "\2003\341\1\0\0\0\0\0\0\0\0\0\0\0\0", 16) = 0
+setsockopt(3, SOL_SOCKET, SO_SNDTIMEO, "\2003\341\1\0\0\0\0\0\0\0\0\0\0\0\0", 16) = 0
+setsockopt(3, SOL_IP, IP_TOS, [8], 4)   = 0
+setsockopt(3, SOL_TCP, TCP_NODELAY, [1], 4) = 0
+setsockopt(3, SOL_SOCKET, SO_KEEPALIVE, [1], 4) = 0
+poll([{fd=3, events=POLLIN}], 1, 1000)  = 1 ([{fd=3, revents=POLLIN|POLLERR|POLLHUP}])
+read(3, 0x118eb90, 16384)               = -1 ECONNREFUSED (Connection refused)
+shutdown(3, 2 /* send and receive */)   = -1 ENOTCONN (Transport endpoint is not connected)
+close(3)                                = 0
+```
+
+## loopback の tcpdump 
+
+`-i lo` 忘れずに
+
+```
+sudo tcpdump -i lo port 3306
+```
+ 
