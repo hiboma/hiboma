@@ -234,6 +234,10 @@ int ip4_datagram_connect(struct sock *sk, struct sockaddr *uaddr, int addr_len)
 	if (usin->sin_family != AF_INET)
 		return -EAFNOSUPPORT;
 
+    // 送信キューを空にする
+    // struct dst_entry (sk->sk_dst_cache) を NULL にする
+    // ルーティンブテーブル?
+    // http://www.mars.dti.ne.jp/~otk/bak/200110-linuxkernel24.pdf
 	sk_dst_reset(sk);
 
 	oif = sk->sk_bound_dev_if;
@@ -244,6 +248,8 @@ int ip4_datagram_connect(struct sock *sk, struct sockaddr *uaddr, int addr_len)
 		if (!saddr)
 			saddr = inet->mc_addr;
 	}
+
+    //
 	err = ip_route_connect(&rt, usin->sin_addr.s_addr, saddr,
 			       RT_CONN_FLAGS(sk), oif,
 			       sk->sk_protocol,
@@ -264,6 +270,8 @@ int ip4_datagram_connect(struct sock *sk, struct sockaddr *uaddr, int addr_len)
 		inet->rcv_saddr = rt->rt_src;
 	inet->daddr = rt->rt_dst;
 	inet->dport = usin->sin_port;
+
+    // UDP なのに TCP_ESTABLISHED だ！
 	sk->sk_state = TCP_ESTABLISHED;
 	inet->id = jiffies;
 
