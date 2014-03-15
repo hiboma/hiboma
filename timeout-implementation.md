@@ -24,7 +24,7 @@ wget | --timeout | - | 上記三つをまとめてセットするオプション
 curl | --connect-timeout | O_NONBLOCK + poll(2) | connect(2) のタイムアウト
 curl | --max-time | alarm(2) | curl を実行してからの実時間でのタイムアウト
 nc | - | select(2) | タイムアウト値無し。TCPの再送回数が上限でタイムアウト | 
-nc | -w | select(2) | connec(2)でタイムアウトした / idle 時間がになったらタイムアウトぽい
+nc | -w | select(2) | connec(2)でタイムアウトした <br /> idle 時間がになったらタイムアウトぽい
 mysql | |  - | TCPの再送回数が上限でタイムアウト |
 mysql | --connect_timeout | O_NONBLOCK + poll(2) | 認証を通さないとタイムアウト? |
 
