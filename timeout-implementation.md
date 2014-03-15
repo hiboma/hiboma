@@ -156,9 +156,22 @@ sys	0m0.100s
 alarm(5)                              = 0
 ```
 
+ * コマンドの実行時間を制限するのだから select(2) とか poll(2) だと実現できなそう
+ * --read-timeout や --connect-timeout と組み合わせて実装することを考えると alarm(2) 使うしか無さそう
 
+なるほど感高いなー 
 
 ## wget --connect-timeout
+
+#### usage
+
+```
+       --connect-timeout=seconds
+           Set the connect timeout to seconds seconds.  TCP connections that take longer to establish will be aborted.  By default, there is no connect timeout,
+           other than that implemented by system libraries.
+```
+
+connect(2) のタイムアウトを指定する
 
 ```
 $ wget --connect-timeout 5 192.168.100.1
@@ -175,7 +188,7 @@ Connecting to 192.168.0.90:80... failed: Connection timed out.
 Retrying.
 ```
 
- * setitimer(ITTIMER_REAL) 
+--connect-timeout の実体は setitimer(ITTIMER_REAL) 
 
 ```
 socket(PF_INET, SOCK_STREAM, IPPROTO_IP) = 3
@@ -189,32 +202,6 @@ rt_sigaction(SIGALRM, {SIG_DFL, [ALRM], SA_RESTORER|SA_RESTART, 0x7f0282b6e9a0},
 close(3)                                = 0
 ```
 
-       --timeout=seconds
-           Set the network timeout to seconds seconds.  This is equivalent to specifying --dns-timeout, --connect-timeout, and --read-timeout, all at the same
-           time.
-
-           When interacting with the network, Wget can check for timeout and abort the operation if it takes too long.  This prevents anomalies like hanging reads
-           and infinite connects.  The only timeout enabled by default is a 900-second read timeout.  Setting a timeout to 0 disables it altogether.  Unless you
-           know what you are doing, it is best not to change the default timeout settings.
-
-           All timeout-related options accept decimal values, as well as subsecond values.  For example, 0.1 seconds is a legal (though unwise) choice of timeout.
-           Subsecond timeouts are useful for checking server response times or for testing network latency.
-
-       --dns-timeout=seconds
-           Set the DNS lookup timeout to seconds seconds.  DNS lookups that don’t complete within the specified time will fail.  By default, there is no timeout
-           on DNS lookups, other than that implemented by system libraries.
-
-       --connect-timeout=seconds
-           Set the connect timeout to seconds seconds.  TCP connections that take longer to establish will be aborted.  By default, there is no connect timeout,
-           other than that implemented by system libraries.
-
-       --read-timeout=seconds
-           Set the read (and write) timeout to seconds seconds.  The "time" of this timeout refers to idle time: if, at any point in the download, no data is
-           received for more than the specified number of seconds, reading fails and the download is restarted.  This option does not directly affect the duration
-           of the entire download.
-
-           Of course, the remote server may choose to terminate the connection sooner than this option requires.  The default read timeout is 900 seconds.
-```
 
 nc 192.168.100.1 80
 
@@ -257,23 +244,35 @@ connect(3, {sa_family=AF_INET, sin_port=htons(80), sin_addr=inet_addr("192.168.1
 select(4, NULL, [3], NULL, {5, 0}^C <unfinished ...>
 ```
 
-## wget —dns-timeout
+## wget --dns-timeout
 
+#### usage
 
-libresolv のタイムアウトも絡むのでややこしい
+```
+       --dns-timeout=seconds
+           Set the DNS lookup timeout to seconds seconds.  DNS lookups that don’t complete within the specified time will fail.  By default, there is no timeout
+           on DNS lookups, other than that implemented by system libraries.
+```
+
+--dns-timeout は libresolv のタイムアウトも絡むのでややこしい
 
  * DNS だけでなくて , /etc/hosts を読み込む時間、nscd にクエリを出す時間も含まれる
- * —dns-timeout > libresolv の場合は libreolsv (libnss_dns ?) のタイムアウトが優先される
-  * /etc/resolv.conf によって挙動がまちまち (デフォルトでは５秒のタイムアウト + リトライ)
-  * 無闇に —dns-timeout が長くしても意味は無い
+ * --dns-timeout > libresolv の場合は libreolsv (libnss_dns ?) のタイムアウトが優先される
+  * タイムアウトの時間は /etc/resolv.conf に左右される (デフォルトでは５秒のタイムアウト timeout:<N> + リトライ attempts:<N> )
+    * see also http://linuxjm.sourceforge.jp/html/LDP_man-pages/man5/resolver.5.html
+  * リゾルバに左右されるので無闇に --dns-timeout を長くしても意味は無いことが分かる
+
+nameserver に適当に不達のIP を指定してタイムアウトのテストすると良い  
 
 ```
 setitimer(ITIMER_REAL, {it_interval={0, 0}, it_value={999, 0}}, NULL) = 0
+
+// nscd にクエリを投げようとする
 socket(PF_FILE, SOCK_STREAM|SOCK_CLOEXEC|SOCK_NONBLOCK, 0) = 3
 connect(3, {sa_family=AF_FILE, path="/var/run/nscd/socket"}, 110) = -1 ENOENT (No such file or directory)
 close(3)                                = 0
 
-
+// DNS にクエリを投げる
 socket(PF_INET, SOCK_DGRAM|SOCK_NONBLOCK, IPPROTO_IP) = 3
 connect(3, {sa_family=AF_INET, sin_port=htons(53), sin_addr=inet_addr("192.168.100.0")}, 16) = 0
 poll([{fd=3, events=POLLOUT}], 1, 0)    = 1 ([{fd=3, revents=POLLOUT}])
@@ -282,14 +281,6 @@ poll([{fd=3, events=POLLIN|POLLOUT}], 1, 5000) = 1 ([{fd=3, revents=POLLOUT}])
 sendto(3, "\232\275\1\0\0\1\0\0\0\0\0\0\3www\6kernel\3org\0\0\34\0\1", 32, MSG_NOSIGNAL, NULL, 0) = 32
 poll([{fd=3, events=POLLIN}], 1, 4999)  = ? ERESTART_RESTARTBLOCK (To be restarted)
 --- SIGALRM (Alarm clock) @ 0 (0) ---
-```
-
-## wget --timeout=seconds
-
-```
-       --timeout=seconds
-           Set the network timeout to seconds seconds.  This is equivalent to specifying --dns-timeout, --connect-timeout, and --read-timeout, all at the same
-           time.
 ```
 
 ## wget --read-timeout
@@ -323,3 +314,13 @@ write(3, "GET / HTTP/1.0\r\nUser-Agent: Wget"..., 112) = 112
 write(2, "HTTP request sent, awaiting resp"..., 40HTTP request sent, awaiting response... ) = 40
 select(4, [3], NULL, NULL, {5, 0}^C <unfinished ...>
 ```
+
+## wget --timeout=seconds
+
+```
+       --timeout=seconds
+           Set the network timeout to seconds seconds.  This is equivalent to specifying --dns-timeout, --connect-timeout, and --read-timeout, all at the same
+           time.
+```
+
+3つまとめてセットくん
