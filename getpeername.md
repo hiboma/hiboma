@@ -249,7 +249,8 @@ int ip4_datagram_connect(struct sock *sk, struct sockaddr *uaddr, int addr_len)
 			saddr = inet->mc_addr;
 	}
 
-    //
+    // ip_route_output_flow
+    // __xfrm_lookup
 	err = ip_route_connect(&rt, usin->sin_addr.s_addr, saddr,
 			       RT_CONN_FLAGS(sk), oif,
 			       sk->sk_protocol,
