@@ -438,18 +438,22 @@ connect(2) でタイムアウト無し。TCP再送の上限までブロックす
 
 ```
 $ mysql -h 192.168.100.1
+ERROR 2003 (HY000): Can't connect to MySQL server on '192.168.100.1' (110)
 
 # (110) = ETIMEDOUT
 #     #define ETIMEDOUT       110     /* Connection timed out */
 #
-ERROR 2003 (HY000): Can't connect to MySQL server on '192.168.100.1' (110)
 ```
+
+#### strace の結果
 
 ```
 socket(PF_INET, SOCK_STREAM, IPPROTO_IP) = 3
 fcntl(3, F_SETFL, O_RDONLY)             = 0
 fcntl(3, F_GETFL)                       = 0x2 (flags O_RDWR)
-connect(3, {sa_family=AF_INET, sin_port=htons(3306), sin_addr=inet_addr("192.168.100.1")}, 16
+connect(3, {sa_family=AF_INET, sin_port=htons(3306), sin_addr=inet_addr("192.168.100.1")}, 16) = -1 ETIMEDOUT (Connection timed out)
+shutdown(3, 2 /* send and receive */)   = -1 ENOTCONN (Transport endpoint is not connected)
+close(3)                                = 0
 ```
 
 ## strace mysql ---connect_timeout=5
@@ -510,10 +514,11 @@ nc -l 3306 で accept(2) だけするサーバーをたててテスト
 ```
 $ mysql -h 127.0.0.1 --connect_timeout=30
 
+ERROR 2003 (HY000): Can't connect to MySQL server on '127.0.0.1' (4)
+
 # (4) = EINTR ? 
 #     #define EINTR            4      /* Interrupted system call */
 # 
-ERROR 2003 (HY000): Can't connect to MySQL server on '127.0.0.1' (4)
 ```
 
 connect(2) が成功したかどうかは確認せず poll(2) に入る 
@@ -537,11 +542,11 @@ poll([{fd=3, events=POLLIN|POLLPRI}], 1, 30000
  * ECONNREFUSED を返されている
 ```
 [vagrant@vagrant-centos65 ~]$ mysql -h 127.0.0.1
+ERROR 2003 (HY000): Can't connect to MySQL server on '127.0.0.1' (111)
 
 # (111) は errno を指す
 #    #define ECONNREFUSED    111     /* Connection refused */
 #
-ERROR 2003 (HY000): Can't connect to MySQL server on '127.0.0.1' (111)
 ```
 
 connect_timeout を指定してるとなかなか見慣れないメッセージになる。戸惑いそう
