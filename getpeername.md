@@ -269,6 +269,8 @@ int ip4_datagram_connect(struct sock *sk, struct sockaddr *uaddr, int addr_len)
 		inet->saddr = rt->rt_src;	/* Update source address */
 	if (!inet->rcv_saddr)
 		inet->rcv_saddr = rt->rt_src;
+
+    // dst の addr と port をセット
 	inet->daddr = rt->rt_dst;
 	inet->dport = usin->sin_port;
 
@@ -276,6 +278,7 @@ int ip4_datagram_connect(struct sock *sk, struct sockaddr *uaddr, int addr_len)
 	sk->sk_state = TCP_ESTABLISHED;
 	inet->id = jiffies;
 
+    // sk->sk_dst_cache を更新
 	sk_dst_set(sk, &rt->u.dst);
 	return(0);
 }
