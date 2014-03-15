@@ -29,7 +29,7 @@ user    0m0.000s
 sys     0m0.000s
 ```
 
-nc は select(2) のタイムアウトを指定しないのでずっとブロックするはずだけど、 SYNの再送が先にタイムアウトする ↓
+nc は select(2) のタイムアウトを指定しないのでずっとブロックするはずだけど、 SYNの再送が先にタイムアウトする ↓ 下記は SYN再送の tcpdump
 
 ```
 00:49:58.737282 IP 10.0.2.15.38278 > 192.168.100.1.http: Flags [S], seq 2741378757, win 14600, options [mss 1460,sackOK,TS val 117887789 ecr 0,nop,wscale 7], length 0
@@ -40,17 +40,22 @@ nc は select(2) のタイムアウトを指定しないのでずっとブロッ
 00:50:29.738310 IP 10.0.2.15.38278 > 192.168.100.1.http: Flags [S], seq 2741378757, win 14600, options [mss 1460,sackOK,TS val 117918790 ecr 0,nop,wscale 7], length 0
 ```
 
-#### /proc/sys/net/ipv4/tcp_syn_retries で再送の回数を減らしてテスト
+ツールで指定したタイムアウトと合わせて SYN再送も確認する必要がある
 
-```
+#### SYN再送の回数を減らしてタイムアウトを発生させる
+
+/proc/sys/net/ipv4/tcp_syn_retries をセットしよう
+
+```sh
 echo 0 > /proc/sys/net/ipv4/tcp_syn_retries 
 ```
 
- * 0 にしても必ず一回の再送 ( 1回目の SYN 送信 -> 1秒 待つ -> 2回目の SYN 送信 -> 2秒待つ ) が行われて、実時間で __3秒以上___ かかる
+ * 0 にしても必ず一回の再送 ( 1回目の SYN 送信 -> 1秒 待つ -> 2回目の SYN 送信 -> 2秒待つ ) が行われて、実時間で __3秒以上___ かかるのだった
  * tcp の再送は tcpdump などで見ておけばよい
-   * http://d.hatena.ne.jp/rx7/20131129/p1
+   * 他に何もプロセスいなければ `sudp tcpdump port 80` とかでおk 
+   * 再送の間隔については http://d.hatena.ne.jp/rx7/20131129/p1 も大事
 
-### curl でテスト 
+### curl でSYN再送タイムアウトのテスト 
 
 ```
 $ time curl --connect-timeout 999 192.168.100.0
@@ -69,7 +74,7 @@ poll([{fd=3, events=POLLOUT|POLLWRNORM}], 1, 1000000) = 1 ([{fd=3, revents=POLLE
 getsockopt(3, SOL_SOCKET, SO_ERROR, [8589934702], [4]) = 0
 ```
 
-### wget でテスト
+### wget でSYN再送タイムアウトのテスト 
 
 ```
 $ time wget --tries 1 --connect-timeout 999 192.168.100.0
@@ -90,7 +95,7 @@ setitimer(ITIMER_REAL, {it_interval={0, 0}, it_value={999, 0}}, NULL) = 0
 connect(3, {sa_family=AF_INET, sin_port=htons(80), sin_addr=inet_addr("192.168.100.0")}, 16) = -1 ETIMEDOUT (Connection timed out)
 ```
 
-# 調べた際のログ
+# 各種ツールの挙動を調べたログ
 
 ## curl --connect-timeout
 
@@ -209,6 +214,10 @@ close(3)                                = 0
 nc 192.168.100.1 80
 ```
 
+#### strace
+
+nc はタイムアウト値がない
+
 ```
 connect(3, {sa_family=AF_INET, sin_port=htons(80), sin_addr=inet_addr("192.168.100.1")}, 16) = -1 EINPROGRESS (Operation now in progress)
 select(4, NULL, [3], NULL, NULL)        = 1 (out [3])
@@ -217,10 +226,9 @@ fcntl(3, F_SETFL, O_RDWR)               = 0
 close(3)                                = 0
 ```
 
-/proc/sys/net/ipv4/tcp_syn_retries 
+システムコール呼び出し側でタイムアウト値をしていしなくとも SYN の再送が先にタイムアウトにいたる
 
 ```
-15:34:29.462253 IP 10.0.2.15.38185 > 192.168.100.1.http: Flags [S], seq 284100565, win 14600, options [mss 1460,sackOK,TS val 84558514 ecr 0,nop,wscale 7], length 0
 15:34:31.679754 IP 10.0.2.15.38186 > 192.168.100.1.http: Flags [S], seq 3071784278, win 14600, options [mss 1460,sackOK,TS val 84560732 ecr 0,nop,wscale 7], length 0
 15:34:32.680423 IP 10.0.2.15.38186 > 192.168.100.1.http: Flags [S], seq 3071784278, win 14600, options [mss 1460,sackOK,TS val 84561733 ecr 0,nop,wscale 7], length 0
 15:34:34.681910 IP 10.0.2.15.38186 > 192.168.100.1.http: Flags [S], seq 3071784278, win 14600, options [mss 1460,sackOK,TS val 84563734 ecr 0,nop,wscale 7], length 0
@@ -228,6 +236,8 @@ close(3)                                = 0
 15:34:46.682595 IP 10.0.2.15.38186 > 192.168.100.1.http: Flags [S], seq 3071784278, win 14600, options [mss 1460,sackOK,TS val 84575735 ecr 0,nop,wscale 7], length 0
 15:35:02.683394 IP 10.0.2.15.38186 > 192.168.100.1.http: Flags [S], seq 3071784278, win 14600, options [mss 1460,sackOK,TS val 84591735 ecr 0,nop,wscale 7], length 0
 ```
+
+再送の間隔が ___1 -> 2 -> 4 -> 8 -> 16___ ですね ( http://d.hatena.ne.jp/rx7/20131129/p1 も読んでね )
 
 ## nc -w 
 
