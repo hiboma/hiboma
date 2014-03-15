@@ -161,3 +161,21 @@ int inet_getname(struct socket *sock, struct sockaddr *uaddr,
 }
 EXPORT_SYMBOL(inet_getname);
 ```
+
+## connect(2)
+
+```c
+int inet_dgram_connect(struct socket *sock, struct sockaddr * uaddr,
+		       int addr_len, int flags)
+{
+	struct sock *sk = sock->sk;
+
+	if (uaddr->sa_family == AF_UNSPEC)
+		return sk->sk_prot->disconnect(sk, flags);
+
+	if (!inet_sk(sk)->num && inet_autobind(sk))
+		return -EAGAIN;
+	return sk->sk_prot->connect(sk, (struct sockaddr *)uaddr, addr_len);
+}
+EXPORT_SYMBOL(inet_dgram_connect);
+```
