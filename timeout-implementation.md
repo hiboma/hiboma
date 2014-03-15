@@ -21,10 +21,12 @@ wget --dns-timeout | setitimer(2) + ITIMER_REAL | ホスト名前解決のタイ
 wget --connect-timeout | setitimer(2) + ITTIMER_REAL | connect(2) のタイムアウト
 wget --read-timeout | select(2) | connect(2)後、idle時間(= select(2)) のタイムアウト
 wget --timeout | - | 上記三つをまとめてセットするオプション | 
-curl --connect-timeout | fcntl(2) O_NONBLOCK + poll(2) | connect(2) のタイムアウト
+curl --connect-timeout | O_NONBLOCK + poll(2) | connect(2) のタイムアウト
 curl --max-time | alarm(2) | curl を実行してからの実時間でのタイムアウト
 nc | select(2) | タイムアウト値無し。TCPの再送回数が上限でタイムアウト | 
 nc -w | select(2) | connec(2)でタイムアウトした / idle 時間がになったらタイムアウトぽい
+mysql |  - | TCPの再送回数が上限でタイムアウト |
+mysql --connect_timeout | O_NONBLOCK + poll(2) | 認証を通さないとタイムアウト? |
 
 ___タイムアウト___ と書いてもコンテキストが数種あることが分かる
 
