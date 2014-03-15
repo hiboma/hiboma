@@ -589,9 +589,13 @@ close(3)                                = 0
 ## より道
 
 ```
-#define ENOENT           2      /* No such file or directory */
-```
+$ mysql
+ERROR 2002 (HY000): Can't connect to local MySQL server through socket '/var/lib/mysql/mysql.sock' (2)
 
+# (2) は ENOENT
+#    define ENOENT           2      /* No such file or directory */
+# UNIXドメインソケットの有無
+```
 
 ----
 
