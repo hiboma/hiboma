@@ -15,7 +15,69 @@
    * グローバルタイマー
  * NMI = Non Maskable Interrupts
    * ハードウェアの故障などの通知
-p
+
+#### 割り込みベクタの初期化コード   
+
+```asm
+// linux-2.6.32-431.el6.x86_64/arch/x86/kernel/entry_32.S
+
+/*
+ * Build the entry stubs and pointer table with some assembler magic.
+ * We pack 7 stubs into a single 32-byte chunk, which will fit in a
+ * single cache line on all modern x86 implementations.
+ */
+.section .init.rodata,"a"
+ENTRY(interrupt)
+.text
+	.p2align 5
+	.p2align CONFIG_X86_L1_CACHE_SHIFT
+ENTRY(irq_entries_start)
+	RING0_INT_FRAME
+vector=FIRST_EXTERNAL_VECTOR
+.rept (NR_VECTORS-FIRST_EXTERNAL_VECTOR+6)/7
+	.balign 32
+  .rept	7
+    .if vector < NR_VECTORS
+      .if vector <> FIRST_EXTERNAL_VECTOR
+	CFI_ADJUST_CFA_OFFSET -4
+      .endif
+1:	pushl $(~vector+0x80)	/* Note: always in signed byte range */
+	CFI_ADJUST_CFA_OFFSET 4
+      .if ((vector-FIRST_EXTERNAL_VECTOR)%7) <> 6
+	jmp 2f
+      .endif
+      .previous
+	.long 1b
+      .text
+vector=vector+1
+    .endif
+  .endr
+2:	jmp common_interrupt
+.endr
+END(irq_entries_start)
+
+.previous
+END(interrupt)
+.previous
+```
+
+```asm
+/*
+ * the CPU automatically disables interrupts when executing an IRQ vector,
+ * so IRQ-flags tracing has to follow that:
+ */
+	.p2align CONFIG_X86_L1_CACHE_SHIFT
+common_interrupt:
+	addl $-0x80,(%esp)	/* Adjust vector into the [-256,-1] range */
+	SAVE_ALL
+	TRACE_IRQS_OFF
+	movl %esp,%eax
+	call do_IRQ
+	jmp ret_from_intr
+ENDPROC(common_interrupt)
+	CFI_ENDPROC
+```
+
 #### 例外 Exception
 
 > このほか、割り込みによく似たものとして「例外」があります。割り込みが外的要因であるのに対し、CPUの動作自体によって引き起こされた事象の場合を「例外」と呼びます。
