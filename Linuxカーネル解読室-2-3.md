@@ -2,7 +2,7 @@
 
 ## 2.3.1 割り込みの種類
 
-#### 割り込み
+#### 割り込み Intterupt
 
 ![](http://sourceforge.jp/projects/linux-kernel-docs/wiki/2.3%E3%80%80ハードウェア割り込み処理/attach/fig2-1.png)
 
@@ -16,9 +16,10 @@
  * NMI = Non Maskable Interrupts
    * ハードウェアの故障などの通知
   
-#### 例外
+#### 例外 Exception
 
  * CPU内部で発生した事象
-   * 0 除算
-   * 数値演算例外
-   * ページフォルト
+   * 0 除算, 数値演算例外, ページフォルト
+ * フォルト
+ * トラップ
+ * アボート
