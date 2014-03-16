@@ -92,9 +92,9 @@ ENDPROC(common_interrupt)
 
 [例外と割り込み](https://github.com/hiboma/hiboma/blob/master/linux-0.0.1.md#例外割り込み) で復習しよう
 
-#### `grep ^ENTRY arch/x86/kernel/` で割り込みベクタと例外の一覧を見る
+`grep ^ENTRY arch/x86/kernel/` で割り込みベクタと例外の一覧を見る
 
-32bit
+#### 32bit
 
 ```asm
 entry_32.S:ENTRY(ret_from_fork)
@@ -138,7 +138,7 @@ entry_32.S:ENTRY(int3)                         // ブレークポイント
 entry_32.S:ENTRY(general_protection)
 ```
 
-64bit 
+#### 64bit 
 
 ```asm
 entry_64.S:ENTRY(mcount)
@@ -181,3 +181,12 @@ entry_64.S:ENTRY(ignore_sysret)
 ```
 
 ## 2.3.2 ハードウェア割り込み処理の動作例
+
+![](http://sourceforge.jp/projects/linux-kernel-docs/wiki/2.3%E3%80%80ハードウェア割り込み処理/attach/fig2-2.png)
+
+ 1. socket に read, recv, recvfrom, recvmsg を呼び TASK_INTERRUPTIBLE で待つ
+ 2. ハードウェアの動作
+ 3. interrupt -> common_interrupt-> do_IRQ
+ 4. __raise_softirq_irqoff(NET_RX_SOFTIRQ)
+ 5. 
+ 
