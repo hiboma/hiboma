@@ -28,6 +28,40 @@
 +-------------------+
 ```
 
+#### struct socket
+
+```c
+/**
+ *  struct socket - general BSD socket
+ *  @state: socket state (%SS_CONNECTED, etc)
+ *  @type: socket type (%SOCK_STREAM, etc)
+ *  @flags: socket flags (%SOCK_ASYNC_NOSPACE, etc)
+ *  @ops: protocol specific socket operations
+ *  @fasync_list: Asynchronous wake up list
+ *  @file: File back pointer for gc
+ *  @sk: internal networking protocol agnostic socket representation
+ *  @wait: wait queue for several uses
+ */
+struct socket {
+	socket_state		state;
+
+	kmemcheck_bitfield_begin(type);
+	short			type;
+	kmemcheck_bitfield_end(type);
+
+	unsigned long		flags;
+	/*
+	 * Please keep fasync_list & wait fields in the same cache line
+	 */
+	struct fasync_struct	*fasync_list;
+	wait_queue_head_t	wait;
+
+	struct file		*file;
+	struct sock		*sk;
+	const struct proto_ops	*ops;
+};
+```
+
 #### struct net_proto_family
 
 ```c
