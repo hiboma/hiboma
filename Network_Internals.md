@@ -114,8 +114,11 @@ BSDソケットレイヤからプロトコルファミリのコンストラク�
    * `struct tcp_sock *tp = tcp_sk(sk)`
  * tcpv6_prot
  * unix_proto
+   * name,owner,obj_size以外 なんも定義されてない
+   * ネットワークプロトコルがいらないから?
  * packet_proto
  * netlink_proto
+   * unix_proto と同じ
  * ping_prot
 
 #### struct inet_protosw
