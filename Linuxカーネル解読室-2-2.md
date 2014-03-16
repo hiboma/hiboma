@@ -318,12 +318,13 @@ static inline void __netif_rx_schedule(struct net_device *dev)
 		dev->quota += dev->weight;
 	else
 		dev->quota = dev->weight;
+    // ここで softirq
 	__raise_softirq_irqoff(NET_RX_SOFTIRQ);
 	local_irq_restore(flags);
 }
 ```
 
-NET_RX_SOFTIRQ に対応するハンドらは net_dev_init で登録されている
+NET_RX_SOFTIRQ のハンドラは net_dev_init で登録されている
 
 ```c
 /*
