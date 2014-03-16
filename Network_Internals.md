@@ -24,7 +24,9 @@
 +-------------------+
 ```
 
-struct proto_ops
+#### struct proto_ops
+
+`struct socket` の `sock->ops->*`
 
  * PF_INET
    * inet_stream_ops
@@ -35,28 +37,29 @@ struct proto_ops
    * unix_dgram_ops  (SOCK_DGRAM)
    * unix_seqpacket_ops (SOCK_SEQPACKET)
 
-struct socket の sock->ops
+#### struct proto
 
-struct proto
+`struct sock` の `sk->sk_proto->*`
 
  * udp_prot
  * udpv6_prot
  * tcp_prot
+   * `struct tcp_sock *tp = tcp_sk(sk)`
  * tcpv6_prot
  * unix_proto
  * packet_proto
  * netlink_proto
  * ping_prot
 
-struct inet_protosw で結びつけされる
+#### struct inet_protosw
+
+struct proto_ops と struct proto が結びつけされる
 
  * IPPROTO_TCP  = tcp_prot  + inet_stream_ops
  * IPPROTO_UDP  = udp_prot  + inet_dgram_ops
  * IPPROTO_ICMP = ping_prot + inet_dgram_ops
  * IPPROTO_IP   = rawprot   + inet_sockraw_ops
 
-struct inet_protosw
-  
 ```  c
 static struct inet_protosw inetsw_array[] =
 {
