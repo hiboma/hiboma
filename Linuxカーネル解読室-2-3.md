@@ -71,7 +71,7 @@ common_interrupt は do_IRQ への橋渡し
 	.p2align CONFIG_X86_L1_CACHE_SHIFT
 common_interrupt:
 	addl $-0x80,(%esp)	/* Adjust vector into the [-256,-1] range */
-	SAVE_ALL
+	SAVE_ALL              // 汎用レジスタの退避
 	TRACE_IRQS_OFF
 	movl %esp,%eax
 	call do_IRQ
@@ -92,7 +92,7 @@ ENDPROC(common_interrupt)
 
 [例外と割り込み](https://github.com/hiboma/hiboma/blob/master/linux-0.0.1.md#例外割り込み) で復習しよう
 
-#### `grep ^ENTRY arch/x86/kernel/` で例外の一覧を取れる
+#### `grep ^ENTRY arch/x86/kernel/` で割り込みベクタと例外の一覧を見る
 
 32bit
 
@@ -179,3 +179,5 @@ entry_64.S:ENTRY(error_exit)
 entry_64.S:ENTRY(nmi)
 entry_64.S:ENTRY(ignore_sysret)
 ```
+
+## 2.3.2 ハードウェア割り込み処理の動作例
