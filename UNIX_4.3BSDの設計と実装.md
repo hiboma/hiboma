@@ -217,8 +217,7 @@ SCBVEC(softclock):
 
   * http://www.cs.auckland.ac.nz/references/macvax/op-codes/Instructions/mtpr.html
     * mtpr命令でソフトウェア割りこみ? レジスタに何か書いてる
-
-```    
+```
               { 0, "_setsoftclock\n",
       "       mtpr    $0x8,$0x14\n" },
 ```
@@ -278,8 +277,8 @@ struct exec {
 ## 4.2 Process Management
 
  * プロセスの state と flags は別
-  * state SIDL ----> SRUN <==> SSLEEP <==> SSTOP ---> SZOMB の遷移だけ
-  * flags は context switch の中間状態を記述するためのフラグ
+   * state SIDL ----> SRUN <==> SSLEEP <==> SSTOP ---> SZOMB の遷移だけ
+   * flags は context switch の中間状態を記述するためのフラグ
  * プロセス管理のリストは 3つある
    * allproc
    * freeproc
@@ -294,17 +293,17 @@ struct exec {
    * 親子関係、兄弟関係を指す。killpg(2) の実装
    * killpg(2) は 4.0 BSD から登場
  * プロセスの優先度は二つ
-  * p_userpri　ユーザーモードの優先度
-  * p_pri      カーネルモードの優先度
-    * 優先度が PZERO以下のプロセスはシグナルハンドリングをしない (TASK_UNINTERRUPTIBLE)
-    * 低レイヤの処理ではリソースを早く解放するために優先度を上げる Bach本
+   * p_userpri　ユーザーモードの優先度
+   * p_pri      カーネルモードの優先度
+      * 優先度が PZERO以下のプロセスはシグナルハンドリングをしない (TASK_UNINTERRUPTIBLE)
+      * 低レイヤの処理ではリソースを早く解放するために優先度を上げる Bach本
 
 ## The User Structure
 
  * `struct user`
-  * 512 * 10ページ
-  * カーネルスタックも同居する。struct user のサイズが固定なので、カーネルスタックが深くならないように注意する ( kernel-access fault を起こす )
-  * 割り込み用のスタックは `interruput stack` というグローバルな領域がある
+   * 512 * 10ページ
+   * カーネルスタックも同居する。struct user のサイズが固定なので、カーネルスタックが深くならないように注意する ( kernel-access fault を起こす )
+   * 割り込み用のスタックは `interruput stack` というグローバルな領域がある
  * VAXアーキテクチャのPCB(Process Control Block)
    * ユーザーモードで、固定した仮想アドレスにおかれる。ハードウェアの仕様が濃い
 
@@ -355,14 +354,14 @@ struct pcb
 ## 4.2 Context Swtiching
 
  * synchronously
-  * => トラップ
+   * => トラップ
  * asynchronously
-  * => 割り込みハンドラ
+   * => 割り込みハンドラ
  * voluntary
-  * => リソース待ちでブロック
-  * sleep()
+   * => リソース待ちでブロック
+   * sleep()
  * involuntary
-  * => タイムスライス使い切り で発生する
+   * => タイムスライス使い切り で発生する
 
  * run queue のキュー操作は VAXの命令で実装されている
    * Cのレイヤでは ↓ な感じで定義されている。32個のキューがある
