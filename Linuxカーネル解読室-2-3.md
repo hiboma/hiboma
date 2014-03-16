@@ -202,16 +202,15 @@ sock_recvmsg
 __sock_recvmsg
 __sock_recvmsg_nosec
 sock->ops->recvmsg
-# AF_INET 層
+# ---- AF_INET 層 -----
 inet_recvmsg
 sk->sk_proto->recvmsg
-# TCP 層
+# ---- TCP 層 -----
 tcp_recvmsg
 sk_wait_data
 ```
-
  * sk_wait_data で TASK_INTERRUPTIBLE で待つ
-   * sk->sk_receive_queue が空か否かが待つ条件となる
+   * ***sk->sk_receive_queue*** が空か否かが待つ条件となる
 ```c
 /**
  * sk_wait_data - wait for data to arrive at sk_receive_queue
@@ -242,7 +241,7 @@ EXPORT_SYMBOL(sk_wait_data);
 PF_INET + UDP の場合
 
  * udp_recvmsg ->__skb_recv_datagram -> wait_for_packet
-   * sk->sk_receive_queue が空か否かで待つ
+   * ***sk->sk_receive_queue*** が空か否かで待つ
    * prepare_to_wait_exclusive + TASK_INTERRUPTIBLE で待ち
    * signal_pending() でシグナルをハンドリング
    * schedule_timeout() でタイムアウト or 起床待ち
