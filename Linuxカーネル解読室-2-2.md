@@ -73,25 +73,23 @@ common_interrupt:
 
 > 伝統UNIXでは、応答性を確保するために割り込みレベルという考え方を採用していました
 
+![](http://www.cs.uni.edu/~fienup/cs143f00/course-notes,-in-class-activitie/lec20_11-2-00.lwp/3b8d5953.jpg)
+
 高優先度の割り込みによるネストを許可する
 
   * 優先度高い割り込み
     * 時計?
     * 電源?
   * Linux
-    * 応答性が必要     ... ハードゥエア割り込みハンドラ
-    * 応答性が必要ない ... 遅延実行、ソフト割り込み (ソフトIRQ)
-
-```c
-int
-request_irq(unsigned int irq, irqreturn_t (*handler)(int, void *, struct pt_regs *),
-	    unsigned long irqflags, const char * devname, void *dev_id)
-```
+    * 応答性が必要な箇所 => ハードゥエア割り込みハンドラ
+    * 応答性が必要ない => 遅延実行、ソフト割り込み (ソフトIRQ)
+  * ソフト割り込みハンドラを実行中は 同じ割り込みのハードウェア割り込みを処理できる
 
 ## 2.2.2 マルチプロセッサへの対応
 
  * どの CPU でも ハードウェア割り込みハンドラを処理できる
    * IRQ が異なっていれば並列に処理できる
+ * 負荷分散
  * どの CPU でも softirq を処理できる
    * softirq はハードウェア割り込みハンドラを受けたCPUで実行される
    * CPUキャッシュを生かす
@@ -118,6 +116,12 @@ dr-xr-xr-x 21 root root 0 Mar  8 11:23 ..
    * tasklet は?
  
 ## イーサネットドライバ処理
+
+```c
+int
+request_irq(unsigned int irq, irqreturn_t (*handler)(int, void *, struct pt_regs *),
+	    unsigned long irqflags, const char * devname, void *dev_id)
+```
 
 ハードウェア割り込みハンドラへ IRQ を配送するコードはどこ?
 
