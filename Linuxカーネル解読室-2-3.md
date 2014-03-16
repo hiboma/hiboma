@@ -312,6 +312,8 @@ interrupt の時点で割り込みを受けた CPU は決まっている?
 
 #### 4. __netif_rx_schedule -> __raise_softirq_irqoff(NET_RX_SOFTIRQ)
 
+ * 実装はデバイスドライバ依存
+
 #### 5. net_rx_action
 
  * softirq ハンドラが起動するタイミングが分からない
