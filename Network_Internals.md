@@ -42,10 +42,13 @@ struct proto_ops
   * netlink_proto
   * ping_prot
 
-IPPROTO_TCP  = tcp_prot  + inet_stream_ops
-IPPROTO_UDP  = udp_prot  + inet_dgram_ops
-IPPROTO_ICMP = ping_prot + inet_dgram_ops
-IPPROTO_IP   = rawprot   + inet_sockraw_ops
+ * IPPROTO_TCP  = tcp_prot  + inet_stream_ops
+ * IPPROTO_UDP  = udp_prot  + inet_dgram_ops
+ * IPPROTO_ICMP = ping_prot + inet_dgram_ops
+ * IPPROTO_IP   = rawprot   + inet_sockraw_ops
+ * SOCK_STREAM    = unix_stream_ops
+ * SOCK_DGRAM     = unix_dgram_ops
+ * SOCK_SEQPACKET = unix_seqpacket_ops
 
 struct inet_protosw
   
