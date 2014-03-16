@@ -194,8 +194,10 @@ sock_recvmsg
 __sock_recvmsg
 __sock_recvmsg_nosec
 sock->ops->recvmsg
+# AF_INET 層
 inet_recvmsg
-sk->sk_proto->recvmsg 
+sk->sk_proto->recvmsg
+# TCP 層
 tcp_recvmsg
 sk_wait_data
 ```
@@ -217,6 +219,7 @@ int sk_wait_data(struct sock *sk, long *timeo)
 {
 	int rc;
 	DEFINE_WAIT(wait);
+    // prepare_to_wait で wait の準備をして schedule_timeout する前に skb_queue_empty で確認する
 	prepare_to_wait(sk->sk_sleep, &wait, TASK_INTERRUPTIBLE);
 	set_bit(SOCK_ASYNC_WAITDATA, &sk->sk_socket->flags);
     // schedule_timeout() でタイムアウト付きで スケジューリングする
