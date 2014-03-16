@@ -217,9 +217,9 @@ int sk_wait_data(struct sock *sk, long *timeo)
 {
 	int rc;
 	DEFINE_WAIT(wait);
-
 	prepare_to_wait(sk->sk_sleep, &wait, TASK_INTERRUPTIBLE);
 	set_bit(SOCK_ASYNC_WAITDATA, &sk->sk_socket->flags);
+    // schedule_timeout() でタイムアウト付きで スケジューリングする
 	rc = sk_wait_event(sk, timeo, !skb_queue_empty(&sk->sk_receive_queue));
 	clear_bit(SOCK_ASYNC_WAITDATA, &sk->sk_socket->flags);
 	finish_wait(sk->sk_sleep, &wait);
@@ -227,8 +227,7 @@ int sk_wait_data(struct sock *sk, long *timeo)
 }
 EXPORT_SYMBOL(sk_wait_data);
 ```
- 
- 2. ハードウェアの動作
+ 2. ハードウェアの動作なので分からん
  3. interrupt -> common_interrupt-> do_IRQ
  4. __netif_rx_schedule -> __raise_softirq_irqoff(NET_RX_SOFTIRQ)
  5. net_rx_action
