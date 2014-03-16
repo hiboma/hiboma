@@ -505,7 +505,7 @@ job_done:
 ```
 
  * sk_buff でパケットの中身を見て、プロトコルに応じたハンドラ (packet_type) に繋げる
-   * dev_add_pack でパケットのハンドラを追加する
+   * 起動時に dev_add_pack でパケットのハンドラを追加している
      * `dev_add_pack(&ip_packet_type);`
      * `dev_add_pack(&arp_packet_type);`
 ```c

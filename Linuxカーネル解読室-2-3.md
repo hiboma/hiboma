@@ -184,13 +184,16 @@ entry_64.S:ENTRY(ignore_sysret)
 
 ![](http://sourceforge.jp/projects/linux-kernel-docs/wiki/2.3%E3%80%80ハードウェア割り込み処理/attach/fig2-2.png)
 
+#### 受信処理
+
  1. socket に read, recv, recvfrom, recvmsg を呼び TASK_INTERRUPTIBLE で待つ
  2. ハードウェアの動作
  3. interrupt -> common_interrupt-> do_IRQ
  4. __netif_rx_schedule -> __raise_softirq_irqoff(NET_RX_SOFTIRQ)
  5. net_rx_action
    * softirq ハンドラが起動するタイミングが分からない
-   * process_backlog
-   * TASK_INTERRUPTIBLE なプロセスを起床させる
+   * process_backlog -> __skb_dequeue -> __netif_receive_skb ->  deliver_skb
+     * struct packet_type のハンドラを呼んでプロトコルのハンドラへ委譲
+     * TASK_INTERRUPTIBLE なプロセスを起床させる箇所が分からん
  6. プロセスが起床してシステムコール呼び出し元に戻る
  
