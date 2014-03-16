@@ -209,7 +209,9 @@ sk->sk_proto->recvmsg
 tcp_recvmsg
 sk_wait_data
 ```
+
  * sk_wait_data で TASK_INTERRUPTIBLE で待つ
+   * sk->sk_receive_queue が空か否かが待つ条件となる
 ```c
 /**
  * sk_wait_data - wait for data to arrive at sk_receive_queue
@@ -240,6 +242,10 @@ EXPORT_SYMBOL(sk_wait_data);
 PF_INET + UDP の場合
 
  * udp_recvmsg ->__skb_recv_datagram -> wait_for_packet
+   * sk->sk_receive_queue が空か否かで待つ
+   * prepare_to_wait_exclusive + TASK_INTERRUPTIBLE で待ち
+   * signal_pending() でシグナルをハンドリング
+   * schedule_timeout() でタイムアウト or 起床待ち
 
 ```c
 /*
@@ -250,6 +256,7 @@ static int wait_for_packet(struct sock *sk, int *err, long *timeo_p)
 	int error;
 	DEFINE_WAIT_FUNC(wait, receiver_wake_function);
 
+    // exclusive 指定なので 1プロセスずつ起床する
 	prepare_to_wait_exclusive(sk->sk_sleep, &wait, TASK_INTERRUPTIBLE);
 
 	/* Socket errors? */
