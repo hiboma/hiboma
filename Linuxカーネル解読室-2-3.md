@@ -22,6 +22,8 @@
  * NMI = Non Maskable Interrupts
    * ハードウェアの故障などの通知
 
+/proc/interrupts で割り込みの統計を見る   
+
 ```
 [vagrant@vagrant-centos65 ~]$ cat /proc/interrupts 
            CPU0       CPU1       CPU2       CPU3       
