@@ -1,6 +1,5 @@
 # CHAPTER 9
 
-
 # CHAPTER 10 Frame Reception
 
 ## CHAPTER 9のおさらい
@@ -70,6 +69,7 @@ struct sk_buff {
 ```   
 
 loopback device
+
  * queue (ingress, egress) が無い
    * ローカルのメモリ内でのデータ転送なのでキューが無くてもよいのだろう
  * loopback device は失敗しないので、再送時の requeue もいらない
