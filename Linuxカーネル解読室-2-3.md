@@ -22,6 +22,49 @@
  * NMI = Non Maskable Interrupts
    * ハードウェアの故障などの通知
 
+```
+[vagrant@vagrant-centos65 ~]$ cat /proc/interrupts 
+           CPU0       CPU1       CPU2       CPU3       
+  0:        150          0          0          0   IO-APIC-edge      timer
+  1:          7          0          0          0   IO-APIC-edge      i8042
+  8:          0          0          0          0   IO-APIC-edge      rtc0
+  9:          0          0          0          0   IO-APIC-fasteoi   acpi
+ 12:        108          0          0          0   IO-APIC-edge      i8042
+ 19:        725          0          0          0   IO-APIC-fasteoi   virtio0
+ 21:       3712          0          0          0   IO-APIC-fasteoi   ahci
+NMI:          0          0          0          0   Non-maskable interrupts
+LOC:      10836      12535      11710      11944   Local timer interrupts
+SPU:          0          0          0          0   Spurious interrupts
+PMI:          0          0          0          0   Performance monitoring interrupts
+IWI:          0          0          0          0   IRQ work interrupts
+RES:       4077       2796       1925       1347   Rescheduling interrupts
+CAL:         57        128        148        147   Function call interrupts
+TLB:        112        741        693        382   TLB shootdowns
+TRM:          0          0          0          0   Thermal event interrupts
+THR:          0          0          0          0   Threshold APIC interrupts
+MCE:          0          0          0          0   Machine check exceptions
+MCP:          3          3          3          3   Machine check polls
+ERR:          0
+MIS:          0
+```
+
+/proc/softirqs で softirq の統計を見る
+
+```
+[vagrant@vagrant-centos65 ~]$ cat /proc/softirqs 
+                CPU0       CPU1       CPU2       CPU3       
+      HI:          0          0          0          0
+   TIMER:       9351      11755      10884      11256
+  NET_TX:          0          0          0          0
+  NET_RX:        753          0          0          0
+   BLOCK:       3527         35          4         16
+BLOCK_IOPOLL:          0          0          0          0
+ TASKLET:          2          0          0          0
+   SCHED:       2299       2782       2732       2746
+ HRTIMER:         57         49         35         31
+     RCU:      11816      12516      12003      12054
+```
+
 #### 割り込みベクタの初期化コード   
 
 ```asm
@@ -310,9 +353,12 @@ out_noerr:
 
 interrupt の時点で割り込みを受けた CPU は決まっている? 
 
-#### 4. __netif_rx_schedule -> __raise_softirq_irqoff(NET_RX_SOFTIRQ)
+#### 4. ハードウェア割り込みハンドラからソフト割り込み発行
 
- * 実装はデバイスドライバ依存
+実装はデバイスドライバ依存
+
+ * __netif_rx_schedule
+ * __raise_softirq_irqoff(NET_RX_SOFTIRQ) で ソフト割り込み
 
 #### 5. net_rx_action
 
