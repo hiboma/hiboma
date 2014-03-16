@@ -43,7 +43,7 @@ TCP の SYN再送も暗にタイムアウトに絡んでくるで更にややこ
 
 # TCP の SYN再送
 
-3way-handshake 
+ * 3way-handshake で SYN-ACK を受け取らないと発生
 
 ## TCP のSYN再送を見る
 
