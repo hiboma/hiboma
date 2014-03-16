@@ -1,5 +1,8 @@
 ## ソケットレイヤ
 
+ * struct socket => 変数名は sock
+ * struct sock   => 変数名は sk
+
 ````
 +-------------------+
   BSD Socket Layer
