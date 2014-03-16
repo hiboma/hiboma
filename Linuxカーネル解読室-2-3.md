@@ -187,6 +187,47 @@ entry_64.S:ENTRY(ignore_sysret)
 #### 受信処理
 
  1. socket に read, recv, recvfrom, recvmsg を呼び TASK_INTERRUPTIBLE で待つ
+   * TCP (tcp_proto + inet_stream_ops ) recvfrom の場合のスタック
+```   
+recv_from
+sock_recvmsg
+__sock_recvmsg
+__sock_recvmsg_nosec
+sock->ops->recvmsg
+inet_recvmsg
+sk->sk_proto->recvmsg 
+tcp_recvmsg
+sk_wait_data
+```
+
+sk_wait_data で TASK_INTERRUPTIBLE で待つ
+
+```c
+/**
+ * sk_wait_data - wait for data to arrive at sk_receive_queue
+ * @sk:    sock to wait on
+ * @timeo: for how long
+ *
+ * Now socket state including sk->sk_err is changed only under lock,
+ * hence we may omit checks after joining wait queue.
+ * We check receive queue before schedule() only as optimization;
+ * it is very likely that release_sock() added new data.
+ */
+int sk_wait_data(struct sock *sk, long *timeo)
+{
+	int rc;
+	DEFINE_WAIT(wait);
+
+	prepare_to_wait(sk->sk_sleep, &wait, TASK_INTERRUPTIBLE);
+	set_bit(SOCK_ASYNC_WAITDATA, &sk->sk_socket->flags);
+	rc = sk_wait_event(sk, timeo, !skb_queue_empty(&sk->sk_receive_queue));
+	clear_bit(SOCK_ASYNC_WAITDATA, &sk->sk_socket->flags);
+	finish_wait(sk->sk_sleep, &wait);
+	return rc;
+}
+EXPORT_SYMBOL(sk_wait_data);
+```
+ 
  2. ハードウェアの動作
  3. interrupt -> common_interrupt-> do_IRQ
  4. __netif_rx_schedule -> __raise_softirq_irqoff(NET_RX_SOFTIRQ)
