@@ -1,5 +1,15 @@
 
-# CHPTER 10 Frame Reception
+# CHAPTER 10 Frame Reception
+
+## CHAPTER 9のおさらい
+
+割り込みハンドラ から softirq までの流れ
+
+ * do_IRQ でネットワークドライバの割り込みハンドラを起動
+ * frame のデータを sk_buffer にコピー
+   * DMAが使えるなら(普通使える) データを指すポインタを初期化するだけでよい
+ * 上位プロトコル処理用に skb->protcol などを初期化
+ * NET_RX_SOSTIRQ で sotirq を出す
 
 ## Queues
 
