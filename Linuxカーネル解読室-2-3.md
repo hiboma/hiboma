@@ -194,7 +194,7 @@ entry_64.S:ENTRY(ignore_sysret)
 
 #### 1. socket に read, recv, recvfrom, recvmsg を呼び TASK_INTERRUPTIBLE で待つ
 
-PF_INET + TCP (tcp_proto + inet_stream_ops ) recvfrom の場合のスタック
+#### PF_INET + TCP (tcp_proto + inet_stream_ops ) recvfrom の場合のスタック
 
 ```   
 recv_from
@@ -238,14 +238,13 @@ int sk_wait_data(struct sock *sk, long *timeo)
 EXPORT_SYMBOL(sk_wait_data);
 ```
 
-PF_INET + UDP の場合
+#### PF_INET + UDP の場合
 
  * udp_recvmsg ->__skb_recv_datagram -> wait_for_packet
    * ***sk->sk_receive_queue*** が空か否かで待つ
    * prepare_to_wait_exclusive + TASK_INTERRUPTIBLE で待ち
    * signal_pending() でシグナルをハンドリング
    * schedule_timeout() でタイムアウト or 起床待ち
-
 ```c
 /*
  * Wait for a packet..
@@ -301,7 +300,12 @@ out_noerr:
 
 #### 2. ハードウェアの動作なので分からん
 
-#### 3. interrupt -> common_interrupt-> do_IRQ
+#### 3. ハードウェア割り込みハンドラ
+
+ * interrupt
+ * common_interrupt
+ * do_IRQ
+ * handle_irq でデバイスドライバのハンドラに委譲される
 
 #### 4. __netif_rx_schedule -> __raise_softirq_irqoff(NET_RX_SOFTIRQ)
 
