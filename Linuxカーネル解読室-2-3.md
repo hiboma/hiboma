@@ -362,6 +362,8 @@ interrupt の時点で割り込みを受けた CPU は決まっている?
  * __netif_rx_schedule
  * __raise_softirq_irqoff(NET_RX_SOFTIRQ) で ソフト割り込み
 
+VirtualBox は virio-net  
+
 #### 5. net_rx_action
 
  * softirq ハンドラが起動するタイミングが分からない
