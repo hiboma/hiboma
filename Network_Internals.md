@@ -32,6 +32,8 @@ struct proto_ops
    * unix_dgram_ops  (SOCK_DGRAM)
    * unix_seqpacket_ops (SOCK_SEQPACKET)
 
+struct socket の sock->ops
+
 struct proto
 
  * udp_prot
