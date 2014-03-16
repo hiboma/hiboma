@@ -21,16 +21,22 @@
 +-------------------+
 ```
 
-struct inet_protos
+struct proto_ops
 
- * inet_stream_ops
- * inet_dgram_ops
- * inet_sockraw_ops
+ * PF_INET
+   * inet_stream_ops
+   * inet_dgram_ops
+   * inet_sockraw_ops
+ * PF_UNIX
+   * unix_stream_ops
+   * unix_dgram_ops
 
-struct proto
+ struct proto
 
- * udp_prot, udpv6_prot
- * tcp_prot, tcpv6_prot
+ * udp_prot
+ * udpv6_prot
+ * tcp_prot
+ * tcpv6_prot
  * unix_proto
  * packet_proto
  * netlink_proto
