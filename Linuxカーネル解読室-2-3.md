@@ -304,8 +304,11 @@ out_noerr:
 
  * interrupt
  * common_interrupt
+   * 割り込みベクタ (IRQ vector) を実行している時は 割込は disabled な状態
  * do_IRQ
  * handle_irq でデバイスドライバのハンドラに委譲される
+
+interrupt の時点で割り込みを受けた CPU は決まっている? 
 
 #### 4. __netif_rx_schedule -> __raise_softirq_irqoff(NET_RX_SOFTIRQ)
 
