@@ -30,11 +30,11 @@
 ENTRY(interrupt)
 .text
 	.p2align 5
-	.p2align CONFIG_X86_L1_CACHE_SHIFT
-ENTRY(irq_entries_start)
+	.p2align CONFIG_X86_L1_CACHE_SHIFT        // L1キャッシュに載るようにアライン?
+ENTRY(irq_entries_start)                      // IRQ 割り込みベクタを定義するぞう
 	RING0_INT_FRAME
 vector=FIRST_EXTERNAL_VECTOR
-.rept (NR_VECTORS-FIRST_EXTERNAL_VECTOR+6)/7
+.rept (NR_VECTORS-FIRST_EXTERNAL_VECTOR+6)/7  // ベクタの数分繰り返し
 	.balign 32
   .rept	7
     .if vector < NR_VECTORS
@@ -52,7 +52,7 @@ vector=FIRST_EXTERNAL_VECTOR
 vector=vector+1
     .endif
   .endr
-2:	jmp common_interrupt
+2:	jmp common_interrupt                      // どの割り込みベクタも common_interrupt に jmp
 .endr
 END(irq_entries_start)
 
@@ -60,6 +60,8 @@ END(irq_entries_start)
 END(interrupt)
 .previous
 ```
+
+common_interrupt は do_IRQ への橋渡し
 
 ```asm
 /*
