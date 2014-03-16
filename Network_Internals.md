@@ -24,6 +24,14 @@
 +-------------------+
 ```
 
+#### struct net_proto_family
+
+ * inet_family_ops
+ * inet6_family_ops
+ * unix_family_ops
+ * packet_family_ops
+ * netlink_family_ops
+
 #### struct proto_ops
 
 `struct socket` の `sock->ops->*`
