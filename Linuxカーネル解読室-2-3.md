@@ -32,19 +32,19 @@ p
 
 32bit
 
-```
+```asm
 entry_32.S:ENTRY(ret_from_fork)
 entry_32.S:ENTRY(resume_userspace)
-entry_32.S:ENTRY(resume_kernel)
-entry_32.S:ENTRY(ia32_sysenter_target)
-entry_32.S:ENTRY(system_call)
+entry_32.S:ENTRY(resume_kernel)n
+entry_32.S:ENTRY(ia32_sysenter_target)         // sysenter でのシステムコール呼び出し?
+entry_32.S:ENTRY(system_call)                  // 0x80 でのシステムコール呼び出し
 entry_32.S:ENTRY(iret_exc)
-entry_32.S:ENTRY(interrupt)
+entry_32.S:ENTRY(interrupt)                    // common_interrupt -> do_IRQ
 entry_32.S:ENTRY(irq_entries_start)
-entry_32.S:ENTRY(name)				\
+entry_32.S:ENTRY(name)				
 entry_32.S:ENTRY(coprocessor_error)
 entry_32.S:ENTRY(simd_coprocessor_error)
-entry_32.S:ENTRY(device_not_available)
+entry_32.S:ENTRY(device_not_available)         // デバイス使用不可能例外
 entry_32.S:ENTRY(native_iret)
 entry_32.S:ENTRY(native_irq_enable_sysexit)
 entry_32.S:ENTRY(overflow)
@@ -67,16 +67,16 @@ entry_32.S:ENTRY(mcount)
 entry_32.S:ENTRY(ftrace_caller)
 entry_32.S:ENTRY(mcount)
 entry_32.S:ENTRY(ftrace_graph_caller)
-entry_32.S:ENTRY(page_fault)
+entry_32.S:ENTRY(page_fault)                   // ページフォルト
 entry_32.S:ENTRY(debug)
-entry_32.S:ENTRY(nmi)
-entry_32.S:ENTRY(int3)
+entry_32.S:ENTRY(nmi)                          // NMI 
+entry_32.S:ENTRY(int3)                         // ブレークポイント
 entry_32.S:ENTRY(general_protection)
 ```
 
 64bit 
 
-```
+```asm
 entry_64.S:ENTRY(mcount)
 entry_64.S:ENTRY(ftrace_caller)
 entry_64.S:ENTRY(mcount)
