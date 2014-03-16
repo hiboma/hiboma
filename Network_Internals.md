@@ -108,6 +108,7 @@ BSDソケットレイヤからプロトコルファミリのコンストラク�
 `struct sock` の `sk->sk_proto->*`
 
  * udp_prot
+   * `struct inet_sock *inet = inet_sk(sk);`
  * udpv6_prot
  * tcp_prot
    * `struct tcp_sock *tp = tcp_sk(sk)`

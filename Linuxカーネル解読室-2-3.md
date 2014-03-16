@@ -207,9 +207,7 @@ sk->sk_proto->recvmsg
 tcp_recvmsg
 sk_wait_data
 ```
-
-sk_wait_data で TASK_INTERRUPTIBLE で待つ
-
+ * sk_wait_data で TASK_INTERRUPTIBLE で待つ
 ```c
 /**
  * sk_wait_data - wait for data to arrive at sk_receive_queue
