@@ -187,6 +187,10 @@ entry_64.S:ENTRY(ignore_sysret)
  1. socket に read, recv, recvfrom, recvmsg を呼び TASK_INTERRUPTIBLE で待つ
  2. ハードウェアの動作
  3. interrupt -> common_interrupt-> do_IRQ
- 4. __raise_softirq_irqoff(NET_RX_SOFTIRQ)
- 5. 
+ 4. __netif_rx_schedule -> __raise_softirq_irqoff(NET_RX_SOFTIRQ)
+ 5. net_rx_action
+   * softirq ハンドラが起動するタイミングが分からない
+   * process_backlog
+   * TASK_INTERRUPTIBLE なプロセスを起床させる
+ 6. プロセスが起床してシステムコール呼び出し元に戻る
  
