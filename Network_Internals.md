@@ -5,6 +5,10 @@
 
 ````
 +-------------------+
+     System Call
++-------------------+
+          |
++-------------------+
   BSD Socket Layer
 +-------------------+
           |
@@ -26,6 +30,17 @@
 
 #### struct net_proto_family
 
+```c
+struct net_proto_family {
+	int		family;
+	int		(*create)(struct net *net, struct socket *sock,
+				  int protocol, int kern);
+	struct module	*owner;
+};
+```
+
+BSDソケットレイヤからプロトコルファミリのコンストラクタとして呼び出しされる
+
  * inet_family_ops
  * inet6_family_ops
  * unix_family_ops
@@ -40,10 +55,19 @@
    * inet_stream_ops
    * inet_dgram_ops
    * inet_sockraw_ops
+ * PF_INET6
+   * inet6_stream_ops
+   * inet6_dgram_ops
+   * inet6_sockraw_ops
  * PF_UNIX
    * unix_stream_ops (SOCK_STREAM)
    * unix_dgram_ops  (SOCK_DGRAM)
    * unix_seqpacket_ops (SOCK_SEQPACKET)
+ * PF_NETLINK
+   * netlink_ops
+ * PF_PACKET
+   * packet_ops
+   * packet_ops_spkt
 
 #### struct proto
 
