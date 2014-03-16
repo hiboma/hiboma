@@ -28,27 +28,27 @@ struct proto_ops
    * inet_dgram_ops
    * inet_sockraw_ops
  * PF_UNIX
-   * unix_stream_ops
-   * unix_dgram_ops
-   * unix_seqpacket_ops
+   * unix_stream_ops (SOCK_STREAM)
+   * unix_dgram_ops  (SOCK_DGRAM)
+   * unix_seqpacket_ops (SOCK_SEQPACKET)
 
- struct proto
-  * udp_prot
-  * udpv6_prot
-  * tcp_prot
-  * tcpv6_prot
-  * unix_proto
-  * packet_proto
-  * netlink_proto
-  * ping_prot
+struct proto
+
+ * udp_prot
+ * udpv6_prot
+ * tcp_prot
+ * tcpv6_prot
+ * unix_proto
+ * packet_proto
+ * netlink_proto
+ * ping_prot
+
+struct inet_protosw で結びつけされる
 
  * IPPROTO_TCP  = tcp_prot  + inet_stream_ops
  * IPPROTO_UDP  = udp_prot  + inet_dgram_ops
  * IPPROTO_ICMP = ping_prot + inet_dgram_ops
  * IPPROTO_IP   = rawprot   + inet_sockraw_ops
- * SOCK_STREAM    = unix_stream_ops
- * SOCK_DGRAM     = unix_dgram_ops
- * SOCK_SEQPACKET = unix_seqpacket_ops
 
 struct inet_protosw
   
