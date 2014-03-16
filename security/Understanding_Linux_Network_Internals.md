@@ -5,8 +5,33 @@
 
  * デバイスごとに queue を持つ
    * ingress queue
-
+   * egress queue
+   * queue はデバイスへのポインタを持つ
 ```c
+// うーん どれだろう
+
+struct netdev_queue {
+/*
+ * read mostly part
+ */
+	struct net_device	*dev;
+	struct Qdisc		*qdisc;
+	unsigned long		state;
+	struct Qdisc		*qdisc_sleeping;
+/*
+ * write mostly part
+ */
+	spinlock_t		_xmit_lock ____cacheline_aligned_in_smp;
+	int			xmit_lock_owner;
+	/*
+	 * please use this field instead of dev->trans_start
+	 */
+	unsigned long		trans_start;
+	unsigned long		tx_bytes;
+	unsigned long		tx_packets;
+	unsigned long		tx_dropped;
+} ____cacheline_aligned_in_smp;
+
 /* This structure contains an instance of an RX queue. */
 struct netdev_rx_queue {
 	struct rps_map *rps_map;
@@ -14,10 +39,13 @@ struct netdev_rx_queue {
 	struct kobject kobj;
 	struct net_device *dev;
 } ____cacheline_aligned_in_smp;
-```   
-   * egress  queue
-   * queue はデバイスへのポインタを持つ
-   * バッファは skb_buffer へのポインタを持つ
+
+struct netdev_tx_queue_extended {
+	struct netdev_queue	*q;
+	struct kobject		kobj;
+};
+```
+  * バッファは sk_buffer へのポインタを持つ
 ```c   
 struct sk_buff {
 	/* These two members must be first. */
@@ -29,7 +57,8 @@ struct sk_buff {
 	struct net_device	*dev;
 ```   
 
- * loopback device は queue (ingress, egress) が無い
+loopback device
+ * queue (ingress, egress) が無い
    * ローカルのメモリ内でのデータ転送なのでキューが無くてもよいのだろう
  * loopback device は失敗しないので、再送時の requeue もいらない
    
