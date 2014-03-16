@@ -572,6 +572,8 @@ EXPORT_SYMBOL(wake_up_process);
   2-3 プロセスが起床したら、プロセスをWAITキューから外す
 ```
 
+sk_receive_queue にデータが来るのを待つ sk_wait_data が下記のパターンで実装している
+
 ```
 1 プロセスをWAITキューに登録（prepare_to_wait関数、またはprepare_to_wait_exclusive関数）
 2 目的の事象が成立しているか調べる

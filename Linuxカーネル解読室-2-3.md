@@ -9,6 +9,12 @@
  * External Interruputs 外部デバイスの割り込み
    * ネットワークカード、端末装置、SCSIホストアダプタ
  * IPI = Inter Processor Interrupts プロセッサ間割り込み
+   * smp_send_reschedule
+     * 再スケジューリング要求を出すために他のCPUに割り込みをかける
+     * send_IPI_mask でIPIを出す -> reschedule_interrupt で受け取る
+   * invalidate_interrupt
+     * TLB の破棄?
+   * call_function_interrupt
  * タイマー割り込み
    * ローカルタイマー
      * APIC ? 
