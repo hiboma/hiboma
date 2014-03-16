@@ -20,3 +20,17 @@
     transport layer
 +-------------------+
 ```
+
+struct inet_protos
+
+ * inet_stream_ops
+ * inet_dgram_ops
+ * inet_sockraw_ops
+
+struct proto
+
+ * udp_prot, udpv6_prot
+ * tcp_prot, tcpv6_prot
+ * unix_proto
+ * packet_proto
+ * netlink_proto
