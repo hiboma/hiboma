@@ -190,10 +190,12 @@ entry_64.S:ENTRY(ignore_sysret)
 
 ![](http://sourceforge.jp/projects/linux-kernel-docs/wiki/2.3%E3%80%80ハードウェア割り込み処理/attach/fig2-2.png)
 
-#### 受信処理
+### 受信処理
 
- 1. socket に read, recv, recvfrom, recvmsg を呼び TASK_INTERRUPTIBLE で待つ
-   * TCP (tcp_proto + inet_stream_ops ) recvfrom の場合のスタック
+#### 1. socket に read, recv, recvfrom, recvmsg を呼び TASK_INTERRUPTIBLE で待つ
+
+PF_INET + TCP (tcp_proto + inet_stream_ops ) recvfrom の場合のスタック
+
 ```   
 recv_from
 sock_recvmsg
@@ -234,13 +236,75 @@ int sk_wait_data(struct sock *sk, long *timeo)
 }
 EXPORT_SYMBOL(sk_wait_data);
 ```
- 2. ハードウェアの動作なので分からん
- 3. interrupt -> common_interrupt-> do_IRQ
- 4. __netif_rx_schedule -> __raise_softirq_irqoff(NET_RX_SOFTIRQ)
- 5. net_rx_action
-   * softirq ハンドラが起動するタイミングが分からない
-   * process_backlog -> __skb_dequeue -> __netif_receive_skb ->  deliver_skb
-     * struct packet_type のハンドラを呼んでプロトコルのハンドラへ委譲
-     * TASK_INTERRUPTIBLE なプロセスを起床させる箇所が分からん
- 6. プロセスが起床してシステムコール呼び出し元に戻る
+
+PF_INET + UDP の場合
+
+ * udp_recvmsg ->__skb_recv_datagram -> wait_for_packet
+
+```c
+/*
+ * Wait for a packet..
+ */
+static int wait_for_packet(struct sock *sk, int *err, long *timeo_p)
+{
+	int error;
+	DEFINE_WAIT_FUNC(wait, receiver_wake_function);
+
+	prepare_to_wait_exclusive(sk->sk_sleep, &wait, TASK_INTERRUPTIBLE);
+
+	/* Socket errors? */
+	error = sock_error(sk);
+	if (error)
+		goto out_err;
+
+	if (!skb_queue_empty(&sk->sk_receive_queue))
+		goto out;
+
+	/* Socket shut down? */
+	if (sk->sk_shutdown & RCV_SHUTDOWN)
+		goto out_noerr;
+
+	/* Sequenced packets can come disconnected.
+	 * If so we report the problem
+	 */
+	error = -ENOTCONN;
+	if (connection_based(sk) &&
+	    !(sk->sk_state == TCP_ESTABLISHED || sk->sk_state == TCP_LISTEN))
+		goto out_err;
+
+	/* handle signals */
+	if (signal_pending(current))
+		goto interrupted;
+
+	error = 0;
+	*timeo_p = schedule_timeout(*timeo_p);
+out:
+	finish_wait(sk->sk_sleep, &wait);
+	return error;
+interrupted:
+	error = sock_intr_errno(*timeo_p);
+out_err:
+	*err = error;
+	goto out;
+out_noerr:
+	*err = 0;
+	error = 1;
+	goto out;
+}
+```
+
+#### 2. ハードウェアの動作なので分からん
+
+#### 3. interrupt -> common_interrupt-> do_IRQ
+
+#### 4. __netif_rx_schedule -> __raise_softirq_irqoff(NET_RX_SOFTIRQ)
+
+#### 5. net_rx_action
+
+ * softirq ハンドラが起動するタイミングが分からない
+ * process_backlog -> __skb_dequeue -> __netif_receive_skb ->  deliver_skb
+   * struct packet_type のハンドラを呼んでプロトコルのハンドラへ委譲
+   * TASK_INTERRUPTIBLE なプロセスを起床させる箇所が分からん
+
+#### 6. プロセスが起床してシステムコール呼び出し元に戻る
  
