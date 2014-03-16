@@ -11,4 +11,13 @@
 +---------+---------+
   AF_* Socket Layer
 +-------------------+
+
+  struct inet_protos  ( IP -> tranport )
+  struct proto        ( AF_INET -> transport )
+  struct inet_protosw ?
+
++-------------------+
+    transport layer
++-------------------+
+
 ```
