@@ -1,3 +1,32 @@
+## IO-APIC-* と XT-PIC-XT
+
+```
+[vagrant@vagrant-centos65 ~]$ cat /proc/interrupts 
+           CPU0       CPU1       CPU2       CPU3
+  0:        170          0          0          0   IO-APIC-edge      timer
+  1:          7          0          0          0   IO-APIC-edge      i8042
+  8:          0          0          0          0   IO-APIC-edge      rtc0
+  9:          0          0          0          0   IO-APIC-fasteoi   acpi
+ 12:        108          0          0          0   IO-APIC-edge      i8042
+ 19:        421          0          0          0   IO-APIC-fasteoi   eth0
+ 20:         50          0          0          0   IO-APIC-fasteoi   vboxguest
+ 21:       1790          0          0          0   IO-APIC-fasteoi   ahci
+```
+
+```
+[vagrant@vagrant-centos65 ~]$ cat /proc/interrupts 
+           CPU0       
+  0:        164    XT-PIC-XT        timer
+  1:          8    XT-PIC-XT        i8042
+  2:          0    XT-PIC-XT        cascade
+  4:          1    XT-PIC-XT      
+  8:          0    XT-PIC-XT        rtc0
+  9:         60    XT-PIC-XT        acpi, vboxguest
+ 10:        252    XT-PIC-XT        virtio0
+ 11:      15208    XT-PIC-XT        ahci
+ 12:        136    XT-PIC-XT        i8042
+```
+
 ## sched_setaffinity にして無限ループ
 
  * ゲストOSでCPUアフィニティをセットしてもホストOSで使われるCPUは固定だった
