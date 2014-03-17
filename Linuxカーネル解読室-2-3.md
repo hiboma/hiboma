@@ -363,7 +363,7 @@ interrupt の時点で割り込みを受けた CPU は決まっている?
 
  * __netif_rx_schedule
  * __raise_softirq_irqoff(NET_RX_SOFTIRQ) で ソフト割り込み
- * napi_schedule も __raise_softirq_irqoff(NET_RX_SOFTIRQ) を呼ぶ
+ * virtnet_poll -> napi_schedule からも __raise_softirq_irqoff(NET_RX_SOFTIRQ) を呼ぶ
 
 VirtualBox は virio-net  
 
