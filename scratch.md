@@ -1,6 +1,6 @@
 ## tmpfs -oremount,size=*M
 
-tmpfs の現使用量よりも size を小さくすることはできない
+tmpfs は remount する際に現使用量(ブロック数, inode数)よりも size を小さくすることはできない
 
 ```
 [vagrant@vagrant-centos65 ~]$ df -h
@@ -9,6 +9,12 @@ tmpfs           100M   53M   48M  53% /dev/shm
 
 [vagrant@vagrant-centos65 ~]$ sudo mount -t tmpfs -oremount,size=10M tmpfs /dev/shm
 mount: /dev/shm not mounted already, or bad option
+```
+
+strace の結果 は mount(2) で EINVAL
+
+```
+[pid  1899] mount("tmpfs", "/dev/shm", 0x7f4227a1d980, MS_MGC_VAL|MS_REMOUNT, "size=10M") = -1 EINVAL (Invalid argument)
 ```
 
 mm/shmem.c で下記の様に実装されている
@@ -44,6 +50,8 @@ out:
 	return error;
 }
 ```
+
+RAMベースのファイルシステムなので、remount の際に勝手に切り詰める訳にはいかんということだろう
 
 ## vagrant sendfile
 
