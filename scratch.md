@@ -1,3 +1,50 @@
+## tmpfs -oremount,size=*M
+
+tmpfs の現使用量よりも size を小さくすることはできない
+
+```
+[vagrant@vagrant-centos65 ~]$ df -h
+Filesystem      Size  Used Avail Use% Mounted on
+tmpfs           100M   53M   48M  53% /dev/shm
+
+[vagrant@vagrant-centos65 ~]$ sudo mount -t tmpfs -oremount,size=10M tmpfs /dev/shm
+mount: /dev/shm not mounted already, or bad option
+```
+
+mm/shmem.c で下記の様に実装されている
+
+```c
+static int shmem_remount_fs(struct super_block *sb, int *flags, char *data)
+	struct shmem_sb_info *sbinfo = SHMEM_SB(sb);
+	struct shmem_sb_info config = *sbinfo;
+	unsigned long inodes;
+	int error = -EINVAL;
+
+    // マウントオプションをパース
+	config.mpol = NULL;
+	if (shmem_parse_options(data, &config, true))
+		return error;
+
+	spin_lock(&sbinfo->stat_lock);
+	inodes = sbinfo->max_inodes - sbinfo->free_inodes;
+
+    // 使用しているブロック数とマウントオプションで指定したブロック数の比較
+    // 左辺が大きければ true かな
+	if (percpu_counter_compare(&sbinfo->used_blocks, config.max_blocks) > 0)
+		goto out;
+
+    // inode数の比較
+	if (config.max_inodes < inodes)
+		goto out;
+
+//....
+
+out:
+	spin_unlock(&sbinfo->stat_lock);
+	return error;
+}
+```
+
 ## vagrant sendfile
 
 期待した通りに動かん
