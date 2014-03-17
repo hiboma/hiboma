@@ -1,6 +1,7 @@
 ## virtioのドライバーAPI で struct virtio_driver を登録
 
   * register_virtio_driver
+    * .driver ( struct device_driver ) を driver_register
   * unregister_virtio_driver
 
 ## virtio_driver の .probe で net_device の初期化
