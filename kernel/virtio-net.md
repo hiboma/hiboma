@@ -58,7 +58,7 @@ virtio は下位のドライバを抽象化している
 ## 下位ドライバで使える機能を virtio_has_feature で取ってvirioの挙動を変える
 
 ```c
-	/* If we can receive ANY GSO packets, we must allocate large ones. */
+	/* If we can receive ANY GSOpackets, we must allocate large ones. */
 	if (virtio_has_feature(vdev, VIRTIO_NET_F_GUEST_TSO4)
 	    || virtio_has_feature(vdev, VIRTIO_NET_F_GUEST_TSO6)
 	    || virtio_has_feature(vdev, VIRTIO_NET_F_GUEST_ECN))
@@ -81,12 +81,13 @@ NAPI に polling のメソッドを追加
 	netif_napi_add(dev, &vi->napi, virtnet_poll, napi_weight);
 ````    
 
-
  * virtnet_poll
- * -> receive_buf (パケットマージしたりとか)
- * -> netif_receive_skb
-   * -> enqueue_to_backlog
-   * -> __netif_receive_skb
+   * -> receive_buf (パケットマージしたりとか)
+     * -> netif_receive_skb
+       * -> enqueue_to_backlog
+       * -> __netif_receive_skb
+   * receive_buf でバッファにパケット溜めといてから softirq を出す
+   * __napi_schedule -> ____napi_schedule -> __raise_softirq_irqoff(NET_RX_SOFTIRQ)
 ```c
 /**
  *	netif_receive_skb - process receive buffer from network
