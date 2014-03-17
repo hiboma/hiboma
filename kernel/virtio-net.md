@@ -1,4 +1,3 @@
-
 ## virtioのドライバーAPI で struct virtio_driver を登録
 
   * register_virtio_driver
@@ -38,6 +37,18 @@ static const struct net_device_ops virtnet_netdev = {
 };
 ```
 
+## net_device の 登録は register_dev
+
+```c
+	err = register_netdev(dev);
+	if (err) {
+		pr_debug("virtio_net: registering device failed\n");
+		goto free_vqs;
+	}
+```
+
+## virtio と virtio-net
+
 virtio は下位のドライバを抽象化している
 
  * IRQ は取り扱わない
@@ -69,22 +80,12 @@ NAPI に polling のメソッドを追加
 	netif_napi_add(dev, &vi->napi, virtnet_poll, napi_weight);
 ````    
 
-net_device の 登録は register_dev
-
-```c
-	err = register_netdev(dev);
-	if (err) {
-		pr_debug("virtio_net: registering device failed\n");
-		goto free_vqs;
-	}
-```    
 
  * virtnet_poll
  * -> receive_buf (パケットマージしたりとか)
  * -> netif_receive_skb
    * -> enqueue_to_backlog
    * -> __netif_receive_skb
-
 ```c
 /**
  *	netif_receive_skb - process receive buffer from network
