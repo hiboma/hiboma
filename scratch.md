@@ -1,3 +1,43 @@
+## sched_setaffinity にして無限ループ
+
+ * ゲストOSでCPUアフィニティをセットしてもホストOSで使われるCPUは固定だった
+ * ただのプロセスだしね
+
+```c
+#if 0
+#!/bin/bash
+CFLAGS="-O2 -std=gnu99 -W -Wall -fPIE -D_FORTIFY_SOURCE=2"
+o=`basename $0`
+o=".${o%.*}"
+gcc ${CFLAGS} -o $o $0 && ./$o $*; exit
+#endif
+
+#define _GNU_SOURCE
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sched.h>
+
+int main(int argc, char *argv[])
+{
+	int cpu = 0;
+	cpu_set_t set;
+
+	if (argc == 2)
+		cpu = atoi(argv[1]);
+
+	CPU_SET(cpu, &set);
+	if(sched_setaffinity(getpid(), sizeof(cpu_set_t), &set) < 0) {
+		perror("sched_setaffinity");
+		exit(EXIT_FAILURE);
+	}
+
+	printf("sched_setaffinity %d\n", cpu);
+	for(;;) { }
+
+	exit(0);
+```
+
 ## tmpfs -oremount,size=*M
 
 tmpfs は remount する際に現使用量(ブロック数, inode数)よりも size を小さくすることはできない
