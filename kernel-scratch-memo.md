@@ -1,4 +1,4 @@
-
+ * http://opensuse-man-ja.berlios.de/opensuse-html/cha.tuning.oprofile.html
  * unlock -> schedule -> lock の構造
 ```c
 	spin_unlock(&q->lock);
