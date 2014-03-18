@@ -79,11 +79,14 @@ drivers/scsi/constants.c にエラーコードとメッセージが書いてあ�
        {0x1104, "Unrecovered read error - auto reallocate failed"},
 ```
 
+これが意味するのは下記のフォーラムあたりで確認
+
  * https://www.centos.org/forums/viewtopic.php?t=7577
+ * http://serverfault.com/questions/407007/what-do-these-disk-errors-in-syslog-mean
 
 > Means it found a sector that was bad and went to try to get a different one from its pool of spares and found that the pool was all used up. That shows that the drive is dying and has already used up its entire spare area. Best RMA it.
 
-不良セクタが見つかったが 予備セクタ? を使い切ってるので 再配置できかった
+不良セクタが見つかったが 予備セクタ? を使い切ってるので再配置できかったとか何とか
 
 ## Remounting filesystem read-only を出しているコード
 
