@@ -1,3 +1,16 @@
+## TODO
+
+ * /proc/sys/vm/dirty_background_ratio
+ * /proc/sys/vm/dirty_ratio
+
+どこで参照されてんの?
+
+ * int allow_signal(int sig)
+   * kernel thread にシグナル飛ばせる refs http://kernelnewbies.org/Simple_UDP_Server
+   * signal_pending(current)
+ * daemonize
+ * debugfs
+
 ## IO-APIC-* と XT-PIC-XT
 
 ```
@@ -164,18 +177,6 @@ ssize_t sf_reg_splice_read(struct file *in, loff_t *ppos,
 ```
  35 #define CURRENT_STACK_FRAME     __builtin_frame_address (0)
 ```
-
-## TODO
-
- * /proc/sys/vm/dirty_background_ratio
- * /proc/sys/vm/dirty_ratio
-
-どこで参照されてんの?
-
- * int allow_signal(int sig)
-   * kernel thread にシグナル飛ばせる refs http://kernelnewbies.org/Simple_UDP_Server
-   * signal_pending(current)
- * daemonize
 
 ## rsync の io timeout
 
