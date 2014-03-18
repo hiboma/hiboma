@@ -49,20 +49,8 @@ If Selective self-test is pending on power-up, resume after 0 minute delay.
 
 ## /var/log/messages
 
-``` 
- Mar 18 13:27:44 ***** kernel: ata6.00: exception Emask 0x0 SAct 0x3f SErr 0x0 action 0x0
-Mar 18 13:27:44 ***** kernel: ata6.00: irq_stat 0x40000008
-Mar 18 13:27:44 ***** kernel: ata6.00: cmd 60/08:00:d7:01:64/00:00:11:00:00/40 tag 0 ncq 4096 in
-Mar 18 13:27:44 ***** kernel:          res 41/40:00:da:01:64/00:00:11:00:00/40 Emask 0x409 (media error) <F>
-Mar 18 13:27:44 ***** kernel: ata6.00: status: { DRDY ERR }
-Mar 18 13:27:44 ***** kernel: ata6.00: error: { UNC }
-Mar 18 13:27:44 ***** kernel: ata6.00: configured for UDMA/133
-Mar 18 13:27:44 ***** kernel: ata6: EH complete
-Mar 18 13:27:44 ***** kernel: SCSI device sdf: 1953525168 512-byte hdwr sectors (1000205 MB)
-Mar 18 13:27:44 ***** kernel: sdf: Write Protect is off
-Mar 18 13:27:44 ***** kernel: SCSI device sdf: drive cache: write back
-
-...
+```
+# read-only になってない。journal 無しだから?
 
 Mar 18 14:01:31 ***** kernel: ata6.00: exception Emask 0x0 SAct 0x7 SErr 0x0 action 0x0
 Mar 18 14:01:31 ***** kernel: ata6.00: irq_stat 0x40000008
@@ -87,7 +75,7 @@ Mar 18 14:01:31 ***** kernel: SCSI device sdf: drive cache: write back
 Mar 18 14:01:31 ***** kernel: unable to read inode block - inode=384516154, block=769032195
 Mar 18 14:01:31 ***** kernel: EXT3-fs error (device dm-0): ext3_get_inode_loc: unable to read inode block - inode=384516130, block=769032195
 
-...
+# ext3_abort で read-only になった。 ジャナール有りだから?
 
 Mar 18 14:34:59 ***** kernel: ata6.00: cmd 60/08:00:d7:01:64/00:00:11:00:00/40 tag 0 ncq 4096 in
 Mar 18 14:34:59 ***** kernel:          res 41/40:00:da:01:64/00:00:11:00:00/40 Emask 0x409 (media error) <F>
@@ -104,47 +92,15 @@ Mar 18 14:34:59 ***** kernel: Descriptor sense data with sense descriptors (in h
 Mar 18 14:34:59 ***** kernel:         72 03 11 04 00 00 00 0c 00 0a 80 00 00 00 00 00 
 Mar 18 14:34:59 ***** kernel:         11 64 01 da 
 Mar 18 14:34:59 ***** kernel: ata6: EH complete
-
-Mar 18 14:34:59 ***** kernel: EXT3-fs error (device dm-0): ext3_get_inode_loc: <2>EXT3-fs error (device dm-0): ext3_get_inode_loc: unable to read inode block - inode=384516154, block=769032195
+Mar 18 14:34:59 ***** kernel: EXT3-fs error (device dm-0): ext3_get_inode_loc: unable to read inode block - inode=384516154, block=769032195
 Mar 18 14:34:59 ***** kernel: Aborting journal on device dm-0.
 Mar 18 14:34:59 ***** kernel: unable to read inode block - inode=384516130, block=769032195
-
 Mar 18 14:34:59 ***** kernel: SCSI device sdf: 1953525168 512-byte hdwr sectors (1000205 MB)
 Mar 18 14:34:59 ***** kernel: sdf: Write Protect is off
 Mar 18 14:34:59 ***** kernel: SCSI device sdf: drive cache: write back
 Mar 18 14:34:59 ***** kernel: ext3_abort called.
 Mar 18 14:34:59 ***** kernel: EXT3-fs error (device dm-0): ext3_journal_start_sb: Detected aborted journal
 Mar 18 14:34:59 ***** kernel: Remounting filesystem read-only
-```
-
-## Aborting journal on device dm-0.
-
-__journal_abort_hard の中で printk されるメッセージ
-
-```c
-/*
- * Quick version for internal journal use (doesn't lock the journal).
- * Aborts hard --- we mark the abort as occurred, but do _nothing_ else,
- * and don't attempt to make any other journal updates.
- */
-void __journal_abort_hard(journal_t *journal)
-{
-        transaction_t *transaction;
-        char b[BDEVNAME_SIZE];
-
-        if (journal->j_flags & JFS_ABORT)
-                return;
-
-        printk(KERN_ERR "Aborting journal on device %s.\n",
-                journal_dev_name(journal, b)); 
-
-        spin_lock(&journal->j_state_lock);
-        journal->j_flags |= JFS_ABORT;
-        transaction = journal->j_running_transaction;
-        if (transaction)
-                __log_start_commit(journal, transaction->t_tid);
-        spin_unlock(&journal->j_state_lock);
-}
 ```
 
 ## kernel: sdf: Current [descriptor]: sense key: Medium Error
@@ -176,105 +132,33 @@ drivers/scsi/constants.c にエラーコードとメッセージが書いてあ�
 
 不良セクタが見つかったが 予備セクタ? を使い切ってるので再配置できかったとか何とか
 
-## Remounting filesystem read-only を出しているコード
+## Aborting journal on device dm-0.
 
-エラーログから解析していく
-
-```
-Mar 18 14:34:59 ***** kernel: Remounting filesystem read-only
-```
-
-ext3_abort の中で printk されて出力されているメッセージ
-
- * ext3_error より強い
- * ログ操作してて journal IO エラー、ENOMEM などリカバリ不可能な場合に呼び出される
- * ファイるシステムを強制的に READONLY にする
-   * ERRORS_PANIC をたててると panic() する
-
-ext3_abort が呼ばれないと READONLY にならんと見ていいのかな
+__journal_abort_hard の中で printk されるメッセージ
 
 ```c
 /*
- * ext3_abort is a much stronger failure handler than ext3_error.  The
- * abort function may be used to deal with unrecoverable failures such
- * as journal IO errors or ENOMEM at a critical moment in log management.
- *
- * We unconditionally force the filesystem into an ABORT|READONLY state,
- * unless the error response on the fs has been set to panic in which
- * case we take the easy way out and panic immediately.
+ * Quick version for internal journal use (doesn't lock the journal).
+ * Aborts hard --- we mark the abort as occurred, but do _nothing_ else,
+ * and don't attempt to make any other journal updates.
  */
-
-void ext3_abort (struct super_block * sb, const char * function,
-		 const char * fmt, ...)
+void __journal_abort_hard(journal_t *journal)
 {
-	va_list args;
+        transaction_t *transaction;
+        char b[BDEVNAME_SIZE];
 
-	printk (KERN_CRIT "ext3_abort called.\n");
+        if (journal->j_flags & JFS_ABORT)
+                return;
 
-	va_start(args, fmt);
-	printk(KERN_CRIT "EXT3-fs error (device %s): %s: ",sb->s_id, function);
-	vprintk(fmt, args);
-	printk("\n");
-	va_end(args);
+        printk(KERN_ERR "Aborting journal on device %s.\n",
+                journal_dev_name(journal, b)); 
 
-    // ERRORS_PANIC がたっていると panic() して終わり
-	if (test_opt(sb, ERRORS_PANIC))
-		panic("EXT3-fs panic from previous error\n");
-
-    // 既に MS_RDONLY なら何もしない
-	if (sb->s_flags & MS_RDONLY)
-		return;
-
-    // EXT3_ERROR_FS フラグと MS_RDONLY を立てる
-	printk(KERN_CRIT "Remounting filesystem read-only\n");
-	EXT3_SB(sb)->s_mount_state |= EXT3_ERROR_FS;
-	sb->s_flags |= MS_RDONLY;
-	EXT3_SB(sb)->s_mount_opt |= EXT3_MOUNT_ABORT;
-	journal_abort(EXT3_SB(sb)->s_journal, -EIO);
-}
-```
-
-ext3_abort は ext3_journal_start_sb で呼び出されいる
-
- * ジャーナルが EIO などでコケてたら ext3_abort を呼んで Readonly にしてしまう
-   * journal_t .j_flags で JFS_ABORT の有無で ジャーナルの成否を見ている
-   * ジャーナルがコケた時点でそれ以降の書き込みを正しく保証出来ないから ???
-
-```c
-/*
- * Wrappers for journal_start/end.
- *
- * The only special thing we need to do here is to make sure that all
- * journal_end calls result in the superblock being marked dirty, so
- * that sync() will call the filesystem's write_super callback if
- * appropriate.
- */
-handle_t *ext3_journal_start_sb(struct super_block *sb, int nblocks)
-{
-	journal_t *journal;
-
-    // EROFS = Readonly Filesystem
-    // superblock のフラグの有無でエラーを返される
-	if (sb->s_flags & MS_RDONLY)
-		return ERR_PTR(-EROFS);
-
-	/* Special case here: if the journal has aborted behind our
-	 * backs (eg. EIO in the commit thread), then we still need to
-	 * take the FS itself readonly cleanly. */
-
-     // "裏でこっそりコミットスレッドが EIO を返していた場合
-     // ファイルシステムを readonly にする必要がある"
-	journal = EXT3_SB(sb)->s_journal;
-
-    // journal->j_flags & JFS_ABORT で判定している
-    // jdb, jdb2 どっちか分からん
-	if (is_journal_aborted(journal)) {
-		ext3_abort(sb, __func__,
-			   "Detected aborted journal");
-		return ERR_PTR(-EROFS);
-	}
-
-	return journal_start(journal, nblocks);
+        spin_lock(&journal->j_state_lock);
+        journal->j_flags |= JFS_ABORT;
+        transaction = journal->j_running_transaction;
+        if (transaction)
+                __log_start_commit(journal, transaction->t_tid);
+        spin_unlock(&journal->j_state_lock);
 }
 ```
 
@@ -440,3 +324,104 @@ has_buffer:
 	return 0;
 }
 ```
+
+## kernel: Remounting filesystem read-only
+
+```
+Mar 18 14:34:59 ***** kernel: Remounting filesystem read-only
+```
+
+ext3_abort の中で printk されて出力されているメッセージ
+
+ * ext3_error より強い
+ * ログ操作してて journal IO エラー、ENOMEM などリカバリ不可能な場合に呼び出される
+ * ファイるシステムを強制的に READONLY にする
+   * ERRORS_PANIC をたててると panic() する
+
+ext3_abort が呼ばれないと READONLY にならんと見ていいのかな
+
+```c
+/*
+ * ext3_abort is a much stronger failure handler than ext3_error.  The
+ * abort function may be used to deal with unrecoverable failures such
+ * as journal IO errors or ENOMEM at a critical moment in log management.
+ *
+ * We unconditionally force the filesystem into an ABORT|READONLY state,
+ * unless the error response on the fs has been set to panic in which
+ * case we take the easy way out and panic immediately.
+ */
+
+void ext3_abort (struct super_block * sb, const char * function,
+		 const char * fmt, ...)
+{
+	va_list args;
+
+	printk (KERN_CRIT "ext3_abort called.\n");
+
+	va_start(args, fmt);
+	printk(KERN_CRIT "EXT3-fs error (device %s): %s: ",sb->s_id, function);
+	vprintk(fmt, args);
+	printk("\n");
+	va_end(args);
+
+    // ERRORS_PANIC がたっていると panic() して終わり
+	if (test_opt(sb, ERRORS_PANIC))
+		panic("EXT3-fs panic from previous error\n");
+
+    // 既に MS_RDONLY なら何もしない
+	if (sb->s_flags & MS_RDONLY)
+		return;
+
+    // EXT3_ERROR_FS フラグと MS_RDONLY を立てる
+	printk(KERN_CRIT "Remounting filesystem read-only\n");
+	EXT3_SB(sb)->s_mount_state |= EXT3_ERROR_FS;
+	sb->s_flags |= MS_RDONLY;
+	EXT3_SB(sb)->s_mount_opt |= EXT3_MOUNT_ABORT;
+	journal_abort(EXT3_SB(sb)->s_journal, -EIO);
+}
+```
+
+ext3_abort は ext3_journal_start_sb で呼び出されいる
+
+ * ジャーナルが EIO などでコケてたら ext3_abort を呼んで Readonly にしてしまう
+   * journal_t .j_flags で JFS_ABORT の有無で ジャーナルの成否を見ている
+   * ジャーナルがコケた時点でそれ以降の書き込みを正しく保証出来ないから ???
+
+```c
+/*
+ * Wrappers for journal_start/end.
+ *
+ * The only special thing we need to do here is to make sure that all
+ * journal_end calls result in the superblock being marked dirty, so
+ * that sync() will call the filesystem's write_super callback if
+ * appropriate.
+ */
+handle_t *ext3_journal_start_sb(struct super_block *sb, int nblocks)
+{
+	journal_t *journal;
+
+    // EROFS = Readonly Filesystem
+    // superblock のフラグの有無でエラーを返される
+	if (sb->s_flags & MS_RDONLY)
+		return ERR_PTR(-EROFS);
+
+	/* Special case here: if the journal has aborted behind our
+	 * backs (eg. EIO in the commit thread), then we still need to
+	 * take the FS itself readonly cleanly. */
+
+     // "裏でこっそりコミットスレッドが EIO を返していた場合
+     // ファイルシステムを readonly にする必要がある"
+	journal = EXT3_SB(sb)->s_journal;
+
+    // journal->j_flags & JFS_ABORT で判定している
+    // jdb, jdb2 どっちか分からん
+	if (is_journal_aborted(journal)) {
+		ext3_abort(sb, __func__,
+			   "Detected aborted journal");
+		return ERR_PTR(-EROFS);
+	}
+
+	return journal_start(journal, nblocks);
+}
+```
+
