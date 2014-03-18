@@ -124,6 +124,10 @@ void ext3_abort (struct super_block * sb, const char * function,
 
 ext3_abort は ext3_journal_start_sb で呼び出されいる
 
+ * ジャーナルが EIO などでコケてたら ext3_abort を呼んで Readonly にしてしまう
+   * journal_t .j_flags で JFS_ABORT の有無で ジャーナルの成否を見ている
+   * ジャーナルがコケた時点でそれ以降の書き込みを正しく保証出来ないから ???
+
 ```c
 /*
  * Wrappers for journal_start/end.
@@ -159,5 +163,156 @@ handle_t *ext3_journal_start_sb(struct super_block *sb, int nblocks)
 	}
 
 	return journal_start(journal, nblocks);
+}
+```
+
+## EXT3-fs error (device dm-0): ext3_get_inode_loc ...
+
+```
+Mar 18 14:34:59 ***** kernel: EXT3-fs error (device dm-0): ext3_get_inode_loc: <2>EXT3-fs error (device dm-0): ext3_get_inode_loc: unable to read inode block - inode=384516154, block=769032195
+Mar 18 14:34:59 ***** kernel: Aborting journal on device dm-0.
+Mar 18 14:34:59 ***** kernel: unable to read inode block - inode=384516130, block=769032195
+```
+
+ext3_get_inode_loc のコード
+
+```c
+int ext3_get_inode_loc(struct inode *inode, struct ext3_iloc *iloc)
+{
+	/* We have all inode data except xattrs in memory here. */
+	return __ext3_get_inode_loc(inode, iloc,
+		!(EXT3_I(inode)->i_state & EXT3_STATE_XATTR));
+}
+```
+
+__ext3_get_inode_loc
+
+ * ext3_get_inode_loc ... を printk するのは 2カ所
+   * sb_getblk の後
+   * wait_on_buffer の後
+
+```c
+/*
+ * ext3_get_inode_loc returns with an extra refcount against the inode's
+ * underlying buffer_head on success. If 'in_mem' is true, we have all
+ * data in memory that is needed to recreate the on-disk version of this
+ * inode.
+ */
+static int __ext3_get_inode_loc(struct inode *inode,
+				struct ext3_iloc *iloc, int in_mem)
+{
+	ext3_fsblk_t block;
+	struct buffer_head *bh;
+
+	block = ext3_get_inode_block(inode->i_sb, inode->i_ino, iloc);
+	if (!block)
+		return -EIO;
+
+	bh = sb_getblk(inode->i_sb, block);
+	if (!bh) {
+		ext3_error (inode->i_sb, "ext3_get_inode_loc",
+				"unable to read inode block - "
+				"inode=%lu, block="E3FSBLK,
+				 inode->i_ino, block);
+		return -EIO;
+	}
+	if (!buffer_uptodate(bh)) {
+		lock_buffer(bh);
+
+		/*
+		 * If the buffer has the write error flag, we have failed
+		 * to write out another inode in the same block.  In this
+		 * case, we don't have to read the block because we may
+		 * read the old inode data successfully.
+		 */
+		if (buffer_write_io_error(bh) && !buffer_uptodate(bh))
+			set_buffer_uptodate(bh);
+
+		if (buffer_uptodate(bh)) {
+			/* someone brought it uptodate while we waited */
+			unlock_buffer(bh);
+			goto has_buffer;
+		}
+
+		/*
+		 * If we have all information of the inode in memory and this
+		 * is the only valid inode in the block, we need not read the
+		 * block.
+		 */
+		if (in_mem) {
+			struct buffer_head *bitmap_bh;
+			struct ext3_group_desc *desc;
+			int inodes_per_buffer;
+			int inode_offset, i;
+			int block_group;
+			int start;
+
+			block_group = (inode->i_ino - 1) /
+					EXT3_INODES_PER_GROUP(inode->i_sb);
+			inodes_per_buffer = bh->b_size /
+				EXT3_INODE_SIZE(inode->i_sb);
+			inode_offset = ((inode->i_ino - 1) %
+					EXT3_INODES_PER_GROUP(inode->i_sb));
+			start = inode_offset & ~(inodes_per_buffer - 1);
+
+			/* Is the inode bitmap in cache? */
+			desc = ext3_get_group_desc(inode->i_sb,
+						block_group, NULL);
+			if (!desc)
+				goto make_io;
+
+			bitmap_bh = sb_getblk(inode->i_sb,
+					le32_to_cpu(desc->bg_inode_bitmap));
+			if (!bitmap_bh)
+				goto make_io;
+
+			/*
+			 * If the inode bitmap isn't in cache then the
+			 * optimisation may end up performing two reads instead
+			 * of one, so skip it.
+			 */
+			if (!buffer_uptodate(bitmap_bh)) {
+				brelse(bitmap_bh);
+				goto make_io;
+			}
+			for (i = start; i < start + inodes_per_buffer; i++) {
+				if (i == inode_offset)
+					continue;
+				if (ext3_test_bit(i, bitmap_bh->b_data))
+					break;
+			}
+			brelse(bitmap_bh);
+			if (i == start + inodes_per_buffer) {
+				/* all other inodes are free, so skip I/O */
+				memset(bh->b_data, 0, bh->b_size);
+				set_buffer_uptodate(bh);
+				unlock_buffer(bh);
+				goto has_buffer;
+			}
+		}
+
+make_io:
+		/*
+		 * There are other valid inodes in the buffer, this inode
+		 * has in-inode xattrs, or we don't have this inode in memory.
+		 * Read the block from disk.
+		 */
+		trace_ext3_load_inode(inode);
+		get_bh(bh);
+		bh->b_end_io = end_buffer_read_sync;
+		submit_bh(READ_META, bh);
+		wait_on_buffer(bh);
+		if (!buffer_uptodate(bh)) {
+			ext3_error(inode->i_sb, "ext3_get_inode_loc",
+					"unable to read inode block - "
+					"inode=%lu, block="E3FSBLK,
+					inode->i_ino, block);
+			brelse(bh);
+			return -EIO;
+		}
+	}
+has_buffer:
+	iloc->bh = bh;
+	return 0;
 }
 ```
