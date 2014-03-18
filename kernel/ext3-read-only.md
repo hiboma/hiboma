@@ -73,6 +73,11 @@ Mar 18 14:34:59 ***** kernel: sdf: Current [descriptor]: sense key: Medium Error
 Mar 18 14:34:59 ***** kernel:     Add. Sense: Unrecovered read error - auto reallocate failed
 ```
 
+drivers/scsi/constants.c にエラーコードとメッセージが書いてある
+
+```c
+       {0x1104, "Unrecovered read error - auto reallocate failed"},
+```
 
 ## Remounting filesystem read-only を出しているコード
 
