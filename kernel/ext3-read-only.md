@@ -47,6 +47,8 @@ Selective self-test flags (0x0):
 If Selective self-test is pending on power-up, resume after 0 minute delay.
 ```
 
+## /var/log/messages
+
 ``` 
  Mar 18 13:27:44 ***** kernel: ata6.00: exception Emask 0x0 SAct 0x3f SErr 0x0 action 0x0
 Mar 18 13:27:44 ***** kernel: ata6.00: irq_stat 0x40000008
@@ -60,7 +62,7 @@ Mar 18 13:27:44 ***** kernel: SCSI device sdf: 1953525168 512-byte hdwr sectors 
 Mar 18 13:27:44 ***** kernel: sdf: Write Protect is off
 Mar 18 13:27:44 ***** kernel: SCSI device sdf: drive cache: write back
 
-----
+...
 
 Mar 18 14:01:31 ***** kernel: ata6.00: exception Emask 0x0 SAct 0x7 SErr 0x0 action 0x0
 Mar 18 14:01:31 ***** kernel: ata6.00: irq_stat 0x40000008
@@ -85,7 +87,7 @@ Mar 18 14:01:31 ***** kernel: SCSI device sdf: drive cache: write back
 Mar 18 14:01:31 ***** kernel: unable to read inode block - inode=384516154, block=769032195
 Mar 18 14:01:31 ***** kernel: EXT3-fs error (device dm-0): ext3_get_inode_loc: unable to read inode block - inode=384516130, block=769032195
 
-——
+...
 
 Mar 18 14:34:59 ***** kernel: ata6.00: cmd 60/08:00:d7:01:64/00:00:11:00:00/40 tag 0 ncq 4096 in
 Mar 18 14:34:59 ***** kernel:          res 41/40:00:da:01:64/00:00:11:00:00/40 Emask 0x409 (media error) <F>
