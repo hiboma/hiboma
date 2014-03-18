@@ -72,6 +72,8 @@ ext3_abort の中だった
 
  * ext3_error より強い
  * ログ操作してて journal IO エラー、ENOMEM などリカバリ不可能な場合に呼び出される
+ * ファイるシステムを強制的に READONLY にする
+   * ERRORS_PANIC をたててると panic() する
 
 ```c
 /*
@@ -97,16 +99,52 @@ void ext3_abort (struct super_block * sb, const char * function,
 	printk("\n");
 	va_end(args);
 
+    // ERRORS_PANIC がたっていると panic() して終わり
 	if (test_opt(sb, ERRORS_PANIC))
 		panic("EXT3-fs panic from previous error\n");
 
+    // 既に MS_RDONLY なら何もしない
 	if (sb->s_flags & MS_RDONLY)
 		return;
 
+    // EXT3_ERROR_FS フラグと MS_RDONLY を立てる
 	printk(KERN_CRIT "Remounting filesystem read-only\n");
 	EXT3_SB(sb)->s_mount_state |= EXT3_ERROR_FS;
 	sb->s_flags |= MS_RDONLY;
 	EXT3_SB(sb)->s_mount_opt |= EXT3_MOUNT_ABORT;
 	journal_abort(EXT3_SB(sb)->s_journal, -EIO);
+}
+```
+
+ext3_abort は ext3_journal_start_sb で呼び出されいる
+
+```c
+/*
+ * Wrappers for journal_start/end.
+ *
+ * The only special thing we need to do here is to make sure that all
+ * journal_end calls result in the superblock being marked dirty, so
+ * that sync() will call the filesystem's write_super callback if
+ * appropriate.
+ */
+handle_t *ext3_journal_start_sb(struct super_block *sb, int nblocks)
+{
+	journal_t *journal;
+
+    // EROFS = Readonly Filesystem
+	if (sb->s_flags & MS_RDONLY)
+		return ERR_PTR(-EROFS);
+
+	/* Special case here: if the journal has aborted behind our
+	 * backs (eg. EIO in the commit thread), then we still need to
+	 * take the FS itself readonly cleanly. */
+	journal = EXT3_SB(sb)->s_journal;
+	if (is_journal_aborted(journal)) {
+		ext3_abort(sb, __func__,
+			   "Detected aborted journal");
+		return ERR_PTR(-EROFS);
+	}
+
+	return journal_start(journal, nblocks);
 }
 ```
