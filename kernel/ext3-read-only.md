@@ -190,6 +190,7 @@ int ext3_get_inode_loc(struct inode *inode, struct ext3_iloc *iloc)
  * ext3_get_inode_loc ... を printk するのは 2カ所
    * sb_getblk の後
    * wait_on_buffer の後
+   * inode の番号は VFS inode 番号そのまま
 
 ```c
 /*
@@ -304,7 +305,11 @@ make_io:
 		trace_ext3_load_inode(inode);
 		get_bh(bh);
 		bh->b_end_io = end_buffer_read_sync;
+
+        // IO 発行
 		submit_bh(READ_META, bh);
+
+        // TASK_UNINTERRUPTIBLE
 		wait_on_buffer(bh);
 
         // ここ --------------------------------------------------------        
