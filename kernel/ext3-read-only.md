@@ -174,7 +174,7 @@ Mar 18 14:34:59 ***** kernel: Aborting journal on device dm-0.
 Mar 18 14:34:59 ***** kernel: unable to read inode block - inode=384516130, block=769032195
 ```
 
-ext3_get_inode_loc のコード
+ext3_get_inode_loc のコード。 __ext3_get_inode_loc のラッパー
 
 ```c
 int ext3_get_inode_loc(struct inode *inode, struct ext3_iloc *iloc)
@@ -185,7 +185,7 @@ int ext3_get_inode_loc(struct inode *inode, struct ext3_iloc *iloc)
 }
 ```
 
-__ext3_get_inode_loc
+ __ext3_get_inode_loc のコード
 
  * ext3_get_inode_loc ... を printk するのは 2カ所
    * sb_getblk の後
