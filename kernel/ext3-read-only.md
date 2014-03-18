@@ -1,5 +1,52 @@
 ## とある Remounting filesystem read-only のログ
 
+smartctl -a /dev/sd*
+
+```
+SMART Attributes Data Structure revision number: 16
+Vendor Specific SMART Attributes with Thresholds:
+ID# ATTRIBUTE_NAME          FLAG     VALUE WORST THRESH TYPE      UPDATED  WHEN_FAILED RAW_VALUE
+  1 Raw_Read_Error_Rate     0x002f   200   200   051    Pre-fail  Always       -       278
+  3 Spin_Up_Time            0x0027   229   224   021    Pre-fail  Always       -       8550
+  4 Start_Stop_Count        0x0032   100   100   000    Old_age   Always       -       24
+  5 Reallocated_Sector_Ct   0x0033   200   200   140    Pre-fail  Always       -       0
+  7 Seek_Error_Rate         0x002e   200   200   000    Old_age   Always       -       0
+  9 Power_On_Hours          0x0032   047   047   000    Old_age   Always       -       39173
+ 10 Spin_Retry_Count        0x0032   100   253   000    Old_age   Always       -       0
+ 11 Calibration_Retry_Count 0x0032   100   253   000    Old_age   Always       -       0
+ 12 Power_Cycle_Count       0x0032   100   100   000    Old_age   Always       -       22
+192 Power-Off_Retract_Count 0x0032   200   200   000    Old_age   Always       -       15
+193 Load_Cycle_Count        0x0032   200   200   000    Old_age   Always       -       24
+194 Temperature_Celsius     0x0022   126   112   000    Old_age   Always       -       24
+196 Reallocated_Event_Count 0x0032   200   200   000    Old_age   Always       -       0
+197 Current_Pending_Sector  0x0032   200   200   000    Old_age   Always       -       9
+198 Offline_Uncorrectable   0x0030   200   200   000    Old_age   Offline      -       0
+199 UDMA_CRC_Error_Count    0x0032   200   200   000    Old_age   Always       -       0
+200 Multi_Zone_Error_Rate   0x0008   200   200   000    Old_age   Offline      -       0
+
+SMART Error Log Version: 1
+No Errors Logged
+
+SMART Self-test log structure revision number 1
+Num  Test_Description    Status                  Remaining  LifeTime(hours)  LBA_of_first_error
+# 1  Short offline       Completed: read failure       90%     39166         291766746
+# 2  Short offline       Completed: read failure       90%     11961         182190570
+# 3  Short offline       Completed: read failure       90%     11951         182190570
+# 4  Short offline       Completed: read failure       90%     11329         182190570
+# 5  Short offline       Completed: read failure       90%     11329         182190570
+
+SMART Selective self-test log data structure revision number 1
+ SPAN  MIN_LBA  MAX_LBA  CURRENT_TEST_STATUS
+    1        0        0  Not_testing
+    2        0        0  Not_testing
+    3        0        0  Not_testing
+    4        0        0  Not_testing
+    5        0        0  Not_testing
+Selective self-test flags (0x0):
+  After scanning selected spans, do NOT read-scan remainder of disk.
+If Selective self-test is pending on power-up, resume after 0 minute delay.
+```
+
 ``` 
  Mar 18 13:27:44 ***** kernel: ata6.00: exception Emask 0x0 SAct 0x3f SErr 0x0 action 0x0
 Mar 18 13:27:44 ***** kernel: ata6.00: irq_stat 0x40000008
@@ -66,18 +113,25 @@ Mar 18 14:34:59 ***** kernel: EXT3-fs error (device dm-0): ext3_journal_start_sb
 Mar 18 14:34:59 ***** kernel: Remounting filesystem read-only
 ```
 
-## Add. Sense: Unrecovered read error - auto reallocate failed
+## Mar 18 14:34:59 ***** kernel: sdf: Current [descriptor]: sense key: Medium Error
 
 ```
-Mar 18 14:34:59 ***** kernel: sdf: Current [descriptor]: sense key: Medium Error
 Mar 18 14:34:59 ***** kernel:     Add. Sense: Unrecovered read error - auto reallocate failed
 ```
 
-drivers/scsi/constants.c にエラーコードとメッセージが書いてある
+sense key でググると見つかる
+
+ * http://ossmpedia.org/messages/linux/2.6.9-34.EL/14123.ja
+
+> メディアエラーの場合は、”Medium Error”、ボリュームオーバフローの場合は、”Volume Overflow”が表示される。 メディアエラーが発生している場合は、メディアの交換やSCSIデバイスのクリーニングなどを行う。一方、ボリュームオーバフローの場合は、ハードウェアの故障やデバイスドライバの不良が考えられるため、ハードウェアの交換やパッチの適用を行う。その他該当デバイスのトラブルシューティングに従って対処を行う。
+
+## Add. Sense: Unrecovered read error - auto reallocate failed
 
 ```c
        {0x1104, "Unrecovered read error - auto reallocate failed"},
 ```
+
+drivers/scsi/constants.c にエラーコードとメッセージが書いてある
 
 これが意味するのは下記のフォーラムあたりで確認
 
