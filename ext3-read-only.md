@@ -68,7 +68,13 @@ Mar 18 14:34:59 ***** kernel: Remounting filesystem read-only
 
 ## Remounting filesystem read-only を出しているコード
 
-ext3_abort の中だった
+エラーログから解析していく
+
+```
+Mar 18 14:34:59 ***** kernel: Remounting filesystem read-only
+```
+
+ext3_abort の中で printk されて出力されているメッセージ
 
  * ext3_error より強い
  * ログ操作してて journal IO エラー、ENOMEM などリカバリ不可能な場合に呼び出される
@@ -132,13 +138,20 @@ handle_t *ext3_journal_start_sb(struct super_block *sb, int nblocks)
 	journal_t *journal;
 
     // EROFS = Readonly Filesystem
+    // superblock のフラグの有無でエラーを返される
 	if (sb->s_flags & MS_RDONLY)
 		return ERR_PTR(-EROFS);
 
 	/* Special case here: if the journal has aborted behind our
 	 * backs (eg. EIO in the commit thread), then we still need to
 	 * take the FS itself readonly cleanly. */
+
+     // "裏でこっそりコミットスレッドが EIO を返していた場合
+     // ファイルシステムを readonly にする必要がある"
 	journal = EXT3_SB(sb)->s_journal;
+
+    // journal->j_flags & JFS_ABORT で判定している
+    // jdb, jdb2 どっちか分からん
 	if (is_journal_aborted(journal)) {
 		ext3_abort(sb, __func__,
 			   "Detected aborted journal");
