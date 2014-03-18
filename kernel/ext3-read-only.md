@@ -132,45 +132,15 @@ drivers/scsi/constants.c にエラーコードとメッセージが書いてあ�
 
 不良セクタが見つかったが 予備セクタ? を使い切ってるので再配置できかったとか何とか
 
-## Aborting journal on device dm-0.
-
-__journal_abort_hard の中で printk されるメッセージ
-
-```c
-/*
- * Quick version for internal journal use (doesn't lock the journal).
- * Aborts hard --- we mark the abort as occurred, but do _nothing_ else,
- * and don't attempt to make any other journal updates.
- */
-void __journal_abort_hard(journal_t *journal)
-{
-        transaction_t *transaction;
-        char b[BDEVNAME_SIZE];
-
-        if (journal->j_flags & JFS_ABORT)
-                return;
-
-        printk(KERN_ERR "Aborting journal on device %s.\n",
-                journal_dev_name(journal, b)); 
-
-        spin_lock(&journal->j_state_lock);
-        journal->j_flags |= JFS_ABORT;
-        transaction = journal->j_running_transaction;
-        if (transaction)
-                __log_start_commit(journal, transaction->t_tid);
-        spin_unlock(&journal->j_state_lock);
-}
-```
-
-## EXT3-fs error (device dm-0): ext3_get_inode_loc ...
+## EXT3-fs error (device dm-0): ext3_get_inode_loc: unable to read inode block - inode=*, block=*
 
 ```
-Mar 18 14:34:59 ***** kernel: EXT3-fs error (device dm-0): ext3_get_inode_loc: <2>EXT3-fs error (device dm-0): ext3_get_inode_loc: unable to read inode block - inode=384516154, block=769032195
+Mar 18 14:34:59 ***** kernel: EXT3-fs error (device dm-0): ext3_get_inode_loc: unable to read inode block - inode=384516154, block=769032195
 Mar 18 14:34:59 ***** kernel: Aborting journal on device dm-0.
 Mar 18 14:34:59 ***** kernel: unable to read inode block - inode=384516130, block=769032195
 ```
 
-ext3_get_inode_loc のコード。 __ext3_get_inode_loc のラッパー
+ext3_get_inode_loc のコードは下記の通り __ext3_get_inode_loc のラッパー
 
 ```c
 int ext3_get_inode_loc(struct inode *inode, struct ext3_iloc *iloc)
@@ -185,6 +155,7 @@ int ext3_get_inode_loc(struct inode *inode, struct ext3_iloc *iloc)
 
  * ext3_get_inode_loc ... を printk するのは 2カ所
    * sb_getblk の後
+     * inode のブロックを探してるのかな?
    * wait_on_buffer の後
      * submit_bh してディスクから割り込みで復帰後
 
@@ -322,6 +293,36 @@ make_io:
 has_buffer:
 	iloc->bh = bh;
 	return 0;
+}
+```
+
+## Aborting journal on device dm-0.
+
+__journal_abort_hard の中で printk されるメッセージ
+
+```c
+/*
+ * Quick version for internal journal use (doesn't lock the journal).
+ * Aborts hard --- we mark the abort as occurred, but do _nothing_ else,
+ * and don't attempt to make any other journal updates.
+ */
+void __journal_abort_hard(journal_t *journal)
+{
+        transaction_t *transaction;
+        char b[BDEVNAME_SIZE];
+
+        if (journal->j_flags & JFS_ABORT)
+                return;
+
+        printk(KERN_ERR "Aborting journal on device %s.\n",
+                journal_dev_name(journal, b)); 
+
+        spin_lock(&journal->j_state_lock);
+        journal->j_flags |= JFS_ABORT;
+        transaction = journal->j_running_transaction;
+        if (transaction)
+                __log_start_commit(journal, transaction->t_tid);
+        spin_unlock(&journal->j_state_lock);
 }
 ```
 
