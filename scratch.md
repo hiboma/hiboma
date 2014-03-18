@@ -94,6 +94,7 @@ static int update_cpumask(struct cpuset *cs, struct cpuset *trialcs,
 }
 ```
 
+top_cpuset の中身。 /cgroup/cpuset.cpus のことだろう。変更不可
 
 ```c
 static struct cpuset top_cpuset = {
