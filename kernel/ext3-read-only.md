@@ -99,14 +99,16 @@ Mar 18 14:34:59 ***** kernel: sd 5:0:0:0: SCSI error: return code = 0x08000002
 Mar 18 14:34:59 ***** kernel: Result: hostbyte=DID_OK driverbyte=DRIVER_SENSE,SUGGEST_OK
 Mar 18 14:34:59 ***** kernel: sdf: Current [descriptor]: sense key: Medium Error
 Mar 18 14:34:59 ***** kernel:     Add. Sense: Unrecovered read error - auto reallocate failed
-Mar 18 14:34:59 ***** kernel: 
+Mar 18 14:34:59 ***** kernel:
 Mar 18 14:34:59 ***** kernel: Descriptor sense data with sense descriptors (in hex):
 Mar 18 14:34:59 ***** kernel:         72 03 11 04 00 00 00 0c 00 0a 80 00 00 00 00 00 
 Mar 18 14:34:59 ***** kernel:         11 64 01 da 
 Mar 18 14:34:59 ***** kernel: ata6: EH complete
+
 Mar 18 14:34:59 ***** kernel: EXT3-fs error (device dm-0): ext3_get_inode_loc: <2>EXT3-fs error (device dm-0): ext3_get_inode_loc: unable to read inode block - inode=384516154, block=769032195
 Mar 18 14:34:59 ***** kernel: Aborting journal on device dm-0.
 Mar 18 14:34:59 ***** kernel: unable to read inode block - inode=384516130, block=769032195
+
 Mar 18 14:34:59 ***** kernel: SCSI device sdf: 1953525168 512-byte hdwr sectors (1000205 MB)
 Mar 18 14:34:59 ***** kernel: sdf: Write Protect is off
 Mar 18 14:34:59 ***** kernel: SCSI device sdf: drive cache: write back
@@ -188,6 +190,8 @@ ext3_abort の中で printk されて出力されているメッセージ
  * ログ操作してて journal IO エラー、ENOMEM などリカバリ不可能な場合に呼び出される
  * ファイるシステムを強制的に READONLY にする
    * ERRORS_PANIC をたててると panic() する
+
+ext3_abort が呼ばれないと READONLY にならんと見ていいのかな
 
 ```c
 /*
