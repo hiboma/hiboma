@@ -190,7 +190,7 @@ int ext3_get_inode_loc(struct inode *inode, struct ext3_iloc *iloc)
  * ext3_get_inode_loc ... を printk するのは 2カ所
    * sb_getblk の後
    * wait_on_buffer の後
-   * inode の番号は VFS inode 番号そのまま
+     * submit_bh してディスクから割り込みで復帰後
 
 ```c
 /*
