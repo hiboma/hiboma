@@ -113,6 +113,34 @@ Mar 18 14:34:59 ***** kernel: EXT3-fs error (device dm-0): ext3_journal_start_sb
 Mar 18 14:34:59 ***** kernel: Remounting filesystem read-only
 ```
 
+## Mar 18 14:34:59 ***** kernel: Aborting journal on device dm-0.
+
+```c
+/*
+ * Quick version for internal journal use (doesn't lock the journal).
+ * Aborts hard --- we mark the abort as occurred, but do _nothing_ else,
+ * and don't attempt to make any other journal updates.
+ */
+void __journal_abort_hard(journal_t *journal)
+{
+        transaction_t *transaction;
+        char b[BDEVNAME_SIZE];
+
+        if (journal->j_flags & JFS_ABORT)
+                return;
+
+        printk(KERN_ERR "Aborting journal on device %s.\n",
+                journal_dev_name(journal, b)); 
+
+        spin_lock(&journal->j_state_lock);
+        journal->j_flags |= JFS_ABORT;
+        transaction = journal->j_running_transaction;
+        if (transaction)
+                __log_start_commit(journal, transaction->t_tid);
+        spin_unlock(&journal->j_state_lock);
+}
+```
+
 ## Mar 18 14:34:59 ***** kernel: sdf: Current [descriptor]: sense key: Medium Error
 
 ```
