@@ -24,6 +24,22 @@ static struct cftype files[] = {
 	},
 ```
 
+update_cpumask で struct cpuset の .cpus_allowd をセットする
+
+トップレベルの cpuset 。変更できない
+
+```c
+static struct cpuset top_cpuset = {
+	.flags = ((1 << CS_CPU_EXCLUSIVE) | (1 << CS_MEM_EXCLUSIVE)),
+};
+```
+
+下記の用にしておくと CPU の数をみなくても全部のCPUを割り当てできる ...
+
+```
+cat /cgroup/cpuset.cpus > /cgroup/namahage_app_1/cpuset.cpus
+```
+
 ## とある I/O error
 
 ``` 
