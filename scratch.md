@@ -11,10 +11,23 @@
  * daemonize
  * debugfs
 
+## /cgroup/cpuset.cpus のファイルインタフェース
+
+```c
+static struct cftype files[] = {
+	{
+		.name = "cpus",
+		.read = cpuset_common_file_read,       // read
+		.write_string = cpuset_write_resmask,  // write
+		.max_write_len = (100U + 6 * NR_CPUS),
+		.private = FILE_CPULIST,
+	},
+```
+
 ## とある I/O error
 
-```
-Mar 18 13:27:44 ***** kernel: ata6.00: exception Emask 0x0 SAct 0x3f SErr 0x0 action 0x0
+``` 
+ Mar 18 13:27:44 ***** kernel: ata6.00: exception Emask 0x0 SAct 0x3f SErr 0x0 action 0x0
 Mar 18 13:27:44 ***** kernel: ata6.00: irq_stat 0x40000008
 Mar 18 13:27:44 ***** kernel: ata6.00: cmd 60/08:00:d7:01:64/00:00:11:00:00/40 tag 0 ncq 4096 in
 Mar 18 13:27:44 ***** kernel:          res 41/40:00:da:01:64/00:00:11:00:00/40 Emask 0x409 (media error) <F>
