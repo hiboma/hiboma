@@ -66,6 +66,14 @@ Mar 18 14:34:59 ***** kernel: EXT3-fs error (device dm-0): ext3_journal_start_sb
 Mar 18 14:34:59 ***** kernel: Remounting filesystem read-only
 ```
 
+## Add. Sense: Unrecovered read error - auto reallocate failed
+
+```
+Mar 18 14:34:59 ***** kernel: sdf: Current [descriptor]: sense key: Medium Error
+Mar 18 14:34:59 ***** kernel:     Add. Sense: Unrecovered read error - auto reallocate failed
+```
+
+
 ## Remounting filesystem read-only を出しているコード
 
 エラーログから解析していく
