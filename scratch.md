@@ -26,7 +26,74 @@ static struct cftype files[] = {
 
 update_cpumask で struct cpuset の .cpus_allowd をセットする
 
-トップレベルの cpuset 。変更できない
+```c
+/**
+ * update_cpumask - update the cpus_allowed mask of a cpuset and all tasks in it
+ * @cs: the cpuset to consider
+ * @buf: buffer of cpu numbers written to this cpuset
+ */
+ // buf は /cgroup/cpuset.cpus に書き込んだ内容かな?
+static int update_cpumask(struct cpuset *cs, struct cpuset *trialcs,
+			  const char *buf)
+{
+	struct ptr_heap heap;
+	int retval;
+	int is_load_balanced;
+
+    // トップレベルの cpuset 。変更できない
+	/* top_cpuset.cpus_allowed tracks cpu_online_map; it's read-only */
+	if (cs == &top_cpuset)
+		return -EACCES;
+
+	/*
+	 * An empty cpus_allowed is ok only if the cpuset has no tasks.
+	 * Since cpulist_parse() fails on an empty mask, we special case
+	 * that parsing.  The validate_change() call ensures that cpusets
+	 * with tasks have cpus.
+	 */
+	if (!*buf) {
+		cpumask_clear(trialcs->cpus_allowed);
+	} else {
+		retval = cpulist_parse(buf, trialcs->cpus_allowed);
+		if (retval < 0)
+			return retval;
+
+		if (!cpumask_subset(trialcs->cpus_allowed, cpu_active_mask))
+			return -EINVAL;
+	}
+	retval = validate_change(cs, trialcs);
+	if (retval < 0)
+		return retval;
+
+	/* Nothing to do if the cpus didn't change */
+	if (cpumask_equal(cs->cpus_allowed, trialcs->cpus_allowed))
+		return 0;
+
+    // heap is なに?
+	retval = heap_init(&heap, PAGE_SIZE, GFP_KERNEL, NULL);
+	if (retval)
+		return retval;
+
+	is_load_balanced = is_sched_load_balance(trialcs);
+
+	mutex_lock(&callback_mutex);
+	cpumask_copy(cs->cpus_allowed, trialcs->cpus_allowed);
+	mutex_unlock(&callback_mutex);
+
+	/*
+	 * Scan tasks in the cpuset, and update the cpumasks of any
+	 * that need an update.
+	 */
+	update_tasks_cpumask(cs, &heap);
+
+	heap_free(&heap);
+
+	if (is_load_balanced)
+		async_rebuild_sched_domains();
+	return 0;
+}
+```
+
 
 ```c
 static struct cpuset top_cpuset = {
