@@ -58,10 +58,12 @@
                 * __alloc_zeroed_user_highpage
                   * alloc_page_vma ...
             * do_nonlinear_fault
-              * PTE が ファイルの場合
+              * pte_file PTE が _PAGE_FILE ファイルの場合
               * __do_fault
+              * VM_FAULT_SIGBUS
+                * SIGBUS のハンドリング `bad pte`
             * do_swap_page
-              * swapin ?
+              * fault を起こしたアドレスが anon でも file でも無い場合に swapin
               * swap されているアドレスで fault
 
 ----
