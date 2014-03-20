@@ -38,7 +38,13 @@
                 * vma->vm_ops->page_mkwrite
                 * mem_cgroup_newpage_charge
                   * __mem_cgroup_try_charge
+                    * チャージを試みる。失敗する可能性もある
                     * mem_cgroup_reclaim
+                      * MEM_CGROUP_RECLAIM_NOSWAP で swap するかどうかが変わる
+                      * try_to_free_mem_cgroup_pages
+                        * do_try_to_free_pages
+                        * cgropu 単位で do_try_to_free_pages する
+                          * cgroup の limit_in_bytes,  を変えた際にも呼び出される (mem_cgroup_resize_limit, mem_cgroup_resize_memsw_limit)
                     * mem_cgroup_handle_oom
                       * mem_cgroup_out_of_memory
                         * select_bad_process
