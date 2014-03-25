@@ -1,7 +1,13 @@
-# lwn.net Stable pages
+g# lwn.net Stable pages
 
  * http://lwn.net/Articles/442355/
  * http://yoshinorimatsunobu.blogspot.jp/2014/03/why-buffered-writes-are-sometimes.html で紹介されている
+ 
+> 1. READ MODIFY WRITE
+> 2. WRITE() MAY BE BLOCKED FOR "STABLE PAGE WRITES"
+> 3. WAITING FOR JOURNAL BLOCK ALLOCATION IN EXT3/4
+
+2 で Stable pages が問題になるとのこと
 
 ## だいたいこんな感じの内容
 
@@ -68,3 +74,10 @@ writeback 中の page 書き換えがよろしくないケースもある
  * 数年してディストリビューションやユーザのによって開発されてから現実的な問題を生む
  * it's far too late to go back.  時既におそし〜
    * 問題の問いかけなのかな ?
+
+----   
+
+無効にするパッチ
+
+ * http://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/commit/?id=1d1d1a767206fbe5d4c69493b7e6d2a8d08cc0a0
+   * bdi_cap_stable_pages_required で挙動を変える
