@@ -7,7 +7,7 @@ g# lwn.net Stable pages
 > 2. WRITE() MAY BE BLOCKED FOR "STABLE PAGE WRITES"
 > 3. WAITING FOR JOURNAL BLOCK ALLOCATION IN EXT3/4
 
-2 で Stable pages が問題になるとのこと
+2 で Stable pages が問題になるケースとのこの
 
 ## だいたいこんな感じの内容
 
