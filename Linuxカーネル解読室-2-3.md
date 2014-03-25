@@ -21,6 +21,7 @@
    * グローバルタイマー
  * NMI = Non Maskable Interrupts
    * ハードウェアの故障などの通知
+   * EFLAGS の IFフラグをオフにしていても割り込まれる
 
 /proc/interrupts で割り込みの統計を見る   
 
@@ -67,7 +68,609 @@ BLOCK_IOPOLL:          0          0          0          0
      RCU:      11816      12516      12003      12054
 ```
 
-#### 割り込みベクタの初期化コード   
+#### send_IPI 群
+
+プロセッサ間割り込み Inter Processor Interrupts
+
+ * 下のは IA64 だった ...
+ * x86 だと arch/x86/kernel/apic/ 以下を見る必要がある?
+
+```c
+/*
+ * Called with preemption disabled.
+ */
+static inline void
+send_IPI_single (int dest_cpu, int op)
+{
+    // ipi_operation CPUキャッシュのアラインのために DEFINE_PER_CPU_SHARED_ALIGNED でごにょごにょ
+    // dest_cpu の per_cpu に op ビットを立てる
+	set_bit(op, &per_cpu(ipi_operation, dest_cpu));
+
+    // 役割に応じて割り込みベクタの定数が複数設定されている
+    //
+    //     #define IA64_IPI_LOCAL_TLB_FLUSH	0xfc	/* SMP flush local TLB */
+    //     #define IA64_IPI_RESCHEDULE		0xfd	/* SMP reschedule */
+    //     #define IA64_IPI_VECTOR			0xfe	/* inter-processor interrupt vector */
+    //
+    // 外部割り込みを pending させながら IPI を送る?
+    //
+    //     IA64_IPI_DM_INT =       0x0,    /* pend an external interrupt */
+    //
+	platform_send_ipi(dest_cpu, IA64_IPI_VECTOR, IA64_IPI_DM_INT, 0);
+}
+```
+
+ * send_IPI_mask cpumask で指定した CPU だけに IPI を飛ばす
+ * send_IPI_all  全部の CPU に飛ばす
+ * send_IPI_self , send_IPI_allbutself など
+
+## 2.3.2 ハードウェア割り込み処理の動作例
+
+![](http://sourceforge.jp/projects/linux-kernel-docs/wiki/2.3%E3%80%80ハードウェア割り込み処理/attach/fig2-2.png)
+
+### 受信処理
+
+#### 1. socket に read, recv, recvfrom, recvmsg を呼び TASK_INTERRUPTIBLE で待つ
+
+#### PF_INET + TCP (tcp_proto + inet_stream_ops ) recvfrom の場合のスタック
+
+recv_from からどんどん潜って行く
+
+```
+recv_from
+sock_recvmsg
+__sock_recvmsg
+__sock_recvmsg_nosec
+sock->ops->recvmsg
+# ---- AF_INET 層 -----
+inet_recvmsg
+sk->sk_proto->recvmsg
+# ---- TCP 層 -----
+tcp_recvmsg
+sk_wait_data
+```
+
+tcp_recvmsg を呼び出した場合
+
+ * sk_wait_data で TASK_INTERRUPTIBLE で待つ
+   * ***sk->sk_receive_queue*** が空か否かが待つ条件となる
+```c
+/**
+ * sk_wait_data - wait for data to arrive at sk_receive_queue
+ * @sk:    sock to wait on
+ * @timeo: for how long
+ *
+ * Now socket state including sk->sk_err is changed only under lock,
+ * hence we may omit checks after joining wait queue.
+ * We check receive queue before schedule() only as optimization;
+ * it is very likely that release_sock() added new data.
+ */
+int sk_wait_data(struct sock *sk, long *timeo)
+{
+	int rc;
+	DEFINE_WAIT(wait);
+    // prepare_to_wait で wait の準備をして schedule_timeout する前に skb_queue_empty で確認する
+	prepare_to_wait(sk->sk_sleep, &wait, TASK_INTERRUPTIBLE);
+	set_bit(SOCK_ASYNC_WAITDATA, &sk->sk_socket->flags);
+    // schedule_timeout() でタイムアウト付きで スケジューリングする
+	rc = sk_wait_event(sk, timeo, !skb_queue_empty(&sk->sk_receive_queue));
+	clear_bit(SOCK_ASYNC_WAITDATA, &sk->sk_socket->flags);
+	finish_wait(sk->sk_sleep, &wait);
+	return rc;
+}
+EXPORT_SYMBOL(sk_wait_data);
+```
+
+#### PF_INET + UDP の場合
+
+ * udp_recvmsg ->__skb_recv_datagram -> wait_for_packet
+   * ***sk->sk_receive_queue*** が空か否かで待つ
+   * prepare_to_wait_exclusive + TASK_INTERRUPTIBLE で待ち
+   * signal_pending() でシグナルをハンドリング
+   * schedule_timeout() でタイムアウト or 起床待ち
+```c
+/*
+ * Wait for a packet..
+ */
+static int wait_for_packet(struct sock *sk, int *err, long *timeo_p)
+{
+	int error;
+	DEFINE_WAIT_FUNC(wait, receiver_wake_function);
+
+    // exclusive 指定なので 1プロセスずつ起床する
+	prepare_to_wait_exclusive(sk->sk_sleep, &wait, TASK_INTERRUPTIBLE);
+
+	/* Socket errors? */
+	error = sock_error(sk);
+	if (error)
+		goto out_err;
+
+	if (!skb_queue_empty(&sk->sk_receive_queue))
+		goto out;
+
+	/* Socket shut down? */
+	if (sk->sk_shutdown & RCV_SHUTDOWN)
+		goto out_noerr;
+
+	/* Sequenced packets can come disconnected.
+	 * If so we report the problem
+	 */
+	error = -ENOTCONN;
+	if (connection_based(sk) &&
+	    !(sk->sk_state == TCP_ESTABLISHED || sk->sk_state == TCP_LISTEN))
+		goto out_err;
+
+	/* handle signals */
+	if (signal_pending(current))
+		goto interrupted;
+
+	error = 0;
+	*timeo_p = schedule_timeout(*timeo_p);
+out:
+	finish_wait(sk->sk_sleep, &wait);
+	return error;
+interrupted:
+	error = sock_intr_errno(*timeo_p);
+out_err:
+	*err = error;
+	goto out;
+out_noerr:
+	*err = 0;
+	error = 1;
+	goto out;
+}
+```
+
+#### 2. ハードウェアの動作なので分からん
+
+ * ~~ネットワークカードの割り込みベクタは 19 ぽい~~
+   * VirtualBox の virit-net だと 19 なだけ
+
+#### 3. ハードウェア割り込みハンドラ
+
+ * interrupt
+ * common_interrupt
+   * 割り込みベクタ (IRQ vector) を実行している時は 割込は disabled な状態
+ * do_IRQ
+ * handle_irq でデバイスドライバのハンドラに委譲される
+
+interrupt の時点で割り込みを受けた CPU は決まっている? 
+
+#### 4. ハードウェア割り込みハンドラからソフト割り込み発行
+
+実装はデバイスドライバ依存
+
+ * __netif_rx_schedule
+   * __raise_softirq_irqoff(NET_RX_SOFTIRQ) で ソフト割り込み
+ * VirtualBox は virio-net
+   * virtnet_poll -> napi_schedule からも __raise_softirq_irqoff(NET_RX_SOFTIRQ) を呼ぶ
+
+#### 5. net_rx_action
+
+ * softirq ハンドラが起動するタイミングが分からない
+   * => do_IRQ の irq_exit
+ * process_backlog -> __skb_dequeue -> __netif_receive_skb ->  deliver_skb
+   * struct packet_type のハンドラを呼んでプロトコルのハンドラへ委譲
+   * TASK_INTERRUPTIBLE なプロセスを起床させる箇所が分からん
+
+#### 6. プロセスが起床してシステムコール呼び出し元に戻る
+
+## 2.3.3 ハードウェア割り込み管理データ構造
+
+![](http://sourceforge.jp/projects/linux-kernel-docs/wiki/2.3%E3%80%80ハードウェア割り込み処理/attach/fig2-3.png)
+
+## strct irq_desc
+
+割り込みデスクリプタ
+
+```c
+/**
+ * struct irq_desc - interrupt descriptor
+ * @irq:		interrupt number for this descriptor
+ * @timer_rand_state:	pointer to timer rand state struct
+ * @kstat_irqs:		irq stats per cpu
+ * @irq_2_iommu:	iommu with this irq
+ * @handle_irq:		highlevel irq-events handler [if NULL, __do_IRQ()]
+ * @chip:		low level interrupt hardware access
+ * @msi_desc:		MSI descriptor
+ * @handler_data:	per-IRQ data for the irq_chip methods
+ * @chip_data:		platform-specific per-chip private data for the chip
+ *			methods, to allow shared chip implementations
+ * @action:		the irq action chain
+ * @status:		status information
+ * @depth:		disable-depth, for nested irq_disable() calls
+ * @wake_depth:		enable depth, for multiple set_irq_wake() callers
+ * @irq_count:		stats field to detect stalled irqs
+ * @last_unhandled:	aging timer for unhandled count
+ * @irqs_unhandled:	stats field for spurious unhandled interrupts
+ * @lock:		locking for SMP
+ * @affinity_notify:	context for notification of affinity changes
+ * @affinity:		IRQ affinity on SMP
+ * @node:		node index useful for balancing
+ * @pending_mask:	pending rebalanced interrupts
+ * @threads_active:	number of irqaction threads currently running
+ * @wait_for_threads:	wait queue for sync_irq to wait for threaded handlers
+ * @dir:		/proc/irq/ procfs entry
+ * @name:		flow handler name for /proc/interrupts output
+ */
+struct irq_desc {
+	unsigned int		irq;
+	struct timer_rand_state *timer_rand_state;
+	unsigned int            *kstat_irqs;
+#ifdef CONFIG_INTR_REMAP
+	struct irq_2_iommu      *irq_2_iommu;
+#endif
+	irq_flow_handler_t	handle_irq;
+	struct irq_chip		*chip;
+	struct msi_desc		*msi_desc;
+	void			*handler_data;
+	void			*chip_data;
+	struct irqaction	*action;	/* IRQ action list */
+	unsigned int		status;		/* IRQ status */
+
+	unsigned int		depth;		/* nested irq disables */
+	unsigned int		wake_depth;	/* nested wake enables */
+	unsigned int		irq_count;	/* For detecting broken IRQs */
+	unsigned long		last_unhandled;	/* Aging timer for unhandled count */
+	unsigned int		irqs_unhandled;
+	spinlock_t		lock;
+#ifdef CONFIG_SMP
+	cpumask_var_t		affinity;
+	const struct cpumask	*affinity_hint;
+	struct irq_affinity_notify *affinity_notify;
+	unsigned int		node;
+#ifdef CONFIG_GENERIC_PENDING_IRQ
+	cpumask_var_t		pending_mask;
+#endif
+#endif
+	atomic_t		threads_active;
+	wait_queue_head_t       wait_for_threads;
+#ifdef CONFIG_PROC_FS
+	struct proc_dir_entry	*dir;
+#endif
+	const char		*name;
+} ____cacheline_internodealigned_in_smp;
+```
+
+## 2.3.4 ハードウェア割り込みハンドラの登録
+
+ * request_irq, free_irq については下記でまとめている
+   * https://github.com/hiboma/kernel_module_scratch/tree/master/request_irq
+
+## 2.3.5 ハードウェア割り込みの制御
+
+ * CPUレベルで禁止
+   * local_ の prefix がついているもの。SMP? (APIC)
+ * 割り込みコントローラーで禁止
+
+## local_irq_enable, local_irq_disable の中身
+
+![](http://sourceforge.jp/projects/linux-kernel-docs/wiki/2.3%E3%80%80ハードウェア割り込み処理/attach/fig2-4.png)
+
+```c
+#define local_irq_enable() \
+	do { trace_hardirqs_on(); raw_local_irq_enable(); } while (0)
+#define local_irq_disable() \
+	do { raw_local_irq_disable(); trace_hardirqs_off(); } while (0)
+```
+
+```c
+static inline void raw_local_irq_disable(void)
+{
+	native_irq_disable();
+}
+
+static inline void raw_local_irq_enable(void)
+{
+	native_irq_enable();
+}
+```
+
+cli, sti で ローカルCPU の EFLAGS の IFビットを操作
+
+```c
+static inline void native_irq_disable(void)
+{
+	asm volatile("cli": : :"memory");
+}
+
+static inline void native_irq_enable(void)
+{
+	asm volatile("sti": : :"memory");
+}
+```
+
+## local_irq_save
+
+```c
+#define local_irq_save(flags)				\
+	do {						\
+		typecheck(unsigned long, flags);	\
+		raw_local_irq_save(flags);		\
+		trace_hardirqs_off();			\
+	} while (0)
+```
+
+```c
+#define raw_local_irq_save(flags)				\
+	do { (flags) = __raw_local_irq_save(); } while (0)
+```
+
+__raw_local_save_flags で EFLAGS をコピーしてから raw_local_irq_disable で 割り込みを禁止する
+
+```c
+/*
+ * For spinlocks, etc:
+ */
+static inline unsigned long __raw_local_irq_save(void)
+{
+	unsigned long flags = __raw_local_save_flags();
+
+	raw_local_irq_disable();
+
+	return flags;
+}
+```
+
+local_save_flags も __raw_local_save_flags で EFLAGS の状態を取ってる
+
+```c
+static inline unsigned long __raw_local_save_flags(void)
+{
+	return native_save_fl();
+}
+```
+
+ * pushf 命令で EFLAGS をスタックに退避 して pop して返している
+ * 直接 EFLAGS を取る事はできないから?
+```c
+static inline unsigned long native_save_fl(void)
+{
+	unsigned long flags;
+
+	/*
+	 * "=rm" is safe here, because "pop" adjusts the stack before
+	 * it evaluates its effective address -- this is part of the
+	 * documented behavior of the "pop" instruction.
+	 */
+	asm volatile("# __raw_save_flags\n\t"
+		     "pushf ; pop %0"
+		     : "=rm" (flags)
+		     : /* no input */
+		     : "memory");
+
+	return flags;
+}
+```
+
+## local_irq_restore
+
+```c
+#define local_irq_restore(flags)			\
+	do {						\
+		typecheck(unsigned long, flags);	\
+		if (raw_irqs_disabled_flags(flags)) {	\
+			raw_local_irq_restore(flags);	\
+			trace_hardirqs_off();		\
+		} else {				\
+			trace_hardirqs_on();		\
+			raw_local_irq_restore(flags);	\
+		}					\
+	} while (0)
+#else /* !CONFIG_TRACE_IRQFLAGS_SUPPORT */
+```
+
+```c
+static inline void raw_local_irq_restore(unsigned long flags)
+{
+	native_restore_fl(flags);
+}
+```
+
+スタックに push した内容を popf で EFLAGSレジスタに読み込むことで復帰
+
+```c
+static inline void native_restore_fl(unsigned long flags)
+{
+	asm volatile("push %0 ; popf"
+		     : /* no output */
+		     :"g" (flags)
+		     :"memory", "cc");
+}
+```
+
+## disable_irq
+
+指定したIRQに対する割り込みを禁止する。割り込みが実行中であれば完了を同期的に待つ
+
+```c
+/**
+ *	disable_irq - disable an irq and wait for completion
+ *	@irq: Interrupt to disable
+ *
+ *	Disable the selected interrupt line.  Enables and Disables are
+ *	nested.
+ *	This function waits for any pending IRQ handlers for this interrupt
+ *	to complete before returning. If you use this function while
+ *	holding a resource the IRQ handler may need you will deadlock.
+ *
+ *	This function may be called - with care - from IRQ context.
+ */
+void disable_irq(unsigned int irq)
+{
+	struct irq_desc *desc = irq_to_desc(irq);
+
+	if (!desc)
+		return;
+
+	disable_irq_nosync(irq);
+
+    // desc->action が true なら IRQ実行中? ここで待つのかな?
+	if (desc->action)
+		synchronize_irq(irq);
+}
+EXPORT_SYMBOL(disable_irq);
+
+void disable_irq_nosync(unsigned int irq)
+{
+	__disable_irq(irq);
+}
+EXPORT_SYMBOL(disable_irq_nosync);
+```
+
+synchronize_irq の中身
+
+ * cpu_relax (nop命令を呼ぶ)
+ * ビジーループで検査
+ * struct irq_desc の .status から IRQ_INPROGRESS フラグが落ちるまで続く
+
+```c
+/**
+ *	synchronize_irq - wait for pending IRQ handlers (on other CPUs)
+ *	@irq: interrupt number to wait for
+ *
+ *	This function waits for any pending IRQ handlers for this interrupt
+ *	to complete before returning. If you use this function while
+ *	holding a resource the IRQ handler may need you will deadlock.
+ *
+ *	This function may be called - with care - from IRQ context.
+ */
+void synchronize_irq(unsigned int irq)
+{
+	struct irq_desc *desc = irq_to_desc(irq);
+	unsigned int status;
+
+	if (!desc)
+		return;
+
+	do {
+		unsigned long flags;
+
+		/*
+		 * Wait until we're out of the critical section.  This might
+		 * give the wrong answer due to the lack of memory barriers.
+		 */
+		while (desc->status & IRQ_INPROGRESS)
+			cpu_relax();
+
+		/* Ok, that indicated we're done: double-check carefully. */
+		spin_lock_irqsave(&desc->lock, flags);
+		status = desc->status;
+		spin_unlock_irqrestore(&desc->lock, flags);
+
+		/* Oops, that failed? */
+	} while (status & IRQ_INPROGRESS);
+
+	/*
+	 * We made sure that no hardirq handler is running. Now verify
+	 * that no threaded handlers are active.
+	 */
+    // ?
+	wait_event(desc->wait_for_threads, !atomic_read(&desc->threads_active));
+}
+EXPORT_SYMBOL(synchronize_irq);
+```
+
+disable_irq で 割り込みが禁止される方法は irq_desc->chip ( struct irq_chip ) の .disable の実装による
+
+```c
+void __disable_irq(struct irq_desc *desc, unsigned int irq, bool suspend)
+{
+	if (suspend) {
+		/* kABI WARNING! We cannot change IRQF_TIMER to include
+		   IRQF_NO_SUSPEND. So test for both bits here. */
+		if (!desc->action ||
+		    (desc->action->flags & (IRQF_TIMER|IRQF_NO_SUSPEND)))
+			return;
+		desc->status |= IRQ_SUSPENDED;
+	}
+
+	if (!desc->depth++) {
+		desc->status |= IRQ_DISABLED;
+		desc->chip->disable(irq);
+	}
+}
+```
+
+struct irq_chip の中身。ハードウェア割り込みチップデスクリプタとな
+
+```c
+/**
+ * struct irq_chip - hardware interrupt chip descriptor
+ *
+ * @name:		name for /proc/interrupts
+ * @startup:		start up the interrupt (defaults to ->enable if NULL)
+ * @shutdown:		shut down the interrupt (defaults to ->disable if NULL)
+ * @enable:		enable the interrupt (defaults to chip->unmask if NULL)
+ * @disable:		disable the interrupt (defaults to chip->mask if NULL)
+ * @ack:		start of a new interrupt
+ * @mask:		mask an interrupt source
+ * @mask_ack:		ack and mask an interrupt source
+ * @unmask:		unmask an interrupt source
+ * @eoi:		end of interrupt - chip level
+ * @end:		end of interrupt - flow level
+ * @set_affinity:	set the CPU affinity on SMP machines
+ * @retrigger:		resend an IRQ to the CPU
+ * @set_type:		set the flow type (IRQ_TYPE_LEVEL/etc.) of an IRQ
+ * @set_wake:		enable/disable power-management wake-on of an IRQ
+ *
+ * @bus_lock:		function to lock access to slow bus (i2c) chips
+ * @bus_sync_unlock:	function to sync and unlock slow bus (i2c) chips
+ *
+ * @release:		release function solely used by UML
+ * @typename:		obsoleted by name, kept as migration helper
+ */
+struct irq_chip {
+	const char	*name;
+	unsigned int	(*startup)(unsigned int irq);
+	void		(*shutdown)(unsigned int irq);
+	void		(*enable)(unsigned int irq);
+	void		(*disable)(unsigned int irq);
+
+	void		(*ack)(unsigned int irq);
+	void		(*mask)(unsigned int irq);
+	void		(*mask_ack)(unsigned int irq);
+	void		(*unmask)(unsigned int irq);
+	void		(*eoi)(unsigned int irq);
+
+	void		(*end)(unsigned int irq);
+	int		(*set_affinity)(unsigned int irq,
+					const struct cpumask *dest);
+	int		(*retrigger)(unsigned int irq);
+	int		(*set_type)(unsigned int irq, unsigned int flow_type);
+	int		(*set_wake)(unsigned int irq, unsigned int on);
+
+	void		(*bus_lock)(unsigned int irq);
+	void		(*bus_sync_unlock)(unsigned int irq);
+
+	/* Currently used only by UML, might disappear one day.*/
+#ifdef CONFIG_IRQ_RELEASE_METHOD
+	void		(*release)(unsigned int irq, void *dev_id);
+#endif
+	/*
+	 * For compatibility, ->typename is copied into ->name.
+	 * Will disappear.
+	 */
+	const char	*typename;
+};
+```
+
+### global_irq_cli
+
+ * 2.6で廃止
+   * どのCPUでも割り込みハンドラが実行されないことが保証
+ * オーバーヘッドが大きい
+ * スピンロックに書き換え
+
+## 2.3.6 ハードウェア割り込みハンドラの起動
+
+> Intel x86で割り込み発生時にdo_IRQ関数が呼び出されるようにするには、IDT（Interrupt Descriptor Table）と呼ばれるテーブルを適切に初期化しておく必要があります。
+
+## 割り込みの初期化コード
+
+x86
+ * リアルモードだと 割り込みベクタ と呼ぶ
+ * プロテクトモード IDT Interrupt Descriptor Table と呼ぶ
 
 ```asm
 // linux-2.6.32-431.el6.x86_64/arch/x86/kernel/entry_32.S
@@ -131,7 +734,7 @@ ENDPROC(common_interrupt)
 	CFI_ENDPROC
 ```
 
-#### 例外 Exception
+### 例外 Exception
 
 > このほか、割り込みによく似たものとして「例外」があります。割り込みが外的要因であるのに対し、CPUの動作自体によって引き起こされた事象の場合を「例外」と呼びます。
 
@@ -231,148 +834,114 @@ entry_64.S:ENTRY(nmi)
 entry_64.S:ENTRY(ignore_sysret)
 ```
 
-## 2.3.2 ハードウェア割り込み処理の動作例
+## do_IRQ
 
-![](http://sourceforge.jp/projects/linux-kernel-docs/wiki/2.3%E3%80%80ハードウェア割り込み処理/attach/fig2-2.png)
-
-### 受信処理
-
-#### 1. socket に read, recv, recvfrom, recvmsg を呼び TASK_INTERRUPTIBLE で待つ
-
-#### PF_INET + TCP (tcp_proto + inet_stream_ops ) recvfrom の場合のスタック
-
-```   
-recv_from
-sock_recvmsg
-__sock_recvmsg
-__sock_recvmsg_nosec
-sock->ops->recvmsg
-# ---- AF_INET 層 -----
-inet_recvmsg
-sk->sk_proto->recvmsg
-# ---- TCP 層 -----
-tcp_recvmsg
-sk_wait_data
-```
- * sk_wait_data で TASK_INTERRUPTIBLE で待つ
-   * ***sk->sk_receive_queue*** が空か否かが待つ条件となる
 ```c
-/**
- * sk_wait_data - wait for data to arrive at sk_receive_queue
- * @sk:    sock to wait on
- * @timeo: for how long
- *
- * Now socket state including sk->sk_err is changed only under lock,
- * hence we may omit checks after joining wait queue.
- * We check receive queue before schedule() only as optimization;
- * it is very likely that release_sock() added new data.
- */
-int sk_wait_data(struct sock *sk, long *timeo)
+fastcall unsigned int do_IRQ(struct pt_regs *regs)
 {
-	int rc;
-	DEFINE_WAIT(wait);
-    // prepare_to_wait で wait の準備をして schedule_timeout する前に skb_queue_empty で確認する
-	prepare_to_wait(sk->sk_sleep, &wait, TASK_INTERRUPTIBLE);
-	set_bit(SOCK_ASYNC_WAITDATA, &sk->sk_socket->flags);
-    // schedule_timeout() でタイムアウト付きで スケジューリングする
-	rc = sk_wait_event(sk, timeo, !skb_queue_empty(&sk->sk_receive_queue));
-	clear_bit(SOCK_ASYNC_WAITDATA, &sk->sk_socket->flags);
-	finish_wait(sk->sk_sleep, &wait);
-	return rc;
+        // EAX 下位 8 ビットに IRQ番号が入ってる?
+        // 上位ビットは関係無い
+        int irq = regs->orig_eax & 0xff; // ――<1>
+        // プリエンプション禁止
+        // add_preempt_count(HARDIRQ_OFFSET)
+        irq_enter(); // ――<2>
+        __do_IRQ(irq, regs);
+        irq_exit(); // ――<3>
+        return 1;
 }
-EXPORT_SYMBOL(sk_wait_data);
-```
 
-#### PF_INET + UDP の場合
-
- * udp_recvmsg ->__skb_recv_datagram -> wait_for_packet
-   * ***sk->sk_receive_queue*** が空か否かで待つ
-   * prepare_to_wait_exclusive + TASK_INTERRUPTIBLE で待ち
-   * signal_pending() でシグナルをハンドリング
-   * schedule_timeout() でタイムアウト or 起床待ち
-```c
-/*
- * Wait for a packet..
- */
-static int wait_for_packet(struct sock *sk, int *err, long *timeo_p)
+fastcall unsigned int __do_IRQ(unsigned int irq, struct pt_regs *regs)
 {
-	int error;
-	DEFINE_WAIT_FUNC(wait, receiver_wake_function);
+        // irq_desc はグローバル変数の配列
+        // irq インデックスにして irq_desc_t を求める
+        irq_desc_t *desc = irq_desc + irq; ――<4>
+        struct irqaction * action;
+        unsigned int status;
 
-    // exclusive 指定なので 1プロセスずつ起床する
-	prepare_to_wait_exclusive(sk->sk_sleep, &wait, TASK_INTERRUPTIBLE);
+        kstat_this_cpu.irqs[irq]++;
+        // ? CPUごとに発生?
+        // 排他制御がいらない
+        if (CHECK_IRQ_PER_CPU(desc->status)) {
 
-	/* Socket errors? */
-	error = sock_error(sk);
-	if (error)
-		goto out_err;
+                irqreturn_t action_ret;
+                // ACK を返す実装があるか否か
+                if (desc->handler->ack)
+                        desc->handler->ack(irq);
+                action_ret = handle_IRQ_event(irq, regs, desc->action); ――<5>
+                // IRQ 終わり
+                desc->handler->end(irq);
+                return 1;
+        }
 
-	if (!skb_queue_empty(&sk->sk_receive_queue))
-		goto out;
+        spin_lock(&desc->lock);
+        // ACK を出して 割り込み可能であることをコントローラに伝える
+        // ただし 同じIRQ の割り込みは発生しない
+        if (desc->handler->ack)
+                desc->handler->ack(irq); ――<6>
 
-	/* Socket shut down? */
-	if (sk->sk_shutdown & RCV_SHUTDOWN)
-		goto out_noerr;
+        status = desc->status & ~(IRQ_REPLAY | IRQ_WAITING);
 
-	/* Sequenced packets can come disconnected.
-	 * If so we report the problem
-	 */
-	error = -ENOTCONN;
-	if (connection_based(sk) &&
-	    !(sk->sk_state == TCP_ESTABLISHED || sk->sk_state == TCP_LISTEN))
-		goto out_err;
+        // 割り込み保留のフラグ
+        status |= IRQ_PENDING; ――<7>
 
-	/* handle signals */
-	if (signal_pending(current))
-		goto interrupted;
+        action = NULL;
+        if (likely(!(status & (IRQ_DISABLED | IRQ_INPROGRESS)))) {
+                // IRQ_PENDING を外して、 割り込み実行中の IRQ_INPROGRESS を立てる
+                action = desc->action;
+                status &= ~IRQ_PENDING;
+                status |= IRQ_INPROGRESS; ――<8>
+        }
+        desc->status = status; ――<9>
 
-	error = 0;
-	*timeo_p = schedule_timeout(*timeo_p);
+        if (unlikely(!action)) ――<10>
+                goto out;
+
+        for (;;) {
+                irqreturn_t action_ret;
+
+                spin_unlock(&desc->lock);
+
+                action_ret = handle_IRQ_event(irq, regs, action); ――<11>
+
+                spin_lock(&desc->lock);
+                if (!noirqdebug)
+                        note_interrupt(irq, desc, action_ret, regs);
+                if (likely(!(desc->status & IRQ_PENDING))) ――<12>
+                        break;
+                desc->status &= ~IRQ_PENDING;
+        }
+        desc->status &= ~IRQ_INPROGRESS; ――<13>
+
 out:
-	finish_wait(sk->sk_sleep, &wait);
-	return error;
-interrupted:
-	error = sock_intr_errno(*timeo_p);
-out_err:
-	*err = error;
-	goto out;
-out_noerr:
-	*err = 0;
-	error = 1;
-	goto out;
+        desc->handler->end(irq); ――<14>
+        spin_unlock(&desc->lock);
+
+        return 1;
+}
+
+fastcall int handle_IRQ_event(unsigned int irq, struct pt_regs *regs, struct irqaction *action)
+{
+        int ret, retval = 0, status = 0;
+
+        // 割り込みハンドラ実行中でも 割り込みを受け付ける = SA_INTERRUPT
+        if (!(action->flags & SA_INTERRUPT))
+                local_irq_enable(); ――<20>
+
+        do {
+                // irqaction のハンドラ実行
+                // request_irq で登録されたハンドラ
+                ret = action->handler(irq, action->dev_id, regs);――<21>
+                if (ret == IRQ_HANDLED)
+                        status |= action->flags;
+                retval |= ret;
+                // IRQ を share している場合?
+                action = action->next;
+        } while (action);
+
+        if (status & SA_SAMPLE_RANDOM)
+                add_interrupt_randomness(irq);――<22>
+        local_irq_disable();――<23>
+
+        return retval;
 }
 ```
-
-#### 2. ハードウェアの動作なので分からん
-
-ネットワークカードの割り込みベクタは 19 ぽい
-
-#### 3. ハードウェア割り込みハンドラ
-
- * interrupt
- * common_interrupt
-   * 割り込みベクタ (IRQ vector) を実行している時は 割込は disabled な状態
- * do_IRQ
- * handle_irq でデバイスドライバのハンドラに委譲される
-
-interrupt の時点で割り込みを受けた CPU は決まっている? 
-
-#### 4. ハードウェア割り込みハンドラからソフト割り込み発行
-
-実装はデバイスドライバ依存
-
- * __netif_rx_schedule
- * __raise_softirq_irqoff(NET_RX_SOFTIRQ) で ソフト割り込み
- * virtnet_poll -> napi_schedule からも __raise_softirq_irqoff(NET_RX_SOFTIRQ) を呼ぶ
-
-VirtualBox は virio-net  
-
-#### 5. net_rx_action
-
- * softirq ハンドラが起動するタイミングが分からない
- * process_backlog -> __skb_dequeue -> __netif_receive_skb ->  deliver_skb
-   * struct packet_type のハンドラを呼んでプロトコルのハンドラへ委譲
-   * TASK_INTERRUPTIBLE なプロセスを起床させる箇所が分からん
-
-#### 6. プロセスが起床してシステムコール呼び出し元に戻る
- 

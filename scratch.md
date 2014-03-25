@@ -11,6 +11,88 @@ nfs_file_splice_read
  * daemonize
  * debugfs
 
+## Your hardware is unsupported.  Please do not report bugs, panics, oopses, etc., on this hardware
+
+VirtualBox + CentOS6.5 起動時に /var/log/messages にでるメッセージ
+
+```
+Mar 21 05:50:39 vagrant-centos65 kernel: Detected CPU family 6 model 69
+Mar 21 05:50:39 vagrant-centos65 kernel: UNSUPPORTED HARDWARE DEVICE: Intel CPU model
+Mar 21 05:50:39 vagrant-centos65 kernel: ------------[ cut here ]------------
+Mar 21 05:50:39 vagrant-centos65 kernel: WARNING: at kernel/rh_taint.c:13 mark_hardware_unsupported+0x39/0x40() (Not tainted)
+Mar 21 05:50:39 vagrant-centos65 kernel: Hardware name: VirtualBox
+Mar 21 05:50:39 vagrant-centos65 kernel: Your hardware is unsupported.  Please do not report bugs, panics, oopses, etc., on this hardware.
+Mar 21 05:50:39 vagrant-centos65 kernel: Modules linked in:
+Mar 21 05:50:39 vagrant-centos65 kernel: Pid: 0, comm: swapper Not tainted 2.6.32-431.el6.x86_64 #1
+Mar 21 05:50:39 vagrant-centos65 kernel: Call Trace:
+Mar 21 05:50:39 vagrant-centos65 kernel: [<ffffffff81071e27>] ? warn_slowpath_common+0x87/0xc0
+Mar 21 05:50:39 vagrant-centos65 kernel: [<ffffffff81071ebf>] ? warn_slowpath_fmt_taint+0x3f/0x50
+Mar 21 05:50:39 vagrant-centos65 kernel: [<ffffffff810a4109>] ? mark_hardware_unsupported+0x39/0x40
+Mar 21 05:50:39 vagrant-centos65 kernel: [<ffffffff81c2ca7c>] ? setup_arch+0xb67/0xb8a
+Mar 21 05:50:39 vagrant-centos65 kernel: [<ffffffff81527303>] ? printk+0x41/0x46
+Mar 21 05:50:39 vagrant-centos65 kernel: [<ffffffff81c26c47>] ? start_kernel+0xdc/0x430
+Mar 21 05:50:39 vagrant-centos65 kernel: [<ffffffff81c2633a>] ? x86_64_start_reservations+0x125/0x129
+Mar 21 05:50:39 vagrant-centos65 kernel: [<ffffffff81c26453>] ? x86_64_start_kernel+0x115/0x124
+Mar 21 05:50:39 vagrant-centos65 kernel: ---[ end trace a7919e7f17c0a725 ]---
+```
+
+kernel/rh_taint.c
+
+```c
+void mark_hardware_unsupported(const char *msg)
+{
+	printk(KERN_CRIT "UNSUPPORTED HARDWARE DEVICE: %s\n", msg);
+	WARN_TAINT(1, TAINT_HARDWARE_UNSUPPORTED,
+		   "Your hardware is unsupported.  Please do not report "
+		   "bugs, panics, oopses, etc., on this hardware.\n");
+}
+EXPORT_SYMBOL(mark_hardware_unsupported);
+```
+
+CPU が RedHat Enterprise でサポートされてるか否かで出力される
+
+```c
+static void rh_check_supported(void)
+{
+	/* The RHEL kernel does not support this hardware.  The kernel will
+	 * attempt to boot, but no support is given for this hardware */
+
+	/* RHEL only supports Intel and AMD processors */
+	if ((boot_cpu_data.x86_vendor != X86_VENDOR_INTEL) &&
+	    (boot_cpu_data.x86_vendor != X86_VENDOR_AMD)) {
+		printk(KERN_CRIT "Detected processor %s %s\n",
+		       boot_cpu_data.x86_vendor_id,
+		       boot_cpu_data.x86_model_id);
+		mark_hardware_unsupported("Processor");
+	}
+
+	/* Intel CPU family 6, model greater than 60 */
+	if ((boot_cpu_data.x86_vendor == X86_VENDOR_INTEL) &&
+	    ((boot_cpu_data.x86 == 6))) {
+		switch (boot_cpu_data.x86_model) {
+		case 77: /* Atom Avoton */
+		case 70: /* Crystal Well */
+		case 63: /* Grantley/Haswell EP */
+		case 62: /* Ivy Town */
+			break;
+		default:
+			if (boot_cpu_data.x86_model > 60) {
+				printk(KERN_CRIT
+				       "Detected CPU family %d model %d\n",
+				       boot_cpu_data.x86,
+				       boot_cpu_data.x86_model);
+				mark_hardware_unsupported("Intel CPU model");
+			}
+			break;
+		}
+	}
+}
+```
+
+`Detected CPU family 6 model 69` は core i7
+
+see also http://stackoverflow.com/questions/20991191/eucalyptus-cloud-not-booting
+
 ## /cgroup/cpuset.cpus のファイルインタフェース
 
 下記で定義されている

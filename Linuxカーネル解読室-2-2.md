@@ -34,6 +34,7 @@ irqaction->handler で割り込みハンドラ呼び出し
 handle_IRQ_event
 __do_IRQ
 do_IRQ
+  irq_exit で softirq 処理
 
 ---- CPUアーキテクチャ依存層 (i386/kernel/entry.S) -------
 2

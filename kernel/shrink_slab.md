@@ -61,7 +61,6 @@
               * pte_file PTE が _PAGE_FILE ファイルの場合
               * __do_fault
                 * `__do_fault() tries to create a new page mapping.`
-                *
               * VM_FAULT_SIGBUS
                 * SIGBUS のハンドリング `bad pte`
             * do_swap_page
@@ -97,6 +96,17 @@
    * nodemask_t を NULL 指定で __alloc_pages_nodemask を呼ぶだけのラッパー
  * __alloc_pages_nodemask
    * get_page_from_freelist
+     * struct zone の free_area から空き page を探す
+     * buffered_rmqueue
+       * order == 0 の場合
+         * per_cpu_pages から空きページを取る
+           * rmqueue_bulk
+       * order > 1 の場合 __rmqueue で buddy アロケータから ?? する
+         * __rmqueue_smallest
+           * order ごとに zone->free_area リストを走査して空き struct page を探す
+           * rmv_page_order
+         * __rmqueue_fallback
+           * 一つ上の order で空きページを探す?
      * freelist からページを確保できなかったら __alloc_pages_slowpath を呼ぶ
      * zone_reclaim で zone ごとに reclaim できるページを探す
        * __zone_reclaim
