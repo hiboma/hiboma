@@ -121,6 +121,10 @@
                    * pageout
                      * try_to_free_buffers
                        * drop_buffers
+                         * free_buffer_head
+                           * kmem_cache_free
+                     * mapping->a_ops->writepage
+                       * shmem_writepage => swap out
          * **shrink_slab**
    * **__alloc_pages_slowpath**
      * wake_all_kswapd で kswapd を起床させておく
