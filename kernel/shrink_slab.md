@@ -118,6 +118,7 @@
                * shrink_inactive_list
                  * shrink_page_list
                  * reclaim したページを返す
+                   * pageout
          * **shrink_slab**
    * **__alloc_pages_slowpath**
      * wake_all_kswapd で kswapd を起床させておく
