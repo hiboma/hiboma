@@ -33,7 +33,7 @@ g# lwn.net Stable pages
    * カーネルが checksum を計算したとあとに page の内容が書き変わると 疑似? write w error となってしまう
    * Software RAID がコレでコケる
 
-ということでファイルシステムで ___stable page___ てので writeback 中に page の内容が書き変わらんことを保証しよう
+ということでファイルシステムで ___stable page___ という仕組みで writeback 中に page の内容が書き変わらんことを保証しよう
 
 ## http://lwn.net/Articles/429295/ のパッチ
 
@@ -84,7 +84,9 @@ g# lwn.net Stable pages
  * http://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/commit/?id=1d1d1a767206fbe5d4c69493b7e6d2a8d08cc0a0
    * bdi_cap_stable_pages_required で挙動を変える
 
-## CentOS6.5   
+## CentOS6.5
+
+デバイスが writeback 中に stable page を必要とするかの判定
 
 ```c
 static inline bool bdi_cap_stable_pages_required(struct backing_dev_info *bdi)
@@ -109,6 +111,7 @@ void wait_for_stable_page(struct page *page)
 	struct address_space *mapping = page_mapping(page);
 	struct backing_dev_info *bdi = mapping->backing_dev_info;
 
+    // デバイスが stable page を必要としないなら待たずに戻る
 	if (!bdi_cap_stable_pages_required(bdi))
 		return;
 #ifdef CONFIG_NEED_BOUNCE_POOL
@@ -116,7 +119,24 @@ void wait_for_stable_page(struct page *page)
 		return;
 #endif /* CONFIG_NEED_BOUNCE_POOL */
 
+    // stable page で writeback を待つ
 	wait_on_page_writeback(page);
 }
 EXPORT_SYMBOL_GPL(wait_for_stable_page);
+```
+
+blk_integrity_register で BDI_CAP_STABLE_WRITES がセットされる
+
+```c
+int blk_integrity_register(struct gendisk *disk, struct blk_integrity *template)
+{
+
+// ...
+
+        disk->queue->backing_dev_info.capabilities |= BDI_CAP_STABLE_WRITES;
+
+        return 0;
+}
+EXPORT_SYMBOL(blk_integrity_register);
+
 ```
