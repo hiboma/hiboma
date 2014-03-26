@@ -37,22 +37,22 @@ g# lwn.net Stable pages
 
 ## http://lwn.net/Articles/429295/ のパッチ
 
- * integrity check が使われるケースで writeback する前の page のコピーを取る
-  * ユーザ空間では気にする必要ない
+ * integrity check が使われるケースでは writeback する前の page のコピーを取っておく
+  * コピーについてはユーザ空間では気にする必要ない
+  * ページの内容が書き変わる事があってもコピーを参照して integrity check できる
   * integrity check での問題は解決したけど コピーはコスト高い
 
 もっといい方法無いの?  
 
 ## http://lwn.net/Articles/442156/ のパッチ
 
- * writeback する page に write する際は、writeback が終わるまで待つだけ
+ * writeback する page に write する際は、writeback が終わるまで待つだけにする
    * 先に書いたように writeback する際に page は read-only にマークされる
    * 加えて writeback 中であることを示すフラグがある
  * ___page_mkwrite___
    * read-only page が writable になったことを通知する
-   * ??
-
- * page_mkwrite を実装してないファイルシステムもある
+   * vm_operations_struct の .page_mkwrite を指す
+ * .page_mkwrite を実装してないファイルシステムもある
    * その場合 ___generic_empty_page_mkwrite___ を使う
      * page をロック、 write back が終わるまで待つ、ロックしたページを返す
    * ext2, ext4, FAT で似たような機能のをつくった
