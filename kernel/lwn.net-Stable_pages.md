@@ -11,10 +11,10 @@ g# lwn.net Stable pages
 
 ## だいたいこんな感じの内容
 
- * プロセスが file-backed (mmap, write) なページに write すると
+ * プロセスが file-backed (mmap, write, PG_private ?) なページに write すると
    * dirty とマークされる
    * backing store に書き込まれないといけない
- * writeback する際に under writeback としてフラグがたち read-only にマークされる
+ * writeback する際に under writeback (PG_writeback) としてフラグがたち read-only にマークされる
    * I/O にキュー される
  * page の write-protection は page の内容の書き換えを防ぐためものでない
    * 追加の writeback を検知するための仕組み
@@ -23,12 +23,12 @@ g# lwn.net Stable pages
 だいだいいい感じに動く
 
  * ワーストケース ? でも ...
- * 最初の writeback の I/O が始まる前に page 書き換えが起こると
- * 直近に書き換えた内容が、最初と次の I/O で redundant disk (RAID?) に キューイングされる
+   * 最初の writeback の I/O が始まる前に page 書き換えが起こると
+   * 直近に書き換えた内容が、最初と次の I/O で redundant disk (RAID?) に キューイングされる
 
-writeback 中の page 書き換えがよろしくないケースもある
+## writeback 中の page 書き換えがよろしくないケースもある
 
-   * 整合性チェック integrity checking できるデバイスで、ディスクに書き込む内容と 
+ * 整合性チェック integrity checking できるデバイスで、ディスクに書き込む内容と 
 カーネルの pre-write checksum を比較する
    * カーネルが checksum を計算したとあとに page の内容が書き変わると 疑似? write w error となってしまう
    * Software RAID がコレでコケる
@@ -40,6 +40,8 @@ writeback 中の page 書き換えがよろしくないケースもある
  * integrity check が使われるケースで writeback する前の page のコピーを取る
   * ユーザ空間では気にする必要ない
   * integrity check での問題は解決したけど コピーはコスト高い
+
+もっといい方法無いの?  
 
 ## http://lwn.net/Articles/442156/ のパッチ
 
@@ -81,3 +83,40 @@ writeback 中の page 書き換えがよろしくないケースもある
 
  * http://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/commit/?id=1d1d1a767206fbe5d4c69493b7e6d2a8d08cc0a0
    * bdi_cap_stable_pages_required で挙動を変える
+
+## CentOS6.5   
+
+```c
+static inline bool bdi_cap_stable_pages_required(struct backing_dev_info *bdi)
+{
+	return bdi->capabilities & BDI_CAP_STABLE_WRITES;
+}
+```
+
+wait_for_stable_page のソース
+
+```c
+/**
+ * wait_for_stable_page() - wait for writeback to finish, if necessary.
+ * @page:	The page to wait on.
+ *
+ * This function determines if the given page is related to a backing device
+ * that requires page contents to be held stable during writeback.  If so, then
+ * it will wait for any pending writeback to complete.
+ */
+void wait_for_stable_page(struct page *page)
+{
+	struct address_space *mapping = page_mapping(page);
+	struct backing_dev_info *bdi = mapping->backing_dev_info;
+
+	if (!bdi_cap_stable_pages_required(bdi))
+		return;
+#ifdef CONFIG_NEED_BOUNCE_POOL
+	if (mapping->host->i_sb->s_flags & MS_SNAP_STABLE)
+		return;
+#endif /* CONFIG_NEED_BOUNCE_POOL */
+
+	wait_on_page_writeback(page);
+}
+EXPORT_SYMBOL_GPL(wait_for_stable_page);
+```
