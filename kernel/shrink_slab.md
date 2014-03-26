@@ -115,10 +115,12 @@
            * shrink_mem_cgroup_zone
              * shrink_list
                * shrink_active_list
+                 * inactive への移動
                * shrink_inactive_list
                  * shrink_page_list
                  * reclaim したページを返す
                    * pageout
+                     * Dirty なページの書き出しを試みる
                      * try_to_free_buffers
                        * drop_buffers
                          * free_buffer_head
