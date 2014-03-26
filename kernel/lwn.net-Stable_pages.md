@@ -9,7 +9,7 @@ g# lwn.net Stable pages
 
 2 で Stable pages が問題になるケースとのこの
 
-## だいたいこんな感じの内容
+## writeback と read-only ページの仕組み
 
  * プロセスが file-backed (mmap, write, PG_private ?) なページに write すると
    * dirty とマークされる
@@ -140,3 +140,6 @@ int blk_integrity_register(struct gendisk *disk, struct blk_integrity *template)
 EXPORT_SYMBOL(blk_integrity_register);
 
 ```
+
+drivers/md/dm-table.c や drivers/scsi/sd_dif.c で呼び出されている
+integrity を担保する方法は CRC ? とかいろいろ方法がある様子
