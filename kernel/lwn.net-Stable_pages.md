@@ -126,6 +126,19 @@ void wait_for_stable_page(struct page *page)
 EXPORT_SYMBOL_GPL(wait_for_stable_page);
 ```
 
+wait_on_page_writeback の中見。 PageWriteback なら wait_on_bit で待つ
+
+```c
+/* 
+ * Wait for a page to complete writeback
+ */
+static inline void wait_on_page_writeback(struct page *page)
+{
+	if (PageWriteback(page))
+		wait_on_page_bit(page, PG_writeback);
+}
+```
+
 blk_integrity_register で BDI_CAP_STABLE_WRITES がセットされる
 
 ```c
@@ -139,8 +152,7 @@ int blk_integrity_register(struct gendisk *disk, struct blk_integrity *template)
         return 0;
 }
 EXPORT_SYMBOL(blk_integrity_register);
-
 ```
 
-drivers/md/dm-table.c や drivers/scsi/sd_dif.c で呼び出されている
+Device Mappter drivers/md/dm-table.c や SCSI drivers/scsi/sd_dif.c で呼び出されている
 integrity を担保する方法は CRC ? とかいろいろ方法がある様子
