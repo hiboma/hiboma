@@ -205,6 +205,10 @@
    * kswapd, 任意のプロセス, 割り込みコンテキスト? の alloc_page 群から呼び出される
  * node と zone
 
+## tmpfs と swap
+
+ * shmem_swapin
+
 ## swap API
 
 shmem_writepage での実装から抜粋
