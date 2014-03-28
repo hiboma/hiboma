@@ -207,7 +207,35 @@
 
 ## tmpfs と swap
 
- * shmem_swapin
+read(2) しようとしたページが swapout されていれば swapin 呼び出しになる
+
+ * do_shmem_file_read
+   * shmem_getpage, shmem_getpage_gfp
+     * shmem_swapin
+       * swapin_readahead -> I/O
+
+```c
+    // ページが swapout されているか否か
+	swap.val = 0;
+	page = find_lock_page(mapping, index);
+	if (radix_tree_exceptional_entry(page)) {
+		swap = radix_to_swp_entry(page);
+		page = NULL;
+	}
+
+// ...    
+
+	if (swap.val) {
+		/* Look it up and read it in.. */
+		page = lookup_swap_cache(swap);
+		if (!page) {
+			/* here we actually do the io */
+			if (fault_type && !(*fault_type & VM_FAULT_MAJOR)) {
+				__count_vm_event(PGMAJFAULT);
+				*fault_type |= VM_FAULT_MAJOR;
+			}
+			page = shmem_swapin(swap, gfp, info, index);
+```
 
 ## swap API
 
