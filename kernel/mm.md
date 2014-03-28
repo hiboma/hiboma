@@ -223,7 +223,7 @@ read(2) しようとしたページが swapout されていれば swapin 呼び�
 		page = NULL;
 	}
 
-// ...    
+// ...
 
 	if (swap.val) {
 		/* Look it up and read it in.. */
