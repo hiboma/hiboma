@@ -45,3 +45,23 @@
  * PG_swapcache
  * PG_unevictable
  * PG_mlocked
+
+----
+
+ * PageLocked
+ * PageSwapBacked
+   * tmpfs, anon, ram, ... backing store が swap
+   * !PageSwapBacked   .... page_is_file_cache
+ * SetPageDirty
+ * SetPageSwapCache, ClearPageSwapCache
+ * SetPageReclaim
+
+ * page_mapped
+   * &(page)->_mapcount >= 0
+
+----
+
+## vm_area_struct
+
+ * VM_LOCKED
+   * アドレス空間がロック。mlock(2)

@@ -189,7 +189,7 @@ int __set_page_dirty_no_writeback(struct page *page)
 
 ### tmpfs
 
- * tmpfs はスワップも絡んでくるので w大分ややこしい
+ * tmpfs はスワップも絡んでくるので大分ややこしい
 
 ```c
 static const struct address_space_operations shmem_aops = {
@@ -203,6 +203,108 @@ static const struct address_space_operations shmem_aops = {
     // メモリが物故割れた際にページを取り除く?らしい
 	.error_remove_page = generic_error_remove_page,
 };
+```
+
+### .writepage
+
+ * alloc_page群で shrink_page_list を呼び出し際に pageout の中で呼び出される
+   * mapping->a_ops->writepage
+ * Backing Store がディスクであれば Dirty なページの writeback
+ * tmpfs は Backing Store が swap なので swap を利用しての writeback になる
+   * ページキャッシュ => スワップキャッシュ => swap out ?
+   * swap page という単位で page cache にマッピングされている
+ * get_swap_page -> swap_writepage -> swapcache_free
+   * swap を writeback する際に使うページを スワップキャッシュと呼ぶのだろうか?
+
+```c
+/*
+ * Move the page from the page cache to the swap cache.
+ */
+static int shmem_writepage(struct page *page, struct writeback_control *wbc)
+{
+	struct shmem_inode_info *info;
+	struct address_space *mapping;
+	struct inode *inode;
+	swp_entry_t swap;
+	pgoff_t index;
+
+	BUG_ON(!PageLocked(page));
+	mapping = page->mapping;
+    // mapping の中でのオフセット (論理的なインデックス?)
+	index = page->index;
+    // オーナー。block_device か swap か
+	inode = mapping->host;
+	info = SHMEM_I(inode);
+
+    // redirty => SetPageDirty しなおして別のページを対象にする?
+    // mlock(2) ?
+	if (info->flags & VM_LOCKED)
+		goto redirty;
+    // swap page が無い ( total_swap_pages はグローバルな統計 )
+	if (!total_swap_pages)
+		goto redirty;
+
+	/*
+	 * shmem_backing_dev_info's capabilities prevent regular writeback or
+	 * sync from ever calling shmem_writepage; but a stacking filesystem
+	 * might use ->writepage of its underlying filesystem, in which case
+	 * tmpfs should write out to swap only in response to memory pressure,
+	 * and not for the writeback threads or sync.
+	 */
+    // スタッキングファイルシステムで下位のファイルシステムの writepage を呼び出すケース
+	if (!wbc->for_reclaim) {
+		WARN_ON_ONCE(1);	/* Still happens? Tell us about it! */
+		goto redirty;
+	}
+
+    // swap 用ページ
+	swap = get_swap_page();
+	if (!swap.val)
+		goto redirty;
+
+	/*
+	 * Add inode to shmem_unuse()'s list of swapped-out inodes,
+	 * if it's not already there.  Do it now before the page is
+	 * moved to swap cache, when its pagelock no longer protects
+	 * the inode from eviction.  But don't unlock the mutex until
+	 * we've incremented swapped, because shmem_unuse_inode() will
+	 * prune a !swapped inode from the swaplist under this mutex.
+	 */
+	mutex_lock(&shmem_swaplist_mutex);
+
+    // inode を swap のリストに入れとく
+	if (list_empty(&info->swaplist))
+    // page が swap cache に移ると pagelock で eviction を保護できないから
+		list_add_tail(&info->swaplist, &shmem_swaplist);
+
+	if (add_to_swap_cache(page, swap, GFP_ATOMIC) == 0) {
+		swap_shmem_alloc(swap);
+        // page キャシュから削除 (address_space の radix tree から削除)
+		shmem_delete_from_page_cache(page, swp_to_radix_entry(swap));
+
+		spin_lock(&info->lock);
+		info->swapped++;
+		shmem_recalc_inode(inode);
+		spin_unlock(&info->lock);
+
+		mutex_unlock(&shmem_swaplist_mutex);
+		BUG_ON(page_mapped(page));
+
+        // swap デバイスに書き出す
+		swap_writepage(page, wbc);
+		return 0;
+	}
+
+	mutex_unlock(&shmem_swaplist_mutex);
+    // cgroup の swap チャージを減らしたり
+	swapcache_free(swap, NULL);
+redirty:
+	set_page_dirty(page);
+	if (wbc->for_reclaim)
+		return AOP_WRITEPAGE_ACTIVATE;	/* Return with page locked */
+	unlock_page(page);
+	return 0;
+}
 ```
 
 ### vfs_write から address_space_operations に下るところを追う

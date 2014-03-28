@@ -1,16 +1,7 @@
-## shrink_slab
 
- * slabキャッシュを破棄する
-   * inode_cache, dentry が大半を占める
-   * kswapd, 任意のプロセス, 割り込みコンテキスト? の alloc_page 群から呼び出される
- * node と zone 
-
-## SEE ALSO
-
- * https://github.com/hiboma/hiboma/blob/master/kernel/SReclaimable.md
- * https://github.com/hiboma/hiboma/blob/master/kernel/dentry_cache.md
- * https://github.com/hiboma/hiboma/blob/master/kernel/swappiness.md
-   * shrink_list 周りとごっちゃにしないように
+* !page->mapping && page_has_private(page)
+  * journaling のページがとりうる。dirty なページ + clean buffer という状態
+  * buffer を使っている場合は page->mapping に dev が来る?
 
 ## alloc_page を利用する API
 
@@ -66,6 +57,28 @@
             * do_swap_page
               * fault を起こしたアドレスが anon でも file でも無い場合に swapin
               * swap されているアドレスで fault
+                * lookup_swap_cache
+                * swapin_readahead
+                  * swapin しても page が見つからない場合は VM_FAULT_OOM で oom killer
+                  * read_swap_cache_async
+                    * find_get_page
+                      * swapper_space からスワップキャッシュを探す
+                    * __add_to_swap_cache
+                    * alloc_page_vma
+                      * swapin するための page を割り当て
+                    * swap_readpage
+                      * get_swap_bio
+                      * count_vm_event(PSWPIN);
+                      * submit_bio
+                        * ___I/O (read)___
+                    * swapcache_free
+                * count_vm_event(PGMAJFAULT)
+                * mem_cgroup_try_charge_swapin
+                  * チャージできなかったら VM_FAULT_OOM
+                * inc_mm_counter(mm, anon_rss),
+                * dec_mm_counter(mm, swap_usage);
+                *  mem_cgroup_commit_charge_swapin(page, ptr);
+                  * ここでコミット
 
 ----
 
@@ -126,7 +139,10 @@
                          * free_buffer_head
                            * kmem_cache_free
                      * mapping->a_ops->writepage
-                       * shmem_writepage => swap out
+                       * shmem_writepage
+                         * ページを swap に writeback
+                       * ディスクベースのファイルシステムならただの writeback
+                   * add_to_swap
          * **shrink_slab**
    * **__alloc_pages_slowpath**
      * wake_all_kswapd で kswapd を起床させておく
@@ -181,6 +197,63 @@
    * unevictable なページは reclaim されない
  * out_of_memory -> oom_kill_process プロセスから reclaim
    * anon, stack, mapped file
+
+## shrink_slab
+
+ * slabキャッシュを破棄する
+   * inode_cache, dentry が大半を占める
+   * kswapd, 任意のプロセス, 割り込みコンテキスト? の alloc_page 群から呼び出される
+ * node と zone
+
+## swap API
+
+shmem_writepage での実装から抜粋
+
+ * get_swap_page
+   * スワップキャシュを確保
+   * swap_list に swap デバイスが連なっているので走査 (swap は複数登録できるので)
+     * swap_list には swapon(2) で追加する
+     * 空きが見つかったら nr_swap_pages++
+   * scan_swap_map
+   * get_swap_page で見つけたページを解放できるように面倒みるのはファイルシステムの役割?
+     * tmpfs ではそうだけど、 anon な場合は?
+ * add_to_swap_cache
+   * page を swap cache として利用する
+   * __add_to_swap_cache
+     * set_page_private
+       * page が swp_entry_t に使われていることを .private
+     * radix_tree_insert(&swapper_space.page_tree, entry.val, page);
+     * total_swapcache_pages++
+     * __inc_zone_page_state(page, NR_FILE_PAGES);
+ * swap_writepage
+   * get_swap_bio
+     * bio_alloc
+       * bio_alloc_bioset
+         * mempool_alloc
+   * count_vm_event(PSWPOUT);
+     * sar で swapout として出る統計
+   * set_page_writeback して submit_bio で I/O する
+ * swapcache_free
+   * swap_entry_free
+     * SWP_BLKDEV
+     * struct gendisk disk->fops->swap_slot_free_notify
+   * mem_cgroup_uncharge_swapcache
+
+スワップキャッシュの属する struct address_space はグローバルな swapper_space
+
+----
+
+ * add_to_swap
+   * get_swap_page
+   * swapcache_free
+   * add_to_swap_cache
+
+## SEE ALSO
+
+ * https://github.com/hiboma/hiboma/blob/master/kernel/SReclaimable.md
+ * https://github.com/hiboma/hiboma/blob/master/kernel/dentry_cache.md
+ * https://github.com/hiboma/hiboma/blob/master/kernel/swappiness.md
+   * shrink_list 周りとごっちゃにしないように
 
 ## __zone_reclaim
 
