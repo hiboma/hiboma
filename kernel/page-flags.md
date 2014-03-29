@@ -49,8 +49,8 @@
 ----
 
  * PageLocked
- * PageSwapBacked
-   * tmpfs, anon, ram, ... backing store が swap
+ * PageSwapBacked, SetPageSwapBacked
+   * tmpfs, anon, ram, ...  ページの backing store が swap
    * !PageSwapBacked   .... page_is_file_cache
  * SetPageDirty
  * SetPageSwapCache, ClearPageSwapCache

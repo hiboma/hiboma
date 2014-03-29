@@ -207,13 +207,18 @@
 
 ## tmpfs と swap
 
-read(2) しようとしたインデックスのページが swapout されていれば swapin 呼び出しになる
+read(2) しようとしたインデックス( address_space での位置) のページが swapout されていれば swapin 呼び出しになる。swapout されていなければ alloc_page_vma
 
  * vfs_read
  * do_shmem_file_read
    * shmem_getpage, shmem_getpage_gfp
      * shmem_swapin
-       * swapin_readahead -> I/O
+       * swapin_readahead -> ___I/O___
+     * shmem_alloc_page
+       * alloc_page_vma
+       * SetPageSwapBacked
+       * mem_cgroup_cache_charge
+         * shmem としてチャージ
 
 ```c
     // address_space で指定したインデックスのページが swapout されているか否かを見る
