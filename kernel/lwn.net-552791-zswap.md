@@ -39,4 +39,6 @@ swap page の圧縮
 使えそうなとこ
 
  * RAMの少ないデスクトップ/ラップトップで swap の軽減
- * overcommit guests 
+ * I/O を共有しててオーバーコミットしてるVMゲストで swap プレッシャーの軽減
+   * hypervisor へひどい I/O がいってしまうのを防ぐ
+ * SSD を swap にしている場合に write で寿命縮むのを防ぐ
