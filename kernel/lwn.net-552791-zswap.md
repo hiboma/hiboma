@@ -29,3 +29,4 @@ swap page の圧縮
 
  * 53% の runtime reduction
  * 76% の I/O reduction
+ * プールのサイズ制限に達したか buddy アロケータからページを確保できない時に圧縮したキャッシュを swap device に追いやることができる
