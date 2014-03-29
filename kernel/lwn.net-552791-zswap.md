@@ -59,12 +59,28 @@ swap page =>=>=> frontswap =>=>=> zswap =>=>=> swap device
    * 圧縮プールがいっぱい、もしくは buddy allocator から割り当てできない時
  * zswap は __zbud__ を利用する
    * z(lib?) buddy allocator ?
+   * 圧縮プールは動的に伸縮する。事前割り当てされない
+
+#### zbud   
+
 > * zbud is an special purpose allocator for storing compressed pages.  Contrary
 > * to what its name may suggest, zbud is not a buddy allocator, but rather an
 > * allocator that "buddies" two compressed pages together in a single memory
 > * page.
 
- * 圧縮プールは動的に伸縮する。事前割り当てされない
+> * zbud works by storing compressed pages, or "zpages", together in pairs in a
+> * single memory page called a "zbud page".  The first buddy is "left
+> * justified" at the beginning of the zbud page, and the last buddy is "right
+> * justified" at the end of the zbud page.  The benefit is that if either
+> * buddy is freed, the freed buddy space, coalesced with whatever slack space
+> * that existed between the buddies, results in the largest possible free region
+> * within the zbud page.
+
+```
+[ left justified ][][][][][][ right justified ]
+```
+
+??? 圧縮自体は zbud ではしないのかな
 
 #### sysfs 
  
