@@ -30,3 +30,13 @@ swap page の圧縮
  * 53% の runtime reduction
  * 76% の I/O reduction
  * プールのサイズ制限に達したか buddy アロケータからページを確保できない時に圧縮したキャッシュを swap device に追いやることができる
+
+基本原則
+
+ * CPU <=> swap I/O 削減 とのトレードオフ
+ * 圧縮キャッシュへの read/write >>>> swap device の非同期ブロックI/O
+
+使えそうなとこ
+
+ * RAMの少ないデスクトップ/ラップトップで swap の軽減
+ * overcommit guests 
