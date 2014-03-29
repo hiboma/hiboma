@@ -86,3 +86,38 @@ swap page =>=>=> frontswap =>=>=> zswap =>=>=> swap device
  create mode 100644 mm/zbud.c
  create mode 100644 mm/zswap.c
 ```
+
+## 圧縮プール
+
+linux-3.13.5/mm/zbud.c
+
+```c
+/**
+ * struct zbud_pool - stores metadata for each zbud pool
+ * @lock:	protects all pool fields and first|last_chunk fields of any
+ *		zbud page in the pool
+ * @unbuddied:	array of lists tracking zbud pages that only contain one buddy;
+ *		the lists each zbud page is added to depends on the size of
+ *		its free region.
+ * @buddied:	list tracking the zbud pages that contain two buddies;
+ *		these zbud pages are full
+ * @lru:	list tracking the zbud pages in LRU order by most recently
+ *		added buddy.
+ * @pages_nr:	number of zbud pages in the pool.
+ * @ops:	pointer to a structure of user defined operations specified at
+ *		pool creation time.
+ *
+ * This structure is allocated at pool creation time and maintains metadata
+ * pertaining to a particular zbud pool.
+ */
+struct zbud_pool {
+	spinlock_t lock;
+	struct list_head unbuddied[NCHUNKS];
+	struct list_head buddied;
+	struct list_head lru;
+	u64 pages_nr;
+	struct zbud_ops *ops;
+};
+```
+
+pool 
