@@ -209,13 +209,17 @@
 
 read(2) しようとしたページが swapout されていれば swapin 呼び出しになる
 
+ * vfs_read
  * do_shmem_file_read
    * shmem_getpage, shmem_getpage_gfp
      * shmem_swapin
        * swapin_readahead -> I/O
 
 ```c
-    // ページが swapout されているか否か
+    // address_space で指定したインデックスのページが swapout されているか否かを見る
+    // インデックスは read(2) の ppos から出す
+    //     index = *ppos >> PAGE_CACHE_SHIFT;
+    //
 	swap.val = 0;
 	page = find_lock_page(mapping, index);
 	if (radix_tree_exceptional_entry(page)) {
@@ -225,6 +229,7 @@ read(2) しようとしたページが swapout されていれば swapin 呼び�
 
 // ...
 
+    // swap.val > 0 で swap されたページと判定
 	if (swap.val) {
 		/* Look it up and read it in.. */
 		page = lookup_swap_cache(swap);
@@ -237,6 +242,7 @@ read(2) しようとしたページが swapout されていれば swapin 呼び�
 			page = shmem_swapin(swap, gfp, info, index);
 ```
 
+swapout されたファイルを read(2) すると count_vm_event(PSWPIN) でカウント
 
 ```
 06:53:47 PM  pswpin/s pswpout/s
