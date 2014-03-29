@@ -42,3 +42,29 @@ swap page の圧縮
  * I/O を共有しててオーバーコミットしてるVMゲストで swap プレッシャーの軽減
    * hypervisor へひどい I/O がいってしまうのを防ぐ
  * SSD を swap にしている場合に write で寿命縮むのを防ぐ
+
+zcache
+
+ * zcache は RAM で page cache 圧縮。zcache でも swap の圧縮はできる
+ * zswap は別のやり方で swap 圧縮の利便性を提供
+
+## 設計
+
+ *
+
+```
+ Documentation/vm/zswap.txt |   68 ++++
+ fs/debugfs/file.c          |   42 ++
+ include/linux/debugfs.h    |    2 +
+ include/linux/zbud.h       |   22 ++
+ lib/fault-inject.c         |   21 -
+ mm/Kconfig                 |   30 ++
+ mm/Makefile                |    2 +
+ mm/zbud.c                  |  526 ++++++++++++++++++++++++
+ mm/zswap.c                 |  943 ++++++++++++++++++++++++++++++++++++++++++++
+ 9 files changed, 1635 insertions(+), 21 deletions(-)
+ create mode 100644 Documentation/vm/zswap.txt
+ create mode 100644 include/linux/zbud.h
+ create mode 100644 mm/zbud.c
+ create mode 100644 mm/zswap.c
+```
