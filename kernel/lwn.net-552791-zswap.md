@@ -50,7 +50,21 @@ zcache
 
 ## 設計
 
+```
+swap page =>=>=> frontswap =>=>=> zswap =>=>=> swap device
+```
+
+ * zswap は Frontswap API からページを受け取る?
+ * LRUにのっとって、圧縮プールから swapデバイスに ページを writeback して evict できる
+   * 圧縮プールがいっぱい、もしくは buddy allocator から割り当てできない時
+ * zswap は __zbud__ を利用する
+ * 圧縮プールは動的に伸縮する。事前割り当てされない
  *
+
+#### sysfs 
+ 
+ * max_compression_ratio
+ * max_pool_percent
 
 ```
  Documentation/vm/zswap.txt |   68 ++++
