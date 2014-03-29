@@ -58,3 +58,4 @@ memset(p, 0, sizeof(type p))
  * list_for_each_entry_safe
  * tasklist_lock
    * __cacheline_aligned DEFINE_RWLOCK(tasklist_lock);  /* outer */
+ * void *page_address(const struct page *page)

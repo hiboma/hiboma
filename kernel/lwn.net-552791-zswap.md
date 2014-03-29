@@ -59,6 +59,11 @@ swap page =>=>=> frontswap =>=>=> zswap =>=>=> swap device
    * 圧縮プールがいっぱい、もしくは buddy allocator から割り当てできない時
  * zswap は __zbud__ を利用する
    * z(lib?) buddy allocator ?
+> * zbud is an special purpose allocator for storing compressed pages.  Contrary
+> * to what its name may suggest, zbud is not a buddy allocator, but rather an
+> * allocator that "buddies" two compressed pages together in a single memory
+> * page.
+
  * 圧縮プールは動的に伸縮する。事前割り当てされない
 
 #### sysfs 
@@ -120,4 +125,3 @@ struct zbud_pool {
 };
 ```
 
-pool 
