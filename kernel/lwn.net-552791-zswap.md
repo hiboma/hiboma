@@ -58,13 +58,17 @@ swap page =>=>=> frontswap =>=>=> zswap =>=>=> swap device
  * LRUにのっとって、圧縮プールから swapデバイスに ページを writeback して evict できる
    * 圧縮プールがいっぱい、もしくは buddy allocator から割り当てできない時
  * zswap は __zbud__ を利用する
+   * z(lib?) buddy allocator ?
  * 圧縮プールは動的に伸縮する。事前割り当てされない
- *
 
 #### sysfs 
  
  * max_compression_ratio
  * max_pool_percent
+
+#### debugfs
+
+ * 統計とれる
 
 ```
  Documentation/vm/zswap.txt |   68 ++++
