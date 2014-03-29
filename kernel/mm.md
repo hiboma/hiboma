@@ -207,7 +207,7 @@
 
 ## tmpfs と swap
 
-read(2) しようとしたページが swapout されていれば swapin 呼び出しになる
+read(2) しようとしたインデックスのページが swapout されていれば swapin 呼び出しになる
 
  * vfs_read
  * do_shmem_file_read
