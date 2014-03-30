@@ -8,6 +8,17 @@
 
 >　NMIは特殊な目的で利用されます。ハードウェアに依存しますが、メモリのパリティエラー発生の捕捉、ウォッチドッグ、デバッガの強制起動などに利用されます。
 
+ハンドラはどこで定義?
+
+ * watchdog_*** てなドライバ実装がある
+   * watchdog_register_device(struct watchdog_device *wdd)
+
+```
+[vagrant@vagrant-centos65 ~]$ find /sys/ | grep watchdog
+/sys/class/watchdog
+/sys/module/ehci_hcd/parameters/io_watchdog_force
+```
+
 >　Intel x86用Linuxでは、LDTに直接NMI用の割り込みハンドラ（nmi関数）を登録しています。NMIが発生するとその時点におけるCPU状態によらず、割り込みハンドラが呼び出されます。
 
  * LDT ... Local Descriptor Table
