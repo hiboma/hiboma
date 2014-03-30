@@ -1,6 +1,6 @@
-g# lwn.net Stable pages
+# lwn.net Stable pages
 
- * http://lwn.net/Articles/442355/
+ * http://lwn.net/Articles/442355R/
  * http://yoshinorimatsunobu.blogspot.jp/2014/03/why-buffered-writes-are-sometimes.html で紹介されている
  
 > 1. READ MODIFY WRITE

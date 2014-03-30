@@ -221,7 +221,7 @@ read(2) しようとしたインデックス( address_space での位置) のペ
          * shmem としてチャージ
 
 ```c
-    // address_space で指定したインデックスのページが swapout されているか否かを見る
+    // address_space で指定したインデックスのページが 
     // インデックスは read(2) の ppos から出す
     //     index = *ppos >> PAGE_CACHE_SHIFT;
     //
