@@ -43,49 +43,66 @@ ENTRY(nmi)
 	movq $-1,%rsi
     // ここ
 	call do_nmi
-#ifdef CONFIG_TRACE_IRQFLAGS
-	/* paranoidexit; without TRACE_IRQS_OFF */
-	/* ebx:	no swapgs flag */
-	DISABLE_INTERRUPTS(CLBR_NONE)
-	testl %ebx,%ebx				/* swapgs needed? */
-	jnz nmi_restore
-	testl $3,CS(%rsp)
-	jnz nmi_userspace
-nmi_swapgs:
-	SWAPGS_UNSAFE_STACK
-nmi_restore:
-	RESTORE_ALL 8
-	jmp irq_return
-nmi_userspace:
-	GET_THREAD_INFO(%rcx)
-	movl TI_flags(%rcx),%ebx
-	andl $_TIF_WORK_MASK,%ebx
-	jz nmi_swapgs
-	movq %rsp,%rdi			/* &pt_regs */
-	call sync_regs
-	movq %rax,%rsp			/* switch stack for scheduling */
-	testl $_TIF_NEED_RESCHED,%ebx
-	jnz nmi_schedule
-	movl %ebx,%edx			/* arg3: thread flags */
-	ENABLE_INTERRUPTS(CLBR_NONE)
-	xorl %esi,%esi 			/* arg2: oldset */
-	movq %rsp,%rdi 			/* arg1: &pt_regs */
-	call do_notify_resume
-	DISABLE_INTERRUPTS(CLBR_NONE)
-	jmp nmi_userspace
-nmi_schedule:
-	ENABLE_INTERRUPTS(CLBR_ANY)
-	call schedule
-	DISABLE_INTERRUPTS(CLBR_ANY)
-	jmp nmi_userspace
-	CFI_ENDPROC
-#else
+# #ifdef CONFIG_TRACE_IRQFLAGS
+...
+# #else
 	jmp paranoid_exit
 	CFI_ENDPROC
 #endif
 END(nmi)
-```   
+```
 
+```
+dotraplinkage notrace __kprobes void
+do_nmi(struct pt_regs *regs, long error_code)
+{
+    // irq_enter() 的な
+	nmi_enter();
 
+    // 統計インクリメント
+	inc_irq_stat(__nmi_count);
 
+	if (!ignore_nmis)
+		default_do_nmi(regs);
 
+   // irq_exit() 的な
+	nmi_exit();
+}
+```
+
+acpi_nmi_disable, acpi_nmi_enable で NMI の on/off を切り替える
+
+```c
+void stop_nmi(void)
+{
+	acpi_nmi_disable();
+	ignore_nmis++;
+}
+
+void restart_nmi(void)
+{
+	ignore_nmis--;
+	acpi_nmi_enable();
+```
+
+acpi_nmi_enable で NMI on/off は CPU ごとにセットされる
+
+```
+/*
+ * Enable timer based NMIs on all CPUs:
+ */
+void acpi_nmi_enable(void)
+{
+	if (atomic_read(&nmi_active) && nmi_watchdog == NMI_IO_APIC)
+		on_each_cpu(__acpi_nmi_enable, NULL, 1);
+}
+```
+
+__acpi_nmi_enable は APIC になんか書いている
+
+```c
+static void __acpi_nmi_enable(void *__unused)
+{
+	apic_write(APIC_LVT0, APIC_DM_NMI);
+}
+```
