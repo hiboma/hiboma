@@ -86,9 +86,13 @@ void timekeeping_notify(struct clocksource *clock)
 	if (timekeeper.clock == clock)
 		return;
 	stop_machine(change_clocksource, clock, NULL);
+    // 各CPU に clocksource が変わったことを notify
+    // per_cpu でビットをたてておく
 	tick_clock_notify();
 }
 ```
+
+stop_machine 一時的に CPU を停止?する
 
 ```c
 int stop_machine(int (*fn)(void *), void *data, const struct cpumask *cpus)
