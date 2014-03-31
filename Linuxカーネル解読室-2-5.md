@@ -10,6 +10,10 @@
 
 ハンドラはどこで定義?
 
+ * パリティエラー
+   * mem_parity_error
+ * I/Oチェックエラー
+   * io_check_error
  * watchdog_*** てなドライバ実装がある
    * watchdog_register_device(struct watchdog_device *wdd)
 
