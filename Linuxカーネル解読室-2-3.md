@@ -836,6 +836,10 @@ entry_64.S:ENTRY(ignore_sysret)
 
 ## do_IRQ
 
+ * struct irq_desc 割り込みデスクリプタ
+ * struct irqaction
+   * irqaction->handler() が 割り込みハンドラ
+
 ```c
 fastcall unsigned int do_IRQ(struct pt_regs *regs)
 {
@@ -885,14 +889,21 @@ fastcall unsigned int __do_IRQ(unsigned int irq, struct pt_regs *regs)
         status |= IRQ_PENDING; ――<7>
 
         action = NULL;
+
+        // IRQ を実行可能かどうか?
         if (likely(!(status & (IRQ_DISABLED | IRQ_INPROGRESS)))) {
                 // IRQ_PENDING を外して、 割り込み実行中の IRQ_INPROGRESS を立てる
                 action = desc->action;
                 status &= ~IRQ_PENDING;
+                // IRQ を実行可能に入る
                 status |= IRQ_INPROGRESS; ――<8>
         }
+        // IRQ デスクリプタい IRQ_PENDING をたてておく
+        // desc はグローバルにシェアされているので要 spin_lock
         desc->status = status; ――<9>
 
+        // 別の CPU で IRQ を実行中なので 任せて終わる
+        // IRQ_PENDING の有無で判定できる
         if (unlikely(!action)) ――<10>
                 goto out;
 
@@ -908,6 +919,8 @@ fastcall unsigned int __do_IRQ(unsigned int irq, struct pt_regs *regs)
                 spin_lock(&desc->lock);
                 if (!noirqdebug)
                         note_interrupt(irq, desc, action_ret, regs);
+
+                // ペンディングされている IRQ がいるので、再度ループしてやっつける
                 if (likely(!(desc->status & IRQ_PENDING))) ――<12>
                         break;
                 desc->status &= ~IRQ_PENDING;
