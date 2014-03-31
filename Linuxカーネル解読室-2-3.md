@@ -896,6 +896,8 @@ fastcall unsigned int __do_IRQ(unsigned int irq, struct pt_regs *regs)
         if (unlikely(!action)) ――<10>
                 goto out;
 
+        // 他の CPU が IRQ_INPROGRESS を立てる可能性があるので
+        // 全部終わるまでループ
         for (;;) {
                 irqreturn_t action_ret;
 
