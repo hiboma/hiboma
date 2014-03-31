@@ -106,3 +106,64 @@ static void __acpi_nmi_enable(void *__unused)
 	apic_write(APIC_LVT0, APIC_DM_NMI);
 }
 ```
+
+## default_do_nmi
+
+```c
+static notrace __kprobes void default_do_nmi(struct pt_regs *regs)
+{
+	unsigned char reason = 0;
+	int cpu;
+
+	cpu = smp_processor_id();
+
+	/* Only the BSP gets external NMIs from the system. */
+	if (!cpu)
+       	// return inb(0x61); で読みこんだ値
+		reason = get_nmi_reason();
+
+	if (!(reason & 0xc0)) {
+		if (notify_die(DIE_NMI_IPI, "nmi_ipi", regs, reason, 2, SIGINT)
+								== NOTIFY_STOP)
+			return;
+
+#ifdef CONFIG_X86_LOCAL_APIC
+		if (notify_die(DIE_NMI, "nmi", regs, reason, 2, SIGINT)
+							== NOTIFY_STOP)
+			return;
+
+#ifndef CONFIG_LOCKUP_DETECTOR
+		/*
+		 * Ok, so this is none of the documented NMI sources,
+		 * so it must be the NMI watchdog.
+		 */
+		if (nmi_watchdog_tick(regs, reason))
+			return;
+		if (!do_nmi_callback(regs, cpu))
+#endif /* !CONFIG_LOCKUP_DETECTOR */
+			unknown_nmi_error(reason, regs);
+#else
+		unknown_nmi_error(reason, regs);
+#endif
+
+		return;
+	}
+	if (notify_die(DIE_NMI, "nmi", regs, reason, 2, SIGINT) == NOTIFY_STOP)
+		return;
+
+	/* AK: following checks seem to be broken on modern chipsets. FIXME */
+	if (reason & 0x80)
+        // パリティエラー
+		mem_parity_error(reason, regs);
+	if (reason & 0x40)
+        // I/O 
+		io_check_error(reason, regs);
+#ifdef CONFIG_X86_32
+	/*
+	 * Reassert NMI in case it became active meanwhile
+	 * as it's edge-triggered:
+	 */
+	reassert_nmi();
+#endif
+}
+```
