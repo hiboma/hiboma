@@ -28,3 +28,25 @@
   * IF = 1 割り込み許可 ... CLI
 
 PUSHFで退避、 POPF/IRET で復帰
+
+割り込みと例外の優先度表
+
+```
+HIGHEST  フォールト デバッグフォールト
+         トラップ INTO, INT n, INT 3
+         デバッグトラップ
+         デバッグフォールト
+         NMI 割り込み
+LOWEST   INTR 割り込み
+```
+
+例外の方が NMI,割り込みより上位なのだなー
+
+## 9.4 INTERRUPT DESCRIPTOR TABLE
+
+IDT
+
+ * IDTエントリは 8byte
+   * IDTRレジスタでIDTのアドレスを取れる
+   * LIDT で メモリから IDTR をセット
+   * SIDT で IDTR をメモリにストアする
