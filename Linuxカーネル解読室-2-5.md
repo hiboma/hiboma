@@ -7,20 +7,22 @@
 
  * CPUの割り込み禁止をシカト
    * 割り込みとはアサートされるピン/メッセージが別にしているので?
- * 割り込みコントローラーでは?
- * NMIは誰が発生させる?
 
 >　NMIは特殊な目的で利用されます。ハードウェアに依存しますが、メモリのパリティエラー発生の捕捉、ウォッチドッグ、デバッガの強制起動などに利用されます。
 
-ハンドラはどこで定義? => ENTRY(nmi)
-
- * 
+ * NMI割り込みハンドラはどこで定義? => ENTRY(nmi)
+   * IDT(割り込みベクタ)の2番
  * パリティエラー
    * mem_parity_error
  * I/Oチェックエラー
    * io_check_error
+   * どんなデバイスが飛ばすんだろ?
+     * `	printk(KERN_EMERG "NMI: IOCK error (debug interrupt?)\n");`
+     * `		panic("NMI IOCK error: Not continuing");
  * watchdog_*** てなドライバ実装がある
    * watchdog_register_device(struct watchdog_device *wdd)
+
+割り込みよりコールスタックが浅くて理解しやすい気も
 
 ```
 [vagrant@vagrant-centos65 ~]$ find /sys/ | grep watchdog
