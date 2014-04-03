@@ -350,6 +350,7 @@ static int __zone_reclaim(struct zone *zone, gfp_t gfp_mask, unsigned int order)
 			zone_page_state(zone, NR_SLAB_RECLAIMABLE);
 	}
 ```
+
 ## kswapd
 
 __alloc_pages_slowpath -> wake_all_kswapd -> wakeup_kswapd で起床する
