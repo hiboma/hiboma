@@ -3,7 +3,7 @@
 実装のポイントを [cgroups/fork](http://lists.linuxfoundation.org/pipermail/containers/2011-February/026665.html) のパッチを見て知る
 
  * cgroup を使っているけど素朴な実装
-   * タスクごとのカウンタを持たせるだけ
+   * タスク群ごとにカウンタを持たせるだけ
    * ツリー構造は利用していない
 
 ----
