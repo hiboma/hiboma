@@ -137,6 +137,74 @@ index 25e4291..0f06202 100644
  		goto fork_out;
 ```
 
+.populate
+
+ * mount された際に呼び出されるのかな?
+   * cgroup_add_files で ファイルを追加できる
+
+```diff
++static int
++fork_cgroup_populate(struct cgroup_subsys *ss, struct cgroup *cgroup)
++{
++	if (cgroup->parent == NULL)
++		/* cannot limit the root cgroup */
++		return 0;
++
++	return cgroup_add_files(cgroup, ss, fork_cgroup_files,
++				ARRAY_SIZE(fork_cgroup_files));
++}
+```
+
+struct cftype で cgroup のファイルを追加できる
+
+ * .read_s64, .write_s64 が読み書きのインタフェース
+
+```diff
++static const struct cftype fork_cgroup_files[] =  {
++	{
++		.name = "remaining",
++		.read_s64 = fork_cgroup_remaining_read,
++		.write_s64 = fork_cgroup_remaining_write,
++	},
++};
++
+```
+
+container_of で cgroup_fork を取り出す
+
+ * 複数のCPU?(タスク?)から同時に read/write される可能性があるので spin_lock で保護
+
+```diff
++static s64
++fork_cgroup_remaining_read(struct cgroup *cgroup, struct cftype *cft)
++{
++	struct cgroup_fork *t = fork_cgroup_group(cgroup);
++	int value;
++
++	spin_lock(&t->lock);
++	value = t->remaining;
++	spin_unlock(&t->lock);
++
++	return value;
++}
++
++static int
++fork_cgroup_remaining_write(struct cgroup *cgroup, struct cftype *cft,
++			    s64 value)
++{
++	struct cgroup_fork *t = fork_cgroup_group(cgroup);
++
++	if (value < -1 || value > (1L << 30))
++		return -EINVAL;
++
++	spin_lock(&t->lock);
++	t->remaining = (int)value;
++	spin_unlock(&t->lock);
++
++	return 0;
++}
+```
+
 ## cgroups/fork
 
 ```diff
