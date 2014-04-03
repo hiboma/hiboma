@@ -15,6 +15,7 @@ cgroup のサブシステムはカーネル本体のコンパイル時に決定�
 
  * linux/cgroup_subsys.h に `SUBSYS(...)` でサブシステムを追加する
    * ここに書いておくと enum cgroup_subsys_id に追加される。
+     * CGROUP_SUBSYS_COUNT 個のサブシステムが追加される
    * 静的に決まってしまうので、カーネルモジュールで動的に足す事できないね
 
 ```diff
@@ -522,6 +523,7 @@ index 0000000..e56b2c6
 +
 +	return err;
 +}
+
 diff --git a/kernel/fork.c b/kernel/fork.c
 index 25e4291..0f06202 100644
 --- a/kernel/fork.c
