@@ -73,6 +73,70 @@ enum cgroup_subsys_id {
 +}
 ```
 
+ * fork 数のカウントの実装
+   * fork(2) に fork_cgroup_pre_fork を追加している
+   * 何かコールバックが用意されている訳じゃないのね
+
+```diff
++int
++fork_cgroup_pre_fork(void)
++{
++	struct cgroup_fork *t;
++	int err = 0;
++
++	rcu_read_lock();
++
++	for (t = fork_cgroup_current(); t->css.cgroup->parent != NULL;
++	     t = fork_cgroup_group(t->css.cgroup->parent)) {
++		spin_lock(&t->lock);
++
++		if (t->remaining > 0)
++			/* decrement the counter */
++			--t->remaining;
++		else if (t->remaining == 0) {
++			/* fork manpage: "[...] RLIMIT_NPROC resource
++			   limit was encountered." - should be close
++			   enough to this condition */
++			spin_unlock(&t->lock);
++			err = -EAGAIN;
++
++			/* restore the decremented counters */
++			fork_cgroup_restore(t);
++			break;
++		}
++
++		spin_unlock(&t->lock);
++	}
++
++	rcu_read_unlock();
++
++	return err;
++}
+diff --git a/kernel/fork.c b/kernel/fork.c
+index 25e4291..0f06202 100644
+--- a/kernel/fork.c
++++ b/kernel/fork.c
+@@ -32,6 +32,7 @@
+ #include <linux/capability.h>
+ #include <linux/cpu.h>
+ #include <linux/cgroup.h>
++#include <linux/cgroup_fork.h>
+ #include <linux/security.h>
+ #include <linux/hugetlb.h>
+ #include <linux/swap.h>
+@@ -1024,6 +1025,10 @@ static struct task_struct *copy_process(unsigned long clone_flags,
+ 				current->signal->flags & SIGNAL_UNKILLABLE)
+ 		return ERR_PTR(-EINVAL);
+ 
++	retval = fork_cgroup_pre_fork();
++	if (retval)
++		goto fork_out;
++
+ 	retval = security_task_create(clone_flags);
+ 	if (retval)
+ 		goto fork_out;
+```
+
 ## cgroups/fork
 
 ```diff
