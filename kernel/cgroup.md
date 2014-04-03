@@ -5,13 +5,17 @@
  * cgroup を使っているけど素朴な実装
    * タスク群ごとにカウンタを持たせるだけ
    * ツリー構造は利用していない
+   * cgroup 自体はタスク群の統計情報を扱うためのAPIで、機能実装は cgroup API を利用したサブシステムががんばる といった設計なんだろうか
+
+メインラインにマージされてないよ~
 
 ----
 
 cgroup のサブシステムはカーネル本体のコンパイル時に決定される
 
  * linux/cgroup_subsys.h に `SUBSYS(...)` でサブシステムを追加する
- * ここに書いておくと enum cgroup_subsys_id に追加される。カーネルモジュールで動的に足す事できないね
+   * ここに書いておくと enum cgroup_subsys_id に追加される。
+   * 静的に決まってしまうので、カーネルモジュールで動的に足す事できないね
 
 ```diff
 diff --git a/include/linux/cgroup_subsys.h b/include/linux/cgroup_subsys.h
@@ -63,7 +67,7 @@ enum cgroup_subsys_id {
  * ツリー構造などを扱ったりもできるぽい
    * `cgroup->root == NULL` か否かで root か否かになる?
 
-```c
+```diff
 +static struct cgroup_subsys_state *
 +fork_cgroup_create(struct cgroup_subsys *ss, struct cgroup *cgroup)
 +{
@@ -176,8 +180,9 @@ struct cftype で cgroup のファイルを追加できる
 +
 ```
 
-container_of で cgroup_fork を取り出す
+fork_cgroup_remaining_{read,write}
 
+ * container_of で cgroup_fork を取り出す
  * 複数のCPU?(タスク?)から同時に read/write される可能性があるので spin_lock で保護
 
 ```diff
