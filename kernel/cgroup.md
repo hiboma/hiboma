@@ -34,64 +34,43 @@ enum cgroup_subsys_id {
 #undef SUBSYS
 ```
 
+サブシステム登録には cgroup_subsys を定義する必要がある
+
+ * 名前
+ * .create, .destroy でサブシステムのコンストラクタ、デストラクタ
+ * .populate は ... ?
+ * .subsys_id は `SUBSYS(fork)` が展開された数値なはず
+
+```diff
++struct cgroup_subsys fork_subsys = {
++	.name = "fork",
++	.create = fork_cgroup_create,
++	.destroy = fork_cgroup_destroy,
++	.populate = fork_cgroup_populate,
++	.subsys_id = fork_subsys_id,
++};
 ```
-struct cgroup_subsys {
-	struct cgroup_subsys_state *(*create)(struct cgroup_subsys *ss,
-						  struct cgroup *cgrp);
-	int (*pre_destroy)(struct cgroup_subsys *ss, struct cgroup *cgrp);
-	void (*destroy)(struct cgroup_subsys *ss, struct cgroup *cgrp);
-	int (*can_attach)(struct cgroup_subsys *ss, struct cgroup *cgrp,
-			  struct task_struct *tsk);
-	int (*can_attach_task)(struct cgroup *cgrp, struct task_struct *tsk);
-	void (*cancel_attach)(struct cgroup_subsys *ss, struct cgroup *cgrp,
-			      struct task_struct *tsk);
-	void (*pre_attach)(struct cgroup *cgrp);
-	void (*attach_task)(struct cgroup *cgrp, struct task_struct *tsk);
-	void (*attach)(struct cgroup_subsys *ss, struct cgroup *cgrp,
-		       struct cgroup *old_cgrp, struct task_struct *tsk);
-	void (*fork)(struct cgroup_subsys *ss, struct task_struct *task);
-	void (*exit)(struct cgroup_subsys *ss, struct cgroup *cgrp,
-			struct cgroup *old_cgrp, struct task_struct *task);
-	int (*populate)(struct cgroup_subsys *ss,
-			struct cgroup *cgrp);
-	void (*post_clone)(struct cgroup_subsys *ss, struct cgroup *cgrp);
-	void (*bind)(struct cgroup_subsys *ss, struct cgroup *root);
 
-	int subsys_id;
-	int active;
-	int disabled;
-	int early_init;
-	/*
-	 * True if this subsys uses ID. ID is not available before cgroup_init()
-	 * (not available in early_init time.)
-	 */
-	bool use_id;
-#define MAX_CGROUP_TYPE_NAMELEN 32
-	const char *name;
+.create の中身はこんなん
 
-	/*
-	 * Protects sibling/children links of cgroups in this
-	 * hierarchy, plus protects which hierarchy (or none) the
-	 * subsystem is a part of (i.e. root/sibling).  To avoid
-	 * potential deadlocks, the following operations should not be
-	 * undertaken while holding any hierarchy_mutex:
-	 *
-	 * - allocating memory
-	 * - initiating hotplug events
-	 */
-	struct mutex hierarchy_mutex;
-	struct lock_class_key subsys_key;
+ * サブシステム独自のオブジェクトを割り当てて、cgroup_subsys_state を返すインタフェース
+ * ツリー構造などを扱ったりもできるぽい
+   * `cgroup->root == NULL` か否かで root か否かになる?
 
-	/*
-	 * Link to parent, and list entry in parent's children.
-	 * Protected by this->hierarchy_mutex and cgroup_lock()
-	 */
-	struct cgroupfs_root *root;
-	struct list_head sibling;
-	/* used when use_id == true */
-	struct idr idr;
-	spinlock_t id_lock;
-};
+```c
++static struct cgroup_subsys_state *
++fork_cgroup_create(struct cgroup_subsys *ss, struct cgroup *cgroup)
++{
++	struct cgroup_fork *t = kzalloc(sizeof(*t), GFP_KERNEL);
++	if (!t)
++		return ERR_PTR(-ENOMEM);
++
++	spin_lock_init(&t->lock);
++
++	t->remaining = -1;
++
++	return &t->css;
++}
 ```
 
 ## cgroups/fork
