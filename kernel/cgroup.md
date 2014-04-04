@@ -8,8 +8,17 @@
 
  * cgroup 自体はタスク群の統計情報を扱うためのAPIで、機能実装は cgroup API を利用したサブシステムががんばる といった設計なんだろうか
    * ユーザランドからはただのファイルシステムとして見える
+   * cgroup, cgroupfs_***
 
+```c
+static struct file_system_type cgroup_fs_type = {
+	.name = "cgroup",
+	.get_sb = cgroup_get_sb,
+	.kill_sb = cgroup_kill_sb,
+};
 ```
+
+```c
 static const struct super_operations cgroup_ops = {
 	.statfs = simple_statfs,
 	.drop_inode = generic_delete_inode,
