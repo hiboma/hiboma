@@ -17,6 +17,22 @@ The zswap compressed swap cache
 https://lwn.net/Articles/537422/
 ```
 
+3.14 での make menucofnig
+
+ * まだ EXPERIMENTAL
+
+```
+  ┌─────────────────────────────────────────
+  │ Symbol: ZSWAP [=n]                                                               
+  │ Type  : boolean                                                                  
+  │ Prompt: Compressed cache for swap pages (EXPERIMENTAL)                           
+  │   Location:                                                                      
+  │ (1) -> Processor type and features                                               
+  │   Defined at mm/Kconfig:524                                                      
+  │   Depends on: FRONTSWAP [=n] && CRYPTO [=y]=y                                    
+  │   Selects: CRYPTO_LZO [=m] && ZBUD [=n]
+````
+
 ## zswap
 
 swap page の圧縮
