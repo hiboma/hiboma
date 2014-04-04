@@ -5,8 +5,18 @@
  * cgroup を使っているけど素朴な実装
    * タスク群ごとにカウンタを持たせるだけ
    * ツリー構造は利用していない
-   * cgroup 自体はタスク群の統計情報を扱うためのAPIで、機能実装は cgroup API を利用したサブシステムががんばる といった設計なんだろうか
-     * ユーザランドからはただのファイルシステムとして見える
+
+ * cgroup 自体はタスク群の統計情報を扱うためのAPIで、機能実装は cgroup API を利用したサブシステムががんばる といった設計なんだろうか
+   * ユーザランドからはただのファイルシステムとして見える
+
+```
+static const struct super_operations cgroup_ops = {
+	.statfs = simple_statfs,
+	.drop_inode = generic_delete_inode,
+	.show_options = cgroup_show_options,
+	.remount_fs = cgroup_remount,
+};
+```
 
 メインラインにマージされてないよ~
 
@@ -152,6 +162,7 @@ index 25e4291..0f06202 100644
 .populate
 
  * mount された際に呼び出されるのかな?
+   * cgroup_create, cgroup_remount, cgroup_get_sb の cgroup_populate_dir で呼び出される
    * cgroup_add_files で ファイルを追加できる
 
 ```diff
