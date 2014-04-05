@@ -3,11 +3,11 @@
 ## tasks で ENOSPC
 
 ```
-Warning: cannot write tid 4185 to /cgroup/cpuset/hetemluser/sandbag//tasks:No space left on device
+Warning: cannot write tid 4185 to /cgroup/cpuset/hogehoge/sandbag//tasks:No space left on device
 Warning: cgroup_attach_task_pid failed: 50016
 Warning: failed to apply the rule. Error was: 50016
 Cgroup change for PID: 4185, UID: 1025, GID: 1000, PROCNAME: /usr/bin/curl FAILED! (Error Code: 50016)
-Warning: cannot write tid 4187 to /cgroup/cpuset/hetemluser/sandbag//tasks:No space left on device
+Warning: cannot write tid 4187 to /cgroup/cpuset/hogehoge/sandbag//tasks:No space left on device
 ```
 
 tasks のエントリポイント
@@ -125,9 +125,38 @@ static int attach_task_by_pid(struct cgroup *cgrp, u64 pid, bool threadgroup)
 }
 ```
 
-cgroup_attach_proc がごっつい
+cgroup_attach_proc がごっついので
 
- * can_attach
+ * can_attach でサブシステムごとにバリデーションが行われる
+ * 例として cpuset の場合下記のような感じ
+   * cpus_allowd と mems_allowed が空だと ENOSPC
+
+```c
+/* Called by cgroups to determine if a cpuset is usable; cgroup_mutex held */
+static int cpuset_can_attach(struct cgroup_subsys *ss, struct cgroup *cont,
+			     struct task_struct *tsk)
+{
+	struct cpuset *cs = cgroup_cs(cont);
+
+	if (cpumask_empty(cs->cpus_allowed) || nodes_empty(cs->mems_allowed))
+		return -ENOSPC;
+
+	/*
+	 * Kthreads bound to specific cpus cannot be moved to a new cpuset; we
+	 * cannot change their cpu affinity and isolating such threads by their
+	 * set of allowed nodes is unnecessary.  Thus, cpusets are not
+	 * applicable for such threads.  This prevents checking for success of
+	 * set_cpus_allowed_ptr() on all attached tasks before cpus_allowed may
+	 * be changed.
+	 */
+	if (tsk->flags & PF_THREAD_BOUND)
+		return -EINVAL;
+
+	return 0;
+}
+``` 
+
+## cgroup_attach_proc 
 
 ```c
 /**
