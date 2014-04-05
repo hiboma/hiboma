@@ -127,6 +127,8 @@ static int attach_task_by_pid(struct cgroup *cgrp, u64 pid, bool threadgroup)
 
 cgroup_attach_proc がごっつい
 
+ * can_attach
+
 ```c
 /**
  * cgroup_attach_proc - attach all threads in a threadgroup to a cgroup
