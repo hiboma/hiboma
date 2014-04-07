@@ -40,3 +40,35 @@ struct thread_info
 ```
 
 ## 3.1.3 ソフト割り込み
+
+
+```c
+void open_softirq(int nr, void (*action)(struct softirq_action *))
+{
+	softirq_vec[nr].action = action;
+}
+
+// #!ruby で書いた場合
+// 
+// softirq_vec[nr] = lambda { ... }
+//
+```
+
+```c
+// linux-2.6.32-431
+enum
+{
+	HI_SOFTIRQ=0,
+	TIMER_SOFTIRQ,
+	NET_TX_SOFTIRQ,
+	NET_RX_SOFTIRQ,
+	BLOCK_SOFTIRQ,        // New!
+	BLOCK_IOPOLL_SOFTIRQ, // New!
+	TASKLET_SOFTIRQ,
+	SCHED_SOFTIRQ,        // New!
+	HRTIMER_SOFTIRQ,      // New!
+	RCU_SOFTIRQ,	/* Preferable RCU should always be the last softirq */
+
+	NR_SOFTIRQS
+};
+```
