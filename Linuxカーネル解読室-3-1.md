@@ -106,22 +106,10 @@ execute_on_irq_stack(int overflow, struct irq_desc *desc, int irq)
 
 ## 3.1.3 ソフト割り込み
 
+ * open_softirq で softirq_vec にハンドラを登録する
+ * ハンドラの実体は softirq_action
 
-```c
-struct softirq_action
-{
-	void	(*action)(struct softirq_action *);
-};
-```
-
-```c
-#ifndef __ARCH_IRQ_STAT
-extern irq_cpustat_t irq_stat[];		/* defined in asm/hardirq.h */
-#define __IRQ_STAT(cpu, member)	(irq_stat[cpu].member)
-#endif
-```
-
-```c
+ ```c
 void open_softirq(int nr, void (*action)(struct softirq_action *))
 {
 	softirq_vec[nr].action = action;
@@ -132,6 +120,25 @@ void open_softirq(int nr, void (*action)(struct softirq_action *))
 // softirq_vec[nr] = lambda { ... }
 //
 ```
+
+softirq_action の中身は下記の通り。 alias 的に使われるだけの struct
+
+```c
+struct softirq_action
+{
+	void	(*action)(struct softirq_action *);
+};
+```
+
+irq_stat テーブル
+
+```c
+#ifndef __ARCH_IRQ_STAT
+extern irq_cpustat_t irq_stat[];		/* defined in asm/hardirq.h */
+#define __IRQ_STAT(cpu, member)	(irq_stat[cpu].member)
+#endif
+```
+
 
 ```c
 // linux-2.6.32-431
