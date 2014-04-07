@@ -166,6 +166,10 @@ enum
 
  * local_bh_disable, local_bh_enable
    * システムコールと softirq とで競合するリソースを保護する場合に使う
+   * 実行したCPU でのみ softirq が 保留 = pending される
+   * 他の CPU では softirq ハンドラが実行される
+ * ハードウェア割り込みを禁止すると softirq も禁止される
+   * raise_softirq するのはハードウェア割り込みハンドラからだけ、というルールから導き出せる
 
 ### local_bh_disable
 
