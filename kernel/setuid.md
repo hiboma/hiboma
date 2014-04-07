@@ -1,5 +1,7 @@
 ## setuid(2) return -EAGAIN
 
+setuid が EAGAIN を返す場所を探す
+
 ```c
 /*
  * setuid() is implemented like SysV with SAVED_IDS 
@@ -45,6 +47,8 @@ asmlinkage long sys_setuid(uid_t uid)
 }
 ```
 
+RLIMIT_NPROC で返している
+
 ```c
 static int set_user(uid_t new_ruid, int dumpclear)
 {
@@ -73,25 +77,5 @@ static int set_user(uid_t new_ruid, int dumpclear)
 }
 ```
 
-```c
-		if (uid != old_ruid && set_user(uid, old_euid != uid) < 0)
-			return -EAGAIN;
-```
-
-```c
-    //
-    //	new = kmem_cache_alloc(uid_cachep, SLAB_KERNEL);
-    //		if (!new)
-	new_user = alloc_uid(new_ruid);
-	if (!new_user)
-		return -EAGAIN;
-```
-
-```c
-	if (atomic_read(&new_user->processes) >=
-				current->rlim[RLIMIT_NPROC].rlim_cur &&
-			new_user != &root_user) {
-		free_uid(new_user);
-		return -EAGAIN;
-	}
-```
+ * alloc_uid (kmem_cache_alloc) で cache を割り当て出来ないさいに EAGAIN
+ * RLIMIT_NPROC を超えた際にも EAGAIN
