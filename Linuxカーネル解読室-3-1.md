@@ -255,3 +255,27 @@ void wakeup_softirqd(void)
 		wake_up_process(tsk);
 }
 ```
+
+## 3.1.3.4 ソフト割り込みの実装
+
+```c
+asmlinkage void do_softirq(void)
+{
+ 	__u32 pending;
+ 	unsigned long flags;
+
+ 	if (in_interrupt())
+ 		return;
+
+    // cli命令でハードウェア割り込み禁止
+ 	local_irq_save(flags);
+ 	pending = local_softirq_pending();
+ 	/* Switch to interrupt stack */
+ 	if (pending)
+		call_softirq();
+
+    // popfl で EFLAGS を復帰
+ 	local_irq_restore(flags);
+}
+EXPORT_SYMBOL(do_softirq);
+```
