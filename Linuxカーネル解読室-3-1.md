@@ -67,10 +67,13 @@ execute_on_irq_stack(int overflow, struct irq_desc *desc, int irq)
 	 * handler) we can't do that and just have to keep using the
 	 * current stack (which is the irq stack already after all)
 	 */
+    // すでに 「IRQスタック」にスイッチしている場合
+    // 割り込みハンドラを実行している最中に、割り込みを受けた場合を指す様子
 	if (unlikely(curctx == irqctx))
 		return 0;
 
 	/* build the stack frame on the IRQ stack */
+    // スタックフレームを作る
 	isp = (u32 *) ((char *)irqctx + sizeof(*irqctx));
 	irqctx->tinfo.task = curctx->tinfo.task;
 	irqctx->tinfo.previous_esp = current_stack_pointer;
@@ -83,12 +86,15 @@ execute_on_irq_stack(int overflow, struct irq_desc *desc, int irq)
 		(irqctx->tinfo.preempt_count & ~SOFTIRQ_MASK) |
 		(curctx->tinfo.preempt_count & SOFTIRQ_MASK);
 
+    // オーバーフローしそうな場合?
+    //     printk(KERN_WARNING "low stack detected by irq handler\n");
+    // てなメッセージを出す様子
 	if (unlikely(overflow))
 		call_on_stack(print_stack_overflow, isp);
 
-	asm volatile("xchgl	%%ebx,%%esp	\n"
-		     "call	*%%edi		\n"
-		     "movl	%%ebx,%%esp	\n"
+	asm volatile("xchgl	%%ebx,%%esp	\n"       // esp と ebx を交換
+		     "call	*%%edi		\n"           // desc->handle_irq を call
+		     "movl	%%ebx,%%esp	\n"           // esp を ebx に戻す
 		     : "=a" (arg1), "=d" (arg2), "=b" (isp)
 		     :  "0" (irq),   "1" (desc),  "2" (isp),
 			"D" (desc->handle_irq)
