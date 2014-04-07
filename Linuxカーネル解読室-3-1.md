@@ -43,12 +43,18 @@ struct thread_info
 
 
 ```c
+struct softirq_action
+{
+	void	(*action)(struct softirq_action *);
+};
+```
+
+```c
 #ifndef __ARCH_IRQ_STAT
 extern irq_cpustat_t irq_stat[];		/* defined in asm/hardirq.h */
 #define __IRQ_STAT(cpu, member)	(irq_stat[cpu].member)
 #endif
 ```
-
 
 ```c
 void open_softirq(int nr, void (*action)(struct softirq_action *))
