@@ -185,6 +185,15 @@ static inline void __local_bh_disable(unsigned long ip, unsigned int cnt)
 	add_preempt_count(cnt);
 	barrier();
 }
+```
+
+ * local_bh_enable
+```c
+void local_bh_enable(void)
+{
+	_local_bh_enable_ip((unsigned long)__builtin_return_address(0));
+}
+EXPORT_SYMBOL(local_bh_enable);
 
 static inline void _local_bh_enable_ip(unsigned long ip)
 {
@@ -215,48 +224,9 @@ static inline void _local_bh_enable_ip(unsigned long ip)
 }
 ```
 
- * local_bh_enable
-```c
-void local_bh_enable(void)
-{
-	_local_bh_enable_ip((unsigned long)__builtin_return_address(0));
-}
-EXPORT_SYMBOL(local_bh_enable);
-```
-
-```c
-static inline void _local_bh_enable_ip(unsigned long ip)
-{
-	WARN_ON_ONCE(in_irq() || irqs_disabled());
-#ifdef CONFIG_TRACE_IRQFLAGS
-	local_irq_disable();
-#endif
-	/*
-	 * Are softirqs going to be turned on now:
-	 */
-	if (softirq_count() == SOFTIRQ_DISABLE_OFFSET)
-		trace_softirqs_on(ip);
-	/*
-	 * Keep preemption disabled until we are done with
-	 * softirq processing:
- 	 */
-	sub_preempt_count(SOFTIRQ_DISABLE_OFFSET - 1);
-
-	if (unlikely(!in_interrupt() && local_softirq_pending()))
-		do_softirq();
-
-	dec_preempt_count();
-#ifdef CONFIG_TRACE_IRQFLAGS
-	local_irq_enable();
-#endif
-	preempt_check_resched();
-}
-```
-
 ## wakeup_softirqd
 
  * __do_softirq で pending されている sofirq があれば wakeup_softirqd
-
 ```
 [vagrant@vagrant-centos65 ~]$ ps aux | grep softirq
 root         3  0.1  0.0      0     0 ?        S    11:42   0:00 [ksoftirqd/0]
@@ -264,6 +234,10 @@ root        13  0.0  0.0      0     0 ?        S    11:42   0:00 [ksoftirqd/1]
 root        19  0.0  0.0      0     0 ?        S    11:42   0:00 [ksoftirqd/2]
 root        24  0.0  0.0      0     0 ?        S    11:42   0:00 [ksoftirqd/3]
 ```
+
+何度も見たので ok
+
+ * wake_up_process で ksoftirqd が起床するけど、スケジューリングされるまでは他のプロセスが実行されているのがミソかな
 
 ```c
 /*
