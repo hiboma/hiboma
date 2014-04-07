@@ -16,8 +16,8 @@
 ## 3.1.2 ソフト割り込みスタック
 
  * ハードウェア割り込みがネストする可能性がある
- * 大きめに確保
- * プロセスのスタックを利用 (thread_info)
+   * プロセスのスタックを利用 (thread_info)
+   * 大きめに確保してスタックオーバーフローを防ぐ
 
 ```
 struct thread_info
@@ -32,11 +32,69 @@ struct thread_info
 |    SCSI割り込み        |
 +------------------------+
 |    TCP/IP softirq      |
-+------------------------+
++------------------------+ <--- ここから上が割り込みのスタック
 |                        |
 |   システムコール処理   |
 |                        |
 +------------------------+
+```
+
+割り込みハンドラがプロセスのスタックを乗っ取って動くのは execute_on_irq_stack を見ると分かる
+
+```c
+static inline int
+execute_on_irq_stack(int overflow, struct irq_desc *desc, int irq)
+{
+	union irq_ctx *curctx, *irqctx;
+	u32 *isp, arg1, arg2;
+
+    // /*
+    //  * per-CPU IRQ handling contexts (thread information and stack)
+    //  */
+    // union irq_ctx {
+    // 	struct thread_info      tinfo;
+    // 	u32                     stack[THREAD_SIZE/sizeof(u32)];
+    // } __attribute__((aligned(PAGE_SIZE)));
+    //
+	curctx = (union irq_ctx *) current_thread_info();
+
+    // ?
+	irqctx = __get_cpu_var(hardirq_ctx);
+
+	/*
+	 * this is where we switch to the IRQ stack. However, if we are
+	 * already using the IRQ stack (because we interrupted a hardirq
+	 * handler) we can't do that and just have to keep using the
+	 * current stack (which is the irq stack already after all)
+	 */
+	if (unlikely(curctx == irqctx))
+		return 0;
+
+	/* build the stack frame on the IRQ stack */
+	isp = (u32 *) ((char *)irqctx + sizeof(*irqctx));
+	irqctx->tinfo.task = curctx->tinfo.task;
+	irqctx->tinfo.previous_esp = current_stack_pointer;
+
+	/*
+	 * Copy the softirq bits in preempt_count so that the
+	 * softirq checks work in the hardirq context.
+	 */
+	irqctx->tinfo.preempt_count =
+		(irqctx->tinfo.preempt_count & ~SOFTIRQ_MASK) |
+		(curctx->tinfo.preempt_count & SOFTIRQ_MASK);
+
+	if (unlikely(overflow))
+		call_on_stack(print_stack_overflow, isp);
+
+	asm volatile("xchgl	%%ebx,%%esp	\n"
+		     "call	*%%edi		\n"
+		     "movl	%%ebx,%%esp	\n"
+		     : "=a" (arg1), "=d" (arg2), "=b" (isp)
+		     :  "0" (irq),   "1" (desc),  "2" (isp),
+			"D" (desc->handle_irq)
+		     : "memory", "cc", "ecx");
+	return 1;
+}
 ```
 
 ## 3.1.3 ソフト割り込み
