@@ -171,18 +171,51 @@ enum
  * ハードウェア割り込みを禁止すると softirq も禁止される
    * raise_softirq するのはハードウェア割り込みハンドラからだけ、というルールから導き出せる
 
-### local_bh_disable
-
+ * local_bh_disable
 ```c
 void local_bh_disable(void)
 {
 	__local_bh_disable((unsigned long)__builtin_return_address(0),
 				SOFTIRQ_DISABLE_OFFSET);
 }
+
+static inline void __local_bh_disable(unsigned long ip, unsigned int cnt)
+{
+    // thread_info->preempt_count に cnt を足す
+	add_preempt_count(cnt);
+	barrier();
+}
+
+static inline void _local_bh_enable_ip(unsigned long ip)
+{
+	WARN_ON_ONCE(in_irq() || irqs_disabled());
+#ifdef CONFIG_TRACE_IRQFLAGS
+	local_irq_disable();
+#endif
+	/*
+	 * Are softirqs going to be turned on now:
+	 */
+	if (softirq_count() == SOFTIRQ_DISABLE_OFFSET)
+		trace_softirqs_on(ip);
+	/*
+	 * Keep preemption disabled until we are done with
+	 * softirq processing:
+ 	 */
+	sub_preempt_count(SOFTIRQ_DISABLE_OFFSET - 1);
+
+    // 割り込みコンテキストではない + pending している softirq があったら do_softirq でやっつける
+	if (unlikely(!in_interrupt() && local_softirq_pending()))
+		do_softirq();
+
+	dec_preempt_count();
+#ifdef CONFIG_TRACE_IRQFLAGS
+	local_irq_enable();
+#endif
+	preempt_check_resched();
+}
 ```
 
-### local_bh_enable
-
+ * local_bh_enable
 ```c
 void local_bh_enable(void)
 {
