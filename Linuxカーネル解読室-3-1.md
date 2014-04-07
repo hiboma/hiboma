@@ -43,6 +43,14 @@ struct thread_info
 
 
 ```c
+#ifndef __ARCH_IRQ_STAT
+extern irq_cpustat_t irq_stat[];		/* defined in asm/hardirq.h */
+#define __IRQ_STAT(cpu, member)	(irq_stat[cpu].member)
+#endif
+```
+
+
+```c
 void open_softirq(int nr, void (*action)(struct softirq_action *))
 {
 	softirq_vec[nr].action = action;
@@ -71,4 +79,34 @@ enum
 
 	NR_SOFTIRQS
 };
+```
+
+### local_bh_disable
+
+```c
+void local_bh_disable(void)
+{
+	__local_bh_disable((unsigned long)__builtin_return_address(0),
+				SOFTIRQ_DISABLE_OFFSET);
+}
+```
+
+
+## wakeup_softirqd
+
+```c
+/*
+ * we cannot loop indefinitely here to avoid userspace starvation,
+ * but we also don't want to introduce a worst case 1/HZ latency
+ * to the pending events, so lets the scheduler to balance
+ * the softirq load for us.
+ */
+void wakeup_softirqd(void)
+{
+	/* Interrupts are disabled: no need to stop preemption */
+	struct task_struct *tsk = __get_cpu_var(ksoftirqd);
+
+	if (tsk && tsk->state != TASK_RUNNING)
+		wake_up_process(tsk);
+}
 ```
