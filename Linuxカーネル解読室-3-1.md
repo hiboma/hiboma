@@ -267,15 +267,67 @@ asmlinkage void do_softirq(void)
  	if (in_interrupt())
  		return;
 
-    // cli命令でハードウェア割り込み禁止
+    // cli命令でハードウェア割り込み禁止 (1)
  	local_irq_save(flags);
+
+    // pending されている softirq (2)
  	pending = local_softirq_pending();
  	/* Switch to interrupt stack */
  	if (pending)
 		call_softirq();
 
-    // popfl で EFLAGS を復帰
- 	local_irq_restore(flags);
+    // popfl で EFLAGS を復帰 (3)
+ 	local_irq_restore(flags); 
 }
 EXPORT_SYMBOL(do_softirq);
+```
+
+```c
+asmlinkage void __do_softirq(void)
+{
+	struct softirq_action *h;
+	__u32 pending;
+	int max_restart = MAX_SOFTIRQ_RESTART;
+	int cpu;
+
+	pending = local_softirq_pending();
+
+    // softirq を禁止 (5)
+	local_bh_disable();
+	cpu = smp_processor_id();
+restart:
+	/* Reset the pending bitmask before enabling irqs */
+	set_softirq_pending(0);
+
+    // sti命令でハードウェア割り込みを許可 (7)
+	local_irq_enable();
+
+	h = softirq_vec;
+
+	do {
+		if (pending & 1) {
+
+            // open_softirq で定義した softirq のハンドラ (8)
+			h->action(h);
+			rcu_bh_qsctr_inc(cpu);
+		}
+		h++;
+		pending >>= 1;
+	} while (pending);
+
+	local_irq_disable();
+
+    // softirq ハンドラ実行中にハードウェア割り込みが発生、 pending されている softirq がある場合は
+    // もういっぺんやり直し (11)
+	pending = local_softirq_pending();
+	if (pending && --max_restart)
+		goto restart;
+
+    // (12)
+	if (pending)
+		wakeup_softirqd();
+
+    // (13) softirq を許可
+	__local_bh_enable();
+}
 ```
