@@ -139,6 +139,9 @@ extern irq_cpustat_t irq_stat[];		/* defined in asm/hardirq.h */
 #endif
 ```
 
+> Linuxカーネル2.6 には、6種類のソフト割り込み種別があります
+
+2.6.32-431 ではもっと多い
 
 ```c
 // linux-2.6.32-431
@@ -158,6 +161,11 @@ enum
 	NR_SOFTIRQS
 };
 ```
+
+## 3.1.3.2 ソフト割り込みの制御
+
+ * local_bh_disable, local_bh_enable
+   * システムコールと softirq とで競合するリソースを保護する場合に使う
 
 ### local_bh_disable
 
