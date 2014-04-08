@@ -1,3 +1,23 @@
+## divider=10 nolapic_timer
+
+nolapic_timer をブートオプション指定すると disable_apic_timer = 1 になる
+
+```
+static int __init parse_disable_apic_timer(char *arg)
+{
+	disable_apic_timer = 1;
+	return 0;
+}
+early_param("noapictimer", parse_disable_apic_timer);
+
+static int __init parse_nolapic_timer(char *arg)
+{
+	disable_apic_timer = 1;
+	return 0;
+}
+early_param("nolapic_timer", parse_nolapic_timer);
+```
+
 
 ## acpi_pm
 
