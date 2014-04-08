@@ -1,4 +1,46 @@
 
+## acpi_pm
+
+```c
+static struct clocksource clocksource_acpi_pm = {
+	.name		= "acpi_pm",
+	.rating		= 200,
+	.read		= acpi_pm_read,
+	.mask		= (cycle_t)ACPI_PM_MASK,
+	.mult		= 0, /*to be calculated*/
+	.shift		= 22,
+	.flags		= CLOCK_SOURCE_IS_CONTINUOUS,
+
+};
+```
+
+acpi_pm_read の実装は下記の通り
+
+```
+static cycle_t acpi_pm_read(struct clocksource *cs)
+{
+	return (cycle_t)read_pmtmr();
+}
+```
+
+read_pmtmr で I/Oポートから時刻をとっているのかな?
+
+```
+/*
+ * The I/O port the PMTMR resides at.
+ * The location is detected during setup_arch(),
+ * in arch/i386/kernel/acpi/boot.c
+ */
+u32 pmtmr_ioport __read_mostly;
+
+static inline u32 read_pmtmr(void)
+{
+	/* mask the output to 24 bits */
+	return inl(pmtmr_ioport) & ACPI_PM_MASK;
+}
+```
+
+## dmesg
 
 ```
 Mar 30 14:55:01 vagrant-centos65 kernel: ACPI: HPET 00000000264f02f0 00038 (v01 VBOX   VBOXHPET 00000001 ASL  00000061)
