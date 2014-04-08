@@ -16,6 +16,8 @@ static struct clocksource clocksource_acpi_pm = {
 
 acpi_pm_read の実装は下記の通り
 
+ * pmtmr = 電源管理タイマー (PMTMR)
+
 ```
 static cycle_t acpi_pm_read(struct clocksource *cs)
 {
@@ -44,6 +46,40 @@ pmtmr_ioport のアドレスは dmesg に出てる
 
 ```
 Apr  8 13:16:57 vagrant-centos65 kernel: ACPI: PM-Timer IO Port: 0x4008
+```
+
+PM-TImer IO Port は acpi_parse_fadt で出力されている
+
+```c
+static int __init acpi_parse_fadt(struct acpi_table_header *table)
+{
+
+#ifdef CONFIG_X86_PM_TIMER
+	/* detect the location of the ACPI PM Timer */
+	if (acpi_gbl_FADT.header.revision >= FADT2_REVISION_ID) {
+		/* FADT rev. 2 */
+		if (acpi_gbl_FADT.xpm_timer_block.space_id !=
+		    ACPI_ADR_SPACE_SYSTEM_IO)
+			return 0;
+
+		pmtmr_ioport = acpi_gbl_FADT.xpm_timer_block.address;
+		/*
+		 * "X" fields are optional extensions to the original V1.0
+		 * fields, so we must selectively expand V1.0 fields if the
+		 * corresponding X field is zero.
+	 	 */
+		if (!pmtmr_ioport)
+			pmtmr_ioport = acpi_gbl_FADT.pm_timer_block;
+	} else {
+		/* FADT rev. 1 */
+		pmtmr_ioport = acpi_gbl_FADT.pm_timer_block;
+	}
+	if (pmtmr_ioport)
+		printk(KERN_INFO PREFIX "PM-Timer IO Port: %#x\n",
+		       pmtmr_ioport);
+#endif
+	return 0;
+}
 ```
 
 ## dmesg
