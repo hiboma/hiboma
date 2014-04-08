@@ -40,6 +40,13 @@ static inline u32 read_pmtmr(void)
 }
 ```
 
+pmtmr_ioport のアドレスは dmesg に出てる
+
+```
+Apr  8 13:16:57 vagrant-centos65 kernel: ACPI: PM-Timer IO Port: 0x4008
+```
+
+
 ## dmesg
 
 ```
