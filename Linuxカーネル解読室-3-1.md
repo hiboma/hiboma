@@ -226,8 +226,11 @@ static inline void _local_bh_enable_ip(unsigned long ip)
 
 ## wakeup_softirqd
 
+要点
+
  * 割り込みコンテキストで処理しきれない softirq を、カーネルスレッドに処理させる
    * softirq がえんえんと実行されるのを防ぐ
+ * スレッドの優先度は低い
 
  * __do_softirq で pending されている sofirq があれば wakeup_softirqd
 ```
