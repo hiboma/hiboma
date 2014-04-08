@@ -1,5 +1,5 @@
 
-```
+```c
 /*
  * The platform setup functions are preset with the default functions
  * for standard PC hardware.
