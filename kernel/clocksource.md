@@ -18,6 +18,59 @@ static int __init parse_nolapic_timer(char *arg)
 early_param("nolapic_timer", parse_nolapic_timer);
 ```
 
+disable_apic_timer は setup_boot_APIC_clock の挙動を変える
+
+```
+/*
+ * Setup the boot APIC
+ *
+ * Calibrate and verify the result.
+ */
+void __init setup_boot_APIC_clock(void)
+{
+	/*
+	 * The local apic timer can be disabled via the kernel
+	 * commandline or from the CPU detection code. Register the lapic
+	 * timer as a dummy clock event source on SMP systems, so the
+	 * broadcast mechanism is used. On UP systems simply ignore it.
+	 */
+	if (disable_apic_timer) {
+		pr_info("Disabling APIC timer\n");
+		/* No broadcast on UP ! */
+		if (num_possible_cpus() > 1) {
+			lapic_clockevent.mult = 1;
+			setup_APIC_timer();
+		}
+		return;
+	}
+
+    // local APIC タイマーを使う場合
+	apic_printk(APIC_VERBOSE, "Using local APIC timer interrupts.\n"
+		    "calibrating APIC timer ...\n");
+
+	if (calibrate_APIC_clock()) {
+		/* No broadcast on UP ! */
+		if (num_possible_cpus() > 1)
+			setup_APIC_timer();
+		return;
+	}
+
+	/*
+	 * If nmi_watchdog is set to IO_APIC, we need the
+	 * PIT/HPET going.  Otherwise register lapic as a dummy
+	 * device.
+	 */
+	if (nmi_watchdog != NMI_IO_APIC)
+		lapic_clockevent.features &= ~CLOCK_EVT_FEAT_DUMMY;
+	else
+		pr_warning("APIC timer registered as dummy,"
+			" due to nmi_watchdog=%d!\n", nmi_watchdog);
+
+	/* Setup the lapic or request the broadcast */
+	setup_APIC_timer();
+}
+```
+
 
 ## acpi_pm
 
