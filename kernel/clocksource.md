@@ -173,7 +173,7 @@ static struct clocksource clocksource_acpi_pm = {
 
 acpi_pm_read の実装は下記の通り
 
- * pmtmr = 電源管理タイマー (PMTMR)
+ * pmtmr = 電源管理タイマー (PMTMR)?
 
 ```
 static cycle_t acpi_pm_read(struct clocksource *cs)
@@ -260,7 +260,6 @@ Mar 30 14:55:31 vagrant-centos65 kernel: Switching to clocksource hpet
 Mar 30 14:55:31 vagrant-centos65 kernel: rtc0: alarms up to one day, 114 bytes nvram, hpet irqs
 ```
 
-
 ## /sys/devices/system/clocksource/clocksource0/current_clocksource
 
  * クロックソースを変えると `Switching to clocksource %s` のメッセージが出る
@@ -333,7 +332,7 @@ void timekeeping_notify(struct clocksource *clock)
 }
 ```
 
-stop_machine 一時的に CPU を停止?する
+stop_machine で 一時的に CPU を停止?するようだ
 
 ```c
 int stop_machine(int (*fn)(void *), void *data, const struct cpumask *cpus)
