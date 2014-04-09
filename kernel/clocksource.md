@@ -56,16 +56,23 @@ struct x86_init_ops x86_init __initdata = {
 
 ## divider=10 nolapic_timer
 
- * local_apic_timer_interrupt
-
+ * local APIC タイマを無効にした際の副作用は?
+   * local_apic_timer_interrupt の割り込みが発生しない?
+   * CPU0 に IO-APIC-edge のタイマ割り込みが集中している
 ```
+# with nolapic_timer
 [vagrant@vagrant-centos65 ~]$ cat /proc/interrupts 
            CPU0       CPU1       CPU2       CPU3       
   0:     548516          0          0          0   IO-APIC-edge      timer
 LOC:          0     547779     547245     546119   Local timer interrupts
+
+# with lapic_timer
+           CPU0       CPU1       CPU2       CPU3       
+  0:        146          0          0          0   IO-APIC-edge      timer
+LOC:       4178       3514       2970       2551   Local timer interrupts
 ```
 
- * local APIC タイマを無効にした際の副作用は?
+ 
  * ダミーデバイスとは?
 
 ```
