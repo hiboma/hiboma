@@ -172,6 +172,63 @@ static struct clocksource clocksource_tsc = {
 };
 ```
 
+read_tsc の中身
+
+```c
+/*
+ * We compare the TSC to the cycle_last value in the clocksource
+ * structure to avoid a nasty time-warp. This can be observed in a
+ * very small window right after one CPU updated cycle_last under
+ * xtime/vsyscall_gtod lock and the other CPU reads a TSC value which
+ * is smaller than the cycle_last reference value due to a TSC which
+ * is slighty behind. This delta is nowhere else observable, but in
+ * that case it results in a forward time jump in the range of hours
+ * due to the unsigned delta calculation of the time keeping core
+ * code, which is necessary to support wrapping clocksources like pm
+ * timer.
+ */
+static cycle_t read_tsc(struct clocksource *cs)
+{
+	cycle_t ret = (cycle_t)get_cycles();
+
+	return ret >= clocksource_tsc.cycle_last ?
+		ret : clocksource_tsc.cycle_last;
+}
+```
+
+get_cycles の中身は rdtscll
+
+```
+static inline cycles_t get_cycles(void)
+{
+	unsigned long long ret = 0;
+
+#ifndef CONFIG_X86_TSC
+	if (!cpu_has_tsc)
+		return 0;
+#endif
+	rdtscll(ret);
+
+	return ret;
+}
+```
+
+rdtscll は rdtsc 命令呼び出しになる
+
+```c
+#define rdtscll(val)						\
+	((val) = __native_read_tsc())
+
+static __always_inline unsigned long long __native_read_tsc(void)
+{
+	DECLARE_ARGS(val, low, high);
+
+	asm volatile("rdtsc" : EAX_EDX_RET(val, low, high));
+
+	return EAX_EDX_VAL(val, low, high);
+}
+```
+
 ## acpi_pm
 
 ___ACPI PM タイマ = Advanced Configuration and Power Interface Power Management Timer___
