@@ -176,7 +176,7 @@ void __init setup_boot_APIC_clock(void)
 }
 ```
 
-## tsc
+## tsc Time Stamp Counter
 
 ```c
 static struct clocksource clocksource_tsc = {
