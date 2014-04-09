@@ -1,3 +1,10 @@
+## tsc
+
+```
+Apr  9 02:19:51 vagrant-centos65 kernel: Measured 116527 cycles TSC warp between CPUs, turning off TSC clock.
+Apr  9 02:19:51 vagrant-centos65 kernel: Marking TSC unstable due to check_tsc_sync_source failed
+```
+
 ## setup_boot_APIC_clock 
 
 ```c
@@ -48,6 +55,10 @@ struct x86_init_ops x86_init __initdata = {
 ```
 
 ## divider=10 nolapic_timer
+
+```
+Apr  9 02:19:51 vagrant-centos65 kernel: Disabling APIC timer
+```
 
 nolapic_timer をブートオプション指定すると disable_apic_timer = 1 になる
 
