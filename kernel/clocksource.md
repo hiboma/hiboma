@@ -154,6 +154,24 @@ void __init setup_boot_APIC_clock(void)
 }
 ```
 
+## tsc
+
+```c
+static struct clocksource clocksource_tsc = {
+	.name                   = "tsc",
+	.rating                 = 300,
+	.read                   = read_tsc,
+	.resume			= resume_tsc,
+	.mask                   = CLOCKSOURCE_MASK(64),
+	.shift                  = 22,
+	.flags                  = CLOCK_SOURCE_IS_CONTINUOUS |
+				  CLOCK_SOURCE_MUST_VERIFY,
+#ifdef CONFIG_X86_64
+	.vread                  = vread_tsc,
+#endif
+};
+```
+
 ## acpi_pm
 
 ___ACPI PM タイマ = Advanced Configuration and Power Interface Power Management Timer___
@@ -172,8 +190,6 @@ static struct clocksource clocksource_acpi_pm = {
 ```
 
 acpi_pm_read の実装は下記の通り
-
- * pmtmr = 電源管理タイマー (PMTMR)?
 
 ```
 static cycle_t acpi_pm_read(struct clocksource *cs)
