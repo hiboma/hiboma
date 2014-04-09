@@ -1,6 +1,7 @@
 ## APIC timer
 
 http://wiki.osdev.org/APIC_timer
+http://d.hatena.ne.jp/big-eyed-hamster/20100108/1262879369
 
  * CPUコアにくっついてる利点
    * 周波数がまちまち
@@ -10,12 +11,13 @@ http://wiki.osdev.org/APIC_timer
    * 割り込み/秒を知る必要がある
  * リソース管理? がいらなくて簡単
 
- * Periodic Mode
+ * Periodic Mode (周期モード)
    * local APIC が current count-- して 0 になったらタイマのIRQを出して、カウントを intial count に戻す
    * local APIC は initical count によって固定のレートで IRQ を発行する
    * current count-- されるレートは CPU の external frequency (bus frequency) / local APIC の _Divide Configuration Register_ に依る
  * One-Shot Mode
    * Periodic Mode と同じようにデクリメントするけど、カウンタを元に戻さない
+   * ソフトウェア側でカウントを都度セットして IRQを出してもらう
  * TSC-Deadline mode
 
 ## tsc
