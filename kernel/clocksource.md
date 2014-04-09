@@ -55,10 +55,11 @@ struct x86_init_ops x86_init __initdata = {
 ```
 
 ## divider=10 nolapic_timer
-
+ 
+ * ダミーデバイスとは?
  * local APIC タイマを無効にした際の副作用は?
    * local_apic_timer_interrupt の割り込みが発生しない?
-   * CPU0 に IO-APIC-edge のタイマ割り込みが集中している
+   * CPU0 に IO-APIC-edge のタイマ割り込みが集中している。数値も随分と多いな
 ```
 # with nolapic_timer
 [vagrant@vagrant-centos65 ~]$ cat /proc/interrupts 
@@ -72,16 +73,15 @@ LOC:          0     547779     547245     546119   Local timer interrupts
 LOC:       4178       3514       2970       2551   Local timer interrupts
 ```
 
- 
- * ダミーデバイスとは?
+nolapic_timer をブートオプション指定すると disable_apic_timer = 1 になる
 
 ```
 Apr  9 02:19:51 vagrant-centos65 kernel: Disabling APIC timer
 ```
 
-nolapic_timer をブートオプション指定すると disable_apic_timer = 1 になる
+nolapic_timer がセットされる箇所
 
-```
+```c
 static int __init parse_disable_apic_timer(char *arg)
 {
 	disable_apic_timer = 1;
@@ -103,7 +103,7 @@ disable_apic_timer は setup_boot_APIC_clock の挙動を変える
    * calibrate_APIC_clock, setup_APIC_timer を飛ばす
    * SMP の場合は dummy device として登録?
 
-```
+```c
 /*
  * Setup the boot APIC
  *
@@ -154,8 +154,9 @@ void __init setup_boot_APIC_clock(void)
 }
 ```
 
-
 ## acpi_pm
+
+___ACPI PM タイマ = Advanced Configuration and Power Interface Power Management Timer___
 
 ```c
 static struct clocksource clocksource_acpi_pm = {
