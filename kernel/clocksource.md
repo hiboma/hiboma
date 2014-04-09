@@ -56,6 +56,18 @@ struct x86_init_ops x86_init __initdata = {
 
 ## divider=10 nolapic_timer
 
+ * local_apic_timer_interrupt
+
+```
+[vagrant@vagrant-centos65 ~]$ cat /proc/interrupts 
+           CPU0       CPU1       CPU2       CPU3       
+  0:     548516          0          0          0   IO-APIC-edge      timer
+LOC:          0     547779     547245     546119   Local timer interrupts
+```
+
+ * local APIC タイマを無効にした際の副作用は?
+ * ダミーデバイスとは?
+
 ```
 Apr  9 02:19:51 vagrant-centos65 kernel: Disabling APIC timer
 ```
