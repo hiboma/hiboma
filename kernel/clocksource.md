@@ -11,7 +11,11 @@ http://wiki.osdev.org/APIC_timer
  * リソース管理? がいらなくて簡単
 
  * Periodic Mode
+   * local APIC が current count-- して 0 になったらタイマのIRQを出して、カウントを intial count に戻す
+   * local APIC は initical count によって固定のレートで IRQ を発行する
+   * current count-- されるレートは CPU の external frequency (bus frequency) / local APIC の _Divide Configuration Register_ に依る
  * One-Shot Mode
+   * Periodic Mode と同じようにデクリメントするけど、カウンタを元に戻さない
  * TSC-Deadline mode
 
 ## tsc
