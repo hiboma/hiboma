@@ -1,3 +1,19 @@
+## APIC timer
+
+http://wiki.osdev.org/APIC_timer
+
+ * CPUコアにくっついてる利点
+   * 周波数がまちまち
+ * PITは別回路
+   * 周波数が固定
+   * 1193182 Hz
+   * 割り込み/秒を知る必要がある
+ * リソース管理? がいらなくて簡単
+
+ * Periodic Mode
+ * One-Shot Mode
+ * TSC-Deadline mode
+
 ## tsc
 
 ```
