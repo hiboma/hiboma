@@ -1,3 +1,4 @@
+## setup_boot_APIC_clock 
 
 ```c
 /*
@@ -67,6 +68,10 @@ early_param("nolapic_timer", parse_nolapic_timer);
 ```
 
 disable_apic_timer は setup_boot_APIC_clock の挙動を変える
+
+ * local APIC タイマを使わない
+   * calibrate_APIC_clock, setup_APIC_timer を飛ばす
+   * SMP の場合は dummy device として登録?
 
 ```
 /*
