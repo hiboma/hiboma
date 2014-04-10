@@ -1,4 +1,4 @@
-# purge
+# /usr/sbin/purge
 
 ```
 $ pkgutil --file-info /usr/sbin/purge
@@ -20,7 +20,7 @@ gid: 0
 mode: 755
 ```
 
-## usage
+## USAGE
 
 ```
 purge(8)                  BSD System Manager's Manual                 purge(8)

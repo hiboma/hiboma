@@ -25,21 +25,23 @@ Cgroup Rules Engine Daemon
 多分こんなん
 
 ```
- [other process]       [ cgrulesengd ]
-       |                      ^
-       |                      |
-+------|--------------+-----------|---------+
+ [other process]           [ cgrulesengd ]
+       |                          ^
+       |                          | * cgre_create_netlink_socket_process_msg で作ったソケット
+       |                          | * cgre_receive_netlink_msg, cgre_handle_msg で受信パケットのハンドリング
+       |                          |
++---------------------+---------------------+
 |    fork             |      recvfrom       | System Call Interface
-+------|--------------+-----------|---------+
++---------------------+---------------------+
 |      |              |           |         |
 |      |              |           |         | BSD Socket Interface
-|      |              |           ^         |  * AF_NETLINK
+|      |              |           |         |  * AF_NETLINK
 |      |              |           |         |  * NETLINK_CONNECTOR
 |      |              +-----------|---------+
-|      |                ^    ^    ^    ^    |
+|      |                |    |    |    |    |
 |      |                |    |    |    |    |
 |   do_fork             netlink_broadcast   |
-|      |                        ^           |
+|      |                        |           |
 |      |                        |           |
 |      |                 cn_netlink_send    |
 |      |                        |           |
