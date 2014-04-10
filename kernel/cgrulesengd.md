@@ -49,143 +49,13 @@ Cgroup Rules Engine Daemon
 | copy_process --> proc_fork_connector  |
 |                                       |
 +---------------------------------------+
-```   
-
-## カーネルの実装
-   
- * cn_add_callback
-   * NETLINK_CONNECTOR ソケットにメッセージが書き込まれた際に呼び出されるコールバックを追加する
-   * コールバックは `int cn_call_callback(struct sk_buff *skb)` で実行される
-     * ソケットバッファである
-
-``` c
-/*
- * cn_proc_init - initialization entry point
- *
- * Adds the connector callback to the connector driver.
- */
-static int __init cn_proc_init(void)
-{
-	int err;
-
-	if ((err = cn_add_callback(&cn_proc_event_id, "cn_proc",
-	 			   &cn_proc_mcast_ctl))) {
-		printk(KERN_WARNING "cn_proc failed to register\n");
-		return err;
-	}
-	return 0;
-}
 ```
-
- * proc_fork_connector の中身
-   * do_fork -> copy_process で呼び出される
-   * cn_netlink_send から netlink_broadcast を通じてメッセージをユーザランドに飛ばす
-   * ソケット周りのめんどくさい実装はしなくていい様子
-```c
-void proc_fork_connector(struct task_struct *task)
-{
-	struct cn_msg *msg;
-	struct proc_event *ev;
-	__u8 buffer[CN_PROC_MSG_SIZE];
-	struct timespec ts;
-
-	if (atomic_read(&proc_event_num_listeners) < 1)
-		return;
-
-	msg = (struct cn_msg*)buffer;
-	ev = (struct proc_event*)msg->data;
-	get_seq(&msg->seq, &ev->cpu);
-	ktime_get_ts(&ts); /* get high res monotonic timestamp */
-	put_unaligned(timespec_to_ns(&ts), (__u64 *)&ev->timestamp_ns);
-	ev->what = PROC_EVENT_FORK;
-	ev->event_data.fork.parent_pid = task->real_parent->pid;
-	ev->event_data.fork.parent_tgid = task->real_parent->tgid;
-	ev->event_data.fork.child_pid = task->pid;
-	ev->event_data.fork.child_tgid = task->tgid;
-
-	memcpy(&msg->id, &cn_proc_event_id, sizeof(msg->id));
-	msg->ack = 0; /* not used */
-	msg->len = sizeof(*ev);
-	/*  If cn_netlink_send() failed, the data is not sent */
-	cn_netlink_send(msg, CN_IDX_PROC, GFP_KERNEL);
-}
-```
-
-struct proc_event の中身
-
- * union にして各種イベントのデータを入れてる
- * ユーザランドでも同じ内容
- * 3.13 を見たら ptrace_proc_event, comm_proc_event, coredump_proc_event が増えている
-   * comm_proc_event は ptrctl(2) の PR_SET_NAME で呼び出しをイベントにする
-
-``` c
-struct proc_event {
-	enum what {
-		/* Use successive bits so the enums can be used to record
-		 * sets of events as well
-		 */
-		PROC_EVENT_NONE = 0x00000000,
-		PROC_EVENT_FORK = 0x00000001,
-		PROC_EVENT_EXEC = 0x00000002,
-		PROC_EVENT_UID  = 0x00000004,
-		PROC_EVENT_GID  = 0x00000040,
-		PROC_EVENT_SID  = 0x00000080,
-		/* "next" should be 0x00000400 */
-		/* "last" is the last process event: exit */
-		PROC_EVENT_EXIT = 0x80000000
-	} what;
-	__u32 cpu;
-	__u64 __attribute__((aligned(8))) timestamp_ns;
-		/* Number of nano seconds since system boot */
-	union { /* must be last field of proc_event struct */
-		struct {
-			__u32 err;
-		} ack;
-
-		struct fork_proc_event {
-			__kernel_pid_t parent_pid;
-			__kernel_pid_t parent_tgid;
-			__kernel_pid_t child_pid;
-			__kernel_pid_t child_tgid;
-		} fork;
-
-		struct exec_proc_event {
-			__kernel_pid_t process_pid;
-			__kernel_pid_t process_tgid;
-		} exec;
-
-		struct id_proc_event {
-			__kernel_pid_t process_pid;
-			__kernel_pid_t process_tgid;
-			union {
-				__u32 ruid; /* task uid */
-				__u32 rgid; /* task gid */
-			} r;
-			union {
-				__u32 euid;
-				__u32 egid;
-			} e;
-		} id;
-
-		struct sid_proc_event {
-			__kernel_pid_t process_pid;
-			__kernel_pid_t process_tgid;
-		} sid;
-
-		struct exit_proc_event {
-			__kernel_pid_t process_pid;
-			__kernel_pid_t process_tgid;
-			__u32 exit_code, exit_signal;
-		} exit;
-	} event_data;
-};
-``` 
 
 ## ソース
 
 cgre_create_netlink_socket_process_msg
  
-```c   
+```c
 static int cgre_create_netlink_socket_process_msg(void)
 {
 	int sk_nl = 0, sk_unix = 0, sk_max;
@@ -245,6 +115,8 @@ static int cgre_create_netlink_socket_process_msg(void)
 	cn_hdr->len = sizeof(enum proc_cn_mcast_op);
 	flog(LOG_DEBUG, "Sending netlink message len=%d, cn_msg len=%d\n",
 		nl_hdr->nlmsg_len, (int) sizeof(struct cn_msg));
+
+    // このメッセージは cn_add_callback の cn_proc_mcast_ctl に渡されるはず
 	if (send(sk_nl, nl_hdr, nl_hdr->nlmsg_len, 0) != nl_hdr->nlmsg_len) {
 		flog(LOG_ERR,
 				"Error: failed to send netlink message (mcast ctl op): %s\n",
@@ -255,6 +127,9 @@ static int cgre_create_netlink_socket_process_msg(void)
 ```
 
 cgre_receive_netlink_msg で netlink のメッセージを recvfrom
+
+ * cn_netlink_send でのメッセージを受け取る
+ * メッセージの中に struct proc_event が入ってる
 
 ```c
 static int cgre_receive_netlink_msg(int sk_nl)
@@ -368,4 +243,135 @@ static int cgre_handle_msg(struct cn_msg *cn_hdr)
 	return ret;
 }
 ```
- 
+
+## カーネルの実装
+   
+ * cn_add_callback
+   * NETLINK_CONNECTOR ソケットにメッセージが書き込まれた際に呼び出されるコールバックを追加する
+   * コールバックは `int cn_call_callback(struct sk_buff *skb)` で実行される
+     * ソケットバッファである
+
+``` c
+/*
+ * cn_proc_init - initialization entry point
+ *
+ * Adds the connector callback to the connector driver.
+ */
+static int __init cn_proc_init(void)
+{
+	int err;
+
+	if ((err = cn_add_callback(&cn_proc_event_id, "cn_proc",
+	 			   &cn_proc_mcast_ctl))) {
+		printk(KERN_WARNING "cn_proc failed to register\n");
+		return err;
+	}
+	return 0;
+}
+```
+
+ * proc_fork_connector の中身
+   * do_fork -> copy_process で呼び出される
+   * cn_netlink_send から netlink_broadcast を通じてメッセージをユーザランドに飛ばす
+   * ソケット周りのめんどくさい実装はしなくていい様子
+```c
+void proc_fork_connector(struct task_struct *task)
+{
+	struct cn_msg *msg;
+	struct proc_event *ev;
+	__u8 buffer[CN_PROC_MSG_SIZE];
+	struct timespec ts;
+
+	if (atomic_read(&proc_event_num_listeners) < 1)
+		return;
+
+	msg = (struct cn_msg*)buffer;
+	ev = (struct proc_event*)msg->data;
+	get_seq(&msg->seq, &ev->cpu);
+	ktime_get_ts(&ts); /* get high res monotonic timestamp */
+	put_unaligned(timespec_to_ns(&ts), (__u64 *)&ev->timestamp_ns);
+	ev->what = PROC_EVENT_FORK;
+	ev->event_data.fork.parent_pid = task->real_parent->pid;
+	ev->event_data.fork.parent_tgid = task->real_parent->tgid;
+	ev->event_data.fork.child_pid = task->pid;
+	ev->event_data.fork.child_tgid = task->tgid;
+
+	memcpy(&msg->id, &cn_proc_event_id, sizeof(msg->id));
+	msg->ack = 0; /* not used */
+	msg->len = sizeof(*ev);
+	/*  If cn_netlink_send() failed, the data is not sent */
+	cn_netlink_send(msg, CN_IDX_PROC, GFP_KERNEL);
+}
+```
+
+struct proc_event の中身
+
+ * union にして各種イベントのデータを入れてる
+ * ユーザランドでも同じ内容
+   * 3.13 を見たら ptrace_proc_event, comm_proc_event, coredump_proc_event が増えている
+     * comm_proc_event は ptrctl(2) の PR_SET_NAME で呼び出しをイベントにする
+     * https://groups.google.com/forum/#!topic/linux.kernel/Xt_7rmV6Nlw に実装の理由が書いてある
+
+``` c
+struct proc_event {
+	enum what {
+		/* Use successive bits so the enums can be used to record
+		 * sets of events as well
+		 */
+		PROC_EVENT_NONE = 0x00000000,
+		PROC_EVENT_FORK = 0x00000001,
+		PROC_EVENT_EXEC = 0x00000002,
+		PROC_EVENT_UID  = 0x00000004,
+		PROC_EVENT_GID  = 0x00000040,
+		PROC_EVENT_SID  = 0x00000080,
+		/* "next" should be 0x00000400 */
+		/* "last" is the last process event: exit */
+		PROC_EVENT_EXIT = 0x80000000
+	} what;
+	__u32 cpu;
+	__u64 __attribute__((aligned(8))) timestamp_ns;
+		/* Number of nano seconds since system boot */
+	union { /* must be last field of proc_event struct */
+		struct {
+			__u32 err;
+		} ack;
+
+		struct fork_proc_event {
+			__kernel_pid_t parent_pid;
+			__kernel_pid_t parent_tgid;
+			__kernel_pid_t child_pid;
+			__kernel_pid_t child_tgid;
+		} fork;
+
+		struct exec_proc_event {
+			__kernel_pid_t process_pid;
+			__kernel_pid_t process_tgid;
+		} exec;
+
+		struct id_proc_event {
+			__kernel_pid_t process_pid;
+			__kernel_pid_t process_tgid;
+			union {
+				__u32 ruid; /* task uid */
+				__u32 rgid; /* task gid */
+			} r;
+			union {
+				__u32 euid;
+				__u32 egid;
+			} e;
+		} id;
+
+		struct sid_proc_event {
+			__kernel_pid_t process_pid;
+			__kernel_pid_t process_tgid;
+		} sid;
+
+		struct exit_proc_event {
+			__kernel_pid_t process_pid;
+			__kernel_pid_t process_tgid;
+			__u32 exit_code, exit_signal;
+		} exit;
+	} event_data;
+};
+``` 
+
