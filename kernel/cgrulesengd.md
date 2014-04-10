@@ -82,8 +82,62 @@ struct proc_event {
    * - cgrulesengd 起動前のプロセスは対象外
  * cgroup_reload_cached_templates     
    * SIGUSR1 で /etc/cgconfig.conf のキャッシュをリロード
- * 
- 
+
+#### カーネル
+   
+ * cn_add_callback
+
+``` c
+/*
+ * cn_proc_init - initialization entry point
+ *
+ * Adds the connector callback to the connector driver.
+ */
+static int __init cn_proc_init(void)
+{
+	int err;
+
+	if ((err = cn_add_callback(&cn_proc_event_id, "cn_proc",
+	 			   &cn_proc_mcast_ctl))) {
+		printk(KERN_WARNING "cn_proc failed to register\n");
+		return err;
+	}
+	return 0;
+}
+```
+
+ * proc_fork_connector の中身
+   * cn_netlink_send でメッセージをユーザランドに飛ばす
+   * ソケット周りのめんどくさい実装はしなくていい様子
+```c
+void proc_fork_connector(struct task_struct *task)
+{
+	struct cn_msg *msg;
+	struct proc_event *ev;
+	__u8 buffer[CN_PROC_MSG_SIZE];
+	struct timespec ts;
+
+	if (atomic_read(&proc_event_num_listeners) < 1)
+		return;
+
+	msg = (struct cn_msg*)buffer;
+	ev = (struct proc_event*)msg->data;
+	get_seq(&msg->seq, &ev->cpu);
+	ktime_get_ts(&ts); /* get high res monotonic timestamp */
+	put_unaligned(timespec_to_ns(&ts), (__u64 *)&ev->timestamp_ns);
+	ev->what = PROC_EVENT_FORK;
+	ev->event_data.fork.parent_pid = task->real_parent->pid;
+	ev->event_data.fork.parent_tgid = task->real_parent->tgid;
+	ev->event_data.fork.child_pid = task->pid;
+	ev->event_data.fork.child_tgid = task->tgid;
+
+	memcpy(&msg->id, &cn_proc_event_id, sizeof(msg->id));
+	msg->ack = 0; /* not used */
+	msg->len = sizeof(*ev);
+	/*  If cn_netlink_send() failed, the data is not sent */
+	cn_netlink_send(msg, CN_IDX_PROC, GFP_KERNEL);
+}
+```
 
 ## ソース
 
