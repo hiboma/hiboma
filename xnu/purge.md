@@ -95,9 +95,8 @@ ubc_msync
  * ubc = Unified Buffer Cache の略?
    * http://www.jp.netbsd.org/ja/docs/kernel/
  * vnode のメモリオブジェクトを invalidate する
- * invalidate_mapping_pages 相当かな
-
-```
+   * invalidate_mapping_pages 相当かな
+```c
 /*
  * ubc_msync
  *
