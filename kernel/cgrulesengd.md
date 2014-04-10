@@ -9,6 +9,8 @@ Cgroup Rules Engine Daemon
 
 ## 要点
 
+libcgroup
+
  * cgre_create_netlink_socket_process_msg
    * socket(PF_NETLINK + SOCK_DGRAM + NETLINK_CONNECTOR) + PROC_CN_MCAST_LISTEN;
      * プロセスの fork, exec, setuid, setgid, exit をソケットから read
@@ -19,6 +21,13 @@ Cgroup Rules Engine Daemon
    * - cgrulesengd 起動前のプロセスは対象外
  * cgroup_reload_cached_templates
    * SIGUSR1 で /etc/cgconfig.conf のキャッシュをリロード
+
+----
+
+kernel
+
+ * netlink_broadcast でブロードキャストされる
+ * proc_*_connector をメッセージ発信とみなせばクライアント/サーバモデルで理解しやすいかな?
 
 ## NETLINK_CONNECTOR の図
 
