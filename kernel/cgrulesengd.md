@@ -8,7 +8,7 @@ Cgroup Rules Engine Daemon
 
 ## 要点   
 
- *cgre_create_netlink_socket_process_msg
+ * cgre_create_netlink_socket_process_msg
    * socket(PF_NETLINK + SOCK_DGRAM + NETLINK_CONNECTOR)
      * プロセスの fork, exec, setuid, setgid, exit をソケットから read
       * struct proc_event = Process Event Connector
