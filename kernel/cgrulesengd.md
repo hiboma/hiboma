@@ -7,6 +7,8 @@ Cgroup Rules Engine Daemon
  * Process Event Connector
    * sturct proc_event でカーネルから通知されるイベント
 
+   
+
 ## 要点   
 
  * cgre_create_netlink_socket_process_msg
@@ -17,12 +19,44 @@ Cgroup Rules Engine Daemon
      * 該当する pid をイベント cgconfig.conf に従って /cgroup に移す
    * - プロセスのイベントと完全に同期している訳ではない
    * - cgrulesengd 起動前のプロセスは対象外
- * cgroup_reload_cached_templates     
+ * cgroup_reload_cached_templates
    * SIGUSR1 で /etc/cgconfig.conf のキャッシュをリロード
 
-#### カーネル
+## NETLINK_CONNECTOR の図
+
+多分こんなん
+
+```
+ [other process]       [ cgrulesengd ]
+       |                      ^
+       |                      |
++------|----------+-----------|---------+
+|    fork         |      recvfrom       | System Call Interface
++------|----------+-----------|---------+
+|      |          |           |         |
+|      |          |           |         | BSD Socket Interface
+|      |          |           ^         |  * AF_NETLINK
+|      |          |           |         |  * NETLINK_CONNECTOR
+|      |          +-----------|---------+
+|      |            ^    ^    ^    ^    |
+|      |            |    |    |    |    |
+|   do_fork         netlink_broadcast   |
+|      |                    ^           |
+|      |                    |           |
+|      |             cn_netlink_send    |
+|      |                    |           |
+|      |                    |           |
+| copy_process --> proc_fork_connector  |
+|                                       |
++---------------------------------------+
+```   
+
+## カーネルの実装
    
  * cn_add_callback
+   * NETLINK_CONNECTOR ソケットにメッセージが書き込まれた際に呼び出されるコールバックを追加する
+   * コールバックは `int cn_call_callback(struct sk_buff *skb)` で実行される
+     * ソケットバッファである
 
 ``` c
 /*
@@ -44,7 +78,8 @@ static int __init cn_proc_init(void)
 ```
 
  * proc_fork_connector の中身
-   * cn_netlink_send でメッセージをユーザランドに飛ばす
+   * do_fork -> copy_process で呼び出される
+   * cn_netlink_send から netlink_broadcast を通じてメッセージをユーザランドに飛ばす
    * ソケット周りのめんどくさい実装はしなくていい様子
 ```c
 void proc_fork_connector(struct task_struct *task)
@@ -79,7 +114,7 @@ void proc_fork_connector(struct task_struct *task)
 struct proc_event の中身
 
  * union にして各種イベントのデータを入れてる
- * ユーザランドでも同じ
+ * ユーザランドでも同じ内容
 
 ``` c
 struct proc_event {
