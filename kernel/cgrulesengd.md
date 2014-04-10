@@ -129,7 +129,7 @@ static int cgre_create_netlink_socket_process_msg(void)
 cgre_receive_netlink_msg で netlink のメッセージを recvfrom
 
  * cn_netlink_send でのメッセージを受け取る
- * メッセージの中に struct proc_event が入ってる
+ * メッセージの中に struct proc_event が入ってるので解析する必要がある
 
 ```c
 static int cgre_receive_netlink_msg(int sk_nl)
