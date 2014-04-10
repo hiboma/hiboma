@@ -115,6 +115,8 @@ struct proc_event の中身
 
  * union にして各種イベントのデータを入れてる
  * ユーザランドでも同じ内容
+ * 3.13 を見たら ptrace_proc_event, comm_proc_event, coredump_proc_event が増えている
+   * comm_proc_event は ptrctl(2) の PR_SET_NAME で呼び出しをイベントにする
 
 ``` c
 struct proc_event {
