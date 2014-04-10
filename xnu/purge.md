@@ -42,6 +42,8 @@ SEE ALSO
                               September 20, 2005
 ```
 
+anon なメモリは対象外。
+
 dtruss 取ると ___vfs_purge___ 呼んでる
 
 ```
