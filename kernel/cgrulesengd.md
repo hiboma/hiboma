@@ -3,13 +3,11 @@
 Cgroup Rules Engine Daemon
 
  * シングルプロセス
-   * netlink の読み取り、cgroup の書き出しも直列
+   * netlink での読み取り、cgroup の書き出しも直列
  * Process Event Connector
    * sturct proc_event でカーネルから通知されるイベント
 
-   
-
-## 要点   
+## 要点
 
  * cgre_create_netlink_socket_process_msg
    * socket(PF_NETLINK + SOCK_DGRAM + NETLINK_CONNECTOR) + PROC_CN_MCAST_LISTEN;
@@ -30,25 +28,25 @@ Cgroup Rules Engine Daemon
  [other process]       [ cgrulesengd ]
        |                      ^
        |                      |
-+------|----------+-----------|---------+
-|    fork         |      recvfrom       | System Call Interface
-+------|----------+-----------|---------+
-|      |          |           |         |
-|      |          |           |         | BSD Socket Interface
-|      |          |           ^         |  * AF_NETLINK
-|      |          |           |         |  * NETLINK_CONNECTOR
-|      |          +-----------|---------+
-|      |            ^    ^    ^    ^    |
-|      |            |    |    |    |    |
-|   do_fork         netlink_broadcast   |
-|      |                    ^           |
-|      |                    |           |
-|      |             cn_netlink_send    |
-|      |                    |           |
-|      |                    |           |
-| copy_process --> proc_fork_connector  |
-|                                       |
-+---------------------------------------+
++------|--------------+-----------|---------+
+|    fork             |      recvfrom       | System Call Interface
++------|--------------+-----------|---------+
+|      |              |           |         |
+|      |              |           |         | BSD Socket Interface
+|      |              |           ^         |  * AF_NETLINK
+|      |              |           |         |  * NETLINK_CONNECTOR
+|      |              +-----------|---------+
+|      |                ^    ^    ^    ^    |
+|      |                |    |    |    |    |
+|   do_fork             netlink_broadcast   |
+|      |                        ^           |
+|      |                        |           |
+|      |                 cn_netlink_send    |
+|      |                        |           |
+|      |                        |           |
+| copy_process -----> proc_fork_connector   | fork 以外のコネクタの場合は呼び出し関数が違うよ
+|                                           |
++-------------------------------------------+
 ```
 
 ## ソース
