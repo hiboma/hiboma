@@ -27,6 +27,7 @@ libcgroup
 kernel
 
  * netlink_broadcast でブロードキャストされる
+   *  netlink_broadcast_deliver で `skb_queue_tail(&sk->sk_receive_queue, skb);` するのが実体
  * proc_*_connector をメッセージ発信とみなせばクライアント/サーバモデルで理解しやすいかな?
 
 ## NETLINK_CONNECTOR の図
