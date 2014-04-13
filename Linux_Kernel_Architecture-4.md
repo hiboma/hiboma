@@ -180,6 +180,31 @@ static int mmap_is_legacy(void)
 
 ## 新しいレイアウト
 
+
+ * ___top to bottom___                        .
+   * mmap_base は RLIMIT_STACK で決定される。ただし
+   * MIN_GAP = 128MB + ランダムサイズ 以下にならないようにする
+   * MAX_GAP 以上にならないようにする
+
+```c
+#define MIN_GAP (128*1024*1024UL + stack_maxrandom_size())
+#define MAX_GAP (TASK_SIZE/6*5)
+
+static unsigned long mmap_base(void)
+{
+	unsigned long gap = current->signal->rlim[RLIMIT_STACK].rlim_cur;
+
+	if (gap < MIN_GAP)
+		gap = MIN_GAP;
+	else if (gap > MAX_GAP)
+		gap = MAX_GAP;
+
+	return PAGE_ALIGN(TASK_SIZE - gap - mmap_rnd());
+}
+```
+
+図解
+
 ```
 +---------+ TASK_SIZE            
 |---------|                   
@@ -215,7 +240,7 @@ b7d78000   2048K r----  /usr/lib/locale/locale-archive     # mm->mmap_base
 b7c94000    912K r----  /usr/lib/locale/locale-archive
 b7c8e000     24K r--s-  /usr/lib/gconv/gconv-modules.cache
 0a0b7000   1460K rw---    [ anon ]                         # heap
-080de000     20K rw---    [ anon ]                         # 
+080de000     20K rw---    [ anon ]                         # ????
 080d8000     24K rw---  /bin/bash                          # data
 08047000    580K r-x--  /bin/bash                          # text
 00b31000      4K rw---  /lib/libtermcap.so.2.0.8
@@ -235,7 +260,7 @@ b7c8e000     24K r--s-  /usr/lib/gconv/gconv-modules.cache
 00317000     36K r-x--  /lib/libnss_files-2.3.4.so
 ```
 
-64bit だとだいぶ様子が違う感じ
+ところが 64bit だとだいぶ様子が違う感じ
 
 ```
 # pmap の結果を逆転させているので注意
@@ -268,25 +293,3 @@ ffffffffff600000      4K r-x--    [ anon ]
 0000000000602000      4K rw---  /usr/bin/pmap            # data セグメント
 0000000000400000     12K r-x--  /usr/bin/pmap            # text セグメント
 ```
-
- * ___top to bottom___                        .
-   * mmap_base は RLIMIT_STACK で決定される。ただし
-   * MIN_GAP = 128MB + ランダムサイズ 以下にならないようにする
-   * MAX_GAP 以上にならないようにする
-
-```c
-#define MIN_GAP (128*1024*1024UL + stack_maxrandom_size())
-#define MAX_GAP (TASK_SIZE/6*5)
-
-static unsigned long mmap_base(void)
-{
-	unsigned long gap = current->signal->rlim[RLIMIT_STACK].rlim_cur;
-
-	if (gap < MIN_GAP)
-		gap = MIN_GAP;
-	else if (gap > MAX_GAP)
-		gap = MAX_GAP;
-
-	return PAGE_ALIGN(TASK_SIZE - gap - mmap_rnd());
-}
-``` 
