@@ -2,6 +2,8 @@
 
 exec(2) の load_elf_binary で address_space が決まる
 
+![2014-04-13 16 19 44](https://cloud.githubusercontent.com/assets/172456/2688992/215f1e5a-c2dc-11e3-9b5e-7b726396ada1.png)
+
 #### Figure-4.3
 
  * load_elf_binary
@@ -108,4 +110,18 @@ void arch_pick_mmap_layout(struct mm_struct *mm)
 
 ### レガシーレイアウトとは?
 
+ * `RLIMIT_STACK == RLIM_INFINITY`
  * `/proc/sys/vm/legacy_va_layout > 0`
+
+```c 
+static int mmap_is_legacy(void)
+{
+	if (current->personality & ADDR_COMPAT_LAYOUT)
+		return 1;
+
+	if (current->signal->rlim[RLIMIT_STACK].rlim_cur == RLIM_INFINITY)
+		return 1;
+
+	return sysctl_legacy_va_layout;
+}
+```
