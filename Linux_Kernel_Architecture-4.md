@@ -44,6 +44,10 @@ struct mm_struct {
 
 ![2014-04-13 16 19 44](https://cloud.githubusercontent.com/assets/172456/2688992/215f1e5a-c2dc-11e3-9b5e-7b726396ada1.png)
 
+ * ___top to bottom___
+   * スタックの上限を固定
+
+
 ## 4.2.2 Creating the Layout
 
 exec(2) の load_elf_binary で address_space が決まる
