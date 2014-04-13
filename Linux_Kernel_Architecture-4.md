@@ -315,4 +315,13 @@ struct mm_struct {
 	struct vm_area_struct * mmap_cache;	/* last find_vma result */
 ```
 
-## 4.4.1 Trees and Lists 
+### 4.4.1 Trees and Lists
+
+mm_struct から vm_area_struct ( ___region___ )を辿る方法は二種類用意されている
+
+![2014-04-13 23 48 29](https://cloud.githubusercontent.com/assets/172456/2689732/bf124a80-c31a-11e3-8331-74ccb4d3074c.png)
+
+ * 1. mm_struct->mmap
+   * linked-list
+ * 2. mm_struct->mm_rb
+   * 赤黒木
