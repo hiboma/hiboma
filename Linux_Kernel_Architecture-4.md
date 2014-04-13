@@ -181,3 +181,23 @@ static int mmap_is_legacy(void)
 ## 新しいレイアウト
 
  * ___top to bottom___
+   * mmap_base は RLIMIT_STACK で決定される。ただし
+   * MIN_GAP = 128MB + ランダムサイズ 以下にならないようにする
+   * MAX_GAP 以上にならないようにする
+
+```c
+#define MIN_GAP (128*1024*1024UL + stack_maxrandom_size())
+#define MAX_GAP (TASK_SIZE/6*5)
+
+static unsigned long mmap_base(void)
+{
+	unsigned long gap = current->signal->rlim[RLIMIT_STACK].rlim_cur;
+
+	if (gap < MIN_GAP)
+		gap = MIN_GAP;
+	else if (gap > MAX_GAP)
+		gap = MAX_GAP;
+
+	return PAGE_ALIGN(TASK_SIZE - gap - mmap_rnd());
+}
+``` 
