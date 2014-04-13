@@ -1,3 +1,36 @@
+## 4.2.1 Layout of the Process Address Space
+
+```c
+struct mm_struct {
+...
+	unsigned long (*get_unmapped_area) (struct file *filp,
+				unsigned long addr, unsigned long len,
+				unsigned long pgoff, unsigned long flags);
+       unsigned long (*get_unmapped_exec_area) (struct file *filp,
+				unsigned long addr, unsigned long len,
+				unsigned long pgoff, unsigned long flags);
+	void (*unmap_area) (struct mm_struct *mm, unsigned long addr);
+	unsigned long mmap_base;		/* base of mmap area */
+	unsigned long task_size;		/* size of task vm space */
+
+	pgd_t * pgd;
+	atomic_t mm_users;			/* How many users with user space? */
+	atomic_t mm_count;			/* How many references to "struct mm_struct" (users count as 1) */
+	int map_count;				/* number of VMAs */
+
+	unsigned long total_vm, locked_vm, shared_vm, exec_vm;
+	unsigned long stack_vm, reserved_vm, def_flags, nr_ptes;
+	unsigned long start_code, end_code, start_data, end_data;
+	unsigned long start_brk, brk, start_stack;
+	unsigned long arg_start, arg_end, env_start, env_end;
+
+...
+};
+```
+
+ * get_unmapped_area
+ * mmap_base
+
 ## 4.2.2 Creating the Layout
 
 exec(2) の load_elf_binary で address_space が決まる
@@ -14,6 +47,8 @@ load_elf_binary
 ```
 
 ___ASR = Address Space Randomization___
+
+アドレス空間レイアウトのランダム化
 
  * **/proc/sys/kernel/randomize_va_space** で切り替え
    * 0 無効
@@ -54,7 +89,7 @@ ffffffffff600000      4K r-x--    [ anon ]
 
 #### randomize_va_space = 1 で無効にした場合
 
-ヒープのアドレスだけ変わらん。2 にするとヒープも変わる
+ヒープのアドレスだけ固定で他はランダムに変わる。2 にするとヒープも変わる
 
 ```
 [vagrant@vagrant-centos65 ~]$ bash -c 'pmap $$'
