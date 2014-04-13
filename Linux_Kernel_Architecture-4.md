@@ -78,3 +78,34 @@ ffffffffff600000      4K r-x--    [ anon ]
 ffffffffff600000      4K r-x--    [ anon ]
  total             6256K
 ```
+
+address_space のレイアウトは ___arch_pick_mmap_layout___ で決まる
+
+```c
+/*
+ * This function, called very early during the creation of a new
+ * process VM image, sets up which VM layout function to use:
+ */
+void arch_pick_mmap_layout(struct mm_struct *mm)
+{
+	if (!(2 & exec_shield) && mmap_is_legacy()) {
+       // レガシーレイアウト
+		mm->mmap_base = mmap_legacy_base();
+		mm->get_unmapped_area = arch_get_unmapped_area;
+		mm->unmap_area = arch_unmap_area;
+	} else {
+		mm->mmap_base = mmap_base();
+		mm->get_unmapped_area = arch_get_unmapped_area_topdown;
+		if (!(current->personality & READ_IMPLIES_EXEC)
+		    && mmap_is_ia32()) {
+			mm->get_unmapped_exec_area = arch_get_unmapped_exec_area;
+			mm->shlib_base = SHLIB_BASE + mmap_rnd();
+		}
+		mm->unmap_area = arch_unmap_area_topdown;
+	}
+}
+```
+
+### レガシーレイアウトとは?
+
+ * `/proc/sys/vm/legacy_va_layout > 0`
