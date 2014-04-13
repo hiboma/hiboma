@@ -42,14 +42,11 @@ struct mm_struct {
    * mmap するアドレスは 低 => 高 で探す
    * HAVE_ARCH_ GET_UNMAPPED_AREA. して別の実装もとれる
 
- * get_unmapped_area
- * mmap_base
+![2014-04-13 16 19 44](https://cloud.githubusercontent.com/assets/172456/2688992/215f1e5a-c2dc-11e3-9b5e-7b726396ada1.png)
 
 ## 4.2.2 Creating the Layout
 
 exec(2) の load_elf_binary で address_space が決まる
-
-![2014-04-13 16 19 44](https://cloud.githubusercontent.com/assets/172456/2688992/215f1e5a-c2dc-11e3-9b5e-7b726396ada1.png)
 
 #### Figure-4.3
 
