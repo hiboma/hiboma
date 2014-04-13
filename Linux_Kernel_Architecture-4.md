@@ -303,3 +303,16 @@ load_elf_binary の setup_arg_pages でスタックの位置を決める
 demand paging, backing store, address_space の話
 
 ## 4.4 Data Structures
+
+```c
+struct mm_struct {
+	struct vm_area_struct * mmap;		/* list of VMAs */
+
+    /* vm_area_struct の 赤黒木 */
+	struct rb_root mm_rb;
+
+   /* 直近の find_vma の結果を保持 */
+	struct vm_area_struct * mmap_cache;	/* last find_vma result */
+```
+
+## 4.4.1 Trees and Lists 
