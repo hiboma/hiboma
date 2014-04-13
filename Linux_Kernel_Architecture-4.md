@@ -180,7 +180,26 @@ static int mmap_is_legacy(void)
 
 ## 新しいレイアウト
 
- * ___top to bottom___
+```
++---------+ TASK_SIZE
+|---------|
+|//stack//|
++----v----+
+|         |
++---------+ mm->mmap_base 
+|//MMAP///|
++----v----+
+|         |
+|         |
+|         |
++----^----+
+|///Heap//|
++---------+
+|///TEXT//|
++---------+ 
+```
+
+ * ___top to bottom___                        .
    * mmap_base は RLIMIT_STACK で決定される。ただし
    * MIN_GAP = 128MB + ランダムサイズ 以下にならないようにする
    * MAX_GAP 以上にならないようにする
