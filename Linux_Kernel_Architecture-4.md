@@ -181,22 +181,48 @@ static int mmap_is_legacy(void)
 ## 新しいレイアウト
 
 ```
-+---------+ TASK_SIZE
-|---------|
-|//stack//|
-+----v----+
-|         |
++---------+ TASK_SIZE            
+|---------|                   
+|//stack//|                       
++----v----+                  
+|         |               
 +---------+ mm->mmap_base 
-|//MMAP///|
-+----v----+
-|         |
-|         |
-|         |
-+----^----+
-|///Heap//|
-+---------+
-|///TEXT//|
-+---------+ 
+|//MMAP///|                     
++----v----+                     
+|         |               
+|         |                     
+|         |                 
++----^----+                       
+|///Heap//|                 
++---------+                
+|///TEXT//|               
++---------+                   
+```
+
+```
+# pmap の結果を逆転させているので注意
+
+ffffffffff600000      4K r-x--    [ anon ]
+00007fff93dff000      4K r-x--    [ anon ]               
+00007fff93ccf000     84K rw---    [ stack ]              # スタック
+00007f4fac724000      4K rw---    [ anon ]               # GAP
+00007f4fac723000      4K rw---  /lib64/ld-2.12.so        # mmap_base ?
+00007f4fac722000      4K r----  /lib64/ld-2.12.so
+00007f4fac71f000     12K rw---    [ anon ]
+00007f4fac719000     12K rw---    [ anon ]
+00007f4fac503000    128K r-x--  /lib64/ld-2.12.so
+00007f4fac4ef000     80K rw---    [ anon ]
+00007f4fac4ee000      4K rw---  /lib64/libproc-3.2.8.so
+00007f4fac2ee000   2048K -----  /lib64/libproc-3.2.8.so
+00007f4fac2e0000     56K r-x--  /lib64/libproc-3.2.8.so
+00007f4fac2db000     20K rw---    [ anon ]
+00007f4fac2da000      4K rw---  /lib64/libc-2.12.so
+00007f4fac2d6000     16K r----  /lib64/libc-2.12.so
+00007f4fac0d7000   2044K -----  /lib64/libc-2.12.so
+00007f4fabf4c000   1580K r-x--  /lib64/libc-2.12.so
+0000000001f77000    132K rw---    [ anon ]               # ヒープ
+0000000000602000      4K rw---  /usr/bin/pmap            # data セグメント
+0000000000400000     12K r-x--  /usr/bin/pmap            # text セグメント
 ```
 
  * ___top to bottom___                        .
