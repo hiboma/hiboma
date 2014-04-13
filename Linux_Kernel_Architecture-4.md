@@ -199,6 +199,42 @@ static int mmap_is_legacy(void)
 +---------+                   
 ```
 
+32bit (CentOS4..) で bash の pmap を取る
+
+```
+# pmap の結果を逆転させているので注意
+
+ffffe000      4K r-x--    [ anon ]
+bff66000    616K rw---    [ stack ] 
+
+....                                                       # 128MB
+
+b7fb0000      8K rw---    [ anon ]                         # GAP?
+b7f78000      8K rw---    [ anon ]                         # GAP?
+b7d78000   2048K r----  /usr/lib/locale/locale-archive     # mm->mmap_base
+b7c94000    912K r----  /usr/lib/locale/locale-archive
+b7c8e000     24K r--s-  /usr/lib/gconv/gconv-modules.cache
+0a0b7000   1460K rw---    [ anon ]                         # heap
+080de000     20K rw---    [ anon ]                         # 
+080d8000     24K rw---  /bin/bash                          # data
+08047000    580K r-x--  /bin/bash                          # text
+00b31000      4K rw---  /lib/libtermcap.so.2.0.8
+00b2e000     12K r-x--  /lib/libtermcap.so.2.0.8
+00b1d000      4K rw---  /lib/libdl-2.3.4.so
+00b1c000      4K r----  /lib/libdl-2.3.4.so
+00b1a000      8K r-x--  /lib/libdl-2.3.4.so
+00af1000      8K rw---    [ anon ]
+00aef000      8K rw---  /lib/tls/libc-2.3.4.so
+00aed000      8K r----  /lib/tls/libc-2.3.4.so
+009c3000   1192K r-x--  /lib/tls/libc-2.3.4.so
+009c0000      4K rw---  /lib/ld-2.3.4.so
+009bf000      4K r----  /lib/ld-2.3.4.so
+009a9000     88K r-x--  /lib/ld-2.3.4.so
+00321000      4K rw---  /lib/libnss_files-2.3.4.so
+00320000      4K r----  /lib/libnss_files-2.3.4.so
+00317000     36K r-x--  /lib/libnss_files-2.3.4.so
+```
+
 64bit だとだいぶ様子が違う感じ
 
 ```
