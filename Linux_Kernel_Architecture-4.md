@@ -5,6 +5,7 @@ address_apce プロセスのメモリレイアウト ってどやって決まる
 ```c
 struct mm_struct {
 ...
+    /* mmap する際に空きを探すメソッド */
 	unsigned long (*get_unmapped_area) (struct file *filp,
 				unsigned long addr, unsigned long len,
 				unsigned long pgoff, unsigned long flags);
@@ -12,7 +13,10 @@ struct mm_struct {
 				unsigned long addr, unsigned long len,
 				unsigned long pgoff, unsigned long flags);
 	void (*unmap_area) (struct mm_struct *mm, unsigned long addr);
+
+    /* mmap するアドレスのベース *
 	unsigned long mmap_base;		/* base of mmap area */
+    /* TASK_SIZE と等しい 64bitの場合はバイナリによる */
 	unsigned long task_size;		/* size of task vm space */
 
 	pgd_t * pgd;
