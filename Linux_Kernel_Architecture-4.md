@@ -34,6 +34,14 @@ struct mm_struct {
 };
 ```
 
+ * arch_pick_mmap_layout, HAVE_ARCH_PICK_MMAP_LAYOUT
+   * アーキテクチャ依存の mmap レイアウトを作りたい場合に定義する
+ * arch_get_unmapped_area, HAVE_ARCH_UNMAPPED_AREA 
+   * mmap で空きアドレスを探す場合にアーキテクチャ依存の方法にする
+ * arch_get_unmapped_area_topdown
+   * mmap するアドレスは 低 => 高 で探す
+   * HAVE_ARCH_ GET_UNMAPPED_AREA. して別の実装もとれる
+
  * get_unmapped_area
  * mmap_base
 
