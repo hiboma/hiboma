@@ -36,8 +36,8 @@ struct mm_struct {
 
  * arch_pick_mmap_layout, HAVE_ARCH_PICK_MMAP_LAYOUT
    * アーキテクチャ依存の mmap レイアウトを作りたい場合に定義する
- * arch_get_unmapped_area, HAVE_ARCH_UNMAPPED_AREA 
-   * mmap で空きアドレスを探す場合にアーキテクチャ依存の方法にする
+ * arch_get_unmapped_area, HAVE_ARCH_UNMAPPED_AREA
+   * mmap する空きアドレスを探す場合にアーキテクチャ依存の方法にする
  * arch_get_unmapped_area_topdown
    * mmap するアドレスは 低 => 高 で探す
    * HAVE_ARCH_ GET_UNMAPPED_AREA. して別の実装もとれる
@@ -47,10 +47,9 @@ struct mm_struct {
  * ___top to bottom___
    * スタックの上限を固定
 
-
 ## 4.2.2 Creating the Layout
 
-exec(2) の load_elf_binary で address_space が決まる
+execve(2) の load_elf_binary する際に address_space が決まる
 
 #### Figure-4.3
 
