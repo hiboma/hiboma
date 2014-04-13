@@ -163,6 +163,7 @@ void arch_pick_mmap_layout(struct mm_struct *mm)
 
  * `RLIMIT_STACK == RLIM_INFINITY`
  * `/proc/sys/vm/legacy_va_layout > 0`
+   * ___bottom to top___
 
 ```c 
 static int mmap_is_legacy(void)
@@ -176,3 +177,7 @@ static int mmap_is_legacy(void)
 	return sysctl_legacy_va_layout;
 }
 ```
+
+## 新しいレイアウト
+
+ * ___top to bottom___
