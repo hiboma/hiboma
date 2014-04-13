@@ -293,3 +293,5 @@ ffffffffff600000      4K r-x--    [ anon ]
 0000000000602000      4K rw---  /usr/bin/pmap            # data セグメント
 0000000000400000     12K r-x--  /usr/bin/pmap            # text セグメント
 ```
+
+load_elf_binary の setup_arg_pages でスタックの位置を決める
