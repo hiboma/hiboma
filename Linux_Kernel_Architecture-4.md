@@ -6,14 +6,16 @@ exec(2) の load_elf_binary で address_space が決まる
 
 #### Figure-4.3
 
- * load_elf_binary
-   * PF_RANDOMIZE
-   * arch_pick_mmap_layout
-   * setup_arg_pages
+```
+load_elf_binary
+ -> PF_RANDOMIZE
+ -> arch_pick_mmap_layout
+ -> setup_arg_pages
+```
 
 ___ASR = Address Space Randomization___
 
- * /proc/sys/kernel/randomize_va_space で切り替え
+ * **/proc/sys/kernel/randomize_va_space** で切り替え
    * 0 無効
    * 1 ヒープのみ無効 COFIG_COMPAT_BRK
      * http://tsueyasu.blogspot.jp/2008/12/randomizevaspace.html
