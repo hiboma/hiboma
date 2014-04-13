@@ -1,5 +1,7 @@
 ## 4.2.1 Layout of the Process Address Space
 
+address_apce プロセスのメモリレイアウト ってどやって決まるんだけの章
+
 ```c
 struct mm_struct {
 ...
@@ -14,14 +16,14 @@ struct mm_struct {
 	unsigned long task_size;		/* size of task vm space */
 
 	pgd_t * pgd;
-	atomic_t mm_users;			/* How many users with user space? */
-	atomic_t mm_count;			/* How many references to "struct mm_struct" (users count as 1) */
-	int map_count;				/* number of VMAs */
 
-	unsigned long total_vm, locked_vm, shared_vm, exec_vm;
-	unsigned long stack_vm, reserved_vm, def_flags, nr_ptes;
+    /* テキストセグメントとデータセグメントの始端〜終端 */
 	unsigned long start_code, end_code, start_data, end_data;
+
+    /* ヒープとスタック始端。brk は変わるよ　*/
 	unsigned long start_brk, brk, start_stack;
+
+   /* argv[], env[] */
 	unsigned long arg_start, arg_end, env_start, env_end;
 
 ...
