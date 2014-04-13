@@ -300,4 +300,6 @@ load_elf_binary の setup_arg_pages でスタックの位置を決める
 
 ## 4.3 Principle of Memory Mappings
 
-demand paging の話
+demand paging, backing store, address_space の話
+
+## 4.4 Data Structures
