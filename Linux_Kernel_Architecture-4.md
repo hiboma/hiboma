@@ -340,6 +340,8 @@ ___Region = vm_area_struct___ の定義
  */
 struct vm_area_struct {
 	struct mm_struct * vm_mm;	/* The address space we belong to. */
+
+    /* ユーザ空間での始端と終端 */
 	unsigned long vm_start;		/* Our start address within vm_mm. */
 	unsigned long vm_end;		/* The first byte after our end address
 					   within vm_mm. */
@@ -347,6 +349,7 @@ struct vm_area_struct {
 	/* linked list of VM areas per task, sorted by address */
 	struct vm_area_struct *vm_next, *vm_prev;
 
+    /* パーミッション */
 	pgprot_t vm_page_prot;		/* Access permissions of this VMA. */
 	unsigned long vm_flags;		/* Flags, see mm.h. */
 
@@ -365,6 +368,7 @@ struct vm_area_struct {
 			struct vm_area_struct *head;
 		} vm_set;
 
+        /* shared mapping の場合 raw_prio_tree に繋がれている? */
 		struct raw_prio_tree_node prio_tree_node;
 	} shared;
 
