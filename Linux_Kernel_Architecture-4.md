@@ -372,6 +372,7 @@ struct vm_area_struct {
 		struct raw_prio_tree_node prio_tree_node;
 	} shared;
 
+    /* 共有の anon ページの ２重リンクリスト */
 	/*
 	 * A file's MAP_PRIVATE vma can be in both i_mmap tree and anon_vma
 	 * list, after a COW of one of the file pages.	A MAP_SHARED vma
@@ -383,6 +384,7 @@ struct vm_area_struct {
 	struct anon_vma *anon_vma;	/* Serialized by page_table_lock */
 
 	/* Function pointers to deal with this struct. */
+    /* ページフォルトの際に呼ばれる .fault が重要 */
 	const struct vm_operations_struct *vm_ops;
 
 	/* Information about our backing store: */
