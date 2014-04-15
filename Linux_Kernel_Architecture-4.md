@@ -410,17 +410,24 @@ struct vm_area_struct {
 
 ![2014-04-15 23 02 51](https://cloud.githubusercontent.com/assets/172456/2707903/b20392a8-c4a6-11e3-9ea2-2495b540fc5d.png)
 
+### struct address_space
+
+vm_area_struct とごっちゃにしないように
+
+ * 複数の struct file から参照されうる (共有されているオブジェクト)
+ * file に map されている page 数なんかも address_space で数値をみる
+
 ```c
 struct address_space {
 	struct inode		*host;		/* owner: inode, block_device */
 
-    // vm_area_struct の木
+    // vm_area_structの木
 	struct prio_tree_root	i_mmap;		/* tree of private and shared mappings */
 	struct list_head	i_mmap_nonlinear;/*list VM_NONLINEAR mappings */
 } __attribute__((aligned(sizeof(long))));
 ```
 
-struct file
+### struct file
 
  * open(2) した際のインスタンス
  * ファイルデスクリプタに対応、でいいだっけ?
@@ -434,7 +441,7 @@ struct file {
 };
 ```
 
-struct inode
+### struct inode
 
  * file もしくは device を指すインスタンス
  * ___inode->i_mapping___
