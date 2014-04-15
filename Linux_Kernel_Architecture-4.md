@@ -427,6 +427,8 @@ struct address_space {
 } __attribute__((aligned(sizeof(long))));
 ```
 
+vm_area_struct = _particular interval of the given file_ ファイルの一区間という説明
+
 ### struct file
 
  * open(2) した際のインスタンス
