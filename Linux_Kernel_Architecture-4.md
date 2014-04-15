@@ -408,10 +408,38 @@ struct vm_area_struct {
 
 ## 4.4.3 The Priority Search Tree
 
+```c
+struct address_space {
+	struct inode		*host;		/* owner: inode, block_device */
+//
+	struct prio_tree_root	i_mmap;		/* tree of private and shared mappings */
+	struct list_head	i_mmap_nonlinear;/*list VM_NONLINEAR mappings */
+} __attribute__((aligned(sizeof(long))));
 ```
+
+struct file
+
+ * open(2) した際のインスタンス
+ * ファイルデスクリプタに対応、でいいだっけ?
+ * ___file->f_mapping___
+
+```c
 struct file {
-...
-	struct address_space	*f_mapping;
-...
+//
+    struct address_space	*f_mapping;
+//
+};
+```
+
+struct inode
+
+ * file もしくは device を指すインスタンス
+ * ___inode->i_mapping___
+
+```c
+struct inode {
+//
+	struct address_space	*i_mapping;
+//    
 };
 ```
