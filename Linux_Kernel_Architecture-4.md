@@ -405,3 +405,13 @@ struct vm_area_struct {
 	unsigned long rh_reserved[2];
 };
 ```
+
+## 4.4.3 The Priority Search Tree
+
+```
+struct file {
+...
+	struct address_space	*f_mapping;
+...
+};
+```
