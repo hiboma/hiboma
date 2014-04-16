@@ -17,13 +17,12 @@ http://man7.org/linux/man-pages/man3/mallopt.3.html
               already been freed.
 ```
 
-データをセキュアにクリアするための実装とは違う?
-
-環境変数 MALLOC_PERTURB_=<int> でもok
+ * データをセキュアにクリアするための実装とは違う?
+ * 環境変数 MALLOC_PERTURB_=<int> でもセットできる
 
 ### 検証コード
 
-```
+```c
 #if 0
 #!/bin/bash
 CFLAGS="-O2 -std=gnu99 -W -Wall -fPIE -D_FORTIFY_SOURCE=2"
