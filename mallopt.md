@@ -38,6 +38,7 @@ gcc ${CFLAGS} -o $o $0 && ./$o $*; exit
 
 int main()
 {
+    /* 小さくすると free した後も参照できないな */
 	size_t size = 128;
 	char *p = malloc(size+1);
 	p[size] = '\0';
@@ -77,7 +78,9 @@ AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 ## M_MMAP_THRESHOLD
 
  * 閾値を超えたら sbrk(2) ではなく mmap(2) でアロケート
- * ヒープはヒープの終端の領域を free しないと縮める事ができないけど、 mmap だと関係無い
+ * ヒープは終端の領域を free しないと縮める事ができないけど、 mmap だと関係無い
+ * free したらカーネルが zero 初期化しないといけない
+ * free list で再利用されない
  * free した際に munmap(2) になる
    * free したポインタを参照したら当然 SIGSEGV 出す
 
