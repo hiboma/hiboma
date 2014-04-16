@@ -20,6 +20,7 @@
        * handle_mm_fault
          * pud_alloc_one, pmd_alloc_one, __pte_alloc
             * get_zeroed_page
+              * ゼロ初期化されたページ
               * __get_free_pages
                  * alloc_pages ...
          * handle_pte_fault
@@ -46,6 +47,7 @@
                 * cgroup で使用量がチャージされる
                 * ...
               * alloc_zeroed_user_highpage_movable
+                * ゼロ初期化されたページを返す
                 * __alloc_zeroed_user_highpage
                   * alloc_page_vma ...
             * do_nonlinear_fault
