@@ -121,3 +121,5 @@ arch/x86/kernel/smpboot.c:847 [smpboot]do_boot_cpu - "Setting warm reset code an
 ## まとめ
  
 2.6.30 からある仕組みけど、お手製のデバッグコードがまだある。 dynamic-debug を使おう！的な啓蒙でおしまい
+
+## テストの実装
