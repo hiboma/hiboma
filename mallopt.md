@@ -1,8 +1,9 @@
-# mallopt
+# mallopt(3)
 
-http://man7.org/linux/man-pages/man3/mallopt.3.html
+ * http://man7.org/linux/man-pages/man3/mallopt.3.html
+ * glibc malloc(3) のチューニングや挙動を変える
 
-## M_PERTURB
+## M_PERTURB オプション
 
 ```
        M_PERTURB (since glibc 2.4)
@@ -104,7 +105,18 @@ ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZAB
 AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAq
 ```
 
-## M_MMAP_THRESHOLD
+ * jemalloc でも同様の事ができる
+```
+$ sudo ln -sfv 'junk:true' /etc/malloc.conf
+`/etc/malloc.conf' -> `junk:true'
+
+$ jemalloc.sh /vagrant/.heap 
+????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????
+ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOP
+ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+``` 
+
+## M_MMAP_THRESHOLD オプション
 
  * 閾値を超えたら sbrk(2) ではなく mmap(2) でアロケート
  * ヒープは終端の領域を free しないと縮める事ができないけど、 mmap だと関係無い
@@ -196,7 +208,7 @@ int main()
 }
 ```
 
-strace
+## strace して mmap(2), brk(2) の様子を確かめる
 
  * 128 * 1024 ちょうどのサイズを mmap するのではない
    * 135168 = 33 * 4096 にアラインされている
@@ -214,10 +226,10 @@ munmap(0x7f4eaf8c1000, 135168)          = 0
 +++ killed by SIGSEGV +++
 ```
 
-`MALLOC_MMAP_THRESHOLD_=204800` に引き上げた場合
+### `MALLOC_MMAP_THRESHOLD_=204800` に引き上げた場合
 
  * mmap じゃなくて brk
-   * サイズが 0x2486000 - 0x2445000 = 0x41000 = 266240 バイト = 4096 * 65 にアラインされている
+ * サイズが 0x2486000 - 0x2445000 = 0x41000 = 266240 バイト = 4096 * 65 にアラインされている
 
 ```
 brk(0)                                  = 0x2445000
