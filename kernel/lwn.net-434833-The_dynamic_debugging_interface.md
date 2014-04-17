@@ -6,12 +6,14 @@
 ## dynamic debugging interface
 
  * 2.6.39 でマイナーチェンジ
- * LWN でも取り上げてなかったよ
+ * 今まで LWN でも取り上げてなかった仕組みについて説明よ
 
 ----
 
+ #デバッグあるある 的な話
+
  * カーネルの挙動調べるのに print 埋めまくるよね
- * 大半はの出力は興味無いもの
+ * 大半の出力は興味無いもの
  * 大概はコメントアウトしておけるものだけど、 edit/rebuild/reboot するサイクルの時は必要な時がある
  * で、ランタイムで enable/disable する仕組みが幾多の開発者によって作られたのであった
 
@@ -22,13 +24,15 @@
     dev_dbg(struct device *dev, char *format, ...);
 ```
 
+上記のコードについて
+
  * CONFIG_DYNAMIC_DEBUG がセットされてない場合
    * printk + KERN_DEBUG になる
  * CONFIG_DYNAMIC_DEBUG がセットされている場合
    * 特別なデスクリプタをセットする
-   * モジュールじゃなくて function, ファイル名で, 行数
-     * ブート時にはオフになってる
-     * でバッグメッセージが syslogd daemon にとんでっても出力されない
+     * モジュール, function, ファイル名, 行数
+   * ブート時にはオフになってる
+   * でバッグメッセージが syslogd daemon にとんでっても出力されない
 
 CentOS6.5 では CONFIG_DYNAMIC_DEBUG=y でビルドされている     
 
@@ -49,18 +53,18 @@ CentOS6.5 では CONFIG_DYNAMIC_DEBUG=y でビルドされている
 ↑のデバッグを取るには↓のように書く
 
 
-```
+```sh
     echo file tpm_nsc.c line 346 +p > .../dynamic_debug/control
 ```    
 
 ↓ みたいに書いても動くらしい
 
-```
+```sh
     echo file tpm_nsc.c line 346-373 +p > .../dynamic_debug/control
     echo file tpm_nsc.c function init_nsc +p > .../dynamic_debug/control
 ```
 
-以下の形式で enable/disable できるらしい
+以下のデスクリプタで enable/disable できるらしい
 
  * ファイル名
  * 行数
@@ -70,7 +74,7 @@ CentOS6.5 では CONFIG_DYNAMIC_DEBUG=y でビルドされている
 
 ## flags
 
- * **+p*: で printk をオンにする
+ * **+p** で printk をオンにする
  * **-p** で printk をオフにする
  * **f** 出力に関数名を足す
  * **l** 出力に行数を足す
@@ -85,7 +89,8 @@ CentOS6.5 では CONFIG_DYNAMIC_DEBUG=y でビルドされている
 
 ## 詳細
 
- * [Documentation/dynamic-debug-howto.txt](https://lwn.net/Articles/434856/)
- * 2.6.30 からあるけど、お手製のデバッグコードがまだある。
+[Documentation/dynamic-debug-howto.txt](https://lwn.net/Articles/434856/) を読むと良い
 
- dynamic-debug を使おう的な啓蒙でおしまい
+## まとめ
+ 
+2.6.30 からある仕組みけど、お手製のデバッグコードがまだある。 dynamic-debug を使おう！的な啓蒙でおしまい
