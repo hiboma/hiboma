@@ -1,9 +1,11 @@
 # mallopt(3)
 
- * http://man7.org/linux/man-pages/man3/mallopt.3.html
  * glibc malloc(3) のチューニングや挙動を変える
+ * http://man7.org/linux/man-pages/man3/mallopt.3.html
 
 ## M_PERTURB オプション
+
+malloc/free する際に指定したバイトでチャンクを埋める
 
 ```
        M_PERTURB (since glibc 2.4)
@@ -17,8 +19,6 @@
               being initialized to zero, or reuse values in memory that has
               already been freed.
 ```
-
-malloc/free する際に指定したバイトでチャンクを埋める
 
  * データをセキュアにクリアするための実装とは違う?
    * [jemalloc](http://linux.die.net/man/3/jemalloc) でも `ln -sfv 'junk:true' /etc/malloc.conf` とすることで同様の機能が使える
@@ -37,9 +37,13 @@ int mALLOPt(param_number, value) int param_number; int value;
   case M_PERTURB:
     perturb_byte = value;
     break;
-``` 
+```
 
-malloc/free とで埋める文字列が異なる。下記のような実装になっている
+下記のような実装になっている
+
+ * memset で埋める
+ * malloc/free とで埋める文字列が異なる
+   * 同じ文字で埋めたらどっちが malloc で どっちが free か分からんもんね
 
 ```c
 /* ------------------ Testing support ----------------------------------*/
@@ -49,8 +53,6 @@ static int perturb_byte;
 #define alloc_perturb(p, n) memset (p, (perturb_byte ^ 0xff) & 0xff, n)
 #define free_perturb(p, n) memset (p, perturb_byte & 0xff, n)
 ```
-
-実装を見て分かるように malloc/free されると違う文字列で埋められる
 
 ### 検証コード
 
@@ -91,7 +93,8 @@ int main()
 }
 ```
 
- * free したデータを参照できる
+free したデータを参照できる
+
 ```
 [vagrant@vagrant-centos65 vagrant]$ ./.heap 
 
@@ -99,7 +102,8 @@ ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZAB
 ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWX
 ```
 
- * alloc したデータが ? (255-65) と free したデータが AAA ... で上書きされている
+alloc したデータが ? (255-65) と free したデータが AAA ... で上書きされている
+
 ```
 [vagrant@vagrant-centos65 vagrant]$ MALLOC_PERTURB_=65 ./.heap 
 ????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????
@@ -107,7 +111,8 @@ ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZAB
 AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAq
 ```
 
- * jemalloc でも同様の事ができる
+jemalloc でも同様の事ができる
+
 ```
 $ sudo ln -sfv 'junk:true' /etc/malloc.conf
 `/etc/malloc.conf' -> `junk:true'
