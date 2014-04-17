@@ -1,7 +1,7 @@
 # The dynamic debugging interface
 
  * https://lwn.net/Articles/434833/
- * ちょう意訳だからね
+ * 意訳だからね
 
 ## dynamic debugging interface
 
@@ -29,6 +29,13 @@
    * モジュールじゃなくて function, ファイル名で, 行数
      * ブート時にはオフになってる
      * でバッグメッセージが syslogd daemon にとんでっても出力されない
+
+CentOS6.5 では CONFIG_DYNAMIC_DEBUG=y でビルドされている     
+
+```     
+[vagrant@vagrant-centos65 ~]$ grep CONFIG_DYNAMIC_DEBUG /boot/*
+/boot/config-2.6.32-431.el6.x86_64:CONFIG_DYNAMIC_DEBUG=y
+```     
 
 ## /sys/kernel/debug/dynamic_debug/control
  
@@ -69,3 +76,16 @@
  * **l** 出力に行数を足す
  * **m** 出力にモジュール名を足す
  * **t** 出力にスレッドIDを足す
+
+**=plm** と書く事で マスクしたフラグを指定できる。 **-pflmt** で全部のフラグをクリアする
+
+## ddebug_query
+
+ブートパラメータに `ddebug_query` を入れとくと初期ブートプロセスのデバッグ出力を取れる
+
+## 詳細
+
+ * [Documentation/dynamic-debug-howto.txt](https://lwn.net/Articles/434856/)
+ * 2.6.30 からあるけど、お手製のデバッグコードがまだある。
+
+ dynamic-debug を使おう的な啓蒙でおしまい
