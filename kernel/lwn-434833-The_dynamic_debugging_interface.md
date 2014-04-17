@@ -1,5 +1,8 @@
 # The dynamic debugging interface
 
+ * https://lwn.net/Articles/434833/
+ * ちょう意訳だからね
+
 ## dynamic debugging interface
 
  * 2.6.39 でマイナーチェンジ
@@ -28,5 +31,41 @@
      * でバッグメッセージが syslogd daemon にとんでっても出力されない
 
 ## /sys/kernel/debug/dynamic_debug/control
-
  
+ * `/sys/kernel/debug/dynamic_debug/control` に enable/disable したいデバッグ関数を write する
+
+```c
+        /* drivers/char/tpm/tpm_nsc.c#346 */
+        dev_dbg(&pdev->dev, "NSC TPM detected\n");
+```
+
+↑のデバッグを取るには↓のように書く
+
+
+```
+    echo file tpm_nsc.c line 346 +p > .../dynamic_debug/control
+```    
+
+↓ みたいに書いても動くらしい
+
+```
+    echo file tpm_nsc.c line 346-373 +p > .../dynamic_debug/control
+    echo file tpm_nsc.c function init_nsc +p > .../dynamic_debug/control
+```
+
+以下の形式で enable/disable できるらしい
+
+ * ファイル名
+ * 行数
+ * 関数名
+ * `module name`
+ * `format fmt` (一致するフォーマット)
+
+## flags
+
+ * **+p*: で printk をオンにする
+ * **-p** で printk をオフにする
+ * **f** 出力に関数名を足す
+ * **l** 出力に行数を足す
+ * **m** 出力にモジュール名を足す
+ * **t** 出力にスレッドIDを足す
