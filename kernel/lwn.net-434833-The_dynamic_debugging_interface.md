@@ -64,13 +64,40 @@ CentOS6.5 では CONFIG_DYNAMIC_DEBUG=y でビルドされている
     echo file tpm_nsc.c function init_nsc +p > .../dynamic_debug/control
 ```
 
-以下のデスクリプタで enable/disable できるらしい
+以下のデスクリプタ(site?)で enable/disable できるらしい
 
  * ファイル名
  * 行数
  * 関数名
  * `module name`
  * `format fmt` (一致するフォーマット)
+
+read すると enable/disable 切り替えられる一覧でてくる
+
+```
+[vagrant@vagrant-centos65 ~]$ cat /sys//kernel/dynamic_debug/control 
+# filename:lineno [module]function flags format
+arch/x86/kernel/tboot.c:101 [tboot]tboot_probe - "tboot_size: 0x%x\012"
+arch/x86/kernel/tboot.c:100 [tboot]tboot_probe - "tboot_base: 0x%08x\012"
+arch/x86/kernel/tboot.c:99 [tboot]tboot_probe - "shutdown_entry: 0x%x\012"
+arch/x86/kernel/tboot.c:98 [tboot]tboot_probe - "log_addr: 0x%08x\012"
+arch/x86/kernel/tboot.c:97 [tboot]tboot_probe - "version: %d\012"
+arch/x86/kernel/cpu/common.c:1241 [common]cpu_init - "Initializing CPU#%d\012"
+arch/x86/kernel/cpu/perfctr-watchdog.c:249 [perfctr_watchdog]write_watchdog_counter - "setting %s to -0x%08Lx\012"
+arch/x86/kernel/cpu/perfctr-watchdog.c:260 [perfctr_watchdog]write_watchdog_counter32 - "setting %s to -0x%08Lx\012"
+arch/x86/kernel/acpi/boot.c:968 [boot]mp_config_acpi_legacy_irqs - "Bus #%d is ISA\012"
+arch/x86/kernel/smpboot.c:1235 [smpboot]native_smp_cpus_done - "Boot done.\012"
+arch/x86/kernel/smpboot.c:532 [smpboot]impress_friends - "Before bogocount - setting activated=1.\012"
+arch/x86/kernel/smpboot.c:522 [smpboot]impress_friends - "Before bogomips.\012"
+arch/x86/kernel/smpboot.c:972 [smpboot]native_cpu_up - "do_boot_cpu failed %d\012"
+arch/x86/kernel/smpboot.c:957 [smpboot]native_cpu_up - "do_boot_cpu %d Already started\012"
+arch/x86/kernel/smpboot.c:945 [smpboot]native_cpu_up - "++++++++++++++++++++=_---CPU UP  %u\012"
+arch/x86/kernel/smpboot.c:895 [smpboot]do_boot_cpu - "CPU%d: has booted.\012"
+arch/x86/kernel/smpboot.c:874 [smpboot]do_boot_cpu - "After Callout %d.\012"
+arch/x86/kernel/smpboot.c:872 [smpboot]do_boot_cpu - "Before Callout %d.\012"
+arch/x86/kernel/smpboot.c:847 [smpboot]do_boot_cpu - "Setting warm reset code and vector.\012"
+/builddir/build/BUILD/kernel-2.6.32-431.el6/linux-2.6.32-431.el6.x86_64/arch/x86/include/asm/smpboot_hooks.h:21 [smpboot]smpboot_setup_warm_reset_vector - "3.\012"
+```
 
 ## flags
 
