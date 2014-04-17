@@ -18,14 +18,16 @@
               already been freed.
 ```
 
+malloc/free する際に指定したバイトでチャンクを埋める
+
  * データをセキュアにクリアするための実装とは違う?
    * [jemalloc](http://linux.die.net/man/3/jemalloc) でも `ln -sfv 'junk:true' /etc/malloc.conf` とすることで同様の機能が使える
    * http://gihyo.jp/admin/clip/01/fdt/201204/26
- * mallopt を使わずとも 環境変数 MALLOC_PERTURB_=<int> でもセットできる
+ * mallopt を使わずとも 環境変数 MALLOC_PERTURB_=\<int\> でもセットできる
 
-### 実装
+### 実装 (glibc)
 
-perturb_byte に値がセットされているか否かで挙動が変わる
+perturb_byte に値がセットされているか否かで挙動が変わる. mallopt(3) に M_PERTURB 指定した際にセットされる
 
 ```c
 int mALLOPt(param_number, value) int param_number; int value;
@@ -37,7 +39,7 @@ int mALLOPt(param_number, value) int param_number; int value;
     break;
 ``` 
 
-malloc/free とで埋める文字列が異なる
+malloc/free とで埋める文字列が異なる。下記のような実装になっている
 
 ```c
 /* ------------------ Testing support ----------------------------------*/
@@ -48,7 +50,7 @@ static int perturb_byte;
 #define free_perturb(p, n) memset (p, perturb_byte & 0xff, n)
 ```
 
-malloc/free されると必ず違う文字列で埋められる。同じ文字列で埋めると訳分からんから?
+実装を見て分かるように malloc/free されると違う文字列で埋められる
 
 ### 検証コード
 
@@ -97,7 +99,7 @@ ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZAB
 ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWX
 ```
 
- * alloc したデータが ? (255-65) free したデータが AAA ... で上書きされている
+ * alloc したデータが ? (255-65) と free したデータが AAA ... で上書きされている
 ```
 [vagrant@vagrant-centos65 vagrant]$ MALLOC_PERTURB_=65 ./.heap 
 ????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????
@@ -120,9 +122,9 @@ ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 
  * 閾値を超えたら sbrk(2) ではなく mmap(2) でアロケート
  * ヒープは終端の領域を free しないと縮める事ができないけど、 mmap だと関係無い
- * free したらカーネルが zero 初期化しないといけない
- * free list で再利用されない
- * free した際に munmap(2) になる
+ * disadvantages
+   * free してチャンクが全部解放された際に munmap(2) になりカーネルが都度 zero 初期化しないといけない
+   * free list で再利用されない
    * free したポインタを参照したら当然 SIGSEGV 出す
 
 ```
@@ -160,14 +162,11 @@ ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
               M_TOP_PAD, M_MMAP_THRESHOLD, or M_MMAP_MAX parameters is set.
 ```
 
-### 検証コード
+#### 検証コード
 
- * malloc(128KB)
- * free
- * printf で参照する
- * => SIGSEGV を起こす
-   * `MALLOC_MMAP_THRESHOLD_=204800 bash mmap.c`
-   * 上限を引き上げるとSIGSEGVしない 
+ * malloc(128KB) して free したポインタを printf で参照する
+   * => SIGSEGV を起こす はず
+ * `MALLOC_MMAP_THRESHOLD_=204800 bash mmap.c` にして上限を引き上げるとSIGSEGVしない 
 
 ```c
 #if 0
@@ -208,7 +207,7 @@ int main()
 }
 ```
 
-## strace して mmap(2), brk(2) の様子を確かめる
+#### strace して mmap(2), brk(2) の様子を確かめる
 
  * 128 * 1024 ちょうどのサイズを mmap するのではない
    * 135168 = 33 * 4096 にアラインされている
@@ -226,7 +225,7 @@ munmap(0x7f4eaf8c1000, 135168)          = 0
 +++ killed by SIGSEGV +++
 ```
 
-### `MALLOC_MMAP_THRESHOLD_=204800` に引き上げた場合
+#### `MALLOC_MMAP_THRESHOLD_=204800` に引き上げた場合
 
  * mmap じゃなくて brk
  * サイズが 0x2486000 - 0x2445000 = 0x41000 = 266240 バイト = 4096 * 65 にアラインされている
