@@ -18,19 +18,19 @@ http://man7.org/linux/man-pages/man3/mallopt.3.html
 ```
 
  * データをセキュアにクリアするための実装とは違う?
- * 環境変数 MALLOC_PERTURB_=<int> でもセットできる
+   * [jemalloc](http://linux.die.net/man/3/jemalloc) でも `ln -sfv 'junk:true' /etc/malloc.conf` とすることで同様の機能が使える
+   * http://gihyo.jp/admin/clip/01/fdt/201204/26
+ * mallopt を使わずとも 環境変数 MALLOC_PERTURB_=<int> でもセットできる
 
 ### 実装
 
-perturb_byte 
+perturb_byte に値がセットされているか否かで挙動が変わる
 
 ```c
 int mALLOPt(param_number, value) int param_number; int value;
 #endif
 {
-
-// 
-
+//
   case M_PERTURB:
     perturb_byte = value;
     break;
@@ -45,12 +45,9 @@ static int perturb_byte;
 
 #define alloc_perturb(p, n) memset (p, (perturb_byte ^ 0xff) & 0xff, n)
 #define free_perturb(p, n) memset (p, perturb_byte & 0xff, n)
-
-    if (__builtin_expect (perturb_byte, 0))
-      free_perturb (chunk2mem(p), size - SIZE_SZ);
 ```
 
-malloc/free されると必ず違う文字列で埋められる
+malloc/free されると必ず違う文字列で埋められる。同じ文字列で埋めると訳分からんから?
 
 ### 検証コード
 
@@ -99,7 +96,7 @@ ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZAB
 ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWX
 ```
 
- * free したデータが AAA ... で上書きされている
+ * alloc したデータが ? (255-65) free したデータが AAA ... で上書きされている
 ```
 [vagrant@vagrant-centos65 vagrant]$ MALLOC_PERTURB_=65 ./.heap 
 ????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????
