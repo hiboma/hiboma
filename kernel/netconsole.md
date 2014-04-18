@@ -24,6 +24,94 @@ oops 飛ばさないといけない状況だとどこが物故割れてるか分
 
 ## struct console
 
+ * printk -> vprintk
+ * -> release_console_sem
+ * -> call_console_drivers
+
+```c
+/*
+ * Call the console drivers, asking them to write out
+ * log_buf[start] to log_buf[end - 1].
+ * The console_sem must be held.
+ */
+static void call_console_drivers(unsigned start, unsigned end)
+{
+	unsigned cur_index, start_print;
+	static int msg_level = -1;
+
+	BUG_ON(((int)(start - end)) > 0);
+
+	cur_index = start;
+	start_print = start;
+	while (cur_index != end) {
+		if (msg_level < 0 && ((end - cur_index) > 2) &&
+				LOG_BUF(cur_index + 0) == '<' &&
+				LOG_BUF(cur_index + 1) >= '0' &&
+				LOG_BUF(cur_index + 1) <= '7' &&
+				LOG_BUF(cur_index + 2) == '>') {
+			msg_level = LOG_BUF(cur_index + 1) - '0';
+			cur_index += 3;
+			start_print = cur_index;
+		}
+		while (cur_index != end) {
+			char c = LOG_BUF(cur_index);
+
+			cur_index++;
+			if (c == '\n') {
+				if (msg_level < 0) {
+					/*
+					 * printk() has already given us loglevel tags in
+					 * the buffer.  This code is here in case the
+					 * log buffer has wrapped right round and scribbled
+					 * on those tags
+					 */
+					msg_level = default_message_loglevel;
+				}
+				_call_console_drivers(start_print, cur_index, msg_level);
+				msg_level = -1;
+				start_print = cur_index;
+				break;
+			}
+		}
+	}
+	_call_console_drivers(start_print, end, msg_level);
+}
+
+/*
+ * Write out chars from start to end - 1 inclusive
+ */
+static void _call_console_drivers(unsigned start,
+				unsigned end, int msg_log_level)
+{
+	if ((msg_log_level < console_loglevel || ignore_loglevel) &&
+			console_drivers && start != end) {
+		if ((start & LOG_BUF_MASK) > (end & LOG_BUF_MASK)) {
+			/* wrapped write */
+			__call_console_drivers(start & LOG_BUF_MASK,
+						log_buf_len);
+			__call_console_drivers(0, end & LOG_BUF_MASK);
+		} else {
+			__call_console_drivers(start, end);
+		}
+	}
+}
+
+/*
+ * Call the console drivers on a range of log_buf
+ */
+static void __call_console_drivers(unsigned start, unsigned end)
+{
+	struct console *con;
+
+	for_each_console(con) {
+		if ((con->flags & CON_ENABLED) && con->write &&
+				(cpu_online(smp_processor_id()) ||
+				(con->flags & CON_ANYTIME)))
+			con->write(con, &LOG_BUF(start), end - start);
+	}
+}
+``` 
+
 ```c
 void register_console(struct console *newcon)
 ```
