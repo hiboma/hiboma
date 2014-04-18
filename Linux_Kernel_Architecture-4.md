@@ -1,3 +1,17 @@
+# 4 Virtual Process Memory
+
+ * 実メモリ(struct page とか) の話は3章にまとまってる
+
+## 4.1 Introduction
+
+ * MMU が載っていること前提
+
+## 4.2 Virtual Process Address Space
+
+ * 仮想アドレス空間 0 〜 TASK_SIZE -1
+ * IA-32
+   * 1:3 = 1GB:4GB
+
 ## 4.2.1 Layout of the Process Address Space
 
 address_apce プロセスのメモリレイアウト ってどやって決まるんだけの章
