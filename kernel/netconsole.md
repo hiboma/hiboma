@@ -4,9 +4,9 @@
    * http://lwn.net/Articles/75944/ 
  * configfs
    * https://www.kernel.org/doc/Documentation/filesystems/configfs/configfs.txt
- * console API 
+ * console API
 
-#### netpoll とは?
+## netpoll とは?
 
 [ゆううきブログ Linuxカーネルにおけるネットワークスタック周りのChangeLog勉強メモ (2.6.0 ~ 2.6.20)](http://yuuki.hatenablog.com/entry/linuxkernel-network-changelog-2.6.0-2.6.20) から引用しております
 
