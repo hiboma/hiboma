@@ -1,7 +1,11 @@
 # netconsole
 
- * netpoll + configfs + console API 
+ * netpoll
    * http://lwn.net/Articles/75944/ 
+ * configfs
+   * https://www.kernel.org/doc/Documentation/filesystems/configfs/configfs.txt
+ * console API 
+
 
 #### netpoll とは?
 
