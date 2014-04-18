@@ -1,5 +1,14 @@
 # netconsole
 
+ * netpoll + configfs + console API 
+   * http://lwn.net/Articles/75944/ 
+
+#### netpoll とは?
+
+ * 2.6.5-rc1 から
+ * ネットワークサブシステム全部を使わない + 割り込み無しでパケットを送受信する low-level の関数
+ * kgdbeth, netconsole 
+
  * Q. 「TCPあるの?」
  * A. 「ないよ」
 
