@@ -3,6 +3,33 @@
  * Q. 「TCPあるの?」
  * A. 「ないよ」
 
+## struct console
+
+```c
+void register_console(struct console *newcon)
+```
+
+netconsole も struct console API を利用してメッセージを飛ばす仕組み
+
+ * bootconsoles (early_printk)
+   * 何個でも登録できる
+ * real console ≠ bootconsoles
+   * real console を登録したら bootconsoles は unregister される
+   * real console を登録したら bootconsoles は reject される
+     * `printk(KERN_INFO "Too late to register bootconsole %s%d\n",`
+
+## struct netconsole
+
+```c
+static struct console netconsole = {
+	.name	= "netcon",
+	.flags	= CON_ENABLED,
+	.write	= write_msg,
+};
+```
+
+.write が汎用API になっているのかな?
+
 ## メッセージを書くコード
 
  * netpoll_send_udp で飛ばしている
