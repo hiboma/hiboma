@@ -18,6 +18,33 @@ netconsole も struct console API を利用してメッセージを飛ばす仕�
    * real console を登録したら bootconsoles は reject される
      * `printk(KERN_INFO "Too late to register bootconsole %s%d\n",`
 
+## struct configfs_subsystem
+
+ * configfs_register_subsystem
+ * configfs_unregister_subsystem
+
+configfs で設定値をファイルから書き込める 
+
+```c
+/*
+ * Our subsystem hierarchy is:
+ *
+ * /sys/kernel/config/netconsole/
+ *				|
+ *				<target>/
+ *				|	enabled
+ *				|	dev_name
+ *				|	local_port
+ *				|	remote_port
+ *				|	local_ip
+ *				|	remote_ip
+ *				|	local_mac
+ *				|	remote_mac
+ *				|
+ *				<target>/...
+ */
+```
+
 ## struct netconsole
 
 ```c
