@@ -24,9 +24,12 @@ oops 飛ばさないといけない状況だとどこが物故割れてるか分
 
 ## struct console
 
- * printk -> vprintk
+ * printk
+ * -> vprintk
  * -> release_console_sem
  * -> call_console_drivers
+ * -> _call_console_drivers
+ * -> __call_console_drivers で struct console の .write を呼び出す
 
 ```c
 /*
