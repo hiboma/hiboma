@@ -47,12 +47,19 @@ static void call_console_drivers(unsigned start, unsigned end)
 	cur_index = start;
 	start_print = start;
 	while (cur_index != end) {
+        // "012345678"
+        // "<7> ...." みたいな形式のフォーマットでレベルを決める
 		if (msg_level < 0 && ((end - cur_index) > 2) &&
 				LOG_BUF(cur_index + 0) == '<' &&
-				LOG_BUF(cur_index + 1) >= '0' &&
-				LOG_BUF(cur_index + 1) <= '7' &&
+				LOG_BUF(cur_index + 1) >= '0' && // 2文字目がレベル
+				LOG_BUF(cur_index + 1) <= '7' && // 2文字目がレベル
 				LOG_BUF(cur_index + 2) == '>') {
 			msg_level = LOG_BUF(cur_index + 1) - '0';
+
+            // v の文字列を出力するために += 3
+            //     vvvvvvv
+            // "0123456789"
+            // "<7>foo bar"
 			cur_index += 3;
 			start_print = cur_index;
 		}
