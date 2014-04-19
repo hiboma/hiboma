@@ -1,10 +1,12 @@
 # netconsole
 
+ * sturct console API
  * netpoll
-   * http://lwn.net/Articles/75944/ 
+   * http://lwn.net/Articles/75944/
  * configfs
    * https://www.kernel.org/doc/Documentation/filesystems/configfs/configfs.txt
- * console API
+
+![2014-04-19 21 26 24](https://cloud.githubusercontent.com/assets/172456/2748363/efb8b8b6-c7bd-11e3-9e30-0b49f4234164.png)
 
 ## netpoll とは?
 
@@ -120,7 +122,9 @@ static void __call_console_drivers(unsigned start, unsigned end)
 			con->write(con, &LOG_BUF(start), end - start);
 	}
 }
-``` 
+```
+
+con->write で netconsole の write_msg が呼び出される
 
 ```c
 void register_console(struct console *newcon)
@@ -174,7 +178,7 @@ static struct console netconsole = {
 
 .write が汎用API になっているのかな?
 
-## メッセージを書くコード
+## strcut console .write の write_msg
 
  * netpoll_send_udp で飛ばしている
  * TCP っぽい文字はひっかからない
