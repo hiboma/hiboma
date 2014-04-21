@@ -1,6 +1,12 @@
 # disable IPv6
 
- * sudo sysctl -w net.ipv6.conf.all.disable_ipv6=1
+```sh
+sudo sysctl -w net.ipv6.conf.all.disable_ipv6=1
+```
+
+## TODO
+
+ユーザランドから AF_INET6 を使うか
 
 ## sysctl interface
 
@@ -104,4 +110,21 @@ static void dev_disable_change(struct inet6_dev *idev)
 	else
 		addrconf_notify(NULL, NETDEV_UP, idev->dev);
 }
+```
+
+ * NETDEV_DOWN と NETDEV_UNREGISTER の違いは?
+
+```c
+static int addrconf_notify(struct notifier_block *this, unsigned long event,
+			   void * data)
+{
+	struct net_device *dev = (struct net_device *) data;
+
+	case NETDEV_DOWN:
+	case NETDEV_UNREGISTER:
+		/*
+		 *	Remove all addresses from this interface.
+		 */
+		addrconf_ifdown(dev, event != NETDEV_DOWN);
+		break;
 ```
