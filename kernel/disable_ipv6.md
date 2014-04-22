@@ -4,6 +4,10 @@
 sudo sysctl -w net.ipv6.conf.all.disable_ipv6=1
 ```
 
+##
+
+/etc/modprobe.d/disable-ipv6.conf とか津kつて `options ipv6 disable` すると下記の dmesg が出る
+
 ```
 IPv6: Loaded, but administratively disabled, reboot required to enable
 ```
