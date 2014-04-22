@@ -1,22 +1,60 @@
 # disable IPv6
 
-```sh
-sudo sysctl -w net.ipv6.conf.all.disable_ipv6=1
-```
+## TODO
 
-##
+ユーザランドから AF_INET6 を使うかはどうやって決定されるか?
+ 
+## /etc/moroprobe.d で無効にする
 
-/etc/modprobe.d/disable-ipv6.conf とか津kつて `options ipv6 disable` すると下記の dmesg が出る
+/etc/modprobe.d/disable-ipv6.conf とか作って `options ipv6 disable` するとブート時に下記の dmesg が出る
 
 ```
 IPv6: Loaded, but administratively disabled, reboot required to enable
 ```
 
-## TODO
+**Loaded** とあるけど、カーネルモジュールの init が実行されてるだけで IPv6 機能は無効
 
-ユーザランドから AF_INET6 を使うか
+```c
+// net/ipv6/af_inet6.c
+static int __init inet6_init(void)
+{
+	struct sk_buff *dummy_skb;
+	struct list_head *r;
+	int err = 0;
 
-## sysctl interface
+	BUILD_BUG_ON(sizeof(struct inet6_skb_parm) > sizeof(dummy_skb->cb));
+
+	/* Register the socket-side information for inet6_create.  */
+	for(r = &inetsw6[0]; r < &inetsw6[SOCK_MAX]; ++r)
+		INIT_LIST_HEAD(r);
+
+	if (disable_ipv6_mod) {
+		printk(KERN_INFO
+		       "IPv6: Loaded, but administratively disabled, "
+		       "reboot required to enable\n");
+		goto out;
+	}
+
+// ...    
+
+out:
+	return err;
+
+// ...    
+    
+}
+module_init(inet6_init);
+```
+
+## sysctl interface で無効にする
+
+ブート後に無効にできる
+
+```sh
+sudo sysctl -w net.ipv6.conf.all.disable_ipv6=1
+```
+
+#### 実装
 
 ```c
 		{
@@ -120,7 +158,7 @@ static void dev_disable_change(struct inet6_dev *idev)
 }
 ```
 
- * NETDEV_DOWN と NETDEV_UNREGISTER の違いは?
+NETDEV_DOWN と NETDEV_UNREGISTER の違いは?
 
 ```c
 static int addrconf_notify(struct notifier_block *this, unsigned long event,
