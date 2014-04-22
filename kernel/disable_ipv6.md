@@ -4,6 +4,10 @@
 sudo sysctl -w net.ipv6.conf.all.disable_ipv6=1
 ```
 
+```
+IPv6: Loaded, but administratively disabled, reboot required to enable
+```
+
 ## TODO
 
 ユーザランドから AF_INET6 を使うか
