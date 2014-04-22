@@ -4,6 +4,8 @@
 libgcc_s.so.1 must be installed for pthread_cancel to work
 ```
 
+エラーの場所
+
 ```
 $ grep -R 'pthread_cancel to work' * 
 nptl/sysdeps/pthread/unwind-forcedunwind.c:    __libc_fatal (LIBGCC_S_SO " must be installed for pthread_cancel to work\n");
@@ -73,6 +75,10 @@ __libc_fatal (message)
 }
 libc_hidden_def (__libc_fatal)
 ```
+
+ * __libc_secure_getenv, LIBC_FATAL_STDERR_
+   * STDERR にログ書く指定かな
+ * /dev/tty を open
 
 ```c
 /* Abort with an error message.  */
