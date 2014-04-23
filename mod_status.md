@@ -102,6 +102,10 @@ static int ap_process_http_connection(conn_rec *c)
 }
 ```
 
+ap_read_request の中身
+
+ * read_request_line でブロックしそう
+
 ```c
 request_rec *ap_read_request(conn_rec *conn)
 {
