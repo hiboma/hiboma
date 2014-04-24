@@ -54,11 +54,22 @@ static int status_init(apr_pool_t *p, apr_pool_t *plog, apr_pool_t *ptemp,
     status_flags[SERVER_READY] = '_'; /* any particular order in scoreboard.h */
     status_flags[SERVER_STARTING] = 'S';
     status_flags[SERVER_BUSY_READ] = 'R';
+    status_flags[SERVER_BUSY_WRITE] = 'W';
+    status_flags[SERVER_BUSY_KEEPALIVE] = 'K';
+    status_flags[SERVER_BUSY_LOG] = 'L';
+    status_flags[SERVER_BUSY_DNS] = 'D';
+    status_flags[SERVER_CLOSING] = 'C';
+    status_flags[SERVER_GRACEFUL] = 'G';
+    status_flags[SERVER_IDLE_KILL] = 'I';
+    ap_mpm_query(AP_MPMQ_HARD_LIMIT_THREADS, &thread_limit);
+    ap_mpm_query(AP_MPMQ_HARD_LIMIT_DAEMONS, &server_limit);
+    return OK;
+}
 ```
 
 status は下記の通りに分類されている
 
-```
+```c
 #define SERVER_DEAD 0
 #define SERVER_STARTING 1	/* Server Starting up */
 #define SERVER_READY 2		/* Waiting for connection (or accept() lock) */
