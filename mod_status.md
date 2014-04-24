@@ -4,6 +4,7 @@
 
  * ヘッダをパースしてから r->request_time がセットされる
    * ヘッダをパースするまでの時間は %D, %T に加算されない
+   * `telnet localhost 80` でヘッダを何にも送らないのはログにでない
  * mod_status.c の統計HTML を返すコード
  * stat_buffer に統計のデータが入ってる
 
