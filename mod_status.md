@@ -2,6 +2,8 @@
 
 ## R = Reading Request
 
+ * ヘッダをパースしてから r->request_time がセットされる
+   * ヘッダをパースするまでの時間は %D, %T に加算されない
  * mod_status.c の統計HTML を返すコード
  * stat_buffer に統計のデータが入ってる
 
