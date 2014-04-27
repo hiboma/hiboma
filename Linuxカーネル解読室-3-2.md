@@ -1,5 +1,9 @@
 # 3.2 workqueue
 
+ * 遅延処理
+   * カーネルスレッド
+   * プロセスコンテキスト
+
 > 主にプロセスコンテキストの処理を遅延させるために利用されています
 
  * 割り込みコンテキストの遅延処理
@@ -92,4 +96,89 @@ struct delayed_work {
 	struct work_struct work;
 	struct timer_list timer;
 };
+```
+
+## workqueue のスレッド
+
+worker_thread 
+
+```c
+static int worker_thread(void *__cwq)
+{
+	struct cpu_workqueue_struct *cwq = __cwq;
+	DEFINE_WAIT(wait);
+
+	if (cwq->wq->freezeable)
+		set_freezable();
+
+	for (;;) {
+		prepare_to_wait(&cwq->more_work, &wait, TASK_INTERRUPTIBLE);
+		if (!freezing(current) &&
+		    !kthread_should_stop() &&
+		    list_empty(&cwq->worklist))
+			schedule();
+		finish_wait(&cwq->more_work, &wait);
+
+		try_to_freeze();
+
+		if (kthread_should_stop())
+			break;
+
+		run_workqueue(cwq);
+	}
+
+	return 0;
+}
+```
+
+run_workqueue で work_struct をひたすら捌く
+
+```c
+static void run_workqueue(struct cpu_workqueue_struct *cwq)
+{
+	spin_lock_irq(&cwq->lock);
+	while (!list_empty(&cwq->worklist)) {
+		struct work_struct *work = list_entry(cwq->worklist.next,
+						struct work_struct, entry);
+		work_func_t f = work->func;
+#ifdef CONFIG_LOCKDEP
+		/*
+		 * It is permissible to free the struct work_struct
+		 * from inside the function that is called from it,
+		 * this we need to take into account for lockdep too.
+		 * To avoid bogus "held lock freed" warnings as well
+		 * as problems when looking into work->lockdep_map,
+		 * make a copy and use that here.
+		 */
+		struct lockdep_map lockdep_map = work->lockdep_map;
+#endif
+		trace_workqueue_execution(cwq->thread, work);
+		cwq->current_work = work;
+		list_del_init(cwq->worklist.next);
+		spin_unlock_irq(&cwq->lock);
+
+		BUG_ON(get_wq_data(work) != cwq);
+		work_clear_pending(work);
+		lock_map_acquire(&cwq->wq->lockdep_map);
+		lock_map_acquire(&lockdep_map);
+		f(work);
+		lock_map_release(&lockdep_map);
+		lock_map_release(&cwq->wq->lockdep_map);
+
+		if (unlikely(in_atomic() || lockdep_depth(current) > 0)) {
+			printk(KERN_ERR "BUG: workqueue leaked lock or atomic: "
+					"%s/0x%08x/%d\n",
+					current->comm, preempt_count(),
+				       	task_pid_nr(current));
+			printk(KERN_ERR "    last function: ");
+			print_symbol("%s\n", (unsigned long)f);
+			debug_show_held_locks(current);
+			dump_stack();
+		}
+
+		spin_lock_irq(&cwq->lock);
+		cwq->current_work = NULL;
+	}
+	spin_unlock_irq(&cwq->lock);
+}
 ```
