@@ -365,11 +365,37 @@ struct tasklet_head
 	struct tasklet_struct **tail;
 };
 
+// TASKLET_SOFTIRQ 用
 static DEFINE_PER_CPU(struct tasklet_head, tasklet_vec);
+
+// HI_SOFTIRQ 用
 static DEFINE_PER_CPU(struct tasklet_head, tasklet_hi_vec);
 ```
 
  * HI_SOFTIRQ
    * 優先度が一番高い
+   * tasklet_hi_schedule で raise_softirq_irqoff
  * TASKLET_SOFTIRQ
    * 優先度が一番低い
+   * tasklet_schedule で raise_softirq_irqoff
+
+```c
+void __tasklet_schedule(struct tasklet_struct *t)
+{
+	unsigned long flags;
+
+    // tasklet_vec は 割り込みハンドラからも操作されるので local_irq_save して保護
+	local_irq_save(flags);
+	t->next = NULL;
+
+    // cpu var の tasklet_vec の末尾に突っ込む
+	*__get_cpu_var(tasklet_vec).tail = t;
+	__get_cpu_var(tasklet_vec).tail = &(t->next);
+	raise_softirq_irqoff(TASKLET_SOFTIRQ);
+	local_irq_restore(flags);
+}
+```
+
+## 3.1.4.2 tasklet の実行
+
+tasklet_schedule
