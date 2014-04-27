@@ -46,9 +46,14 @@ root        77  0.0  0.0      0     0 ?        S    13:37   0:00 [kthrotld/3]
 root       271  0.0  0.0      0     0 ?        S    13:37   0:00 [ext4-dio-unwrit]
 ```
 
+## 3行まとめ
+
  * 遅延処理
-   * カーネルスレッド
-   * プロセスコンテキスト
+ * カーネルスレッド
+ * プロセスコンテキスト
+
+## API 群
+ 
  * queue_work   
  * run_workqueue
  * flush_workqueue
@@ -244,3 +249,10 @@ root        20  0.0  0.0      0     0 ?        S    13:37   0:00 [events/1]
 root        21  0.0  0.0      0     0 ?        S    13:37   0:00 [events/2]
 root        22  0.0  0.0      0     0 ?        S    13:37   0:00 [events/3]
 ```
+
+専用の workqueue を用意する程 大そうな機能でない場合に keventd_wq を使う
+
+ * AIO
+ * ブロックI/O
+ * XFS
+   * https://github.com/hiboma/hiboma/blob/master/kernel/xfs.md
