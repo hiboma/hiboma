@@ -349,3 +349,27 @@ https://github.com/hiboma/kernel_module_scratch/tree/master/tasklet
 
  * ソフト割り込みハンドラの拡張
  * 任意の関数を実行可能
+
+> taslet_vec に登録されている関数群を順番に実行していきます。 taslet_vec は、CPUごとに用意されており
+
+実体は DEFINE_PER_CPU で定義されている2重リンクリスト
+
+```c
+// kernel/softirq.c
+/*
+ * Tasklets
+ */
+struct tasklet_head
+{
+	struct tasklet_struct *head;
+	struct tasklet_struct **tail;
+};
+
+static DEFINE_PER_CPU(struct tasklet_head, tasklet_vec);
+static DEFINE_PER_CPU(struct tasklet_head, tasklet_hi_vec);
+```
+
+ * HI_SOFTIRQ
+   * 優先度が一番高い
+ * TASKLET_SOFTIRQ
+   * 優先度が一番低い
