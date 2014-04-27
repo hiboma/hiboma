@@ -383,6 +383,8 @@ static DEFINE_PER_CPU(struct tasklet_head, tasklet_hi_vec);
 
 > tasklet の起動要求は tasklet_schedule 関数で行います
 
+softirq を pending させておいて、しかるべきタイミングで実行される
+
 ```c
 void __tasklet_schedule(struct tasklet_struct *t)
 {
@@ -395,12 +397,42 @@ void __tasklet_schedule(struct tasklet_struct *t)
     // cpu var の tasklet_vec の末尾に突っ込む
 	*__get_cpu_var(tasklet_vec).tail = t;
 	__get_cpu_var(tasklet_vec).tail = &(t->next);
+    // IRQ が disabled された状態で呼び出す API
+    // local_irq_save してから他にもごそごそしたい場合に raise_softirq ではなくこっちを使う
 	raise_softirq_irqoff(TASKLET_SOFTIRQ);
 	local_irq_restore(flags);
 }
 ```
 
 > tasklet_action 関数は、tasklet_vec に登録された処理を順番に実行していきます
+
+tasklet_action は softirq_init で登録されている
+
+```c
+void __init softirq_init(void)
+{
+	int cpu;
+
+    // 各CPUごとに tasklet_vec しの初期化
+	for_each_possible_cpu(cpu) {
+		int i;
+
+		per_cpu(tasklet_vec, cpu).tail =
+			&per_cpu(tasklet_vec, cpu).head;
+		per_cpu(tasklet_hi_vec, cpu).tail =
+			&per_cpu(tasklet_hi_vec, cpu).head;
+		for (i = 0; i < NR_SOFTIRQS; i++)
+			INIT_LIST_HEAD(&per_cpu(softirq_work_list[i], cpu));
+	}
+
+	register_hotcpu_notifier(&remote_softirq_cpu_notifier);
+
+    // ここね
+	open_softirq(TASKLET_SOFTIRQ, tasklet_action);
+    // HI の方
+	open_softirq(HI_SOFTIRQ, tasklet_hi_action);
+}
+```
 
 ```c
 static void tasklet_action(struct softirq_action *a)
