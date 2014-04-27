@@ -44,10 +44,11 @@ struct workqueue_struct {
 };
 ```
 
-cpu_workqueue_struct の中身
+struct cpu_workqueue_struct の中身
 
- * work_struct のリスト
+ * worklist が struct work_struct (ジョブ) のリスト
  * 待ちキュー
+ * more_work でカーネルスレッドを待たせる
 
 ```c
 /*
@@ -67,7 +68,10 @@ struct cpu_workqueue_struct {
 } ____cacheline_aligned;
 ```
 
-work_struct (≒ job)
+struct work_struct (≒ job) の中身
+
+ * 遅延処理用の関数
+ * 遅延処理に渡す任意のデータ
 
 ```c
 struct work_struct {
