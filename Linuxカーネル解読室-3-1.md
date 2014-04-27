@@ -379,6 +379,10 @@ static DEFINE_PER_CPU(struct tasklet_head, tasklet_hi_vec);
    * 優先度が一番低い
    * tasklet_schedule で raise_softirq_irqoff
 
+## 3.1.4.2 tasklet の実行
+
+> tasklet の起動要求は tasklet_schedule 関数で行います
+
 ```c
 void __tasklet_schedule(struct tasklet_struct *t)
 {
@@ -396,6 +400,46 @@ void __tasklet_schedule(struct tasklet_struct *t)
 }
 ```
 
-## 3.1.4.2 tasklet の実行
+> tasklet_action 関数は、tasklet_vec に登録された処理を順番に実行していきます
 
-tasklet_schedule
+```c
+static void tasklet_action(struct softirq_action *a)
+{
+	struct tasklet_struct *list;
+
+	local_irq_disable();
+    // tasklet_vec から先頭だけ取り出す
+	list = __get_cpu_var(tasklet_vec).head;
+	__get_cpu_var(tasklet_vec).head = NULL;
+	__get_cpu_var(tasklet_vec).tail = &__get_cpu_var(tasklet_vec).head;
+	local_irq_enable();
+
+	while (list) {
+		struct tasklet_struct *t = list;
+
+        // リストが無くなるまでひたすら続ける
+		list = list->next;
+
+		if (tasklet_trylock(t)) {
+			if (!atomic_read(&t->count)) {
+				if (!test_and_clear_bit(TASKLET_STATE_SCHED, &t->state))
+					BUG();
+
+                // ここで tasklet の実行
+				t->func(t->data);
+				tasklet_unlock(t);
+				continue;
+			}
+			tasklet_unlock(t);
+		}
+
+		local_irq_disable();
+		t->next = NULL;
+		*__get_cpu_var(tasklet_vec).tail = t;
+		__get_cpu_var(tasklet_vec).tail = &(t->next);
+        // ???
+		__raise_softirq_irqoff(TASKLET_SOFTIRQ);
+		local_irq_enable();
+	}
+}
+```
