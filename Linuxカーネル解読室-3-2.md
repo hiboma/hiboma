@@ -155,7 +155,7 @@ struct delayed_work {
 
 ## workqueue のスレッド
 
-worker_thread 
+カーネルスレッドが worker_thread でループしている
 
 ```c
 static int worker_thread(void *__cwq)
@@ -188,6 +188,9 @@ static int worker_thread(void *__cwq)
 
 run_workqueue で work_struct をひたすら捌く
 
+ * worklist に繋いだ work_struct が無くなるまでループ
+ * lockdep_map が謎
+
 ```c
 static void run_workqueue(struct cpu_workqueue_struct *cwq)
 {
@@ -208,14 +211,20 @@ static void run_workqueue(struct cpu_workqueue_struct *cwq)
 		struct lockdep_map lockdep_map = work->lockdep_map;
 #endif
 		trace_workqueue_execution(cwq->thread, work);
+
+        // 現在実行中のを判別出来るようにポインタ持っておくのかな
 		cwq->current_work = work;
 		list_del_init(cwq->worklist.next);
 		spin_unlock_irq(&cwq->lock);
 
 		BUG_ON(get_wq_data(work) != cwq);
 		work_clear_pending(work);
+
+        // ???
 		lock_map_acquire(&cwq->wq->lockdep_map);
 		lock_map_acquire(&lockdep_map);
+        
+        // ここで遅延処理
 		f(work);
 		lock_map_release(&lockdep_map);
 		lock_map_release(&cwq->wq->lockdep_map);
@@ -255,4 +264,4 @@ root        22  0.0  0.0      0     0 ?        S    13:37   0:00 [events/3]
  * AIO
  * ブロックI/O
  * XFS
-   * https://github.com/hiboma/hiboma/blob/master/kernel/xfs.md
+   * https://github.com/hiboma/hiboma/blob/master/kernel/xfs.md に書いてる
