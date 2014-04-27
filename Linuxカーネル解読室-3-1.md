@@ -264,6 +264,9 @@ void wakeup_softirqd(void)
 
 ## 3.1.3.4 ソフト割り込みの実装
 
+ * do_IRQ でハードウェア割り込みハンドラを実行後 irq_exit する際に do_softirq でソフト割り込みハンドラを実行
+ * pending している softirq 処理が MAX_SOFTIRQ_RESTART 回を超えたら wakeup_softirqd を起床
+
 ```c
 asmlinkage void do_softirq(void)
 {
@@ -293,6 +296,7 @@ asmlinkage void __do_softirq(void)
 {
 	struct softirq_action *h;
 	__u32 pending;
+    // 10回
 	int max_restart = MAX_SOFTIRQ_RESTART;
 	int cpu;
 
