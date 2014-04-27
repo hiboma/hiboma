@@ -3,6 +3,10 @@
  * 遅延処理
    * カーネルスレッド
    * プロセスコンテキスト
+ * queue_work   
+ * run_workqueue
+ * flush_workqueue
+ * queue_delayed_work, cancel_delayed_work
 
 > 主にプロセスコンテキストの処理を遅延させるために利用されています
 
@@ -181,4 +185,16 @@ static void run_workqueue(struct cpu_workqueue_struct *cwq)
 	}
 	spin_unlock_irq(&cwq->lock);
 }
+```
+
+## 3.2.3 汎用workqueue
+
+keventd_wq
+
+```
+[vagrant@vagrant-centos65 linux-3.14.2]$ ps aux | grep event
+root        19  0.0  0.0      0     0 ?        S    13:37   0:01 [events/0]
+root        20  0.0  0.0      0     0 ?        S    13:37   0:00 [events/1]
+root        21  0.0  0.0      0     0 ?        S    13:37   0:00 [events/2]
+root        22  0.0  0.0      0     0 ?        S    13:37   0:00 [events/3]
 ```
