@@ -434,6 +434,8 @@ void __init softirq_init(void)
 }
 ```
 
+tasklet_action の中身
+
 ```c
 static void tasklet_action(struct softirq_action *a)
 {
