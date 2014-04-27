@@ -479,3 +479,62 @@ static void tasklet_action(struct softirq_action *a)
 ```
 
 ### tasklet 操作関数
+
+ * TASKLET_STATE_SCHED がたってるとスケジューリング待ち?
+
+```c
+enum
+{
+	TASKLET_STATE_SCHED,	/* Tasklet is scheduled for execution */
+	TASKLET_STATE_RUN	/* Tasklet is running (SMP only) */
+};
+```
+
+ * TASKLET_STATE_SCHED でループ
+ * TASKLET_STATE_SCHED ビットをたてることができたら tasklet_unlock_wait
+   * kill = スケジューリングを回避するのかな
+
+```c
+void tasklet_kill(struct tasklet_struct *t)
+{
+	if (in_interrupt())
+		printk("Attempt to kill tasklet from interrupt\n");
+
+	while (test_and_set_bit(TASKLET_STATE_SCHED, &t->state)) {
+		do {
+			yield();
+		} while (test_bit(TASKLET_STATE_SCHED, &t->state));
+	}
+	tasklet_unlock_wait(t);
+	clear_bit(TASKLET_STATE_SCHED, &t->state);
+}
+```
+
+t->count を inc/dec で enable/disable する API になっている
+
+```c
+static inline void tasklet_disable_nosync(struct tasklet_struct *t)
+{
+	atomic_inc(&t->count);
+	smp_mb__after_atomic_inc();
+}
+
+static inline void tasklet_disable(struct tasklet_struct *t)
+{
+	tasklet_disable_nosync(t);
+	tasklet_unlock_wait(t);
+	smp_mb();
+}
+
+static inline void tasklet_enable(struct tasklet_struct *t)
+{
+	smp_mb__before_atomic_dec();
+	atomic_dec(&t->count);
+}
+
+static inline void tasklet_hi_enable(struct tasklet_struct *t)
+{
+	smp_mb__before_atomic_dec();
+	atomic_dec(&t->count);
+}
+```
