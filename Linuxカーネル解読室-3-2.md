@@ -1,5 +1,51 @@
 # 3.2 workqueue
 
+/proc/\<pid\>/stack がこんなんなってるカーネルスレッド
+
+```
+[<ffffffff81094dac>] worker_thread+0x1fc/0x2a0
+[<ffffffff8109aef6>] kthread+0x96/0xa0
+[<ffffffff8100c20a>] child_rip+0xa/0x20
+[<ffffffffffffffff>] 0xffffffffffffffff
+```
+
+みたとこ下記のスレッドが相当する
+
+```
+root        23  0.0  0.0      0     0 ?        S    13:37   0:00 [cgroup]
+root        25  0.0  0.0      0     0 ?        S    13:37   0:00 [netns]
+root        30  0.0  0.0      0     0 ?        S    13:37   0:00 [kintegrityd/0]
+root        31  0.0  0.0      0     0 ?        S    13:37   0:00 [kintegrityd/1]
+root        32  0.0  0.0      0     0 ?        S    13:37   0:00 [kintegrityd/2]
+root        33  0.0  0.0      0     0 ?        S    13:37   0:00 [kintegrityd/3]
+root        34  0.4  0.0      0     0 ?        S    13:37   0:11 [kblockd/0]
+root        35  0.0  0.0      0     0 ?        S    13:37   0:01 [kblockd/1]
+root        36  0.0  0.0      0     0 ?        S    13:37   0:01 [kblockd/2]
+root        37  0.0  0.0      0     0 ?        S    13:37   0:01 [kblockd/3]
+root        38  0.0  0.0      0     0 ?        S    13:37   0:00 [kacpid]
+root        39  0.0  0.0      0     0 ?        S    13:37   0:00 [kacpi_notify]
+root        40  0.0  0.0      0     0 ?        S    13:37   0:00 [kacpi_hotplug]
+root        41  0.0  0.0      0     0 ?        S    13:37   0:00 [ata_aux]
+root        42  0.0  0.0      0     0 ?        S    13:37   0:00 [ata_sff/0]
+root        43  0.0  0.0      0     0 ?        S    13:37   0:00 [ata_sff/1]
+root        44  0.0  0.0      0     0 ?        S    13:37   0:00 [ata_sff/2]
+root        45  0.0  0.0      0     0 ?        S    13:37   0:00 [ata_sff/3]
+root        46  0.0  0.0      0     0 ?        S    13:37   0:00 [ksuspend_usbd]
+root        49  0.0  0.0      0     0 ?        S    13:37   0:00 [md/0]
+root        50  0.0  0.0      0     0 ?        S    13:37   0:00 [md/1]
+root        51  0.0  0.0      0     0 ?        S    13:37   0:00 [md/2]
+root        57  0.0  0.0      0     0 ?        S    13:37   0:00 [linkwatch]
+root        66  0.0  0.0      0     0 ?        S    13:37   0:00 [crypto/0]
+root        67  0.0  0.0      0     0 ?        S    13:37   0:00 [crypto/1]
+root        68  0.0  0.0      0     0 ?        S    13:37   0:00 [crypto/2]
+root        69  0.0  0.0      0     0 ?        S    13:37   0:00 [crypto/3]
+root        74  0.0  0.0      0     0 ?        S    13:37   0:00 [kthrotld/0]
+root        75  0.0  0.0      0     0 ?        S    13:37   0:00 [kthrotld/1]
+root        76  0.0  0.0      0     0 ?        S    13:37   0:00 [kthrotld/2]
+root        77  0.0  0.0      0     0 ?        S    13:37   0:00 [kthrotld/3]
+root       271  0.0  0.0      0     0 ?        S    13:37   0:00 [ext4-dio-unwrit]
+```
+
  * 遅延処理
    * カーネルスレッド
    * プロセスコンテキスト
