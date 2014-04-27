@@ -12,6 +12,20 @@
 
 2.6.15 と 2.6.32 とで中身が全然違う。下記は 2.6.32
 
+```
+[cpu0]
+workqueue_struct
+  \___ .cpu_wq -> cpu_workqueue_struct
+                    \___ .work_list -> work_struct -> work_struct -> ...
+
+[cpu1]                    
+workqueue_struct
+  \___ .cpu_wq -> cpu_workqueue_struct
+                    \___ .work_list -> work_struct -> work_struct -> ...
+```
+
+workqueue_struct は CPUごとに用意 (1CPUしか使わないのもあるけど)
+
 ```c
 /*
  * The externally visible workqueue abstraction is an array of
@@ -31,6 +45,9 @@ struct workqueue_struct {
 ```
 
 cpu_workqueue_struct の中身
+
+ * work_struct のリスト
+ * 待ちキュー
 
 ```c
 /*
