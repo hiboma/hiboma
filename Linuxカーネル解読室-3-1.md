@@ -477,3 +477,5 @@ static void tasklet_action(struct softirq_action *a)
 	}
 }
 ```
+
+### tasklet 操作関数
