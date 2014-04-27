@@ -265,6 +265,7 @@ void wakeup_softirqd(void)
 ## 3.1.3.4 ソフト割り込みの実装
 
  * do_IRQ でハードウェア割り込みハンドラを実行後 irq_exit する際に do_softirq でソフト割り込みハンドラを実行
+ * ソフト割り込みハンドラ実行中は local_irq_enable なので softirq を更に pending 可能
  * pending している softirq 処理が MAX_SOFTIRQ_RESTART 回を超えたら wakeup_softirqd を起床
 
 ```c
@@ -341,3 +342,10 @@ restart:
 	__local_bh_enable();
 }
 ```
+
+## 3.1.4 tasklet
+
+https://github.com/hiboma/kernel_module_scratch/tree/master/tasklet
+
+ * ソフト割り込みハンドラの拡張
+ * 任意の関数を実行可能
