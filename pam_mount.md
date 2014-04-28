@@ -1,6 +1,8 @@
 # pam_mount
 
-## pam_mount の問題
+## pam_mount と symlink 問題
+
+http://sourceforge.net/p/pam-mount/bugs/93/
 
  * mount済みのエントリは /etc/mtab に書き込まれる
  * symlink は解決されて、実体パスで /etc/mtab に書き込まれる
