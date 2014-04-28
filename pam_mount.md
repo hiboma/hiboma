@@ -2,9 +2,10 @@
 
 ## pam_mount の問題
 
- * mountポイントは /etc/mtab に書き込まれている
- * symlink は解決され実体パスに書き変わって /etc/mtab に書き込まれている
- * **already_mounted** は /etc/mtab の実体パスと symlink が未解決なパスを比較するので不一致になる
+ * mount済みのエントリは /etc/mtab に書き込まれる
+ * symlink は解決されて、実体パスで /etc/mtab に書き込まれる
+ * **already_mounted** は /etc/mtab の実体パスと symlink が未解決なパスを比較する
+ * マウント済みと見なされず、重複マウントの原因になる
 
 ## mount の重複を防ぐコードの実装を追う
 
