@@ -165,6 +165,9 @@ vm_swappiness が参照されているコードを見ていく
 
 ## get_scan_ratio
 
+ * http://www.mysqlperformanceblog.com/2014/04/28/oom-relation-vm-swappiness0-new-kernel/
+   * vm.swappiness=0 の挙動が変わっていますぞ
+
 ```c
 // anon と ファイルの LRU を見ていく積極度?
 /*
