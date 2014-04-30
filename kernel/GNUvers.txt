@@ -75,3 +75,87 @@ foo として export されるバージョンを指定
  * **foo@@VERS_2.0**
    * @が2個ついてる
    * バージョン指定されない場合にデフォルトのバージョンとして export されるシンボル
+
+## Specifying the version script.
+
+
+```   
+	$ ld --shared ... --version-script foo.map
+```
+
+foo.map の中身
+
+```
+VERS_1.1 {
+		 foo1;
+};
+```
+
+別のやり方
+
+```
+	$ ld --shared ...  foo2.map
+```
+
+foo2.map の中身
+
+```
+VERSION {
+	VERS_1.1 {
+			 foo1;
+	};
+}
+```
+
+## Diagnosing problems - verifying correct usage.
+
+```
+bash$ ../binutils/objdump --dynamic-syms test2.so
+
+test2.so:     file format elf32-i386
+
+DYNAMIC SYMBOL TABLE:
+000012c0 g    DO *ABS*	00000000 _DYNAMIC
+000012b0 g    DO *ABS*	00000000 _GLOBAL_OFFSET_TABLE_
+000002a0 g    DF .text	0000000c main@@GNU_1.1
+00000000 l    D  *UND*	00000000 
+000002ac g    DO *ABS*	00000000 _etext
+00001360 g    DO *ABS*	00000000 _edata
+00001360 g    DO *ABS*	00000000 __bss_start
+00001360 g    DO *ABS*	00000000 _end
+00000000      DF *UND*	0000001d foo@SUNW_1.3a
+00000000 g    DO *ABS*	00000000 GNU_1.1
+```
+
+**--dynamic-reloc**
+
+```
+bash$ ../binutils/objdump --dynamic-reloc test2.so
+
+test2.so:     file format elf32-i386
+
+DYNAMIC RELOCATION RECORDS
+OFFSET   TYPE              VALUE 
+000012bc R_386_JUMP_SLOT   foo@SUNW_1.3a
+```
+
+ * foo が @SUNW_1.3a を要求する
+ * **objdump --private-header** で確認出来る
+
+```
+bash$ ../binutils/objdump --private-header test2.so
+
+test2.so:     file format elf32-i386
+
+[...]
+
+Version definitions:
+1 0x01 0x0ca7523f test2.so
+	
+2 0x00 0x0c3b2451 GNU_1.1
+	
+
+Version references:
+	Interfaces required from ./test.so:
+		0x03d27931 0x00 03 SUNW_1.3a
+```
