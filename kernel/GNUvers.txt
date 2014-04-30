@@ -2,6 +2,8 @@
 
 http://www.tux.org/pub/tux/eric/elf/docs/GNUvers.txt
 
+## Here is a normal Sun style of config file:
+
  * Sun の実装とドキュメントから説明
  * Sun のスタイルだと ↓ な感じ
 
@@ -18,4 +20,44 @@ http://www.tux.org/pub/tux/eric/elf/docs/GNUvers.txt
 
  * 依存関係は下記の通りになる 
    * VERS_2.0 => VERS_1.2 => VERS_1.1
-   * VERS_1.1 より以前のバージョンは mapfile に記述されていない全てのシンボル
+   * VERS_1.1 より以前のバージョンは mapfile に記述されていない全てのシンボルの base となる
+ * シンボルを特定のレベルに bind しておくことができる
+   * ローカルディレクティブを使ってシンボルが shared library からエクスポートされるのを防ぐ事ができる
+
+## There are two problems with Sun's approach   
+    
+ * 1. 互換性の無い複数のバージョンの関数を同じライブラリで定義できない
+ * 2. インタフェースが変わった際に master の設定ファイルを書き換える必要がある
+
+ おんなじ source file で関数のバージョンを指定できるようにしたい
+
+ ```c
+ original_foo()
+{
+	return 1+bar();
+
+}
+
+old_foo()
+{
+	return 2+bar();
+
+}
+
+old_foo1()
+{
+	return 3+bar();
+
+}
+
+new_foo()
+{
+	return 4+bar();
+
+}
+
+__asm__(".symver original_foo,foo@");
+__asm__(".symver old_foo,foo@VERS_1.1");
+__asm__(".symver old_foo1,foo@VERS_1.2");
+__asm__(".symver new_foo,foo@@VERS_2.0");
+```
