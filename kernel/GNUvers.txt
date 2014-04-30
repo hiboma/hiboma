@@ -31,6 +31,9 @@ http://www.tux.org/pub/tux/eric/elf/docs/GNUvers.txt
 
  おんなじ source file で関数のバージョンを指定できるようにしたい
 
+## Let us say we have 3 different implementations of the
+function foob().
+
  ```c
  original_foo()
 {
@@ -61,3 +64,14 @@ __asm__(".symver old_foo,foo@VERS_1.1");
 __asm__(".symver old_foo1,foo@VERS_1.2");
 __asm__(".symver new_foo,foo@@VERS_2.0");
 ```
+
+foo として export されるバージョンを指定
+
+ * original_foo, old_foo, old_foo1, new_foo は内部の参照として使うだけで shared library から export される必要は無い
+ * **local:**
+ * global, weak ???
+ * foo@
+   * base となるバージョン
+ * **foo@@VERS_2.0**
+   * @が2個ついてるよ
+   * バージョン指定されない場合にデフォルトのバージョンとして export されるシンボル
