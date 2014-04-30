@@ -1,0 +1,21 @@
+# Symbold Versioning
+
+http://www.tux.org/pub/tux/eric/elf/docs/GNUvers.txt
+
+ * Sun の実装とドキュメントから説明
+ * Sun のスタイルだと ↓ な感じ
+
+```
+	VERS_1.1 { 
+			global:   foo1;
+			local:    bar2; *_tmp;
+		 };
+	VERS_1.2 { 
+			foo2; 
+		 } VERS_1.1;
+	VERS_2.0 {  } VERS_1.2;
+```
+
+ * 依存関係は下記の通りになる 
+   * VERS_2.0 => VERS_1.2 => VERS_1.1
+   * VERS_1.1 より以前のバージョンは mapfile に記述されていない全てのシンボル
