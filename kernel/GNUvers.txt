@@ -1,4 +1,4 @@
-# Symbold Versioning
+# Symbol Versioning
 
 http://www.tux.org/pub/tux/eric/elf/docs/GNUvers.txt
 
@@ -75,6 +75,13 @@ foo として export されるバージョンを指定
  * **foo@@VERS_2.0**
    * @が2個ついてる
    * バージョン指定されない場合にデフォルトのバージョンとして export されるシンボル
+ * *Sun does have this concept of a 'weak' version, which is a
+version node that has no symbols bound into it.*
+   * シンボルがバインドされていないバージョン
+   * バグフィックス => 新しい関数がないけど、古い関数が取り除かれる ???
+ * アプリケーションが version 付きライブラリにリンクすると required interface のリストを持つ
+   * shared library にリンクするとインポートされるシンボル、 required interface のリストが生成される
+   * ランタイムに dynamic loader が required interface がロードされたかどうかを走査する
 
 ## Specifying the version script.
 
