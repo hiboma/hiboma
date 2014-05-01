@@ -1,5 +1,10 @@
 # open(2) の O_EXCL
 
+do_filp_open
+
+ * open の flags に O_EXCL がたっていると LOOKUP_EXCL
+ * LOOKUP_EXCL が使われている箇所が NFS くらいしかなくて用途が分からんぞ
+
 ```c
 /*
  * Note that the low bits of the passed in "open_flag"
@@ -27,3 +32,4 @@ struct file *do_filp_open(int dfd, struct filename *filename,
 	if (flag & O_EXCL)
 		nd.flags |= LOOKUP_EXCL;
 ```
+
