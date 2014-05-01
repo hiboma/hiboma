@@ -168,12 +168,11 @@ do_last:
 		return filp;
 	}
 
+    // 排他終わり
 	/*
 	 * It already exists.
 	 */
 	mutex_unlock(&dir->d_inode->i_mutex);
-    // ディレクトリの inode の mutex で排他
-    // 1ファイルにつき 1プロセスしかアクセスできないクリティカルリージョン
     
 	if (got_write) {
 		mnt_drop_write(nd.path.mnt);
