@@ -1,4 +1,6 @@
-# symbol versioning
+# Symbol Versioning
+
+ruby と openssl 編
 
 ## とある SL6 の openssl
 
