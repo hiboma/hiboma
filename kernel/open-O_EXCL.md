@@ -1,14 +1,16 @@
 # open(2) の O_EXCL
 
-O_CREAT|O_EXCL の排他はどんな風に実装されているのか?
+O_CREAT|O_EXCL はどんな風に実装されているのか?
 
 ## do_filp_open
 
- * 強過ぎる
- * open の flags に O_EXCL がたっていると LOOKUP_EXCL
-   * LOOKUP_EXCL が使われている箇所が NFS くらいしかなくて用途が分からんぞ
+強過ぎる
+
  * EEXIST な場合に O_EXCL でエラるだけ
    * ディレクトリ inode の mutex で排他するので、新規に作成するのが atomic になることが保証される様子
+   * O_EXCL を指定しなくても mutex で排他はなされていて、 EEXIST ならエラーとするように挙動が変わるだけ。シンプル
+ * open の flags に O_EXCL がたっていると LOOKUP_EXCL
+   * LOOKUP_EXCL が使われている箇所が NFS くらいしかなくて用途が分からんぞ
 
 ```c
 /*
@@ -106,7 +108,7 @@ struct file *do_filp_open(int dfd, struct filename *filename,
 
     //
     // LOOKUP_EXCL をたてる
-    //
+    // 
 	if (flag & O_EXCL)
 		nd.flags |= LOOKUP_EXCL;
 
@@ -121,10 +123,10 @@ struct file *do_filp_open(int dfd, struct filename *filename,
 	if (!error)
 		got_write = true;
 
-	//
+	// -------------------------------------------------------------------------
 	// ここから クリティカルリージョン
     // ディレクトリ inode で mutex 
-	//
+	// -------------------------------------------------------------------------
 	mutex_lock(&dir->d_inode->i_mutex);
 	path.dentry = lookup_hash(&nd);
 	path.mnt = nd.path.mnt;
@@ -168,7 +170,9 @@ do_last:
 		return filp;
 	}
 
+    // -------------------------------------------------------------------------
     // 排他終わり
+    // -------------------------------------------------------------------------
 	/*
 	 * It already exists.
 	 */
@@ -329,4 +333,3 @@ do_link:
 	goto do_last;
 }
 ```
-
