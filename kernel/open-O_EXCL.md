@@ -7,7 +7,8 @@ O_CREAT|O_EXCL の排他はどんな風に実装されているのか?
  * 強過ぎる
  * open の flags に O_EXCL がたっていると LOOKUP_EXCL
    * LOOKUP_EXCL が使われている箇所が NFS くらいしかなくて用途が分からんぞ
- * EEXIST な場合に O_EXCL でエラる
+ * EEXIST な場合に O_EXCL でエラるだけ
+   * ディレクトリ inode の mutex で排他するので、新規に作成するのが atomic になることが保証される様子
 
 ```c
 /*
@@ -120,6 +121,10 @@ struct file *do_filp_open(int dfd, struct filename *filename,
 	if (!error)
 		got_write = true;
 
+	//
+	// ここから クリティカルリージョン
+    // ディレクトリ inode で mutex 
+	//
 	mutex_lock(&dir->d_inode->i_mutex);
 	path.dentry = lookup_hash(&nd);
 	path.mnt = nd.path.mnt;
@@ -167,7 +172,7 @@ do_last:
 	 * It already exists.
 	 */
 	mutex_unlock(&dir->d_inode->i_mutex);
-    // inode の mutex で排他
+    // ディレクトリの inode の mutex で排他
     // 1ファイルにつき 1プロセスしかアクセスできないクリティカルリージョン
     
 	if (got_write) {
