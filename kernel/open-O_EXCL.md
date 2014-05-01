@@ -7,6 +7,7 @@ O_CREAT|O_EXCL の排他はどんな風に実装されているのか?
  * 強過ぎる
  * open の flags に O_EXCL がたっていると LOOKUP_EXCL
    * LOOKUP_EXCL が使われている箇所が NFS くらいしかなくて用途が分からんぞ
+ * EEXIST な場合に O_EXCL でエラる
 
 ```c
 /*
