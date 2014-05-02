@@ -151,6 +151,9 @@ do_last:
 			error = -EROFS;
 			goto exit_mutex_unlock;
 		}
+        
+        // vfs_create 呼び出し
+        // ディレクトリの inode_operations .create を呼び出す
 		error = __open_namei_create(&nd, &path, open_flag, mode);
 		if (error) {
 			mnt_drop_write(nd.path.mnt);
