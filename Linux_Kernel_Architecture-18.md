@@ -106,6 +106,7 @@ swapout する際にメモリ使用量を診る
  * zone ごとに 2つの LRUリスト
    * active
    * inactive
+ * 古い実装。今は Split LRU   
    
  
    
