@@ -14,7 +14,6 @@ RAM はノードに分割される。 pg_data_t で定義される
 
 ノードはゾーンに分割される
 
-
 > Each zone is associated with an array in which the physical memory pages belonging to the zone — known as page frames in the kernel
 
 ゾーンにページフレームの配列がついてる
@@ -100,7 +99,10 @@ typedef struct pglist_data {
 } pg_data_t;
 ```
 
-## struct zone
+## Memory Zones
+
+### struct zone
+
 
 ```c
 struct zone {
