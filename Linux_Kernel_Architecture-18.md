@@ -98,7 +98,14 @@ swapout する際にメモリ使用量を診る
  * kswapd が定期的にみてる
  * **direct reclaim**
    * buddy システムやバッファでページを必要とする際に swapout
- * どうしても足らなきゃOOM   
+ * どうしても足らなきゃOOM
+
+## 18.2.3 Selecting Pages to Be Swapped Out
+
+ * rough-grained LRU
+ * zone ごとに 2つの LRUリスト
+   * active
+   * inactive
    
  
    
