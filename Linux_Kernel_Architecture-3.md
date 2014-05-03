@@ -79,10 +79,20 @@ typedef struct pglist_data {
 	 */
 	spinlock_t node_size_lock;
 #endif
+
+    // NUMAノードで最初のページフレームの論理番号
+    // ページフレームの番号は全ノードで連続していて、グローバルに一意になる
+    // UMA では ゼロ
 	unsigned long node_start_pfn;
+    
+    // ノードのページフレームの総数
 	unsigned long node_present_pages; /* total number of physical pages */
+    // ノードのページフレームの範囲サイズ?
+    // hole も含む
 	unsigned long node_spanned_pages; /* total size of physical page
 					     range, including holes */
+
+    // ノードの一意なID
 	int node_id;
 	wait_queue_head_t kswapd_wait;
 	struct task_struct *kswapd;
