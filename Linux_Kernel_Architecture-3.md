@@ -1,12 +1,50 @@
 ## 3.2.1 Overview
 
  * RAM 
-   * nodes
-     * zones
+   * node
+     * zone
+       * struct page
+         * page frame
 
 > First, RAM memory is divided into nodes
 
 RAM はノードに分割される。 pg_data_t で定義される
+
+> Each node is split into zones as further subdivisions of memory.
+
+ノードはゾーンに分割される
+
+
+> Each zone is associated with an array in which the physical memory pages belonging to the zone — known as page frames in the kernel
+
+ゾーンにページフレームの配列がついてる
+
+ * pg_data_t の `struct zone node_zones` を指している
+ * low
+   * ISAデバイス? の DMA は 0〜16MiB までしかアクセスできない
+ * normal
+   * memory area for universal use.
+ * higmem
+   * area that cannot be mapped directly. B
+
+ * ZONE_DMA
+   * 16MB
+ * ZONE_DMA32
+   * 32bit でアドレッシング可能
+   * 32bit 機では空
+   * 64biy では 32bit の周辺機器をサポートする際に必要
+ * ZONE_NORMAL
+   * カーネルセグメントに直接 map される
+ * ZONE_HIGHMEM
+   * カーネルセグメントを超えた物理メモリ
+   * 64bit では必要無い
+ * ZONE_MOVABLE
+   * 物理メモリのフラグメンテーションを防ぐため
+ * NUMA の場合、メモリの割り当てはプロセスが載っているノードから割り当てようとする
+   * パフォーマンス
+   * 割り当てできない場合は、他のノードに fallback する (zonelist)
+
+## pg_data_t   
 
 ```c
 typedef struct pglist_data {
@@ -41,31 +79,7 @@ typedef struct pglist_data {
 } pg_data_t;
 ```
 
-> Each node is split into zones as further subdivisions of memory.
-
-ノードはゾーンに分割される
-
- * pg_data_t の `struct zone node_zones` を指している
- * low
-   * ISAデバイス? の DMA は 0〜16MiB までしかアクセスできない
- * normal
-   * memory area for universal use.
- * higmem
-   * area that cannot be mapped directly. B
-
- * ZONE_DMA
-   * 16MB
- * ZONE_DMA32
-   * 32bit でアドレッシング可能
-   * 32bit 機では空
-   * 64biy では 32bit の周辺機器をサポートする際に必要
- * ZONE_NORMAL
-   * カーネルセグメントに直接 map される
- * ZONE_HIGHMEM
-   * カーネルセグメントを超えた物理メモリ
-   * 64bit では必要無い
- * ZONE_MOVABLE
-   * 物理メモリのフラグメンテーションを防ぐため
+## struct zone
 
 ```c
 struct zone {
