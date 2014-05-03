@@ -23,3 +23,23 @@ page を evict する方法
    * malloc で heap
    * IPC用に使われるページ。 shared memory
  * カーネルのページは **絶対に** swapout されない
+
+##  18.1.3 Page-Swapping Algorithms
+
+**Second Chance**
+
+```
+      New                 Old
+[] => [][][][][][][][][][][] => [] swapout 
+ \
+  \_ page fault
+
+```
+
+ * FIFO
+ * page がリンクリストになってる
+ * page fault すると新しく参照されたページはリストの先頭に来る
+ * FIFO のキューサイズを有限にしておく
+ * キューの末端のページが *drop off* して swapout される
+ * 再度必要になったら page fault で page を読み込んで先頭に配置する
+
