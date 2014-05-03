@@ -26,7 +26,7 @@ page を evict する方法
 
 ##  18.1.3 Page-Swapping Algorithms
 
-**Second Chance**
+**FIFO**
 
 ```
       New                 Old
@@ -36,10 +36,18 @@ page を evict する方法
 
 ```
 
- * FIFO
  * page がリンクリストになってる
  * page fault すると新しく参照されたページはリストの先頭に来る
  * FIFO のキューサイズを有限にしておく
  * キューの末端のページが *drop off* して swapout される
  * 再度必要になったら page fault で page を読み込んで先頭に配置する
+
+**Second Chance**
+
+ * ハードウェア管理のビットを追加
+ * 参照されると 1
+ * kernel がビットを落とす
+ * リストの末尾にくると、ビットが立っていたらビットを落として FIFO の先頭に配置
+   * new page として扱われるのと一緒
+ * ビットが立っていなかったら swapout される
 
