@@ -53,6 +53,18 @@ typedef struct pglist_data {
  * higmem
    * area that cannot be mapped directly. B
 
+ * ZONE_DMA
+   * 16MB
+ * ZONE_DMA32
+   * 32bit でアドレッシング可能
+   * 32bit 機では空
+   * 64biy では 32bit の周辺機器をサポートする際に必要
+ * ZONE_NORMAL
+   * カーネルセグメントに直接 map される
+ * ZONE_HIGHMEM
+   * カーネルセグメントを超えた物理メモリ
+   * 64bit では必要無い
+
 ```c
 struct zone {
 	/* Fields commonly accessed by the page allocator */
