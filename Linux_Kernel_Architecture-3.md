@@ -44,11 +44,17 @@ RAM はノードに分割される。 pg_data_t で定義される
    * パフォーマンス
    * 割り当てできない場合は、他のノードに fallback する (zonelist)
 
-## pg_data_t   
+## 3.2.2 Data Structures   
+
+### Node Management
+
+ノード = pg_data_t   
 
 ```c
 typedef struct pglist_data {
 	struct zone node_zones[MAX_NR_ZONES];
+
+    // ページ足らん時の fallback 用のゾーン
 	struct zonelist node_zonelists[MAX_ZONELISTS];
 	int nr_zones;
 #ifdef CONFIG_FLAT_NODE_MEM_MAP	/* means !SPARSEMEM */
