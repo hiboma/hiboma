@@ -106,8 +106,13 @@ typedef struct pglist_data {
  * ZONE_PADDING
    * CPUのキャッシュラインに乗るようにパディング
  * pages_min, pages_high, pages_low
-   * ページが swap out される際の watermarks
-   * 
+   * ページが swapout される際の watermarks。 kswapd の挙動を左右する
+   * 空きページ > pages_high が理想
+   * 空きページ < pages_low  だと swapout し始める
+   * 空きページ < pages_min だと page reclaim のプレッシャーが強くなる
+     * 18章で説明される
+ * lowmem_reserve
+   * クリティカルなメモリ割り当て用に予約
 
 ```c
 struct zone {
