@@ -103,6 +103,11 @@ typedef struct pglist_data {
 
 ### struct zone
 
+ * ZONE_PADDING
+   * CPUのキャッシュラインに乗るようにパディング
+ * pages_min, pages_high, pages_low
+   * ページが swap out される際の watermarks
+   * 
 
 ```c
 struct zone {
