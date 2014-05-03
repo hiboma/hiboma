@@ -90,4 +90,15 @@ priority
  * used/free を bitmap で管理
 
 mkswap(3), swapon(3), swapon(2)
+
+## 18.2.2 Checking Memory Utilization
+
+swapout する際にメモリ使用量を診る
+
+ * kswapd が定期的にみてる
+ * **direct reclaim**
+   * buddy システムやバッファでページを必要とする際に swapout
+ * どうしても足らなきゃOOM   
+   
+ 
    
