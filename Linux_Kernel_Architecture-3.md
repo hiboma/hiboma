@@ -26,7 +26,6 @@ RAM はノードに分割される。 pg_data_t で定義される
    * memory area for universal use.
  * higmem
    * area that cannot be mapped directly. B
-
  * ZONE_DMA
    * 16MB
  * ZONE_DMA32
@@ -52,6 +51,7 @@ RAM はノードに分割される。 pg_data_t で定義される
 
  * MM が初期化されていないブート中にもメモリが必要
  * ***boot memory allocator*** を使う。bdata はそれのポインタ
+ * MAX_NR_ZONES ゾーンをイテレートする時に使える
 
 ```c
 typedef struct pglist_data {
