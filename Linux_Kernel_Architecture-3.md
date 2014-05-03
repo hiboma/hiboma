@@ -48,7 +48,10 @@ RAM はノードに分割される。 pg_data_t で定義される
 
 ### Node Management
 
-ノード = pg_data_t   
+ノード = pg_data_t
+
+ * MM が初期化されていないブート中にもメモリが必要
+ * ***boot memory allocator*** を使う。bdata はそれのポインタ
 
 ```c
 typedef struct pglist_data {
@@ -58,6 +61,8 @@ typedef struct pglist_data {
 	struct zonelist node_zonelists[MAX_ZONELISTS];
 	int nr_zones;
 #ifdef CONFIG_FLAT_NODE_MEM_MAP	/* means !SPARSEMEM */
+
+    // ノードの 全zone の page の配列を指す用ポインタ
 	struct page *node_mem_map;
 #ifdef CONFIG_CGROUP_MEM_RES_CTLR
 	struct page_cgroup *node_page_cgroup;
