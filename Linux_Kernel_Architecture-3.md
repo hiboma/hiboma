@@ -64,6 +64,8 @@ typedef struct pglist_data {
  * ZONE_HIGHMEM
    * カーネルセグメントを超えた物理メモリ
    * 64bit では必要無い
+ * ZONE_MOVABLE
+   * 物理メモリのフラグメンテーションを防ぐため
 
 ```c
 struct zone {
