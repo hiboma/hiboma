@@ -67,7 +67,7 @@ page が頻繁に参照されているかどうかを扱える
 ## LRU Algorithm
 
 
-## 18.2.1 Organization of the Swap Area
+1## 18.2.1 Organization of the Swap Area
 
  * ファイルシステム無しのパーティションでも動作
  * ファイルシステムで固定長のファイルでも動作
@@ -86,4 +86,8 @@ priority
 
  * 複数の swap 領域の priority が同じ場合は round robin で書き込み
  
+ * どのページがどの swap パーティションにあるかをメモリに保持する
+ * used/free を bitmap で管理
+
+mkswap(3), swapon(3), swapon(2)
    
