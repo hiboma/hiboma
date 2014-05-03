@@ -21,4 +21,5 @@ page を evict する方法
    * mmap で作られた stack
  * MAP_PRIVATE
    * malloc で heap
-   * IPC用に使われるページ。 shared memory 
+   * IPC用に使われるページ。 shared memory
+ * カーネルのページは **絶対に** swapout されない
