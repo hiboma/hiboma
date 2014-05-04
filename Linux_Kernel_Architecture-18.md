@@ -118,4 +118,12 @@ swapout する際にメモリ使用量を診る
    * どのページを swapped out するべき?
  * **page reclaim**
    * free した page をすぐに利用
+
+## 18.6.1 Overview
+
+ * カーネルの実行パスで page reclaim** する **direct page reclaim** と kswapd
+   * どちらも shrink_zone を呼び出す
+ * NUMA では kswapd は 各 node にいて zone の面倒を見てる
+
+ 
   
