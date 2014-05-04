@@ -111,6 +111,11 @@ swapout する際にメモリ使用量を診る
 ## 18.2.5 Shrinking Kernel Caches
 
  * **shrinkers**
-   
- 
-   
+
+## 18.6 Page Reclaim
+
+ * **swap policy**
+   * どのページを swapped out するべき?
+ * **page reclaim**
+   * free した page をすぐに利用
+  
