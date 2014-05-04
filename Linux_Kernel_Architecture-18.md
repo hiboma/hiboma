@@ -155,3 +155,4 @@ struct pagevec {
 ## The LRU Cache
 
  * LRUリストのキャッシュ
+ * page vectors を使って まとめて active/inactive に配置?
