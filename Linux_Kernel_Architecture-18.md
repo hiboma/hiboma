@@ -142,8 +142,16 @@ struct pagevec {
 
  * hot pages
  * cold pages
+ * pagevec_add
  * pagevec_release
-   * 参照カウントをデクリメント
+   * pages の 参照カウントをデクリメント
    * 0 になったら buddy system に返される
    * LRU にのってる場合は、カウントの数に関わらずリストから外される
  * pagevec_free
+   * pages を buddy system に返す
+   * 呼び出し側が参照カウントが 0 であることを保証しないといけない
+   * LRU に乗っているのは含まれない
+
+## The LRU Cache
+
+ * LRUリストのキャッシュ
