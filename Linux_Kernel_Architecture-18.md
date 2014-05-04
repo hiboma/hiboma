@@ -128,6 +128,10 @@ swapout する際にメモリ使用量を診る
  
 ## 18.6.2 Data Structures
 
+**batch mode**
+
+page をまとめて扱うための仕組み?
+
 ```c
 struct pagevec {
        unsigned nr;
@@ -135,3 +139,11 @@ struct pagevec {
        struct page *pages[PAGEVEC_SIZE];
 };
 ```
+
+ * hot pages
+ * cold pages
+ * pagevec_release
+   * 参照カウントをデクリメント
+   * 0 になったら buddy system に返される
+   * LRU にのってる場合は、カウントの数に関わらずリストから外される
+ * pagevec_free
