@@ -126,4 +126,12 @@ swapout する際にメモリ使用量を診る
  * NUMA では kswapd は 各 node にいて zone の面倒を見てる
 
  
-  
+## 18.6.2 Data Structures
+
+```c
+struct pagevec {
+       unsigned nr;
+       int cold;
+       struct page *pages[PAGEVEC_SIZE];
+};
+```
