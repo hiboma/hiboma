@@ -316,7 +316,8 @@ const struct inet_connection_sock_af_ops ipv4_specific = {
 };
 ```
 
- * struct net_protoco の .handler
+struct net_protoco の .handler
+
  * tcp_v4_rcv
  * tcp_v4_do_rcv
    * sk->sk_state によってディスパッチ
