@@ -318,6 +318,17 @@ const struct inet_connection_sock_af_ops ipv4_specific = {
 
 割り込みからどのようにプロトコルスタックを上っていくかをつらつらを書きだす
 
+
+struct virtio_driver virtio_net_driver の .probe 登録
+
+ * virtnet_probe(struct virtio_device *vdev)
+ * netif_napi_add(dev, &vi->napi, virtnet_poll, napi_weight);
+ * NAPI に virtnet_poll の登録
+
+ * virtnet_poll(struct napi_struct *napi, int budget)
+ * receive_buf(struct net_device *dev, void *buf, unsigned int len)
+ * netif_receive_skb へ続く
+
 a. device driver が netif_receive_skb 呼び出し
 
  * netif_receive_skb(struct sk_buff *skb)
@@ -330,7 +341,8 @@ b. device driver が netif_rx 呼び出し
  * enqueue_to_backlog(struct sk_buff *skb, int cpu, unsigned int *qtail)
    * CPU ごとのバックログに sk_buff を突っ込む?
      `queue->input_pkt_queue.qlen <= netdev_max_backlog` でドロップするか否かを見る
-   * netdev_max_backlog
+   * **netdev_max_backlog**
+     * プロトコルに関係ないレイヤでの backlog
  * ____napi_schedule
  * __raise_softirq_irqoff(NET_RX_SOFTIRQ)
 
@@ -365,7 +377,7 @@ struct net_protocol *ipprot の .handler 呼び出し
 struct inet_connection_sock_af_ops の .conn_request で
 
  * tcp_v4_conn_request
-   * sk_acceptq_is_full(sk) で sk_max_ack_backlog と比較
+   * sk_acceptq_is_full(sk) で **sk_max_ack_backlog** と比較
 
 ## process_backlog
 
