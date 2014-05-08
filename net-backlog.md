@@ -224,7 +224,7 @@ int reqsk_queue_alloc(struct request_sock_queue *queue,
 
 ## sk_max_ack_backlog でドロップされる箇所
 
- * sk_acceptq_is_full の場合パケットが drop? される
+sk_acceptq_is_full の場合パケットが drop? される
 
 ```c
 int tcp_v4_conn_request(struct sock *sk, struct sk_buff *skb)
