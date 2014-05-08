@@ -147,7 +147,9 @@ EXPORT_SYMBOL_GPL(inet_csk_listen_start);
 
 nr_table_entries
 
- * sysctl_max_syn_backlog 
+ * backlog(= nr_table_entries) と sysctl_max_syn_backlog の min
+ * backlog(= nr_table_entries) と 8 の max
+   * つまり `8 <= nr_table_entries <= sysctl_max_syn_backlog` に設定される
 
 ```c
 /*
