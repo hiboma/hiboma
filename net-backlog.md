@@ -234,7 +234,6 @@ struct listen_sock {
 	u32			nr_table_entries;         // backlog
 	struct request_sock	*syn_table[0];
 };
-
 ```
 
 ## backlog でドロップされる箇所
@@ -246,6 +245,19 @@ int tcp_v4_conn_request(struct sock *sk, struct sk_buff *skb)
 	struct request_sock *req;
 
 // ...
+
+	/* TW buckets are converted to open requests without
+	 * limitations, they conserve resources and peer is
+	 * evidently real one.
+	 */
+	if (inet_csk_reqsk_queue_is_full(sk) && !isn) {
+#ifdef CONFIG_SYN_COOKIES
+		if (sysctl_tcp_syncookies) {
+			want_cookie = 1;
+		} else
+#endif
+		goto drop;
+	}
 
 	/* Accept backlog is full. If we have already queued enough
 	 * of warm entries in syn queue, drop request. It is better than
