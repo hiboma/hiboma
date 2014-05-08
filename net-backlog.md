@@ -236,6 +236,30 @@ struct listen_sock {
 };
 
 ```
+
+## backlog でドロップされる箇所
+
+```c
+int tcp_v4_conn_request(struct sock *sk, struct sk_buff *skb)
+{
+
+	struct request_sock *req;
+
+// ...
+
+	/* Accept backlog is full. If we have already queued enough
+	 * of warm entries in syn queue, drop request. It is better than
+	 * clogging syn queue with openreqs with exponentially increasing
+	 * timeout.
+	 */
+	if (sk_acceptq_is_full(sk) && inet_csk_reqsk_queue_young(sk) > 1)
+		goto drop;
+
+	req = inet_reqsk_alloc(&tcp_request_sock_ops);
+	if (!req)
+		goto drop;
+```
+
 ## process_backlog
 
  * softirq
