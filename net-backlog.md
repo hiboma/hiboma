@@ -326,7 +326,7 @@ struct softnet_data *queue の .backlog.poll 呼び出し
  * __netif_receive_skb
  * deliver_skb
 
-struct packet_type pt->prev->func
+struct packet_type pt->prev->func で .func 呼び出し
 
  * ip_rcv
  * ip_rcv_finish
@@ -334,7 +334,7 @@ struct packet_type pt->prev->func
  * ip_local_deliver
  * ip_local_deliver_finish
 
-struct net_protoco の .handler
+struct net_protocol *ipprot の .handler 呼び出し
 
  * tcp_v4_rcv
  * tcp_v4_do_rcv
