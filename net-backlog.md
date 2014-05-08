@@ -260,7 +260,7 @@ int tcp_v4_conn_request(struct sock *sk, struct sk_buff *skb)
 		goto drop;
 ```
 
-sk_acceptq_is_full の中身は下記の通り
+sk_acceptq_is_full の中身は下記の通り。ここで backlog の数値が意味を茄子
 
 ```c
 static inline int sk_acceptq_is_full(struct sock *sk)
