@@ -316,6 +316,12 @@ const struct inet_connection_sock_af_ops ipv4_specific = {
 };
 ```
 
+open_softirq(NET_RX_SOFTIRQ, net_rx_action);
+
+ * net_rx_action
+
+struct softnet_data *queue の .backlog.poll  process_backlog 呼び出し?
+
 struct net_protoco の .handler
 
  * tcp_v4_rcv
