@@ -331,6 +331,8 @@ struct packet_type pt->prev->func
  * ip_rcv
  * ip_rcv_finish
  * dst_input
+ * ip_local_deliver
+ * ip_local_deliver_finish
 
 struct net_protoco の .handler
 
