@@ -324,6 +324,13 @@ struct softnet_data *queue の .backlog.poll 呼び出し
 
  * process_backlog
  * __netif_receive_skb
+ * deliver_skb
+
+struct packet_type pt->prev->func
+
+ * ip_rcv
+ * ip_rcv_finish
+ * dst_input
 
 struct net_protoco の .handler
 
