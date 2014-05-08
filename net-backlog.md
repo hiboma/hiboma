@@ -316,6 +316,20 @@ const struct inet_connection_sock_af_ops ipv4_specific = {
 };
 ```
 
+a. device driver が netif_receive_skb 呼び出し
+
+ * netif_receive_skb(struct sk_buff *skb)
+ * __netif_receive_skb
+   * ... deliver_skb に続く
+
+b. device driver が netif_rx 呼び出し
+
+ * netif_rx(struct sk_buff *skb)
+ * enqueue_to_backlog(struct sk_buff *skb, int cpu, unsigned int *qtail)
+   * input_pkt_queue, CPU ごとのバックログ netdev_max_backlog
+ * ____napi_schedule
+ * __raise_softirq_irqoff(NET_RX_SOFTIRQ)
+
 open_softirq(NET_RX_SOFTIRQ, net_rx_action);
 
  * net_rx_action
