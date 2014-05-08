@@ -3,7 +3,7 @@
 
 ## net.core.somaxconn
 
-カーネル では core.sysctl_somaxconn
+カーネル では core.sysctl_somaxconn で定義されている
 
 ```c
 /* init_net はデフォルトの netns */
@@ -20,7 +20,7 @@ static struct ctl_table netns_core_table[] = {
 };
 ```
 
-SOMAXCONN は 128 がデフォルト値
+SOMAXCONN は 128 がデフォルト値である。
 
 ```c
 /* Maximum queue length specifiable by listen.  */
@@ -65,10 +65,11 @@ SYSCALL_DEFINE2(listen, int, fd, int, backlog)
 }
 ```
 
-sock->ops->listen は IPv4 + AF_INET + SOCKS_TREAM なら inet_listen 呼び出しになる
+backlog がどのように扱われるかは プロトコルファミリと通信方式に依る
 
- * backlog は `sk->sk_max_ack_backlog` としてセットされる
- * ACK を受け取れるキューのサイズ?
+ * IPv4 + AF_INET + SOCK_STREAM なら sock->ops->listen は は inet_listen 呼び出しになる
+   * backlog が `sk->sk_max_ack_backlog` としてセットされる
+   * ACK を受け取れるキューのサイズ?
 
 ```
 /*
@@ -148,14 +149,14 @@ int inet_csk_listen_start(struct sock *sk, const int nr_table_entries)
 EXPORT_SYMBOL_GPL(inet_csk_listen_start);
 ```
 
-nr_table_entries
+reqsk_queue_alloc で nr_table_entries は下記の様に扱われている
 
- * backlog(= nr_table_entries) と sysctl_max_syn_backlog の min
- * backlog(= nr_table_entries) と 8 の max
- * roundup_pow_of_two で 2の倍数に切り詰められる
+ * nr_table_entries (= backlog) と sysctl_max_syn_backlog の min()
+ * nr_table_entries (= backlog) と 8 の max()
+ * roundup_pow_of_two で 2の倍数に切り詰められる?
    * つまり `8 <= nr_table_entries <= sysctl_max_syn_backlog` に設定される
  * backlog 分の resquet_sock を vmalloc/kzalloc で割り当てる
-   = request_sock が backlog の正体?
+   * = request_sock がメモリ上のデータとしての backlog の正体?
 
 ```
 
@@ -221,25 +222,9 @@ int reqsk_queue_alloc(struct request_sock_queue *queue,
 }
 ```
 
+## sk_max_ack_backlog でドロップされる箇所
 
-```c
-/** struct listen_sock - listen state
- *
- * @max_qlen_log - log_2 of maximal queued SYNs/REQUESTs
- */
-struct listen_sock {
-	u8			max_qlen_log;
-	/* 3 bytes hole, try to use */
-	int			qlen;
-	int			qlen_young;
-	int			clock_hand;
-	u32			hash_rnd;
-	u32			nr_table_entries;         // backlog
-	struct request_sock	*syn_table[0];
-};
-```
-
-## backlog でドロップされる箇所
+ * sk_acceptq_is_full の場合パケットが drop? される
 
 ```c
 int tcp_v4_conn_request(struct sock *sk, struct sk_buff *skb)
@@ -273,6 +258,15 @@ int tcp_v4_conn_request(struct sock *sk, struct sk_buff *skb)
 	req = inet_reqsk_alloc(&tcp_request_sock_ops);
 	if (!req)
 		goto drop;
+```
+
+sk_acceptq_is_full の中身は下記の通り
+
+```c
+static inline int sk_acceptq_is_full(struct sock *sk)
+{
+	return sk->sk_ack_backlog > sk->sk_max_ack_backlog;
+}
 ```
 
 ## process_backlog
