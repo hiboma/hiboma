@@ -1,3 +1,6 @@
+
+ * ACK の backlog
+
 ## net.core.somaxconn
 
 カーネル では core.sysctl_somaxconn
