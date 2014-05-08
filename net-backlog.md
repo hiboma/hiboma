@@ -64,6 +64,47 @@ SYSCALL_DEFINE2(listen, int, fd, int, backlog)
 
 sock->ops->listen は IPv4 + AF_INET + SOCKS_TREAM なら inet_listen 呼び出しになる
 
+ * backlog は `sk->sk_max_ack_backlog` としてセットされる
+ * ACK を受け取れるキューのサイズ?
+
+```
+/*
+ *	Move a socket into listening state.
+ */
+int inet_listen(struct socket *sock, int backlog)
+{
+	struct sock *sk = sock->sk;
+	unsigned char old_state;
+	int err;
+
+	lock_sock(sk);
+
+	err = -EINVAL;
+	if (sock->state != SS_UNCONNECTED || sock->type != SOCK_STREAM)
+		goto out;
+
+	old_state = sk->sk_state;
+	if (!((1 << old_state) & (TCPF_CLOSE | TCPF_LISTEN)))
+		goto out;
+
+	/* Really, if the socket is already in listen state
+	 * we can only allow the backlog to be adjusted.
+	 */
+	if (old_state != TCP_LISTEN) {
+		err = inet_csk_listen_start(sk, backlog);
+		if (err)
+			goto out;
+	}
+	sk->sk_max_ack_backlog = backlog;
+	err = 0;
+
+out:
+	release_sock(sk);
+	return err;
+}
+EXPORT_SYMBOL(inet_listen);
+```
+
 ## process_backlog
 
  * softirq
