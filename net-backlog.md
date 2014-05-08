@@ -1,5 +1,17 @@
 
- * ACK の backlog
+# backlog あれこれ
+
+下記の設定がどんなレイヤで作用するのかを追っている
+
+ * net.core.somaxconn
+ * net.core.netdev_max_backlog
+ * net.ipv4.tcp_max_syn_backlog
+
+## メモ書き 
+ 
+ * net.core.*
+   * プロトコルに依存しない設定
+ * net.ipv4.*
 
 ## net.core.somaxconn
 
@@ -158,18 +170,17 @@ reqsk_queue_alloc で nr_table_entries は下記の様に扱われている
  * backlog 分の resquet_sock を vmalloc/kzalloc で割り当てる
    * = request_sock がメモリ上のデータとしての backlog の正体?
 
-```
-
-                    |-- nr_table_entries = backlog --|
-                    |                                |
-                    |                                |
-[listen_sock][request_sock][request_sock] ... [request_sock]
-   \
-    \
- LISTEN の socket?
-```
-
 ```c
+
+//                     |-- nr_table_entries = backlog --|
+//                     |                                |
+//                     |                                |
+// [listen_sock][request_sock][request_sock] ... [request_sock]
+//    \
+//     \
+//  LISTEN の socket?
+//
+
 /*
  * Maximum number of SYN_RECV sockets in queue per LISTEN socket.
  * One SYN_RECV socket costs about 80bytes on a 32bit machine.
@@ -222,7 +233,7 @@ int reqsk_queue_alloc(struct request_sock_queue *queue,
 }
 ```
 
-## sk_max_ack_backlog でドロップされる箇所
+## sk_max_ack_backlog と比較してドロップされる箇所はどこ?
 
 sk_acceptq_is_full の場合パケットが drop? される
 
@@ -316,8 +327,7 @@ const struct inet_connection_sock_af_ops ipv4_specific = {
 };
 ```
 
-割り込みからどのようにプロトコルスタックを上っていくかをつらつらを書きだす
-
+## 割り込みからどのようにプロトコルスタックを上っていくかをつらつらを書きだす
 
 struct virtio_driver virtio_net_driver の .probe 登録
 
@@ -342,7 +352,7 @@ b. device driver が netif_rx 呼び出し
    * CPU ごとのバックログに sk_buff を突っ込む?
      `queue->input_pkt_queue.qlen <= netdev_max_backlog` でドロップするか否かを見る
    * **netdev_max_backlog**
-     * プロトコルに関係ないレイヤでの backlog
+     * プロトコルに関係ないレイヤ( net.core ) での backlog
  * ____napi_schedule
  * __raise_softirq_irqoff(NET_RX_SOFTIRQ)
 
@@ -423,19 +433,13 @@ static int process_backlog(struct napi_struct *napi, int quota)
 }
 ```
 
-——
+----
 
+ * net.ipv4.tcp_syncookies 
+ * http://d.hatena.ne.jp/nyant/20111216/1324043063
+ * TCP_DEFER_ACCEPT
 
-
-
-net.core.netdev_max_backlog
-net.ipv4.tcp_max_syn_backlog
-net.ipv4.tcp_syncookies 
-
-http://d.hatena.ne.jp/nyant/20111216/1324043063
-
-TCP_DEFER_ACCEPT
-
+```
 server/listen.c
 
 #ifdef APR_TCP_DEFER_ACCEPT
@@ -466,3 +470,4 @@ srclib/apr/network_io/unix/sockopt.c
 strut net
 
 net->core.sysctl_somaxconn
+```
