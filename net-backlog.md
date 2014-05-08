@@ -160,6 +160,9 @@ nr_table_entries
                     |                                |
                     |                                |
 [listen_sock][request_sock][request_sock] ... [request_sock]
+ \
+  \
+  LISTEN の socket?
 ```
 
 ```c
