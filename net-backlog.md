@@ -7,6 +7,8 @@
  * net.core.netdev_max_backlog
  * net.ipv4.tcp_max_syn_backlog
 
+http://d.hatena.ne.jp/nyant/20111216/1324043063 も詳しい
+
 ## メモ書き 
  
  * net.core.*
