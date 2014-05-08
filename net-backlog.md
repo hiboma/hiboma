@@ -150,6 +150,15 @@ nr_table_entries
  * backlog(= nr_table_entries) と sysctl_max_syn_backlog の min
  * backlog(= nr_table_entries) と 8 の max
    * つまり `8 <= nr_table_entries <= sysctl_max_syn_backlog` に設定される
+ * backlog 分の resquet_sock を vmalloc で割り当てる
+   = request_sock が backlog の正体
+
+```
+                    |-- nr_table_entries = backlog --|
+                    |                                |
+                    |                                |
+[listen_sock][request_sock][request_sock] ... [request_sock]
+```
 
 ```c
 /*
