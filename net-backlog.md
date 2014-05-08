@@ -149,9 +149,10 @@ nr_table_entries
 
  * backlog(= nr_table_entries) と sysctl_max_syn_backlog の min
  * backlog(= nr_table_entries) と 8 の max
+ * roundup_pow_of_two で 2の倍数に切り詰められる
    * つまり `8 <= nr_table_entries <= sysctl_max_syn_backlog` に設定される
  * backlog 分の resquet_sock を vmalloc/kzalloc で割り当てる
-   = request_sock が backlog の正体
+   = request_sock が backlog の正体?
 
 ```
 
