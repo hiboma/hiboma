@@ -320,7 +320,10 @@ open_softirq(NET_RX_SOFTIRQ, net_rx_action);
 
  * net_rx_action
 
-struct softnet_data *queue の .backlog.poll  process_backlog 呼び出し?
+struct softnet_data *queue の .backlog.poll 呼び出し
+
+ * process_backlog
+ * __netif_receive_skb
 
 struct net_protoco の .handler
 
