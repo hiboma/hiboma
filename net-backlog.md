@@ -269,6 +269,30 @@ static inline int sk_acceptq_is_full(struct sock *sk)
 }
 ```
 
+tcp_v4_syn_recv_sock でも sk_acceptq_is_full する
+
+```c
+/*
+ * The three way handshake has completed - we got a valid synack -
+ * now create the new socket.
+ */
+struct sock *tcp_v4_syn_recv_sock(struct sock *sk, struct sk_buff *skb,
+				  struct request_sock *req,
+				  struct dst_entry *dst)
+{
+	struct inet_request_sock *ireq;
+	struct inet_sock *newinet;
+	struct tcp_sock *newtp;
+	struct sock *newsk;
+#ifdef CONFIG_TCP_MD5SIG
+	struct tcp_md5sig_key *key;
+#endif
+	struct ip_options *inet_opt;
+
+	if (sk_acceptq_is_full(sk))
+		goto exit_overflow;
+```
+
 ## process_backlog
 
  * softirq
