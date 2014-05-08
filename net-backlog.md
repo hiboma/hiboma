@@ -150,10 +150,11 @@ nr_table_entries
  * backlog(= nr_table_entries) と sysctl_max_syn_backlog の min
  * backlog(= nr_table_entries) と 8 の max
    * つまり `8 <= nr_table_entries <= sysctl_max_syn_backlog` に設定される
- * backlog 分の resquet_sock を vmalloc で割り当てる
+ * backlog 分の resquet_sock を vmalloc/kzalloc で割り当てる
    = request_sock が backlog の正体
 
 ```
+
                     |-- nr_table_entries = backlog --|
                     |                                |
                     |                                |
@@ -213,6 +214,24 @@ int reqsk_queue_alloc(struct request_sock_queue *queue,
 }
 ```
 
+
+```c
+/** struct listen_sock - listen state
+ *
+ * @max_qlen_log - log_2 of maximal queued SYNs/REQUESTs
+ */
+struct listen_sock {
+	u8			max_qlen_log;
+	/* 3 bytes hole, try to use */
+	int			qlen;
+	int			qlen_young;
+	int			clock_hand;
+	u32			hash_rnd;
+	u32			nr_table_entries;         // backlog
+	struct request_sock	*syn_table[0];
+};
+
+```
 ## process_backlog
 
  * softirq
