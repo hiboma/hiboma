@@ -316,6 +316,11 @@ const struct inet_connection_sock_af_ops ipv4_specific = {
 };
 ```
 
+tcp_v4_do_rcv
+ * sk->sk_state によってディスパッチ
+tcp_rcv_state_process
+icsk->icsk_af_ops->conn_request
+
 ## process_backlog
 
  * softirq
