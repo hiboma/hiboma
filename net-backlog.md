@@ -352,9 +352,10 @@ b. device driver が netif_rx 呼び出し
  * netif_rx(struct sk_buff *skb)
  * enqueue_to_backlog(struct sk_buff *skb, int cpu, unsigned int *qtail)
    * CPU ごとのバックログに sk_buff を突っ込む?
-     `queue->input_pkt_queue.qlen <= netdev_max_backlog` でドロップするか否かを見る
+     * `queue->input_pkt_queue.qlen <= netdev_max_backlog` でドロップするか否かを見る
    * **netdev_max_backlog**
      * プロトコルに関係ないレイヤ( net.core ) での backlog
+     * ここでしか参照されてない
  * ____napi_schedule
  * __raise_softirq_irqoff(NET_RX_SOFTIRQ)
 
