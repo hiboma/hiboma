@@ -9,9 +9,12 @@
 
 http://d.hatena.ne.jp/nyant/20111216/1324043063 も詳しい
 
-## メモ
+## miscメモ
 
  * AF_INET/TCP の実装は net/ipv4/inet_connection_sock.c らへん
+   * listen(2) inet_csk_listen_start
+   * accpet(2) inet_csk_accept
+   * struct proto tcp_prot 読んだら対応分かる
  * icksk_accept_queue
  * request_sock_queue
  * SYN_RECV ソケットは 32bit で 80バイト
