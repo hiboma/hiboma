@@ -13,6 +13,7 @@ http://d.hatena.ne.jp/nyant/20111216/1324043063 も詳しい
 
  * icksk_accept_queue
    * accept(2) の queue?
+ * SYN_RECV ソケットは 32bit で 80バイト
 
 ## まとめ
  
@@ -21,6 +22,7 @@ http://d.hatena.ne.jp/nyant/20111216/1324043063 も詳しい
    * プロトコルに依存しない
  * net.ipv4.tcp_max_syn_backlog
    * LISTENソケットの SYN_RECV キューの最大長
+   * TCP だよね
 
 ## TODO
 
