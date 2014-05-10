@@ -9,14 +9,18 @@
 
 http://d.hatena.ne.jp/nyant/20111216/1324043063 も詳しい
 
+## メモ
+
+ * icksk_accept_queue
+   * accept(2) の queue?
+
 ## まとめ
  
  * net.core.somaxconn
    * per_cpu の softnet_data .input_pkt_queue のキュー長と比較
    * プロトコルに依存しない
  * net.ipv4.tcp_max_syn_backlog
-   * 
-   * TCP
+   * LISTENソケットの SYN_RECV キューの最大長
 
 ## TODO
 
