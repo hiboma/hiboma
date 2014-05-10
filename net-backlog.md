@@ -15,7 +15,26 @@ http://d.hatena.ne.jp/nyant/20111216/1324043063 も詳しい
    * per_cpu の softnet_data .input_pkt_queue のキュー長と比較
    * プロトコルに依存しない
  * net.ipv4.tcp_max_syn_backlog
+   * 
    * TCP
+
+## TODO
+
+ * TCP で sk_ack_backlog の数を扱っているコードはどれ?
+ * sk_acceptq_removed は inet_connection_sock.c で使われている
+ * 対応する sk_acceptq_added が見つからん
+
+```c
+static inline void sk_acceptq_removed(struct sock *sk)
+{
+	sk->sk_ack_backlog--;
+}
+
+static inline void sk_acceptq_added(struct sock *sk)
+{
+	sk->sk_ack_backlog++;
+}
+```
 
 ## net.core.somaxconn
 
