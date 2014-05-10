@@ -12,7 +12,7 @@ http://d.hatena.ne.jp/nyant/20111216/1324043063 も詳しい
 ## メモ
 
  * icksk_accept_queue
-   * accept(2) の queue?
+ * request_sock_queue
  * SYN_RECV ソケットは 32bit で 80バイト
 
 ## まとめ
