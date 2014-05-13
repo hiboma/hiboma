@@ -6,7 +6,7 @@
  * net.core.somaxconn
  * net.core.netdev_max_backlog
  * net.ipv4.tcp_max_syn_backlog
- * /proc/sys/net/unix/max_dgram_qlen
+ * net.unix.max_dgram_qlen
 
 http://d.hatena.ne.jp/nyant/20111216/1324043063 も詳しい
 
@@ -26,6 +26,8 @@ http://d.hatena.ne.jp/nyant/20111216/1324043063 も詳しい
    * IPv4 + TCP の LISTEN ソケットの SYN_RECV キューの最大長
    * reqsk_queue_alloc で somaxconn の値以下にセットされる
    * TCP だよね
+ * net.unix.max_dgram_qlen
+   * unix_create1
 
 listen(2) する際に backlog の値が net.core.somaxconn と net.ipv4.tcp_max_syn_backlog とで切り詰められるので 両者の値を一緒に上げておかないと意味がない
 
@@ -128,6 +130,7 @@ SYSCALL_DEFINE2(listen, int, fd, int, backlog)
 backlog がどのように扱われるかは プロトコルファミリと通信方式に依る
 
  * IPv4 + AF_INET + SOCK_STREAM なら sock->ops->listen は は inet_listen 呼び出しになる
+ * AF_UNIX + SOCK_STREAM なら sock->ops->listen は unix_listen 呼び出しになる
    * backlog が `sk->sk_max_ack_backlog` としてセットされる
    * ACK を受け取れるキューのサイズ?
 
