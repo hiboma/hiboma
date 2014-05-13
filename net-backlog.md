@@ -485,6 +485,8 @@ EXPORT_SYMBOL(netif_rx);
 
 ## 割り込みからどのようにプロトコルスタックを上っていくかをつらつらを書きだす
 
+### ドライバの準備
+
 struct virtio_driver virtio_net_driver の .probe 登録
 
  * virtnet_probe(struct virtio_device *vdev)
@@ -498,13 +500,13 @@ struct virtio_driver virtio_net_driver の .probe 登録
 
 ### ドライバ層
 
-a. device driver が netif_receive_skb 呼び出し
+#### device driver が netif_receive_skb 呼び出しするパス
 
  * netif_receive_skb(struct sk_buff *skb)
  * __netif_receive_skb
    * ... deliver_skb に続く
 
-b. device driver が netif_rx 呼び出し
+#### device driver が netif_rx 呼び出しするパス
 
  * netif_rx(struct sk_buff *skb)
  * enqueue_to_backlog(struct sk_buff *skb, int cpu, unsigned int *qtail)
@@ -520,7 +522,7 @@ b. device driver が netif_rx 呼び出し
 
 ### SoftIRQ 層
 
-open_softirq(NET_RX_SOFTIRQ, net_rx_action);
+open_softirq(NET_RX_SOFTIRQ, net_rx_action) で登録していたソフト割り込みハンドラを実行
 
  * net_rx_action
  * ???
