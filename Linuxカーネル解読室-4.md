@@ -1,10 +1,23 @@
 # 4 時計
 
- * smp_local_timer_interrupt
+## 4.1
+
+ * 時刻
+   * 1970月1月1日0時〜
+ * 時限処理
+   * あとでやる
+   * デバイスポーリング
+   * SIGALRM
+ * グローバルタイマ
+   * do_timer
+ * CPUローカルタイマ
+   * smp_local_timer_interrupt
 
 ## グローバルタイマー割り込みハンドラ
 
- * TODO x86 の割り込みからのエントリポイントは?
+### do_timer ロードアベレージの計算
+
+CentOS6.5 だと書籍とだいぶ違う。 **TODO** x86 の割り込みからのエントリポイントは?
 
 ```c
 /*
@@ -20,7 +33,7 @@ void do_timer(unsigned long ticks)
 }
 ```
 
-### do_timer ロードアベレージの計算
+calc_global_load でロードアベレージの計算をする
 
 ```c
 /*
@@ -46,6 +59,8 @@ void calc_global_load(void)
 }
 ```
 
+移動平均?
+
 ```c
 static unsigned long
 calc_load(unsigned long load, unsigned long exp, unsigned long active)
@@ -53,5 +68,184 @@ calc_load(unsigned long load, unsigned long exp, unsigned long active)
 	load *= exp;
 	load += active * (FIXED_1 - exp);
 	return load >> FSHIFT;
+}
+```
+
+## smp_local_timer_interrupt (2.6.15)
+
+CONFIG_SMP で update_process_times を呼び出すか否かが変わる
+
+ * update_process_times
+   * account_user_time
+   * account_system_time
+     * acct_update_integrals
+
+```c
+/*
+ * Local timer interrupt handler. It does both profiling and
+ * process statistics/rescheduling.
+ *
+ * We do profiling in every local tick, statistics/rescheduling
+ * happen only every 'profiling multiplier' ticks. The default
+ * multiplier is 1 and it can be changed by writing the new multiplier
+ * value into /proc/profile.
+ */
+
+inline void smp_local_timer_interrupt(struct pt_regs * regs)
+{
+	int cpu = smp_processor_id();
+
+	profile_tick(CPU_PROFILING, regs);
+
+    // プロファイラを起動???
+	if (--per_cpu(prof_counter, cpu) <= 0) {
+		/*
+		 * The multiplier may have changed since the last time we got
+		 * to this point as a result of the user writing to
+		 * /proc/profile. In this case we need to adjust the APIC
+		 * timer accordingly.
+		 *
+		 * Interrupts are already masked off at this point.
+		 */
+		per_cpu(prof_counter, cpu) = per_cpu(prof_multiplier, cpu);
+		if (per_cpu(prof_counter, cpu) !=
+					per_cpu(prof_old_multiplier, cpu)) {
+			__setup_APIC_LVTT(
+					calibration_result/
+					per_cpu(prof_counter, cpu));
+			per_cpu(prof_old_multiplier, cpu) =
+						per_cpu(prof_counter, cpu);
+		}
+
+#ifdef CONFIG_SMP
+        // ((regs->xcs & 3) | (regs->eflags & VM_MASK)) != 0;
+        // CSレジスタ ... ???
+        // EFLAFGS    ... VM_MASK 仮想X86モード?
+		update_process_times(user_mode_vm(regs));
+#endif
+	}
+
+	/*
+	 * We take the 'long' return path, and there every subsystem
+	 * grabs the apropriate locks (kernel lock/ irq lock).
+	 *
+	 * we might want to decouple profiling from the 'long path',
+	 * and do the profiling totally in assembly.
+	 *
+	 * Currently this isn't too much of an issue (performance wise),
+	 * we can take more than 100K local irqs per second on a 100 MHz P5.
+	 */
+}
+```
+
+update_process_times でローカルタイマ割り込みを受けた際の task_struct の時間の統計を出す
+
+```c
+/*
+ * Called from the timer interrupt handler to charge one tick to the current 
+ * process.  user_tick is 1 if the tick is user time, 0 for system.
+ */
+void update_process_times(int user_tick)
+{
+	struct task_struct *p = current;
+	int cpu = smp_processor_id();
+
+	/* Note: this timer irq context must be accounted for as well. */
+	if (user_tick)
+		account_user_time(p, jiffies_to_cputime(1));
+	else
+		account_system_time(p, HARDIRQ_OFFSET, jiffies_to_cputime(1));
+	run_local_timers();
+	if (rcu_pending(cpu))
+		rcu_check_callbacks(cpu, user_tick);
+	scheduler_tick();
+ 	run_posix_cpu_timers(p);
+}
+```
+
+account_user_time, account_system_time でタスクのCPU統計と、CPUの統計を出す
+
+ * account_system_time が IRQ, SOFTIRQ, system時間, ... と分類されていておもしろい
+   * munin のグラフで見るのもこれ
+ * account_user_time は nice 時間が特殊かな?
+
+```c
+/*
+ * Account user cpu time to a process.
+ * @p: the process that the cpu time gets accounted to
+ * @hardirq_offset: the offset to subtract from hardirq_count()
+ * @cputime: the cpu time spent in user space since the last update
+ */
+void account_user_time(struct task_struct *p, cputime_t cputime)
+{
+	struct cpu_usage_stat *cpustat = &kstat_this_cpu.cpustat;
+	cputime64_t tmp;
+
+    // プロセスの user 時間に加算
+	p->utime = cputime_add(p->utime, cputime);
+
+	/* Add user time to cpustat. */
+	tmp = cputime_to_cputime64(cputime);
+
+    // CPU自体がどう使われたのかの統計?
+    // NICE 値が 0 以上なら nice 時間として加算
+	if (TASK_NICE(p) > 0)
+		cpustat->nice = cputime64_add(cpustat->nice, tmp);
+	else
+		cpustat->user = cputime64_add(cpustat->user, tmp);
+}
+
+/*
+ * Account system cpu time to a process.
+ * @p: the process that the cpu time gets accounted to
+ * @hardirq_offset: the offset to subtract from hardirq_count()
+ * @cputime: the cpu time spent in kernel space since the last update
+ */
+void account_system_time(struct task_struct *p, int hardirq_offset,
+			 cputime_t cputime)
+{
+	struct cpu_usage_stat *cpustat = &kstat_this_cpu.cpustat;
+	runqueue_t *rq = this_rq();
+	cputime64_t tmp;
+
+	p->stime = cputime_add(p->stime, cputime);
+
+	/* Add system time to cpustat. */
+	tmp = cputime_to_cputime64(cputime);
+
+    // IRQ, SOFTIRQ, system時間, I/O wait、idle で分類している
+	if (hardirq_count() - hardirq_offset)
+		cpustat->irq = cputime64_add(cpustat->irq, tmp);
+	else if (softirq_count())
+		cpustat->softirq = cputime64_add(cpustat->softirq, tmp);
+	else if (p != rq->idle)
+		cpustat->system = cputime64_add(cpustat->system, tmp);
+	else if (atomic_read(&rq->nr_iowait) > 0)
+		cpustat->iowait = cputime64_add(cpustat->iowait, tmp);
+	else
+		cpustat->idle = cputime64_add(cpustat->idle, tmp);
+	/* Account for system time used */
+	acct_update_integrals(p);
+}
+```
+
+acct_update_integrals で acct(2) アカウンティング統計を更新?
+
+```c
+/**
+ * acct_update_integrals - update mm integral fields in task_struct
+ * @tsk: task_struct for accounting
+ */
+void acct_update_integrals(struct task_struct *tsk)
+{
+	if (likely(tsk->mm)) {
+		long delta = tsk->stime - tsk->acct_stimexpd;
+
+		if (delta == 0)
+			return;
+		tsk->acct_stimexpd = tsk->stime;
+		tsk->acct_rss_mem1 += delta * get_mm_rss(tsk->mm);
+		tsk->acct_vm_mem1 += delta * tsk->mm->total_vm;
+	}
 }
 ```
