@@ -524,6 +524,7 @@ struct virtio_driver virtio_net_driver の .probe 登録
 #### device driver が netif_rx 呼び出しするパス
 
  * netif_rx(struct sk_buff *skb)
+   * NAPI 未対応のドライバが呼び出す
  * enqueue_to_backlog(struct sk_buff *skb, int cpu, unsigned int *qtail)
    * CPU ごとのバックログに sk_buff を突っ込む?
      * `queue->input_pkt_queue.qlen <= netdev_max_backlog` でドロップするか否かを見る
@@ -535,7 +536,7 @@ struct virtio_driver virtio_net_driver の .probe 登録
 
 ----
 
-### SoftIRQ 層
+### ネットワーク層 (SoftIRQ)
 
 open_softirq(NET_RX_SOFTIRQ, net_rx_action) で登録していたソフト割り込みハンドラを実行
 
