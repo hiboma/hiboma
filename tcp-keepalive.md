@@ -102,6 +102,8 @@ sudo ifconfig eth1 down
 
 ## kernel
 
+kernel の sk->timer のタイマハンドラ。keepalive の probe パケット送信の際に呼び出される
+
 ```c
 static void tcp_keepalive_timer (unsigned long data)
 {
@@ -158,7 +160,9 @@ static void tcp_keepalive_timer (unsigned long data)
 		    icsk->icsk_probes_out > 0) ||
 		    (icsk_user_timeout == 0 &&
 		    icsk->icsk_probes_out >= keepalive_probes(tp))) {
+			/* RST パケット? */
 			tcp_send_active_reset(sk, GFP_ATOMIC);
+			/* プロセスにエラー返す */
 			tcp_write_err(sk);
 			goto out;
 		}
@@ -180,6 +184,7 @@ static void tcp_keepalive_timer (unsigned long data)
 	sk_mem_reclaim(sk);
 
 resched:
+	/* タイマをリセットして再度発火させる */
 	inet_csk_reset_keepalive_timer (sk, elapsed);
 	goto out;
 
@@ -189,5 +194,28 @@ death:
 out:
 	bh_unlock_sock(sk);
 	sock_put(sk);
+}
+```
+
+カーネルからプロセスへのエラーの通知
+
+```c
+static void tcp_write_err(struct sock *sk)
+{
+	sk->sk_err = sk->sk_err_soft ? : ETIMEDOUT;
+	sk->sk_error_report(sk);
+
+	tcp_done(sk);
+	NET_INC_STATS_BH(sock_net(sk), LINUX_MIB_TCPABORTONTIMEOUT);
+}
+```
+
+タイマのセット
+
+```c
+void tcp_init_xmit_timers(struct sock *sk)
+{
+	inet_csk_init_xmit_timers(sk, &tcp_write_timer, &tcp_delack_timer,
+				  &tcp_keepalive_timer);
 }
 ```
