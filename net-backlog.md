@@ -548,6 +548,7 @@ struct softnet_data *queue の .backlog.poll 呼び出し
 ----
 
  * process_backlog
+   * input_pkt_queue から __skb_dequeue
  * __netif_receive_skb
  * deliver_skb
 
