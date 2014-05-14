@@ -576,8 +576,11 @@ struct net_protocol *ipprot の .handler 呼び出し
  * tcp_rcv_state_process
    * TCP_LISTEN + SYN パケットを送られた場合
  * icsk->icsk_af_ops->conn_request
+   * struct inet_connection_sock_af_ops の .conn_request 呼び出し
+   * IPv4, IPv6 でそれぞれ TCP,DCCP 用の実装がある
+   * ipv4_specific を読んだらよさげ
 
-struct inet_connection_sock_af_ops の .conn_request で
+### TCP + IPv4
 
  * tcp_v4_conn_request
    * sk_acceptq_is_full(sk) で **sk_max_ack_backlog** と比較
