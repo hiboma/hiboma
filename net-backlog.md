@@ -8,7 +8,10 @@
  * net.ipv4.tcp_max_syn_backlog
  * net.unix.max_dgram_qlen
 
-http://d.hatena.ne.jp/nyant/20111216/1324043063 も詳しい
+## 参考
+
+ * http://d.hatena.ne.jp/nyant/20111216/1324043063
+ * http://wiki.bit-hive.com/linuxkernelmemo/pg/%C1%F7%BC%F5%BF%AE
 
 ## まとめ
 
@@ -129,10 +132,13 @@ SYSCALL_DEFINE2(listen, int, fd, int, backlog)
 
 backlog がどのように扱われるかは プロトコルファミリと通信方式に依る
 
- * IPv4 + AF_INET + SOCK_STREAM なら sock->ops->listen は は inet_listen 呼び出しになる
- * AF_UNIX + SOCK_STREAM なら sock->ops->listen は unix_listen 呼び出しになる
-   * backlog が `sk->sk_max_ack_backlog` としてセットされる
-   * ACK を受け取れるキューのサイズ?
+ * IPv4 + AF_INET + SOCK_STREAM
+    * sock->ops->listen は は inet_listen 呼び出しになる
+ * AF_UNIX + SOCK_STREAM なら
+    * sock->ops->listen は unix_listen 呼び出しになる
+ * listen(2) の引き数の backlog が `sk->sk_max_ack_backlog` としてセットされる
+
+inet_listen の実装は下記の通り 
 
 ```
 /*
@@ -162,6 +168,7 @@ int inet_listen(struct socket *sock, int backlog)
 		if (err)
 			goto out;
 	}
+    /* backlog を代入 */
 	sk->sk_max_ack_backlog = backlog;
 	err = 0;
 
