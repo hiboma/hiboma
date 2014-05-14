@@ -179,7 +179,7 @@ out:
 EXPORT_SYMBOL(inet_listen);
 ```
 
-baclkog は nr_table_entries として reqsk_queue_alloc に渡される
+また baclkog は nr_table_entries として reqsk_queue_alloc に渡されて struct request_sock_queue の割り当てに使われる
 
 ```c
 // nr_table_entries = backlog
@@ -292,9 +292,13 @@ int reqsk_queue_alloc(struct request_sock_queue *queue,
 }
 ```
 
-sk_max_ack_backlog と比較してドロップされる箇所はどこ?
+listen(2) の backlog がセットされるパスは上記の通り。この backlog の数値がどのように扱われるかはパケット受信のパスを見る必要がある
 
-sk_acceptq_is_full の場合パケットが drop される
+----
+
+## sk_max_ack_backlog でドロップされる箇所はどこ?
+
+tcp_v4_conn_request で sk_acceptq_is_full の場合パケットが drop される
 
 ```c
 int tcp_v4_conn_request(struct sock *sk, struct sk_buff *skb)
