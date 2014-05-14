@@ -548,11 +548,11 @@ struct softnet_data *queue の .backlog.poll 呼び出し
 ----
 
  * process_backlog
-   * input_pkt_queue から __skb_dequeue
+   * input_pkt_queue から skb を __skb_dequeue
  * __netif_receive_skb
  * deliver_skb
-
-struct packet_type pt->prev->func で .func 呼び出し
+   * struct packet_type pt->prev->func で受信パケットのプロトコルに応じた .func 呼び出し
+   * ip_rcv, arp_rcv, ipv6_rcv などがある
 
 ----
 
@@ -574,7 +574,7 @@ struct net_protocol *ipprot の .handler 呼び出し
  * tcp_v4_do_rcv
    * sk->sk_state によってディスパッチ
  * tcp_rcv_state_process
-   * TCP_LISTEN + SYN パケットを送られた
+   * TCP_LISTEN + SYN パケットを送られた場合
  * icsk->icsk_af_ops->conn_request
 
 struct inet_connection_sock_af_ops の .conn_request で
