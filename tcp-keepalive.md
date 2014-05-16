@@ -210,6 +210,40 @@ static void tcp_write_err(struct sock *sk)
 }
 ```
 
+```c
+void tcp_done(struct sock *sk)
+{
+	if (sk->sk_state == TCP_SYN_SENT || sk->sk_state == TCP_SYN_RECV)
+		TCP_INC_STATS_BH(sock_net(sk), TCP_MIB_ATTEMPTFAILS);
+
+	tcp_set_state(sk, TCP_CLOSE);
+	tcp_clear_xmit_timers(sk);
+
+	sk->sk_shutdown = SHUTDOWN_MASK;
+
+	if (!sock_flag(sk, SOCK_DEAD))
+		sk->sk_state_change(sk);
+	else
+		inet_csk_destroy_sock(sk);
+}
+EXPORT_SYMBOL_GPL(tcp_done);
+```
+
+sock_def_wakeup がデフォルトの sk_state_chnage 実装
+
+ * wake_up_interruptible_all(sk->sk_sleep) でプロセスを起床させる
+ * sk->sk_err を見てシステムコールから返る挙動になりそう
+
+```c
+static void sock_def_wakeup(struct sock *sk)
+{
+	read_lock(&sk->sk_callback_lock);
+	if (sk_has_sleeper(sk))
+		wake_up_interruptible_all(sk->sk_sleep);
+	read_unlock(&sk->sk_callback_lock);
+}
+```
+
 タイマのセット
 
 ```c
