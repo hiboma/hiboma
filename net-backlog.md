@@ -332,6 +332,101 @@ int tcp_v4_conn_request(struct sock *sk, struct sk_buff *skb)
 	req = inet_reqsk_alloc(&tcp_request_sock_ops);
 	if (!req)
 		goto drop;
+#ifdef CONFIG_TCP_MD5SIG
+	tcp_rsk(req)->af_specific = &tcp_request_sock_ipv4_ops;
+#endif
+
+	tcp_clear_options(&tmp_opt);
+	tmp_opt.mss_clamp = 536;
+	tmp_opt.user_mss  = tcp_sk(sk)->rx_opt.user_mss;
+
+	tcp_parse_options(skb, &tmp_opt, 0);
+
+	if (want_cookie && !tmp_opt.saw_tstamp)
+		tcp_clear_options(&tmp_opt);
+
+	tmp_opt.tstamp_ok = tmp_opt.saw_tstamp;
+
+	tcp_openreq_init(req, &tmp_opt, skb);
+
+	ireq = inet_rsk(req);
+	ireq->loc_addr = daddr;
+	ireq->rmt_addr = saddr;
+	ireq->no_srccheck = inet_sk(sk)->transparent;
+	ireq->opt = tcp_v4_save_options(sk, skb);
+
+	if (security_inet_conn_request(sk, skb, req))
+		goto drop_and_free;
+
+	if (!want_cookie)
+		TCP_ECN_create_request(req, tcp_hdr(skb));
+
+	if (want_cookie) {
+#ifdef CONFIG_SYN_COOKIES
+		syn_flood_warning(skb);
+		req->cookie_ts = tmp_opt.tstamp_ok;
+#endif
+		isn = cookie_v4_init_sequence(sk, skb, &req->mss);
+	} else if (!isn) {
+		struct inet_peer *peer = NULL;
+
+		/* VJ's idea. We save last timestamp seen
+		 * from the destination in peer table, when entering
+		 * state TIME-WAIT, and check against it before
+		 * accepting new connection request.
+		 *
+		 * If "isn" is not zero, this request hit alive
+		 * timewait bucket, so that all the necessary checks
+		 * are made in the function processing timewait state.
+		 */
+		if (tmp_opt.saw_tstamp &&
+		    tcp_death_row.sysctl_tw_recycle &&
+		    (dst = inet_csk_route_req(sk, req)) != NULL &&
+		    (peer = rt_get_peer((struct rtable *)dst)) != NULL &&
+		    peer->v4daddr == saddr) {
+			if (get_seconds() < peer->tcp_ts_stamp + TCP_PAWS_MSL &&
+			    (s32)(peer->tcp_ts - req->ts_recent) >
+							TCP_PAWS_WINDOW) {
+				NET_INC_STATS_BH(sock_net(sk), LINUX_MIB_PAWSPASSIVEREJECTED);
+				goto drop_and_release;
+			}
+		}
+		/* Kill the following clause, if you dislike this way. */
+		else if (!sysctl_tcp_syncookies &&
+			 (sysctl_max_syn_backlog - inet_csk_reqsk_queue_len(sk) <
+			  (sysctl_max_syn_backlog >> 2)) &&
+			 (!peer || !peer->tcp_ts_stamp) &&
+			 (!dst || !dst_metric(dst, RTAX_RTT))) {
+			/* Without syncookies last quarter of
+			 * backlog is filled with destinations,
+			 * proven to be alive.
+			 * It means that we continue to communicate
+			 * to destinations, already remembered
+			 * to the moment of synflood.
+			 */
+			LIMIT_NETDEBUG(KERN_DEBUG "TCP: drop open request from %pI4/%u\n",
+				       &saddr, ntohs(tcp_hdr(skb)->source));
+			goto drop_and_release;
+		}
+
+		isn = tcp_v4_init_sequence(skb);
+	}
+	tcp_rsk(req)->snt_isn = isn;
+	tcp_rsk(req)->snt_synack = tcp_time_stamp;
+
+	if (__tcp_v4_send_synack(sk, req, dst) || want_cookie)
+		goto drop_and_free;
+
+	inet_csk_reqsk_queue_hash_add(sk, req, TCP_TIMEOUT_INIT);
+	return 0;
+
+drop_and_release:
+	dst_release(dst);
+drop_and_free:
+	reqsk_free(req);
+drop:
+	return 0;
+}
 ```
 
 sk_acceptq_is_full の中身は下記の通り。ここで backlog の数値が意味を茄子
