@@ -469,6 +469,7 @@ struct sock *tcp_v4_syn_recv_sock(struct sock *sk, struct sk_buff *skb,
 	if (!dst && (dst = inet_csk_route_req(sk, req)) == NULL)
 		goto exit;
 
+    /* ESTABLISED で複製されるソケット? */
 	newsk = tcp_create_openreq_child(sk, req, skb);
 	if (!newsk)
 		goto exit_nonewsk;
