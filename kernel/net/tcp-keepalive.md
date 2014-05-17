@@ -91,6 +91,10 @@ sudo ifconfig eth1 down
 ## TODO
 
  * keepalive パケットの仕様
+   * データを含まないパケット
+     * Ethernet 60 bytes
+   * 応答パケットも データを含まない
+     * Ethernet 54 bytes
  * eth1 down してもサーバ側のソケットが ESTABLISHED なままなのは何故?
  * setsockopt(2) での指定方法
    * TCP_KEEPCNT
@@ -100,7 +104,9 @@ sudo ifconfig eth1 down
      * http://thatsdone-j.blogspot.jp/2013/02/tcp.html
  * /proc/sys/net/ipv4/tcp_retries2
 
-## kernel
+## kernel の実装を見る
+
+### tcp_keepalive_timer
 
 kernel の sk->timer のタイマハンドラ。keepalive の probe パケット送信の際に呼び出される
 
@@ -197,7 +203,7 @@ out:
 }
 ```
 
-カーネルからプロセスへのエラーの通知
+カーネルからプロセスへのエラーの通知 [refs](https://github.com/hiboma/hiboma/blob/master/kernel/net/プロセスの起床.md)
 
 ```c
 static void tcp_write_err(struct sock *sk)
