@@ -300,6 +300,8 @@ listen(2) の backlog がセットされるパスは上記の通り。この bac
 
 tcp_v4_conn_request で sk_acceptq_is_full の場合パケットが drop される
 
+ * LISTEN -> SYN_RECV の state
+
 ```c
 int tcp_v4_conn_request(struct sock *sk, struct sk_buff *skb)
 {
@@ -440,6 +442,8 @@ static inline int sk_acceptq_is_full(struct sock *sk)
 
 sk_acceptq_is_full は tcp_v4_syn_recv_sock でも使っている
 
+ * SYN_RECV -> ESTABLISED の state
+
 ```c
 /*
  * The three way handshake has completed - we got a valid synack -
@@ -458,8 +462,83 @@ struct sock *tcp_v4_syn_recv_sock(struct sock *sk, struct sk_buff *skb,
 #endif
 	struct ip_options *inet_opt;
 
+    /* ここで使ってるぞー */
 	if (sk_acceptq_is_full(sk))
 		goto exit_overflow;
+
+	if (!dst && (dst = inet_csk_route_req(sk, req)) == NULL)
+		goto exit;
+
+	newsk = tcp_create_openreq_child(sk, req, skb);
+	if (!newsk)
+		goto exit_nonewsk;
+
+	newsk->sk_gso_type = SKB_GSO_TCPV4;
+	sk_setup_caps(newsk, dst);
+
+	newtp		      = tcp_sk(newsk);
+	newinet		      = inet_sk(newsk);
+	ireq		      = inet_rsk(req);
+	newinet->daddr	      = ireq->rmt_addr;
+	newinet->rcv_saddr    = ireq->loc_addr;
+	newinet->saddr	      = ireq->loc_addr;
+	inet_opt	      = ireq->opt;
+	rcu_assign_pointer(newinet->opt, inet_opt);
+	ireq->opt	      = NULL;
+	newinet->mc_index     = inet_iif(skb);
+	newinet->mc_ttl	      = ip_hdr(skb)->ttl;
+	sk_extended(newsk)->rcv_tos = ip_hdr(skb)->tos;
+	inet_csk(newsk)->icsk_ext_hdr_len = 0;
+	if (inet_opt)
+		inet_csk(newsk)->icsk_ext_hdr_len = inet_opt->optlen;
+	newinet->id = newtp->write_seq ^ jiffies;
+
+	tcp_mtup_init(newsk);
+	tcp_sync_mss(newsk, dst_mtu(dst));
+	newtp->advmss = dst_metric(dst, RTAX_ADVMSS);
+	if (tcp_sk(sk)->rx_opt.user_mss &&
+	    tcp_sk(sk)->rx_opt.user_mss < newtp->advmss)
+		newtp->advmss = tcp_sk(sk)->rx_opt.user_mss;
+
+	tcp_initialize_rcv_mss(newsk);
+	if (tcp_rsk(req)->snt_synack)
+		tcp_valid_rtt_meas(newsk,
+		    tcp_time_stamp - tcp_rsk(req)->snt_synack);
+	newtp->total_retrans = req->retrans;
+
+#ifdef CONFIG_TCP_MD5SIG
+	/* Copy over the MD5 key from the original socket */
+	if ((key = tcp_v4_md5_do_lookup(sk, newinet->daddr)) != NULL) {
+		/*
+		 * We're using one, so create a matching key
+		 * on the newsk structure. If we fail to get
+		 * memory, then we end up not copying the key
+		 * across. Shucks.
+		 */
+		char *newkey = kmemdup(key->key, key->keylen, GFP_ATOMIC);
+		if (newkey != NULL)
+			tcp_v4_md5_do_add(newsk, newinet->daddr,
+					  newkey, key->keylen);
+		newsk->sk_route_caps &= ~NETIF_F_GSO_MASK;
+	}
+#endif
+
+	if (__inet_inherit_port(sk, newsk) < 0) {
+		sock_put(newsk);
+		goto exit;
+	}
+	__inet_hash_nolisten(newsk);
+
+	return newsk;
+
+exit_overflow:
+	NET_INC_STATS_BH(sock_net(sk), LINUX_MIB_LISTENOVERFLOWS);
+exit_nonewsk:
+	dst_release(dst);
+exit:
+	NET_INC_STATS_BH(sock_net(sk), LINUX_MIB_LISTENDROPS);
+	return NULL;
+}
 ```
 
 tcp_v4_syn_recv_sock, tcp_v4_conn_request が出てくるのは ↓
