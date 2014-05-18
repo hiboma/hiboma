@@ -38,6 +38,7 @@ listen(2) する際に backlog の値が net.core.somaxconn と net.ipv4.tcp_max
  * TCP で sk_ack_backlog の数をインクリメントするコードはどれ?
    * sk_acceptq_removed は inet_connection_sock.c で使われている
    * 対応する sk_acceptq_added が見つからん
+   * 
 
 ```c
 static inline void sk_acceptq_removed(struct sock *sk)
@@ -760,6 +761,11 @@ TCP_LISTEN + SYN パケットを送られた場合に次に続く
 
  * tcp_v4_conn_request
    * sk_acceptq_is_full(sk) で **sk_max_ack_backlog** と比較してドロップ
+   * sysctl_max_syn_backlog と inet_csk_reqsk_queue_len() と比較してドロップ
+```c
+   			 (sysctl_max_syn_backlog - inet_csk_reqsk_queue_len(sk) <
+			  (sysctl_max_syn_backlog >> 2)) &&
+```
  * __tcp_v4_send_synack で ACK を返す
 
 ## process_backlog
