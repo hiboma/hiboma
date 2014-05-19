@@ -479,3 +479,7 @@ lrwxrwxrwx 1 root root      4 May 19 12:44 /dev/rtc -> rtc0
 crw-rw---- 1 root root 254, 0 May 19 12:44 /dev/rtc0
 ```
 
+### 4.3.4 タイムスタンプカウンタ
+
+## 4.4 各種タイマー関連ハードゥエア
+
