@@ -142,12 +142,16 @@ update_process_times でローカルタイマ割り込みを受けた際の task
 
  * run_local_timers (softirq の実行)
  * CPU時間の統計
- * スケジューリング
- * posix タイマ (k_timer?) => timer_create(2)
+ * 再スケジューリング
+   * scheduler_tick
+ * posix タイマ (struct k_timer) => timer_create(2)
+   * check_thread_timers
+     * RLIMIT_RTTIME
    * check_process_timers
      * CPUCLOCK_PROF
      * CPUCLOCK_VIRT
      * CPUCLOCK_SCHED
+     * RLIMIT_CPU を超えてないかどうか
 
 ```c
 /*
