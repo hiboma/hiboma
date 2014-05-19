@@ -140,6 +140,11 @@ inline void smp_local_timer_interrupt(struct pt_regs * regs)
 
 update_process_times でローカルタイマ割り込みを受けた際の task_struct の時間の統計を出す
 
+ * run_local_timers (softirq の実行)
+ * CPU時間の統計
+ * スケジューリング
+ * posix タイマ (k_timer?)
+
 ```c
 /*
  * Called from the timer interrupt handler to charge one tick to the current 
@@ -158,7 +163,11 @@ void update_process_times(int user_tick)
 	run_local_timers();
 	if (rcu_pending(cpu))
 		rcu_check_callbacks(cpu, user_tick);
+
+    /* 再スケジューリング */
 	scheduler_tick();
+
+    /* posix タイマ */
  	run_posix_cpu_timers(p);
 }
 ```
