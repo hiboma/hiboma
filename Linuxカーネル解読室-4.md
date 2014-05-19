@@ -249,3 +249,150 @@ void acct_update_integrals(struct task_struct *tsk)
 	}
 }
 ```
+
+## 4.2.3 CPUローカルな時計 - ソフト割り込み
+
+ * タイマーリスト (struct timer_list)
+ * 縮退
+   * 複数回のローカルタイマ割り込みに対して、一回しかローカルタイマソフト割り込みが実行されないこと
+   * まとめてやりなおす
+
+```c
+/*
+ * Called by the local, per-CPU timer interrupt on SMP.
+ */
+void run_local_timers(void)
+{
+    // hrtimer ? でキューイングされてるジョブを実行?
+	hrtimer_run_queues();
+	raise_softirq(TIMER_SOFTIRQ);
+}
+```
+
+TIMER_SOFTIRQ に対応するのは run_timer_softirq。 init_timers で登録されている
+
+```c
+
+void __init init_timers(void)
+{
+	int err = timer_cpu_notify(&timers_nb, (unsigned long)CPU_UP_PREPARE,
+				(void *)(long)smp_processor_id());
+
+	init_timer_stats();
+
+	BUG_ON(err == NOTIFY_BAD);
+	register_cpu_notifier(&timers_nb);
+	open_softirq(TIMER_SOFTIRQ, run_timer_softirq);
+}
+```
+
+run_timer_softirq の実装
+
+```c
+/*
+ * This function runs timers and the timer-tq in bottom half context.
+ */
+static void run_timer_softirq(struct softirq_action *h)
+{
+	struct tvec_base *base = __get_cpu_var(tvec_bases);
+
+	hrtimer_run_pending();
+
+	if (time_after_eq(jiffies, base->timer_jiffies))
+		__run_timers(base);
+}
+```
+
+__run_timers でタイマ (struct timer_list) の実行?
+
+```c
+/**
+ * __run_timers - run all expired timers (if any) on this CPU.
+ * @base: the timer vector to be processed.
+ *
+ * This function cascades all vectors and executes all expired timer
+ * vectors.
+ */
+static inline void __run_timers(struct tvec_base *base)
+{
+	struct timer_list *timer;
+
+	spin_lock_irq(&base->lock);
+	while (time_after_eq(jiffies, base->timer_jiffies)) {
+		struct list_head work_list;
+		struct list_head *head = &work_list;
+		int index = base->timer_jiffies & TVR_MASK;
+
+		/*
+		 * Cascade timers:
+		 */
+		if (!index &&
+			(!cascade(base, &base->tv2, INDEX(0))) &&
+				(!cascade(base, &base->tv3, INDEX(1))) &&
+					!cascade(base, &base->tv4, INDEX(2)))
+			cascade(base, &base->tv5, INDEX(3));
+		++base->timer_jiffies;
+		list_replace_init(base->tv1.vec + index, &work_list);
+		while (!list_empty(head)) {
+			void (*fn)(unsigned long);
+			unsigned long data;
+
+            /* タイマ */
+			timer = list_first_entry(head, struct timer_list,entry);
+			fn = timer->function;
+			data = timer->data;
+
+			timer_stats_account_timer(timer);
+
+			set_running_timer(base, timer);
+			detach_timer(timer, 1);
+
+			spin_unlock_irq(&base->lock);
+			{
+				int preempt_count = preempt_count();
+
+#ifdef CONFIG_LOCKDEP
+				/*
+				 * It is permissible to free the timer from
+				 * inside the function that is called from
+				 * it, this we need to take into account for
+				 * lockdep too. To avoid bogus "held lock
+				 * freed" warnings as well as problems when
+				 * looking into timer->lockdep_map, make a
+				 * copy and use that here.
+				 */
+				struct lockdep_map lockdep_map =
+					timer->lockdep_map;
+#endif
+				/*
+				 * Couple the lock chain with the lock chain at
+				 * del_timer_sync() by acquiring the lock_map
+				 * around the fn() call here and in
+				 * del_timer_sync().
+				 */
+				lock_map_acquire(&lockdep_map);
+
+				trace_timer_expire_entry(timer);
+
+                /* タイマの実行 */
+				fn(data);
+				trace_timer_expire_exit(timer);
+
+				lock_map_release(&lockdep_map);
+
+				if (preempt_count != preempt_count()) {
+					printk(KERN_ERR "huh, entered %p "
+					       "with preempt_count %08x, exited"
+					       " with %08x?\n",
+					       fn, preempt_count,
+					       preempt_count());
+					BUG();
+				}
+			}
+			spin_lock_irq(&base->lock);
+		}
+	}
+	set_running_timer(base, NULL);
+	spin_unlock_irq(&base->lock);
+}
+```
