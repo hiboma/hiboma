@@ -363,6 +363,9 @@ static void run_timer_softirq(struct softirq_action *h)
 
 __run_timers でタイマ (struct timer_list) の実行?
 
+ * keepalive のタイマとか?
+ * timer_list の実装サンプル [refs](https://github.com/hiboma/kernel_module_scratch/blob/master/tasklet/tasklet.c)
+
 ```c
 /**
  * __run_timers - run all expired timers (if any) on this CPU.
@@ -454,3 +457,25 @@ static inline void __run_timers(struct tvec_base *base)
 	spin_unlock_irq(&base->lock);
 }
 ```
+
+## 4.3 Linux の時刻
+
+### 4.3.1 Linux 内部時計
+
+ * UTC 1970/1/1 からの経過時間を **xtime**
+ * stime(2), settimeofday(2)
+ * NTP slew mode
+
+### 4.3.2 ハードウェアのカレンダ
+
+ * **カレンダ** と呼ばれるコントローラー
+ * hwclock <=> Linux 内部時計
+ * BIOS とかでセットするやつ
+ * /dev/rtc
+
+```
+[vagrant@vagrant-centos65 ~]$ ls -hal /dev/rtc*
+lrwxrwxrwx 1 root root      4 May 19 12:44 /dev/rtc -> rtc0
+crw-rw---- 1 root root 254, 0 May 19 12:44 /dev/rtc0
+```
+
