@@ -71,6 +71,12 @@ calc_load(unsigned long load, unsigned long exp, unsigned long active)
 }
 ```
 
+## 4.2.2 CPUローカルな時計 - ハードウェア割り込み
+
+ * コアごとにズラす
+ * プロファイリング
+ * scheduler_tick
+
 ## smp_local_timer_interrupt (2.6.15)
 
 CONFIG_SMP で update_process_times を呼び出すか否かが変わる
@@ -264,6 +270,41 @@ void acct_update_integrals(struct task_struct *tsk)
 		tsk->acct_rss_mem1 += delta * get_mm_rss(tsk->mm);
 		tsk->acct_vm_mem1 += delta * tsk->mm->total_vm;
 	}
+}
+```
+
+### scheduler_tick
+
+HZの頻度で呼び出しされる (= ローカルタイマ)
+
+```
+/*
+ * This function gets called by the timer code, with HZ frequency.
+ * We call it with interrupts disabled.
+ *
+ * It also gets called by the fork code, when changing the parent's
+ * timeslices.
+ */
+void scheduler_tick(void)
+{
+	int cpu = smp_processor_id();
+	struct rq *rq = cpu_rq(cpu);
+	struct task_struct *curr = rq->curr;
+
+	sched_clock_tick();
+
+	spin_lock(&rq->lock);
+	update_rq_clock(rq);
+	update_cpu_load_active(rq);
+	curr->sched_class->task_tick(rq, curr, 0);
+	spin_unlock(&rq->lock);
+
+	perf_event_task_tick();
+
+#ifdef CONFIG_SMP
+	rq->idle_at_tick = idle_cpu(cpu);
+	trigger_load_balance(rq, cpu);
+#endif
 }
 ```
 
