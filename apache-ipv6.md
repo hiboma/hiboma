@@ -13,7 +13,7 @@
 
  * IN6_IS_ADDR_V4MAPPED で IPv4-mapped IPv6 アドレスかどうかを見る
    * glibc の実装 ( inet/netinet/in.h )
-   * `::ffff:` => `0:0:ffff:` を見てるのかな?
+   * `::ffff:` => `0:0:0:0:0:ffff:` を見てるのかな?
 
 ```
 # define IN6_IS_ADDR_V4MAPPED(a) \
