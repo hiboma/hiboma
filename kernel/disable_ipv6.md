@@ -130,7 +130,7 @@ static int addrconf_disable_ipv6(struct ctl_table *table, int *p, int old)
 
 addrconf_disable_change
 
- * デバイスをイテレートして IPv6 を止める
+ * デバイスをイテレートして dev_disable_change で IPv6 を止めてる
 
 ```c
 static void addrconf_disable_change(struct net *net, __s32 newf)
