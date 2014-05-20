@@ -2,8 +2,9 @@
 
 **IPv4-mapped IPv6 address** (::ffff: の prefix を持つ IPv6 アドレス) の扱いについて
 
- * `sockaddr->family == AF_INET6`, `sockaddr->family == AF_INET`, IN6_IS_ADDR_V4MAPPED で分岐させてよしなしに扱う
- * IPv4 mapped IPv6 の扱いは apr の層だけで完結して、httpd本体では実装が隠蔽されている感じ
+ * **APR_HAVE_IPV6** マクロで定義された区間だけ読めば追える
+ * IPv4 か IPv6 かは sockaddr に隠蔽されている
+ * IPv4 mapped IPv6 の扱いは apr の層だけで完結して、httpd本体では実装が隠蔽されている感じ * `sockaddr->family == AF_INET6`, `sockaddr->family == AF_INET`, IN6_IS_ADDR_V4MAPPED で分岐させてよしなしに扱う
 
 ## 参考
 
@@ -12,10 +13,7 @@
 
 ## IN6_IS_ADDR_V4MAPPED
 
-IPv4-mapped IPv6 アドレスかどうかを見る
-
- * glibc の実装 ( inet/netinet/in.h )
- * `::ffff:` => `0:0:0:0:0:ffff:` を見てるのかな?
+glibc の実装 ( inet/netinet/in.h )。IPv4-mapped IPv6 アドレスかどうかを見る
 
 ```c
 # define IN6_IS_ADDR_V4MAPPED(a) \
@@ -23,6 +21,8 @@ IPv4-mapped IPv6 アドレスかどうかを見る
 	 && (((const uint32_t *) (a))[1] == 0)				      \
 	 && (((const uint32_t *) (a))[2] == htonl (0xffff)))
 ```
+
+`::ffff:` => `0:0:0:0:0:ffff:` を見てるのかな?
 
 ## apr_sockaddr_ip_getbuf
 
