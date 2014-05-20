@@ -749,6 +749,7 @@ struct net_protocol *ipprot の .handler 呼び出し
  * tcp_v4_do_rcv
    * sk->sk_state によってディスパッチ
  * tcp_rcv_state_process
+   * パケット受信をソケットの state によってあれこれ操作
 
 TCP_LISTEN + SYN パケットを送られた場合に次に続く
 
