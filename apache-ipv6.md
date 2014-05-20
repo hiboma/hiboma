@@ -2,6 +2,8 @@
 
  * **IPv4-mapped IPv6 address** なら IPv4 に変換して扱う
  * それ以外は AF_INET, AF_INET6 それぞれとして扱う
+   * 一部 IN6_IS_ADDR_V4MAPPED で分岐させてよしなしに扱う
+ * apr の層だけで完結して本体では実装は隠蔽されている
 
 ## apr_sockaddr_ip_getbuf
 
