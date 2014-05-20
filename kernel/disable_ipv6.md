@@ -136,6 +136,7 @@ static void addrconf_disable_change(struct net *net, __s32 newf)
 	struct inet6_dev *idev;
 
 	read_lock(&dev_base_lock);
+    /* イテレート */
 	for_each_netdev(net, dev) {
 		rcu_read_lock();
 		idev = __in6_dev_get(dev);
