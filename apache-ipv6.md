@@ -1,5 +1,8 @@
 # Apache の IPv4 mapped IPv6 の扱い
 
+ * **IPv4-mapped IPv6 address** なら IPv4 に変換して扱う
+ * それ以外は AF_INET, AF_INET6 それぞれとして扱う
+
 ## apr_sockaddr_ip_getbuf
 
 **IPv4-mapped IPv6 address** の文字列を IPv4 に変換する
