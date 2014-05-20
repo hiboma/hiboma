@@ -96,8 +96,6 @@ int addrconf_sysctl_disable(ctl_table *ctl, int write,
 }
 ```
 
-addrconf_disable_ipv6 
-
 ```c
 static int addrconf_disable_ipv6(struct ctl_table *table, int *p, int old)
 {
@@ -128,8 +126,6 @@ static int addrconf_disable_ipv6(struct ctl_table *table, int *p, int old)
 }
 ```
 
-addrconf_disable_change
-
  * デバイスをイテレートして dev_disable_change で IPv6 を止めてる
  * net_device から inet6_dev を取り出せるらしい
 
@@ -156,8 +152,6 @@ static void addrconf_disable_change(struct net *net, __s32 newf)
 }
 ```
 
-dev_disable_change
-
  * inet6_dev インタフェースの DOWN/UP を切り替えるメソッド
  * addrconf_notify(NETDEV_DOWN) で IPv6 の停止になる様子
 
@@ -174,8 +168,6 @@ static void dev_disable_change(struct inet6_dev *idev)
 		addrconf_notify(NULL, NETDEV_UP, idev->dev);
 }
 ```
-
-addrconf_notify
 
  * NETDEV_DOWN と NETDEV_UNREGISTER の違いは?
 
@@ -194,8 +186,6 @@ static int addrconf_notify(struct notifier_block *this, unsigned long event,
 		addrconf_ifdown(dev, event != NETDEV_DOWN);
 		break;
 ```
-
-addrconf_ifdown
 
  * コメントにステップが記載されているので参考にして読む
 
