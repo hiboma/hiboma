@@ -56,6 +56,8 @@ sudo sysctl -w net.ipv6.conf.all.disable_ipv6=1
 
 #### 実装
 
+sysctl の定義は次の通り
+
 ```c
 		{
 			.ctl_name	=	CTL_UNNUMBERED,
@@ -71,6 +73,8 @@ sudo sysctl -w net.ipv6.conf.all.disable_ipv6=1
  * addrconf_sysctl_disable がハンドラとして呼び出される
  * `sudo sysctl -w net.ipv6.conf.all.disable_ipv6=1` で IPv6 のアドレスが消えるのもこれの作用?
 
+addrconf_sysctl_disable から掘り下げていきます
+
 ```c
 static
 int addrconf_sysctl_disable(ctl_table *ctl, int write,
@@ -84,12 +88,15 @@ int addrconf_sysctl_disable(ctl_table *ctl, int write,
 	ret = proc_dointvec(ctl, write, buffer, lenp, ppos);
 
 	if (write)
+        // ->
 		ret = addrconf_disable_ipv6(ctl, valp, val);
 	if (ret)
 		*ppos = pos;
 	return ret;
 }
 ```
+
+addrconf_disable_ipv6 
 
 ```c
 static int addrconf_disable_ipv6(struct ctl_table *table, int *p, int old)
@@ -110,8 +117,10 @@ static int addrconf_disable_ipv6(struct ctl_table *table, int *p, int old)
 	if (p == &net->ipv6.devconf_all->disable_ipv6) {
 		__s32 newf = net->ipv6.devconf_all->disable_ipv6;
 		net->ipv6.devconf_dflt->disable_ipv6 = newf;
+        // ->
 		addrconf_disable_change(net, newf);
 	} else if ((!*p) ^ (!old))
+        // ->
 		dev_disable_change((struct inet6_dev *)table->extra1);
 
 	rtnl_unlock();
@@ -119,7 +128,9 @@ static int addrconf_disable_ipv6(struct ctl_table *table, int *p, int old)
 }
 ```
 
-デバイスをイテレートして IPv6 を止める
+addrconf_disable_change
+
+ * デバイスをイテレートして IPv6 を止める
 
 ```c
 static void addrconf_disable_change(struct net *net, __s32 newf)
