@@ -197,11 +197,23 @@ static int addrconf_notify(struct notifier_block *this, unsigned long event,
 
 addrconf_ifdown
 
- * 強い
+ * コメントにステップが記載されているので参考にして読む
+
+```c
+/* Step 1: remove reference to ipv6 device from parent device. Do not dev_put! */
+/* Step 1.5: remove snmp6 entry */
+/* Step 2: clear hash table */
+/* Step 3: clear flags for stateless addrconf */
+/* Step 4: clear address list */
+/* clear tempaddr list */
+/* Step 5: Discard multicast list */
+/* Shot the device (if unregistered) */
+```
+
  * rt6_ifdown
    * IPv6 の routing 情報? を down
  * neigh_ifdown
-   * ? 
+   * ?
 
 ```c
 static int addrconf_ifdown(struct net_device *dev, int how)
