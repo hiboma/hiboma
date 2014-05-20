@@ -131,6 +131,7 @@ static int addrconf_disable_ipv6(struct ctl_table *table, int *p, int old)
 addrconf_disable_change
 
  * デバイスをイテレートして dev_disable_change で IPv6 を止めてる
+ * net_device から inet6_dev を取り出せるらしい
 
 ```c
 static void addrconf_disable_change(struct net *net, __s32 newf)
@@ -146,6 +147,7 @@ static void addrconf_disable_change(struct net *net, __s32 newf)
 			int changed = (!idev->cnf.disable_ipv6) ^ (!newf);
 			idev->cnf.disable_ipv6 = newf;
 			if (changed)
+                // ->
 				dev_disable_change(idev);
 		}
 		rcu_read_unlock();
@@ -154,7 +156,10 @@ static void addrconf_disable_change(struct net *net, __s32 newf)
 }
 ```
 
-addrconf_notify(NETDEV_DOWN) で IPv6 の停止になる様子
+dev_disable_change
+
+ * inet6_dev インタフェースの DOWN/UP を切り替えるメソッド
+ * addrconf_notify(NETDEV_DOWN) で IPv6 の停止になる様子
 
 ```c
 static void dev_disable_change(struct inet6_dev *idev)
@@ -163,13 +168,16 @@ static void dev_disable_change(struct inet6_dev *idev)
 		return;
 
 	if (idev->cnf.disable_ipv6)
+        // ->
 		addrconf_notify(NULL, NETDEV_DOWN, idev->dev);
 	else
 		addrconf_notify(NULL, NETDEV_UP, idev->dev);
 }
 ```
 
-NETDEV_DOWN と NETDEV_UNREGISTER の違いは?
+addrconf_notify
+
+ * NETDEV_DOWN と NETDEV_UNREGISTER の違いは?
 
 ```c
 static int addrconf_notify(struct notifier_block *this, unsigned long event,
@@ -182,6 +190,137 @@ static int addrconf_notify(struct notifier_block *this, unsigned long event,
 		/*
 		 *	Remove all addresses from this interface.
 		 */
+        // ->
 		addrconf_ifdown(dev, event != NETDEV_DOWN);
 		break;
+```
+
+addrconf_ifdown
+
+ * 強い
+ * rt6_ifdown
+   * IPv6 の routing 情報? を down
+ * neigh_ifdown
+   * ? 
+
+```c
+static int addrconf_ifdown(struct net_device *dev, int how)
+{
+	struct inet6_dev *idev;
+	struct inet6_ifaddr *ifa, **bifa;
+	struct net *net = dev_net(dev);
+	int state;
+	int i;
+
+	ASSERT_RTNL();
+
+	rt6_ifdown(net, dev);
+	neigh_ifdown(&nd_tbl, dev);
+
+	idev = __in6_dev_get(dev);
+	if (idev == NULL)
+		return -ENODEV;
+
+	/* Step 1: remove reference to ipv6 device from parent device.
+		   Do not dev_put!
+	 */
+	if (how) {
+		idev->dead = 1;
+
+		/* protected by rtnl_lock */
+		rcu_assign_pointer(dev->ip6_ptr, NULL);
+
+		/* Step 1.5: remove snmp6 entry */
+		snmp6_unregister_dev(idev);
+
+	}
+
+	/* Step 2: clear hash table */
+	for (i=0; i<IN6_ADDR_HSIZE; i++) {
+		bifa = &inet6_addr_lst[i];
+
+		write_lock_bh(&addrconf_hash_lock);
+		while ((ifa = *bifa) != NULL) {
+			if (ifa->idev == idev) {
+				*bifa = ifa->lst_next;
+				ifa->lst_next = NULL;
+				addrconf_del_timer(ifa);
+				in6_ifa_put(ifa);
+				continue;
+			}
+			bifa = &ifa->lst_next;
+		}
+		write_unlock_bh(&addrconf_hash_lock);
+	}
+
+	write_lock_bh(&idev->lock);
+
+	/* Step 3: clear flags for stateless addrconf */
+	if (!how)
+		idev->if_flags &= ~(IF_RS_SENT|IF_RA_RCVD|IF_READY);
+
+	/* Step 4: clear address list */
+#ifdef CONFIG_IPV6_PRIVACY
+	if (how && del_timer(&idev->regen_timer))
+		in6_dev_put(idev);
+
+	/* clear tempaddr list */
+	while ((ifa = idev->tempaddr_list) != NULL) {
+		idev->tempaddr_list = ifa->tmp_next;
+		ifa->tmp_next = NULL;
+		write_unlock_bh(&idev->lock);
+		spin_lock_bh(&ifa->lock);
+
+		if (ifa->ifpub) {
+			in6_ifa_put(ifa->ifpub);
+			ifa->ifpub = NULL;
+		}
+		spin_unlock_bh(&ifa->lock);
+		in6_ifa_put(ifa);
+		write_lock_bh(&idev->lock);
+	}
+#endif
+	while ((ifa = idev->addr_list) != NULL) {
+		idev->addr_list = ifa->if_next;
+		ifa->if_next = NULL;
+		addrconf_del_timer(ifa);
+		write_unlock_bh(&idev->lock);
+		spin_lock_bh(&ifa_state_lock);
+		state = ifa->dead;
+		ifa->dead = INET6_IFADDR_STATE_DEAD;
+		spin_unlock_bh(&ifa_state_lock);
+
+		if (state == INET6_IFADDR_STATE_DEAD)
+			goto put_ifa;
+
+
+		__ipv6_ifa_notify(RTM_DELADDR, ifa);
+		atomic_notifier_call_chain(&inet6addr_chain, NETDEV_DOWN, ifa);
+
+put_ifa:
+		in6_ifa_put(ifa);
+
+		write_lock_bh(&idev->lock);
+	}
+	write_unlock_bh(&idev->lock);
+
+	/* Step 5: Discard multicast list */
+
+	if (how)
+		ipv6_mc_destroy_dev(idev);
+	else
+		ipv6_mc_down(idev);
+
+	idev->tstamp = jiffies;
+
+	/* Shot the device (if unregistered) */
+
+	if (how) {
+		addrconf_sysctl_unregister(idev);
+		neigh_parms_release(&nd_tbl, idev->nd_parms);
+		neigh_ifdown(&nd_tbl, dev);
+		in6_dev_put(idev);
+	}
+	return 0;
+}
 ```
