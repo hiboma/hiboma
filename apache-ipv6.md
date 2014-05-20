@@ -26,9 +26,7 @@ IPv4-mapped IPv6 アドレスかどうかを見る
 
 ## apr_sockaddr_ip_getbuf
 
-IPv4-mapped IPv6 address の文字列を IPv4 に変換する
-
- * memmove で `::ffff:192.168.0.1`  -> `192.168.0.1` にする 
+IPv4-mapped IPv6 address の文字列表記を IPv4 に変換して変えす処理が入っている
 
 ```c
 APR_DECLARE(apr_status_t) apr_sockaddr_ip_getbuf(char *buf, apr_size_t buflen,
@@ -56,3 +54,5 @@ APR_DECLARE(apr_status_t) apr_sockaddr_ip_getbuf(char *buf, apr_size_t buflen,
     return APR_SUCCESS;
 }
 ```
+
+memmove で `::ffff:192.168.0.1`  -> `192.168.0.1` な処理にしていますね
