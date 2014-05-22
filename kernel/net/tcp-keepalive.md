@@ -108,7 +108,8 @@ sudo ifconfig eth1 down
 
 ### tcp_keepalive_timer
 
-kernel の sk->timer のタイマハンドラ。keepalive の probe パケット送信の際に呼び出される
+kernel の sk->timer (struct timer_list) のタイマハンドラ
+keepalive の probe パケット送信の際に呼び出される
 
 ```c
 static void tcp_keepalive_timer (unsigned long data)
@@ -168,7 +169,8 @@ static void tcp_keepalive_timer (unsigned long data)
 		    icsk->icsk_probes_out >= keepalive_probes(tp))) {
 			/* RST パケット? */
 			tcp_send_active_reset(sk, GFP_ATOMIC);
-			/* プロセスにエラー返す */
+			/* keepalive のタイムアウトを迎えたのでプロセスにエラー返す */
+            // ->
 			tcp_write_err(sk);
 			goto out;
 		}
@@ -211,6 +213,7 @@ static void tcp_write_err(struct sock *sk)
 	sk->sk_err = sk->sk_err_soft ? : ETIMEDOUT;
 	sk->sk_error_report(sk);
 
+    // ->
 	tcp_done(sk);
 	NET_INC_STATS_BH(sock_net(sk), LINUX_MIB_TCPABORTONTIMEOUT);
 }
@@ -228,6 +231,8 @@ void tcp_done(struct sock *sk)
 	sk->sk_shutdown = SHUTDOWN_MASK;
 
 	if (!sock_flag(sk, SOCK_DEAD))
+        // プロセスを起床させる
+        // ->
 		sk->sk_state_change(sk);
 	else
 		inet_csk_destroy_sock(sk);
