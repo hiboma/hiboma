@@ -26,6 +26,9 @@ struct request_sock_queue {
 
 rskq_defer_accept は inet_csk_reqsk_queue_prune で参照されている
 
+ * syn/ack を再送するタイムアウトを計算している?
+ * 
+
 ```c
 void inet_csk_reqsk_queue_prune(struct sock *parent,
 				const unsigned long interval,
@@ -103,6 +106,8 @@ void inet_csk_reqsk_queue_prune(struct sock *parent,
 					timeo = min((timeout << req->retrans), max_rto);
 					req->expires = now + timeo;
 					reqp = &req->dl_next;
+
+                    // もういっぺん再送
 					continue;
 				}
 
@@ -127,6 +132,8 @@ void inet_csk_reqsk_queue_prune(struct sock *parent,
 
 EXPORT_SYMBOL_GPL(inet_csk_reqsk_queue_prune);
 ```
+
+tcp_v4_send_synack から syn/ack を送信する処理
 
 ```c
 static int tcp_v4_send_synack(struct sock *sk, struct request_sock *req)
@@ -155,7 +162,6 @@ static int __tcp_v4_send_synack(struct sock *sk, struct request_sock *req,
 
     // skb を sock_wmalloc
 	skb = tcp_make_synack(sk, dst, req);
-
 	if (skb) {
 		struct tcphdr *th = tcp_hdr(skb);
 
@@ -165,7 +171,7 @@ static int __tcp_v4_send_synack(struct sock *sk, struct request_sock *req,
 					 csum_partial(th, skb->len,
 						      skb->csum));
 
-        // IPヘッダをごそごそ
+        // IPヘッダをごそごそして送信
 		err = ip_build_and_send_pkt(skb, sk, ireq->loc_addr,
 					    ireq->rmt_addr,
 					    ireq->opt);
