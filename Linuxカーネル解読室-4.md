@@ -569,6 +569,9 @@ SYSCALL_DEFINE2(gettimeofday, struct timeval __user *, tv,
 
 do_gettimeofday の中身
 
+  * tv_sec の扱いは time(2) と一緒
+  * tv_usec は getnstimeofday を追う必要がある
+
 ```c
 /**
  * do_gettimeofday - Returns the time of day in a timeval
@@ -589,7 +592,7 @@ void do_gettimeofday(struct timeval *tv)
 EXPORT_SYMBOL(do_gettimeofday);
 ```
 
-getnstimeofday は ナノ秒を精度として時刻取得
+getnstimeofday は ナノ秒を精度として時刻取得する
 
 ```c
 /**
@@ -617,8 +620,10 @@ void getnstimeofday(struct timespec *ts)
 		/* If arch requires, add in gettimeoffset() */
 		nsecs += arch_gettimeoffset();
 
+   // ロックとれるまでループ
 	} while (read_seqretry(&timekeeper.lock, seq));
 
+    // ?
 	timespec_add_ns(ts, nsecs);
 }
 EXPORT_SYMBOL(getnstimeofday);
