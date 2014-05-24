@@ -518,6 +518,7 @@ crw-rw---- 1 root root 254, 0 May 19 12:44 /dev/rtc0
  */
 SYSCALL_DEFINE1(time, time_t __user *, tloc)
 {
+    // ->
 	time_t i = get_seconds();
 
 	if (tloc) {
@@ -537,4 +538,45 @@ unsigned long get_seconds(void)
 	return timekeeper.xtime.tv_sec;
 }
 EXPORT_SYMBOL(get_seconds);
+```
+
+### gettimeofday(2) の実装
+
+```c
+SYSCALL_DEFINE2(gettimeofday, struct timeval __user *, tv,
+		struct timezone __user *, tz)
+{
+	if (likely(tv != NULL)) {
+		struct timeval ktv;
+        // ->
+		do_gettimeofday(&ktv);
+		if (copy_to_user(tv, &ktv, sizeof(ktv)))
+			return -EFAULT;
+	}
+	if (unlikely(tz != NULL)) {
+		if (copy_to_user(tz, &sys_tz, sizeof(sys_tz)))
+			return -EFAULT;
+	}
+	return 0;
+}
+```
+
+do_gettimeofday の中身
+
+```c
+/**
+ * do_gettimeofday - Returns the time of day in a timeval
+ * @tv:		pointer to the timeval to be set
+ *
+ * NOTE: Users should be converted to using getnstimeofday()
+ */
+void do_gettimeofday(struct timeval *tv)
+{
+	struct timespec now;
+
+	getnstimeofday(&now);
+	tv->tv_sec = now.tv_sec;
+	tv->tv_usec = now.tv_nsec/1000;
+}
+EXPORT_SYMBOL(do_gettimeofday);
 ```
