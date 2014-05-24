@@ -1,5 +1,11 @@
 # TCP_DEFER_ACCEPT
 
+## refs
+
+ * http://d.hatena.ne.jp/kazuhooku/20100327/1269682361
+
+## ソース
+
 do_tcp_setsockopt でセットされる
 
  * request_sock_queue の rskq_defer_accept に retrans? として設定
@@ -99,6 +105,7 @@ void inet_csk_reqsk_queue_prune(struct sock *parent,
 				    (!resend ||
                      // syn/ack 送信? -> tcp_v4_send_synack
 				     !req->rsk_ops->rtx_syn_ack(parent, req) ||
+                     // acked なので ACK 済み?
 				     inet_rsk(req)->acked)) {
 					unsigned long timeo;
 
