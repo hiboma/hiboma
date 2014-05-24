@@ -131,9 +131,12 @@ EXPORT_SYMBOL_GPL(inet_csk_reqsk_queue_prune);
 ```c
 static int tcp_v4_send_synack(struct sock *sk, struct request_sock *req)
 {
+    // ->
 	return __tcp_v4_send_synack(sk, req, NULL);
 }
+```
 
+```c
 /*
  *	Send a SYN-ACK after having received a SYN.
  *	This still operates on a request_sock only, not on a big
@@ -150,6 +153,7 @@ static int __tcp_v4_send_synack(struct sock *sk, struct request_sock *req,
 	if (!dst && (dst = inet_csk_route_req(sk, req)) == NULL)
 		return -1;
 
+    // skb を sock_wmalloc
 	skb = tcp_make_synack(sk, dst, req);
 
 	if (skb) {
@@ -161,12 +165,14 @@ static int __tcp_v4_send_synack(struct sock *sk, struct request_sock *req,
 					 csum_partial(th, skb->len,
 						      skb->csum));
 
+        // IPヘッダをごそごそ
 		err = ip_build_and_send_pkt(skb, sk, ireq->loc_addr,
 					    ireq->rmt_addr,
 					    ireq->opt);
 		err = net_xmit_eval(err);
 	}
 
+    // 送信用バッファが足らん場合?
 	dst_release(dst);
 	return err;
 }
