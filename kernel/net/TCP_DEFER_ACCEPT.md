@@ -38,7 +38,7 @@ struct request_sock_queue {
 rskq_defer_accept は inet_csk_reqsk_queue_prune で参照されている
 
  * syn/ack を再送するタイムアウトを計算している?
- * 
+ * sysctl net.ipv4.tcp_synack_retries をオーバライド
 
 ```c
 void inet_csk_reqsk_queue_prune(struct sock *parent,
