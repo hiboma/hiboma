@@ -486,3 +486,14 @@ crw-rw---- 1 root root 254, 0 May 19 12:44 /dev/rtc0
 ## 4.5 時刻の取得
 
  * time(2), gettimeofday(2)
+
+```c
+
+	time_t t;
+	if(time(&t) == -1) {
+		perror("time");
+		exit(1);
+	}
+
+	printf("%ld\n", t);
+```
