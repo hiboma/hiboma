@@ -486,6 +486,8 @@ crw-rw---- 1 root root 254, 0 May 19 12:44 /dev/rtc0
 ## 4.5 時刻の取得
 
  * time(2), gettimeofday(2)
+   * time は精度が秒
+   * gettimeofday は精度が マイクロ秒
 
 ```c
 
@@ -495,5 +497,34 @@ crw-rw---- 1 root root 254, 0 May 19 12:44 /dev/rtc0
 		exit(1);
 	}
 
+	struct timeval tv;
+	if(gettimeofday(&tv, NULL) == -1) {
+		perror("gettimeofday");
+		exit(1);
+	}
+
 	printf("%ld\n", t);
+	printf("%ld - %d\n", tv.tv_sec, tv.tv_usec);
+```
+
+### time(2) の実装
+
+```c
+/*
+ * sys_time() can be implemented in user-level using
+ * sys_gettimeofday().  Is this for backwards compatibility?  If so,
+ * why not move it into the appropriate arch directory (for those
+ * architectures that need it).
+ */
+SYSCALL_DEFINE1(time, time_t __user *, tloc)
+{
+	time_t i = get_seconds();
+
+	if (tloc) {
+		if (put_user(i,tloc))
+			return -EFAULT;
+	}
+	force_successful_syscall_return();
+	return i;
+}
 ```
