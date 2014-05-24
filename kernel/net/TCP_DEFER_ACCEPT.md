@@ -8,8 +8,8 @@
 
 do_tcp_setsockopt でセットされる
 
- * request_sock_queue の rskq_defer_accept に retrans? として設定
- * SYN/ACK を再送する回数を決める様子
+ * request_sock_queue の rskq_defer_accept に retrans? として設定する
+   * SYN/ACK を再送する回数を決める様子
 
 ```c
 	case TCP_DEFER_ACCEPT:
