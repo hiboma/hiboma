@@ -3,6 +3,7 @@
 do_tcp_setsockopt でセットされる
 
  * request_sock_queue の rskq_defer_accept に retrans? として設定
+ * SYN/ACK を再送する回数を決める様子
 
 ```c
 	case TCP_DEFER_ACCEPT:
@@ -111,6 +112,7 @@ void inet_csk_reqsk_queue_prune(struct sock *parent,
 					continue;
 				}
 
+                // syn/ack 再送でタイムアウト? なので DROP する
 				/* Drop this request */
 				inet_csk_reqsk_queue_unlink(parent, req, reqp);
 				reqsk_queue_removed(queue, req);
