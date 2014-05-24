@@ -507,6 +507,12 @@ crw-rw---- 1 root root 254, 0 May 19 12:44 /dev/rtc0
 	printf("%ld - %d\n", tv.tv_sec, tv.tv_usec);
 ```
 
+型　| 精度
+---|---
+time_t | 秒
+struct timeval | マイクロ秒
+struct timespec | ナノ秒
+
 ### time(2) の実装
 
 ```c
@@ -574,9 +580,46 @@ void do_gettimeofday(struct timeval *tv)
 {
 	struct timespec now;
 
+    // ->
 	getnstimeofday(&now);
 	tv->tv_sec = now.tv_sec;
+    // nanosec を 1000 で割って usec に変換している
 	tv->tv_usec = now.tv_nsec/1000;
 }
 EXPORT_SYMBOL(do_gettimeofday);
+```
+
+getnstimeofday は ナノ秒を精度として時刻取得
+
+```c
+/**
+ * getnstimeofday - Returns the time of day in a timespec
+ * @ts:		pointer to the timespec to be set
+ *
+ * Returns the time of day in a timespec.
+ */
+void getnstimeofday(struct timespec *ts)
+{
+	unsigned long seq;
+	s64 nsecs;
+
+	WARN_ON(timekeeping_suspended);
+
+	do {
+        // シーケンシャル読み取りロック?
+		seq = read_seqbegin(&timekeeper.lock);
+
+		*ts = timekeeper.xtime;
+
+        // ナノ秒
+		nsecs = timekeeping_get_ns();
+
+		/* If arch requires, add in gettimeoffset() */
+		nsecs += arch_gettimeoffset();
+
+	} while (read_seqretry(&timekeeper.lock, seq));
+
+	timespec_add_ns(ts, nsecs);
+}
+EXPORT_SYMBOL(getnstimeofday);
 ```
