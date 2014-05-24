@@ -87,13 +87,13 @@ void inet_csk_reqsk_queue_prune(struct sock *parent,
 			if (time_after_eq(now, req->expires)) {
 				int expire = 0, resend = 0;
 
-                // 
+                // syn/ack 再送のタイムアウトを計算
 				syn_ack_recalc(req, thresh, max_retries,
 					       queue->rskq_defer_accept,
 					       &expire, &resend);
 				if (!expire &&
 				    (!resend ||
-                     // syn/ack 送信? => tcp_v4_send_synack
+                     // syn/ack 送信? -> tcp_v4_send_synack
 				     !req->rsk_ops->rtx_syn_ack(parent, req) ||
 				     inet_rsk(req)->acked)) {
 					unsigned long timeo;
@@ -126,4 +126,48 @@ void inet_csk_reqsk_queue_prune(struct sock *parent,
 }
 
 EXPORT_SYMBOL_GPL(inet_csk_reqsk_queue_prune);
+```
+
+```c
+static int tcp_v4_send_synack(struct sock *sk, struct request_sock *req)
+{
+	return __tcp_v4_send_synack(sk, req, NULL);
+}
+
+/*
+ *	Send a SYN-ACK after having received a SYN.
+ *	This still operates on a request_sock only, not on a big
+ *	socket.
+ */
+static int __tcp_v4_send_synack(struct sock *sk, struct request_sock *req,
+				struct dst_entry *dst)
+{
+	const struct inet_request_sock *ireq = inet_rsk(req);
+	int err = -1;
+	struct sk_buff * skb;
+
+	/* First, grab a route. */
+	if (!dst && (dst = inet_csk_route_req(sk, req)) == NULL)
+		return -1;
+
+	skb = tcp_make_synack(sk, dst, req);
+
+	if (skb) {
+		struct tcphdr *th = tcp_hdr(skb);
+
+		th->check = tcp_v4_check(skb->len,
+					 ireq->loc_addr,
+					 ireq->rmt_addr,
+					 csum_partial(th, skb->len,
+						      skb->csum));
+
+		err = ip_build_and_send_pkt(skb, sk, ireq->loc_addr,
+					    ireq->rmt_addr,
+					    ireq->opt);
+		err = net_xmit_eval(err);
+	}
+
+	dst_release(dst);
+	return err;
+}
 ```
