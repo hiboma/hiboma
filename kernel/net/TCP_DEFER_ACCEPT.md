@@ -1,5 +1,15 @@
 # TCP_DEFER_ACCEPT
 
+
+```
+setsockopt(3, SOL_SOCKET, SO_REUSEADDR, [1], 4) = 0
+setsockopt(3, SOL_SOCKET, SO_KEEPALIVE, [1], 4) = 0
+setsockopt(3, SOL_TCP, TCP_NODELAY, [1], 4) = 0
+bind(3, {sa_family=AF_INET, sin_port=htons(80), sin_addr=inet_addr("0.0.0.0")}, 16) = 0
+listen(3, 511)                          = 0
+setsockopt(3, SOL_TCP, TCP_DEFER_ACCEPT, [1], 4) = 0
+```
+
 ## refs
 
  * http://d.hatena.ne.jp/kazuhooku/20100327/1269682361
