@@ -528,3 +528,13 @@ SYSCALL_DEFINE1(time, time_t __user *, tloc)
 	return i;
 }
 ```
+
+get_seconds の中身は **timekeeper.xtime.tv_sec** を return するだけ
+
+```c
+unsigned long get_seconds(void)
+{
+	return timekeeper.xtime.tv_sec;
+}
+EXPORT_SYMBOL(get_seconds);
+```
