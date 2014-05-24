@@ -27,7 +27,6 @@ struct request_sock_queue {
 rskq_defer_accept は inet_csk_reqsk_queue_prune で参照されている
 
 ```c
-
 void inet_csk_reqsk_queue_prune(struct sock *parent,
 				const unsigned long interval,
 				const unsigned long timeout,
@@ -76,6 +75,7 @@ void inet_csk_reqsk_queue_prune(struct sock *parent,
 	}
 
 	if (queue->rskq_defer_accept)
+        // ここ. max_retries 上書きしてるな
 		max_retries = queue->rskq_defer_accept;
 
 	budget = 2 * (lopt->nr_table_entries / (timeout / interval));
@@ -87,6 +87,7 @@ void inet_csk_reqsk_queue_prune(struct sock *parent,
 			if (time_after_eq(now, req->expires)) {
 				int expire = 0, resend = 0;
 
+                // 
 				syn_ack_recalc(req, thresh, max_retries,
 					       queue->rskq_defer_accept,
 					       &expire, &resend);
