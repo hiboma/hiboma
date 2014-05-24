@@ -40,7 +40,6 @@ rskq_defer_accept は inet_csk_reqsk_queue_prune で参照されている
    * TCP_LISTEN なら tcp_synack_timer
      * inet_csk_reqsk_queue_prune
 
-
 ```c
 void inet_csk_reqsk_queue_prune(struct sock *parent,
 				const unsigned long interval,
