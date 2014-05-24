@@ -8,6 +8,7 @@ do_tcp_setsockopt でセットされる
 	case TCP_DEFER_ACCEPT:
 		/* Translate value in seconds to number of retransmits */
 		icsk->icsk_accept_queue.rskq_defer_accept =
+            // 秒数を再送の回数に変換?
 			secs_to_retrans(val, TCP_TIMEOUT_INIT / HZ,
 					TCP_RTO_MAX / HZ);
 		break;
