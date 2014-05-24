@@ -483,3 +483,6 @@ crw-rw---- 1 root root 254, 0 May 19 12:44 /dev/rtc0
 
 ## 4.4 各種タイマー関連ハードゥエア
 
+## 4.5 時刻の取得
+
+ * time(2), gettimeofday(2)
