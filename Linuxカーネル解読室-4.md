@@ -485,6 +485,11 @@ crw-rw---- 1 root root 254, 0 May 19 12:44 /dev/rtc0
 
 ## 4.5 時刻の取得
 
+> 周期的に発生するタイマー割り込みの精度以上にはなりません。Intel x86用Linuxの場合、タイマ割り込み間隔は4ミリ秒です。
+
+> ただし、最近のCPUは周波数を動的に変更できるものも増えてきたため、可能であれば、CPU内部のレジスタよりはCPU外部のハードウェアを利用するようになっています。
+
+
  * time(2), gettimeofday(2)
    * time は精度が秒
    * gettimeofday は精度が マイクロ秒
@@ -514,6 +519,8 @@ struct timeval | マイクロ秒
 struct timespec | ナノ秒
 
 ### time(2) の実装
+
+**内部時計 = xtime** から時刻を取る
 
 ```c
 /*
@@ -548,6 +555,10 @@ EXPORT_SYMBOL(get_seconds);
 
 ### gettimeofday(2) の実装
 
+> gettimeofdayシステムコールでは、システムコールインターフェイス上は、ナノ秒単位の時刻を得ることかできます。
+
+あれ マイクロ秒に丸まってないかな?
+
 ```c
 SYSCALL_DEFINE2(gettimeofday, struct timeval __user *, tv,
 		struct timezone __user *, tz)
@@ -570,7 +581,7 @@ SYSCALL_DEFINE2(gettimeofday, struct timeval __user *, tv,
 do_gettimeofday の中身
 
   * tv_sec の扱いは time(2) と一緒
-  * tv_usec は getnstimeofday を追う必要がある
+  * tv_usec は getnstimeofday の中身を見るといい
 
 ```c
 /**
