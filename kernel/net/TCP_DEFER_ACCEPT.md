@@ -31,14 +31,15 @@ struct request_sock_queue {
 };
 ```
 
- * tcp_keepalive_timer
-   * TCP_LISTEN なら tcp_synack_timer
-     * inet_csk_reqsk_queue_prune
-
 rskq_defer_accept は inet_csk_reqsk_queue_prune で参照されている
 
  * syn/ack を再送するタイムアウトを計算している?
  * sysctl net.ipv4.tcp_synack_retries をオーバライド
+ * inet_csk_reqsk_queue_prune は tcp_keepalive_timer で発動する。tcp_init_xmit_timers で設定されるタイマ
+ * tcp_keepalive_timer
+   * TCP_LISTEN なら tcp_synack_timer
+     * inet_csk_reqsk_queue_prune
+
 
 ```c
 void inet_csk_reqsk_queue_prune(struct sock *parent,
@@ -106,7 +107,7 @@ void inet_csk_reqsk_queue_prune(struct sock *parent,
 					       queue->rskq_defer_accept,
 					       &expire, &resend);
 				if (!expire &&　
-				    (!resend ||
+                				    (!resend ||
                      // syn/ack 送信? -> tcp_v4_send_synack
 				     !req->rsk_ops->rtx_syn_ack(parent, req) ||
                      // acked なので ACK 済み?
