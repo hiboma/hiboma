@@ -21,4 +21,12 @@ https://github.com/hiboma/kernel_module_scratch/tree/master/timer でサンプ�
 	timer.data     = 0;
 	timer.function = timer_callback;
 	add_timer(&timer);
-``` 
+```
+
+### add_timer_on
+
+暇な CPU にタイマーリストを設定させる？
+
+```
+sysctl kernel.timer_migration = 1
+```
