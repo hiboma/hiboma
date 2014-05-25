@@ -75,7 +75,9 @@ calc_load(unsigned long load, unsigned long exp, unsigned long active)
 
 ## 4.2.2 CPUローカルな時計 - ハードウェア割り込み
 
- * コアごとにズラす
+ * CPUローカルな割り込みはタイミングをコアごとにズラす
+   * 競合を避ける
+   * 負荷が集中する事をさける
  * プロファイリング
  * scheduler_tick
 
