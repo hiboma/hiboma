@@ -599,7 +599,7 @@ timekeeper.xtime.tv_sec がどのように更新されているか? は update_w
 
 > gettimeofdayシステムコールでは、システムコールインターフェイス上は、ナノ秒単位の時刻を得ることかできます。
 
-あれ マイクロ秒に丸まってないかな?
+gettimeofday(2) は **struct timeval** なので、精度がマイクロ秒に丸まってないかな? 記述ミスかな
 
 ```c
 SYSCALL_DEFINE2(gettimeofday, struct timeval __user *, tv,
@@ -624,6 +624,7 @@ do_gettimeofday の中身
 
   * tv_sec の扱いは time(2) と一緒
   * tv_usec は getnstimeofday の中身を見るといい
+    * getnstimeofday で得た値を 1/1000 してマイクロ秒に丸めている
 
 ```c
 /**
