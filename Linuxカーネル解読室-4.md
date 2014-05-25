@@ -746,7 +746,10 @@ struct tms  {
 
 過去のある時点とは???
 
-times(2) の実装は下記の通りになっている
+times(2) の実装は下記の通りになっている。
+
+  * `return (long) jiffies_64_to_clock_t(get_jiffies_64());` の部分がオーバーフローする可能性があるってことか?
+  * 不思議インタフェースだ
 
 ```
 SYSCALL_DEFINE1(times, struct tms __user *, tbuf)
@@ -769,12 +772,13 @@ void do_sys_times(struct tms *tms)
 	cputime_t tgutime, tgstime, cutime, cstime;
 
 	spin_lock_irq(&current->sighand->siglock);
-
     // 全スレッドの時間を加算
 	thread_group_times(current, &tgutime, &tgstime);
+    // wait 待ち子プロセスのユー座時間とシステム時間
 	cutime = current->signal->cutime;
 	cstime = current->signal->cstime;
 	spin_unlock_irq(&current->sighand->siglock);
+
 	tms->tms_utime = cputime_to_clock_t(tgutime);
 	tms->tms_stime = cputime_to_clock_t(tgstime);
 	tms->tms_cutime = cputime_to_clock_t(cutime);
