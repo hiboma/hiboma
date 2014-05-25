@@ -485,6 +485,25 @@ crw-rw---- 1 root root 254, 0 May 19 12:44 /dev/rtc0
 
 ### 4.3.4 タイムスタンプカウンタ
 
+#### TSC Time Stamp Counter
+
+ * [access.redhat.com 15.1. ハードウェアクロック](https://access.redhat.com/site/documentation/ja-JP/Red_Hat_Enterprise_MRG/2/html/Realtime_Reference_Guide/chap-Realtime_Reference_Guide-Timestamping.html)
+   * クロックソース
+ * http://msmania.wordpress.com/tag/rdtsc/
+   * プロセッサごとに用意されてるレジスタ
+   * 高速な理由
+
+> それが、RDTSC (=Read Time Stamp Counter) 命令です。詳細は IA-32 の仕様書に書いてありますが、RDTSC を実行すると、1 命令で Tick 値を取得することができます。
+> しかも単位はクロック単位です。Pentium 以降の IA-32 アーキテクチャーでは、プロセッサーごとに TSC (=Time Stamp Counter) という 64bit カウンターが MSR (マシン固有レジスタ) に含まれており、RDTSC はこれを EDX:EAX レジスターにロードする命令です。
+
+/var/log/messages に TSC の同期を試みるログが出る
+
+```
+Jan 28 12:40:21 vagrant-centos65 kernel: TSC synchronization [CPU#0 -> CPU#1]:
+Jan 28 12:40:21 vagrant-centos65 kernel: Measured 1826989 cycles TSC warp between CPUs, turning off TSC clock.
+Jan 28 12:40:21 vagrant-centos65 kernel: Marking TSC unstable due to check_tsc_sync_source failed
+```
+
 ## 4.4 各種タイマー関連ハードゥエア
 
 ## 4.5 時刻の取得
@@ -503,6 +522,9 @@ crw-rw---- 1 root root 254, 0 May 19 12:44 /dev/rtc0
    * gettimeofday は精度が マイクロ秒
 
 ```c
+// サンプルコード
+
+int main(){ 
 
 	time_t t;
 	if(time(&t) == -1) {
@@ -518,6 +540,7 @@ crw-rw---- 1 root root 254, 0 May 19 12:44 /dev/rtc0
 
 	printf("%ld\n", t);
 	printf("%ld - %d\n", tv.tv_sec, tv.tv_usec);
+}    
 ```
 
 型　| 精度
