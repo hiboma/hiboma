@@ -751,7 +751,7 @@ times(2) の実装は下記の通りになっている。
   * `return (long) jiffies_64_to_clock_t(get_jiffies_64());` の部分がオーバーフローする可能性があるってことか?
   * 不思議インタフェースだ
 
-```
+```c
 SYSCALL_DEFINE1(times, struct tms __user *, tbuf)
 {
 	if (tbuf) {
@@ -783,5 +783,47 @@ void do_sys_times(struct tms *tms)
 	tms->tms_stime = cputime_to_clock_t(tgstime);
 	tms->tms_cutime = cputime_to_clock_t(cutime);
 	tms->tms_cstime = cputime_to_clock_t(cstime);
+}
+```
+
+サンプル書いてみたけど、jiffies 以外全部 0 になる。何か間違ってるかな
+
+```c
+#if 0
+#!/bin/bash
+CFLAGS="-O2 -std=gnu99 -W -Wall -fPIE -D_FORTIFY_SOURCE=2"
+o=`basename $0`
+o=".${o%.*}"
+gcc ${CFLAGS} -o $o $0 && ./$o $*; exit
+#endif
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/times.h>
+
+int main()
+{
+	struct tms buf;
+	clock_t jiffies = times(&buf);
+	if (jiffies == -1) {
+		perror("times");
+		exit(1);
+	}
+
+	for (int i = 0; i < 100000000; i++) {
+		pid_t pid = getpid();
+		pid = pid * pid;
+	}
+
+	// > 全ての時間はクロック数で返される。
+	printf("%ld, %ld, %ld, %ld, %ld\n",
+	       jiffies,
+	       buf.tms_utime,
+	       buf.tms_stime,
+	       buf.tms_cutime,
+	       buf.tms_cstime);
+
+	exit(0);
 }
 ```
