@@ -708,12 +708,13 @@ EXPORT_SYMBOL(getnstimeofday);
 
  Linux内部時計 (xtime) の説明
 
-  * CentOS5 のソースだと xtime はグローバル変数の **struct timespec** 
+  * 32bit での xtime (long型 = 4bytes) のオーバーフローの話
+  * mtime, atime, ctime も xtime を使ってセットされている
+  * CentOS5 のソースだと xtime はグローバル変数の **struct timespec**
 ```c
 // include/linux/time.h
 extern struct timespec xtime;
 ```
-
  * CentOS6.5 のソースだと **struct timekeeper** の .xtime で struct timespec
 ```c
 /* Structure holding internal timekeeping values. */
