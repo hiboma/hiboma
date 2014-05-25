@@ -646,7 +646,7 @@ void do_gettimeofday(struct timeval *tv)
 EXPORT_SYMBOL(do_gettimeofday);
 ```
 
-getnstimeofday は ナノ秒を精度として時刻取得する
+getnstimeofday(2) は ナノ秒を精度として時刻取得する
 
  * シーケンスロック * [refs](http://wiki.bit-hive.com/north/pg/%A5%B7%A5%B1%A1%BC%A5%F3%A5%B9%A5%ED%A5%C3%A5%AF)
    * 時計は書き手より読み手の方が圧倒的に多いはずなので、シーケンスロックを使っているのだろう
@@ -663,7 +663,7 @@ void getnstimeofday(struct timespec *ts)
 	unsigned long seq;
 	s64 nsecs;
 
-	WARN_ON(timekeeping_suspended);
+	WARN_ON(timekeeping_suspended);    k
 
 	do {
         // シーケンスロック
@@ -689,4 +689,8 @@ EXPORT_SYMBOL(getnstimeofday);
 
 > NTPデーモンは、時刻に狂いが出てくるとadjlimexシステムコールを利用してLinuxカーネルに時刻の修正を依頼します。
 
- * [adjtimex(2)](http://linuxjm.sourceforge.jp/html/LDP_man-pages/man2/adjtimex.2.html)
+ [adjtimex(2)](http://linuxjm.sourceforge.jp/html/LDP_man-pages/man2/adjtimex.2.html)。し仕様が複雑なので atode ...
+
+ ## 4.6 時刻管理の問題
+
+ 
