@@ -515,7 +515,7 @@ Jan 28 12:40:21 vagrant-centos65 kernel: Marking TSC unstable due to check_tsc_s
  * [インテルターボ・ブースト・テクノロジー](http://ja.wikipedia.org/wiki/%E3%82%A4%E3%83%B3%E3%83%86%E3%83%AB_%E3%82%BF%E3%83%BC%E3%83%9C%E3%83%BB%E3%83%96%E3%83%BC%E3%82%B9%E3%83%88%E3%83%BB%E3%83%86%E3%82%AF%E3%83%8E%E3%83%AD%E3%82%B8%E3%83%BC)
  * [Intel SpeedStep テクノロジ](http://ja.wikipedia.org/wiki/Intel_SpeedStep_%E3%83%86%E3%82%AF%E3%83%8E%E3%83%AD%E3%82%B8)
 
----- 
+----
 
  * time(2), gettimeofday(2)
    * time は精度が秒
@@ -523,8 +523,15 @@ Jan 28 12:40:21 vagrant-centos65 kernel: Marking TSC unstable due to check_tsc_s
 
 ```c
 // サンプルコード
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <err.h>
+#include <time.h>
+#include <sys/time.h>
 
-int main(){ 
+int main() { 
 
 	time_t t;
 	if(time(&t) == -1) {
@@ -543,6 +550,8 @@ int main(){
 }    
 ```
 
+time_t, timeval, timespec の精度を確認しておこう
+
 型　| 精度
 ---|---
 time_t | 秒
@@ -551,7 +560,7 @@ struct timespec | ナノ秒
 
 ### time(2) の実装
 
-**内部時計 = xtime** から時刻を取る
+**内部時計 = xtime** から時刻を取る実装になっている。非常にシンプル
 
 ```c
 /*
@@ -584,9 +593,11 @@ unsigned long get_seconds(void)
 EXPORT_SYMBOL(get_seconds);
 ```
 
+timekeeper.xtime.tv_sec がどのように更新されているか? は update_wall_time を読むとよい
+
 ### gettimeofday(2) の実装
 
-> gettimeofdayシステムコールでは、システムコールインターフェイス上は、ナノ秒単位の時刻を得ることかできます。
+> gettimeofdayシステムコールでは、システムコールインターフェイス上は、ナノ秒単位の時刻を得ることかできます。
 
 あれ マイクロ秒に丸まってないかな?
 
