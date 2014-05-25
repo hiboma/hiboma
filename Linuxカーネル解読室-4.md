@@ -725,3 +725,19 @@ struct timekeeper {
 	/* The current time */
 	struct timespec xtime;
 ```
+
+> また、timesシステムコールの戻り値は、jiffiesを基に計算するため、時間とともに次第に大きくなり、長時間動作しているシステムではオーバフローすることがあります。
+
+times(2) の定義は下記の通りにセットされている
+
+```c
+#include <sys/times.h>
+clock_t times(struct tms *buf);
+
+struct tms  {
+    clock_t tms_utime;  /* user time */
+    clock_t tms_stime;  /* system time */
+    clock_t tms_cutime; /* user time of children */
+    clock_t tms_cstime; /* system time of children */
+};
+```
