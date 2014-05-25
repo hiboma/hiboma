@@ -839,7 +839,13 @@ jiffies が使われている /proc は `/proc/<pid>/stat` か?
 
 `/proc/<pid>/stat` のハンドラは do_task_stat で実装されている
 
- * プロセスの起動時刻 `task_struct .real_start_time` を start_time (ticks = jiffies) に変えてる
+ * プロセスの生成時刻 `task_struct .real_start_time` を start_time (ticks = jiffies) に変えてる
+   * real_start_time は fork の過程でセットされている
+ ```c
+	do_posix_clock_monotonic_gettime(&p->start_time);
+	p->real_start_time = p->start_time;
+	monotonic_to_bootbased(&p->real_start_time);
+```
  * jiffies がオーバーフローするとここが狂いそう
 
 ```c
