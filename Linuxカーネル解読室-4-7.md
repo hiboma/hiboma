@@ -13,6 +13,7 @@ https://github.com/hiboma/kernel_module_scratch/tree/master/timer でサンプ�
 
  * expires はタイマの発動時間を指定する
  * timer は自動で削除されない。追加する側の責任で del_timer で消すこと
+   * 再度発火させる場合は mod_timer 使う?
 
 ```c
 	init_timer(&timer);
