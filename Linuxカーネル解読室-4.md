@@ -671,7 +671,8 @@ void getnstimeofday(struct timespec *ts)
 
 		*ts = timekeeper.xtime;
 
-        // ナノ秒
+        // クロックソースからナノ秒を読み取る
+        // 「秒」は timekeeper.xtime.tv_sec をそのまま返す様子
 		nsecs = timekeeping_get_ns();
 
 		/* If arch requires, add in gettimeoffset() */
@@ -680,7 +681,7 @@ void getnstimeofday(struct timespec *ts)
    // ロックとれるまでループ
 	} while (read_seqretry(&timekeeper.lock, seq));
 
-    // ?
+    // struct timespec の計算用ルーチ
 	timespec_add_ns(ts, nsecs);
 }
 EXPORT_SYMBOL(getnstimeofday);
