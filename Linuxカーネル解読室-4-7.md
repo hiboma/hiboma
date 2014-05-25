@@ -61,7 +61,6 @@ static void run_timer_softirq(struct softirq_action *h)
 }
 ```
 
-
 ### add_timer の API
 
  * expires はタイマの発動時間を指定する
