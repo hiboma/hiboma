@@ -33,7 +33,8 @@ void do_timer(unsigned long ticks)
 }
 ```
 
-calc_global_load でロードアベレージの計算をする
+ * update_wall_time で xtime の更新
+ * calc_global_load でロードアベレージの計算をする
 
 ```c
 /*
