@@ -828,11 +828,74 @@ int main()
 }
 ```
 
-jiffies が使われている /proc は `/proc/<pid>/stat` か
+jiffies が使われている /proc は `/proc/<pid>/stat` か?
 
  * http://blog.livedoor.jp/kurt0027/archives/51870033.html
 
 ```
 [vagrant@vagrant-centos65 ~]$ cat /proc/self/stat
 3468 (cat) R 3449 3468 3449 34816 3468 4202496 215 0 0 0 0 0 0 0 20 0 1 0 7867478 6221824 141 18446744073709551615 4194304 4235780 140733613784960 140733218595128 140483486963504 0 0 0 0 0 0 0 17 3 0 0 0 0 0
-``` 
+```
+
+`/proc/<pid>/stat` のハンドラは do_task_stat で実装されている
+
+```c
+static int do_task_stat(struct seq_file *m, struct pid_namespace *ns,
+			struct pid *pid, struct task_struct *task, int whole)
+{
+
+	seq_printf(m, "%d (%s) %c %d %d %d %d %d %u %lu \
+%lu %lu %lu %lu %lu %ld %ld %ld %ld %d 0 %llu %lu %ld %lu %lu %lu %lu %lu \
+%lu %lu %lu %lu %lu %lu %lu %lu %d %d %u %u %llu %lu %ld\n",
+		pid_nr_ns(pid, ns),
+		tcomm,
+		state,
+		ppid,
+		pgid,
+		sid,
+		tty_nr,
+		tty_pgrp,
+		task->flags,
+		min_flt,
+		cmin_flt,
+		maj_flt,
+		cmaj_flt,
+		cputime_to_clock_t(utime),
+		cputime_to_clock_t(stime),
+		cputime_to_clock_t(cutime),
+		cputime_to_clock_t(cstime),
+		priority,
+		nice,
+		num_threads,
+		start_time,
+		vsize,
+		mm ? get_mm_rss(mm) : 0,
+		rsslim,
+		mm ? (permitted ? mm->start_code : 1) : 0,
+		mm ? (permitted ? mm->end_code : 1) : 0,
+		(permitted && mm) ? mm->start_stack : 0,
+		esp,
+		eip,
+		/* The signal information here is obsolete.
+		 * It must be decimal for Linux 2.0 compatibility.
+		 * Use /proc/#/status for real-time signals.
+		 */
+		task->pending.signal.sig[0] & 0x7fffffffUL,
+		task->blocked.sig[0] & 0x7fffffffUL,
+		sigign      .sig[0] & 0x7fffffffUL,
+		sigcatch    .sig[0] & 0x7fffffffUL,
+		wchan,
+		0UL,
+		0UL,
+		task->exit_signal,
+		task_cpu(task),
+		task->rt_priority,
+		task->policy,
+		(unsigned long long)delayacct_blkio_ticks(task),
+		cputime_to_clock_t(gtime),
+		cputime_to_clock_t(cgtime));
+	if (mm)
+		mmput(mm);
+	return 0;
+}
+```
