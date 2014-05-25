@@ -31,3 +31,11 @@ https://github.com/hiboma/kernel_module_scratch/tree/master/timer でサンプ�
 ```
 sysctl kernel.timer_migration = 1
 ```
+
+----
+
+寄り道
+
+ * tickless カーネル
+   * CONFIG_NO_HZ
+   * http://www.ibm.com/developerworks/jp/linux/library/l-green-linux/
