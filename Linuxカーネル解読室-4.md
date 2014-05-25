@@ -827,3 +827,7 @@ int main()
 	exit(0);
 }
 ```
+
+jiffies が使われている /proc は `/proc/<pid>/stat` か
+
+ * http://blog.livedoor.jp/kurt0027/archives/51870033.html
