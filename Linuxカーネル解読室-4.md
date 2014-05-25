@@ -839,7 +839,8 @@ jiffies が使われている /proc は `/proc/<pid>/stat` か?
 
 `/proc/<pid>/stat` のハンドラは do_task_stat で実装されている
 
- * start_time
+ * プロセスの起動時刻 `task_struct .real_start_time` を start_time (ticks = jiffies) に変えてる
+ * jiffies がオーバーフローするとここが狂いそう
 
 ```c
 static int do_task_stat(struct seq_file *m, struct pid_namespace *ns,
