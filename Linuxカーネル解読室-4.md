@@ -741,3 +741,7 @@ struct tms  {
     clock_t tms_cstime; /* system time of children */
 };
 ```
+
+> times() は過去のある時点から経過したクロック数 (clock tick) を返す。 この返り値は clock_t >型が取り得る範囲からオーバーフローするかもしれない。 エラーの場合、(clock_t) -1 が返され、 errno が適切に設定される。
+
+過去のある時点とは???
