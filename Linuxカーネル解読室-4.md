@@ -755,7 +755,7 @@ SYSCALL_DEFINE1(times, struct tms __user *, tbuf)
 		struct tms tmp;
 
         // ->
-        // プロセスのユーザ時間、システム時間、子プロセスのユーザ/システム時間をとってくる
+        // プロセスのユーザ時間、システム時間、「終了を待っている」子プロセスのユーザ/システム時間をとってくる
 		do_sys_times(&tmp);
 		if (copy_to_user(tbuf, &tmp, sizeof(struct tms)))
 			return -EFAULT;
@@ -769,6 +769,8 @@ void do_sys_times(struct tms *tms)
 	cputime_t tgutime, tgstime, cutime, cstime;
 
 	spin_lock_irq(&current->sighand->siglock);
+
+    // 全スレッドの時間を加算
 	thread_group_times(current, &tgutime, &tgstime);
 	cutime = current->signal->cutime;
 	cstime = current->signal->cstime;
