@@ -8,6 +8,7 @@ https://github.com/hiboma/kernel_module_scratch/tree/master/timer でサンプ�
  * 古典UNIX の callout の仕組み
    * しらんがな〜
  * ローカルタイマソフト割り込みのタイミングでタイマが実行される
+   * `raise_softirq_irqoff(TIMER_SOFTIRQ);`
 
 ### add_timer の API
 
