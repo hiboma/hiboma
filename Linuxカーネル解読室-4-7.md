@@ -10,6 +10,33 @@ https://github.com/hiboma/kernel_module_scratch/tree/master/timer でサンプ�
  * ローカルタイマソフト割り込みのタイミングでタイマが実行される
    * `raise_softirq_irqoff(TIMER_SOFTIRQ);`
 
+```c   
+void __init init_timers(void)
+{
+	int err = timer_cpu_notify(&timers_nb, (unsigned long)CPU_UP_PREPARE,
+				(void *)(long)smp_processor_id());
+
+	init_timer_stats();
+
+	BUG_ON(err == NOTIFY_BAD);
+	register_cpu_notifier(&timers_nb);
+	open_softirq(TIMER_SOFTIRQ, run_timer_softirq);
+}
+
+/*
+ * This function runs timers and the timer-tq in bottom half context.
+ */
+static void run_timer_softirq(struct softirq_action *h)
+{
+	struct tvec_base *base = __get_cpu_var(tvec_bases);
+
+	hrtimer_run_pending();
+
+	if (time_after_eq(jiffies, base->timer_jiffies))
+		__run_timers(base);
+}
+```   
+
 ### add_timer の API
 
  * expires はタイマの発動時間を指定する
