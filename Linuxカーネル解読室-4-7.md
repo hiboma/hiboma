@@ -28,10 +28,7 @@ void __init init_timers(void)
 }
 ```
 
-softirq を出すのは以下のコード。
-
- * CPUコアごと
- * SMP
+softirq を出すのは以下のコード。CPU コアごとに発火する割り込みですぞ
 
 ```c
 /*
@@ -44,7 +41,12 @@ void run_local_timers(void)
 }
 ```
 
+softirq ハンドラは **run_timer_softirq**
 
+ * hrtimer_run_queues ? は後で
+ * __run_timers が timer_list を順次見ていって処理するコード
+
+```
 /*
  * This function runs timers and the timer-tq in bottom half context.
  */
