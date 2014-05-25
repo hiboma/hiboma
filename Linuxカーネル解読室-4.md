@@ -648,6 +648,9 @@ EXPORT_SYMBOL(do_gettimeofday);
 
 getnstimeofday は ナノ秒を精度として時刻取得する
 
+ * シーケンスロック * [refs](http://wiki.bit-hive.com/north/pg/%A5%B7%A5%B1%A1%BC%A5%F3%A5%B9%A5%ED%A5%C3%A5%AF)
+   * 時計は書き手より読み手の方が圧倒的に多いはずなので、シーケンスロックを使っているのだろう
+
 ```c
 /**
  * getnstimeofday - Returns the time of day in a timespec
@@ -663,7 +666,7 @@ void getnstimeofday(struct timespec *ts)
 	WARN_ON(timekeeping_suspended);
 
 	do {
-        // シーケンシャル読み取りロック?
+        // シーケンスロック
 		seq = read_seqbegin(&timekeeper.lock);
 
 		*ts = timekeeper.xtime;
