@@ -10,6 +10,10 @@ https://github.com/hiboma/kernel_module_scratch/tree/master/timer でサンプ�
  * ローカルタイマソフト割り込みのタイミングでタイマが実行される
    * `raise_softirq_irqoff(TIMER_SOFTIRQ);`
 
+### ローカルCPU の softirq
+
+TIMER_SOFTIRQ が softirq 番号。初期化は下記のコードでされている
+
 ```c   
 void __init init_timers(void)
 {
@@ -22,6 +26,24 @@ void __init init_timers(void)
 	register_cpu_notifier(&timers_nb);
 	open_softirq(TIMER_SOFTIRQ, run_timer_softirq);
 }
+```
+
+softirq を出すのは以下のコード。
+
+ * CPUコアごと
+ * SMP
+
+```c
+/*
+ * Called by the local, per-CPU timer interrupt on SMP.
+ */
+void run_local_timers(void)
+{
+	hrtimer_run_queues();
+	raise_softirq(TIMER_SOFTIRQ);
+}
+```
+
 
 /*
  * This function runs timers and the timer-tq in bottom half context.
@@ -35,7 +57,8 @@ static void run_timer_softirq(struct softirq_action *h)
 	if (time_after_eq(jiffies, base->timer_jiffies))
 		__run_timers(base);
 }
-```   
+```
+
 
 ### add_timer の API
 
