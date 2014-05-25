@@ -745,3 +745,37 @@ struct tms  {
 > times() は過去のある時点から経過したクロック数 (clock tick) を返す。 この返り値は clock_t >型が取り得る範囲からオーバーフローするかもしれない。 エラーの場合、(clock_t) -1 が返され、 errno が適切に設定される。
 
 過去のある時点とは???
+
+times(2) の実装は下記の通りになっている
+
+```
+SYSCALL_DEFINE1(times, struct tms __user *, tbuf)
+{
+	if (tbuf) {
+		struct tms tmp;
+
+        // ->
+        // プロセスのユーザ時間、システム時間、子プロセスのユーザ/システム時間をとってくる
+		do_sys_times(&tmp);
+		if (copy_to_user(tbuf, &tmp, sizeof(struct tms)))
+			return -EFAULT;
+	}
+	force_successful_syscall_return();
+	return (long) jiffies_64_to_clock_t(get_jiffies_64());
+}
+
+void do_sys_times(struct tms *tms)
+{
+	cputime_t tgutime, tgstime, cutime, cstime;
+
+	spin_lock_irq(&current->sighand->siglock);
+	thread_group_times(current, &tgutime, &tgstime);
+	cutime = current->signal->cutime;
+	cstime = current->signal->cstime;
+	spin_unlock_irq(&current->sighand->siglock);
+	tms->tms_utime = cputime_to_clock_t(tgutime);
+	tms->tms_stime = cputime_to_clock_t(tgstime);
+	tms->tms_cutime = cputime_to_clock_t(cutime);
+	tms->tms_cstime = cputime_to_clock_t(cstime);
+}
+```
