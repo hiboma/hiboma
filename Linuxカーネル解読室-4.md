@@ -643,3 +643,5 @@ void getnstimeofday(struct timespec *ts)
 }
 EXPORT_SYMBOL(getnstimeofday);
 ```
+
+> NTPデーモンは、時刻に狂いが出てくるとadjlimexシステムコールを利用してLinuxカーネルに時刻の修正を依頼します。
