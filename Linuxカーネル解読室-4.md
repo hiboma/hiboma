@@ -522,32 +522,45 @@ Jan 28 12:40:21 vagrant-centos65 kernel: Marking TSC unstable due to check_tsc_s
    * gettimeofday は精度が マイクロ秒
 
 ```c
-// サンプルコード
+#if 0
+#!/bin/bash
+CFLAGS="-O2 -std=gnu99 -lrt -W -Wall -fPIE -D_FORTIFY_SOURCE=2"
+o=`basename $0`
+o=".${o%.*}"
+gcc ${CFLAGS} -o $o $0 && ./$o $*; exit
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <err.h>
 #include <time.h>
 #include <sys/time.h>
 
-int main() { 
-
+int main()
+{
 	time_t t;
-	if(time(&t) == -1) {
+	if (time(&t) == -1) {
 		perror("time");
 		exit(1);
 	}
 
 	struct timeval tv;
-	if(gettimeofday(&tv, NULL) == -1) {
+	if (gettimeofday(&tv, NULL) == -1) {
 		perror("gettimeofday");
 		exit(1);
 	}
 
+	struct timespec ts;
+	if (clock_gettime(CLOCK_REALTIME, &ts) == -1) {
+		perror("clock_gettime");
+		exit(1);
+	}
+
 	printf("%ld\n", t);
-	printf("%ld - %d\n", tv.tv_sec, tv.tv_usec);
-}    
+	printf("%ld - %ld\n", tv.tv_sec, tv.tv_usec);
+	printf("%ld - %ld\n", ts.tv_sec, ts.tv_nsec);
+	exit(0);
+
+}
 ```
 
 time_t, timeval, timespec の精度を確認しておこう
