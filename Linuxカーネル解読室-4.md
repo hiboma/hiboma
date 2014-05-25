@@ -706,4 +706,21 @@ EXPORT_SYMBOL(getnstimeofday);
 
  ## 4.6 時刻管理の問題
 
- 
+ Linux内部時計 (xtime) の説明
+
+  * CentOS5 のソースだと xtime はグローバル変数の **struct timespec** 
+```c
+// include/linux/time.h
+extern struct timespec xtime;
+```
+
+ * CentOS6.5 のソースだと **struct timekeeper** の .xtime で struct timespec
+```c
+/* Structure holding internal timekeeping values. */
+struct timekeeper {
+
+// ...
+
+	/* The current time */
+	struct timespec xtime;
+```
