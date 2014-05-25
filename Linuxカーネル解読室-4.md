@@ -688,3 +688,5 @@ EXPORT_SYMBOL(getnstimeofday);
 ```
 
 > NTPデーモンは、時刻に狂いが出てくるとadjlimexシステムコールを利用してLinuxカーネルに時刻の修正を依頼します。
+
+ * [adjtimex(2)](http://linuxjm.sourceforge.jp/html/LDP_man-pages/man2/adjtimex.2.html)
