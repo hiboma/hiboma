@@ -77,7 +77,9 @@ static void run_timer_softirq(struct softirq_action *h)
 
 ### add_timer_on
 
-暇な CPU にタイマーリストを設定させる？
+~~暇な CPU~~ 忙しいCPUにタイマーリストを設定させる
+
+ * 電力消費おさえる
 
 ```
 sysctl kernel.timer_migration = 1
