@@ -16,7 +16,10 @@ https://github.com/hiboma/kernel_module_scratch/tree/master/timer でサンプ�
 
  * schedule_timeout
  * process_timeout
+   * `wake_up_process((struct task_struct *)__data);`
  * sleep_on_timeout, interruptible_sleep_on_timeout
+
+kernel/schedule_timeout.md に書いた 
 
 ### ローカルCPU の softirq
 
