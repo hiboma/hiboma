@@ -10,6 +10,14 @@ https://github.com/hiboma/kernel_module_scratch/tree/master/timer でサンプ�
  * ローカルタイマソフト割り込みのタイミングでタイマが実行される
    * `raise_softirq_irqoff(TIMER_SOFTIRQ);`
 
+## 4.7.4 プロセスからの利用
+
+プロセスコンテキストからの利用てことかな
+
+ * schedule_timeout
+ * process_timeout
+ * sleep_on_timeout, interruptible_sleep_on_timeout
+
 ### ローカルCPU の softirq
 
 TIMER_SOFTIRQ が softirq 番号。初期化は下記のコードでされている
