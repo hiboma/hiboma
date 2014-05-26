@@ -79,7 +79,8 @@ static void run_timer_softirq(struct softirq_action *h)
 
 ~~暇な CPU~~ 忙しいCPUにタイマーリストを設定させる
 
- * 電力消費おさえる
+ * チックレースカーネルで電力消費抑える
+ * 暇なCPUの数が多い => チックを抑える事ができる
 
 ```
 sysctl kernel.timer_migration = 1
