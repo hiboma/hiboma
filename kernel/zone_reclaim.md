@@ -8,7 +8,8 @@ free > pages_high | ideal
 free < pages_low  | swapout し始める
 free < pages_min  | pressure to reclaim page is increased
 
-watermark を下回ったかどうかは **zone_watermark_ok** で確認される
+ * watermark を下回ったかどうかは **zone_watermark_ok** で確認される
+ * zone_watermark_ok が false なら zone_reclaim が走る
 
 ```c
 static struct page *
