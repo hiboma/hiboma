@@ -5,7 +5,7 @@ zone の relcaim が起こる条件をまとめておく
 watermark と free の状態               | 説明       
 ------------------|--------------
 free > pages_high | ideal
-free < pages_low  | swapout し始める
+free < pages_low  | reclaim し始める
 free < pages_min  | pressure to reclaim page is increased
 
  * watermark を下回ったかどうかは **zone_watermark_ok** で確認される
