@@ -51,9 +51,11 @@ zonelist_scan:
 				    classzone_idx, alloc_flags))
 				goto try_this_zone;
 
+            /* see http://mkosaki.blog46.fc2.com/blog-entry-936.html */
 			if (zone_reclaim_mode == 0)
 				goto this_zone_full;
 
+            /* zone で reclaim を試みる */
 			ret = zone_reclaim(preferred_zone, zone, gfp_mask,
 					   order,
 					   mark, classzone_idx, alloc_flags);
