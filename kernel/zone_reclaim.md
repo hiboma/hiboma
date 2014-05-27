@@ -10,6 +10,7 @@ free < pages_min  | pressure to reclaim page is increased
 
  * watermark を下回ったかどうかは **zone_watermark_ok** で確認される
  * zone_watermark_ok が false なら zone_reclaim が走る
+   * zone_reclaim を呼ぶのは get_page_from_freelist だけ
 
 ```c
 static struct page *
