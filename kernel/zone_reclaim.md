@@ -8,6 +8,7 @@ free > pages_high | ideal
 free < pages_low  | swapout し始める
 free < pages_min  | pressure to reclaim page is increased
 
+watermark を下回ったかどうかは **zone_watermark_ok** で確認される
 
 ```c
 static struct page *
@@ -44,6 +45,8 @@ zonelist_scan:
 			int ret;
 
 			mark = zone->watermark[alloc_flags & ALLOC_WMARK_MASK];
+
+            /* watermark 大丈夫なので この zone から空きページを取る */
 			if (zone_watermark_ok(zone, order, mark,
 				    classzone_idx, alloc_flags))
 				goto try_this_zone;
