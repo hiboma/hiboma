@@ -62,3 +62,12 @@ zonelist_scan:
 					   order,
 					   mark, classzone_idx, alloc_flags);
 ```
+
+zone_reclaim から各種 shrink_ プレフィックスな関数呼び出しに繋がる
+
+   * __zone_reclaim
+     * zone_reclaim_compact
+     * shrink_zones
+       * shrink_list
+         * shrink_active_list
+         * shrink_inactive_list
