@@ -46,6 +46,7 @@ zonelist_scan:
 			unsigned long mark;
 			int ret;
 
+            /* alloc_flags から比較する watermark を出す */
 			mark = zone->watermark[alloc_flags & ALLOC_WMARK_MASK];
 
             /* watermark 大丈夫なので この zone から空きページを取る */
