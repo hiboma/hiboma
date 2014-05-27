@@ -1,8 +1,8 @@
 # zone_reclaim
 
-zone の relcaim が起こる条件
+zone の relcaim が起こる条件をまとめておく
 
-状態               | 説明       
+watermark と free の状態               | 説明       
 ------------------|--------------
 free > pages_high | ideal
 free < pages_low  | swapout し始める
@@ -71,3 +71,5 @@ zone_reclaim から各種 shrink_ プレフィックスな関数呼び出しに�
        * shrink_list
          * shrink_active_list
          * shrink_inactive_list
+
+これらの詳細は別件で。
