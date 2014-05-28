@@ -68,6 +68,9 @@ zone_reclaim から各種 shrink_ プレフィックスな関数呼び出しに�
 
    * __zone_reclaim
      * zone_reclaim_compact
+       * compact_zone_order
+         * compact_zone, migrate_page, ...
+         * ページのデフラグする?
      * shrink_zones
        * shrink_list
          * shrink_active_list
