@@ -1,10 +1,9 @@
 # buffered_rmqueue
 
-Linux Kernel Arcitecture P264, P.265,
+ * Linux Kernel Arcitecture P264, P.265,
+ * get_page_from_freelist から呼び出される関数で, zone からの page 確保の肝 (buddy system) となる
 
 ## 要点
-
-get_page_from_freelist から呼び出される関数で, zone からの page 確保の肝 (buddy system) となる
 
 どのようにして page を取るかはいろいろ条件がつく
 
@@ -16,7 +15,7 @@ get_page_from_freelist から呼び出される関数で, zone からの page �
 
 無事 page を確保できたらゼロ初期化などをして返す
 
-## ソース  
+## buffered_rmqueue のソース
 
  ```c
  /*
@@ -89,12 +88,16 @@ again:
 		__mod_zone_page_state(zone, NR_FREE_PAGES, -(1 << order));
 	}
 
+    // ここまできたら page 自体は取れている ...
 	__count_zone_vm_events(PGALLOC, zone, 1 << order);
 	zone_statistics(preferred_zone, zone, gfp_flags);
 	local_irq_restore(flags);
 	put_cpu();
 
 	VM_BUG_ON(bad_range(zone, page));
+
+    // 初期化がコケるケースがある
+    // ->
 	if (prep_new_page(page, order, gfp_flags))
 		goto again;
 	return page;
@@ -107,9 +110,7 @@ failed:
 }
 ```
 
-free なページを取れた場合は prep_new_page で page の初期化? をする
-
- * prep_zero_page 以下の動作は [ページのゼロ初期化](https://github.com/hiboma/hiboma/blob/master/kernel/%E3%83%98%E3%82%9A%E3%83%BC%E3%82%B7%E3%82%99%E3%81%AE%E3%82%BB%E3%82%99%E3%83%AD%E5%88%9D%E6%9C%9F%E5%8C%96.md) も合わせて読むとよい
+free なページを取れた場合は prep_new_page で page の初期化? をする。prep_zero_page 以下の動作は [ページのゼロ初期化](https://github.com/hiboma/hiboma/blob/master/kernel/%E3%83%98%E3%82%9A%E3%83%BC%E3%82%B7%E3%82%99%E3%81%AE%E3%82%BB%E3%82%99%E3%83%AD%E5%88%9D%E6%9C%9F%E5%8C%96.md) も合わせて読むとよい
 
 ```c
 static int prep_new_page(struct page *page, int order, gfp_t gfp_flags)
@@ -143,12 +144,16 @@ static int prep_new_page(struct page *page, int order, gfp_t gfp_flags)
 }
 ```
 
-order > 0 の場合は __rmqueue を試す。 buddyシステムの order に応じて探す?
+----
 
- * __rmqueue_smallest を試す
+## order > 0 の場合
+
+__rmqueue を試す。buddyシステムの order に応じて探す?
+
+ * 1. __rmqueue_smallest を試す
    * 連続したページを探す
- * free な page を取れないなら __rmqueue_fallback を試す
- * MIGRATE_RESERVE をつけてもういっぺん __rmqueue_smallest を試す
+ * 2. free な page を取れないなら __rmqueue_fallback を試す
+ * 3. MIGRATE_RESERVE をつけてもういっぺん __rmqueue_smallest を試す
 
 ```c
 /*
