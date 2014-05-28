@@ -10,9 +10,9 @@ get_page_from_freelist から呼び出される
 
  * ページが連続( contiguous ) しているか
  * order = 0 の場合
-   * per-CPU page cahce から取る
+   * per-CPU page cahce から free なページを取る
  * order > 0 の場合
-   * free_lists から空きページを取る
+   * free_lists から free なページを取る
 
 ## ソース   
 
@@ -138,6 +138,10 @@ static int prep_new_page(struct page *page, int order, gfp_t gfp_flags)
 ```
 
 __rmqueue
+
+ * __rmqueue_smallest を試す
+ * free な page を取れないなら __rmqueue_fallback を試す
+ * MIGRATE_RESERVE をつけてもういっぺん __rmqueue_smallest を試す
 
 ```c
 /*
