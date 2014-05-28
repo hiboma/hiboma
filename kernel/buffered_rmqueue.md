@@ -4,17 +4,17 @@ Linux Kernel Arcitecture P264, P.265,
 
 ## 要点
 
-get_page_from_freelist から呼び出される
+get_page_from_freelist から呼び出される関数で, zone からの page 確保の肝 (buddy system) となる
 
-ページを解放する zone を決めた後
+どのようにして page を取るかはいろいろ条件がつく
 
  * ページが連続( contiguous ) しているか
  * order = 0 の場合
    * per-CPU page cahce から free なページを取る
  * order > 0 の場合
-   * free_lists から free なページを取る
+   * free_lists から連続した free なページを取るためにあれこれする
 
-page を確保できたらゼロ初期化など   
+無事 page を確保できたらゼロ初期化などをして返す
 
 ## ソース  
 
