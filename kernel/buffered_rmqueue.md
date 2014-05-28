@@ -105,7 +105,9 @@ failed:
 }
 ```
 
-prep_new_page で page の初期化? をする
+free なページを取れた場合は prep_new_page で page の初期化? をする
+
+ * prep_zero_page 以下の動作は [ページのゼロ初期化](https://github.com/hiboma/hiboma/blob/master/kernel/%E3%83%98%E3%82%9A%E3%83%BC%E3%82%B7%E3%82%99%E3%81%AE%E3%82%BB%E3%82%99%E3%83%AD%E5%88%9D%E6%9C%9F%E5%8C%96.md) も合わせて読むとよい
 
 ```c
 static int prep_new_page(struct page *page, int order, gfp_t gfp_flags)
@@ -124,6 +126,7 @@ static int prep_new_page(struct page *page, int order, gfp_t gfp_flags)
 	arch_alloc_page(page, order);
 	kernel_map_pages(page, 1 << order, 1);
 
+    // ゼロ初期化
 	if (gfp_flags & __GFP_ZERO)
 		prep_zero_page(page, order, gfp_flags);
 
