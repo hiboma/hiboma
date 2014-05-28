@@ -71,7 +71,8 @@ zone_reclaim から各種 shrink_ プレフィックスな関数呼び出しに�
        * compact_zone_order
          * compact_zone, migrate_page, ...
          * 外部断片化(external fragmentation) してるページのデフラグする?
-         * sysctl_extfrag_threshold で compaction の度合いを決めれる
+         * `sysctl_extfrag_threshold`? で compaction の度合いを決めれる
+         * `/proc/sys/vm/compact_memory`?
      * shrink_zones
        * shrink_list
          * shrink_active_list
