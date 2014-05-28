@@ -122,13 +122,17 @@ static int prep_new_page(struct page *page, int order, gfp_t gfp_flags)
 			return 1;
 	}
 
+    // 0 初期化。 buffer 用に使われる際に設定されている
 	set_page_private(page, 0);
+    // 使用カウントを 1 にセット
 	set_page_refcounted(page);
 
+    // ?
 	arch_alloc_page(page, order);
+    // ?
 	kernel_map_pages(page, 1 << order, 1);
 
-    // ゼロ初期化
+    // ページの中身をゼロ初期化
 	if (gfp_flags & __GFP_ZERO)
 		prep_zero_page(page, order, gfp_flags);
 
