@@ -70,7 +70,8 @@ zone_reclaim から各種 shrink_ プレフィックスな関数呼び出しに�
      * zone_reclaim_compact
        * compact_zone_order
          * compact_zone, migrate_page, ...
-         * ページのデフラグする?
+         * 外部断片化(external fragmentation) してるページのデフラグする?
+         * sysctl_extfrag_threshold で compaction の度合いを決めれる
      * shrink_zones
        * shrink_list
          * shrink_active_list
