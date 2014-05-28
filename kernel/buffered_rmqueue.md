@@ -14,7 +14,9 @@ get_page_from_freelist から呼び出される
  * order > 0 の場合
    * free_lists から free なページを取る
 
-## ソース   
+page を確保できたらゼロ初期化など   
+
+## ソース  
 
  ```c
  /*
@@ -137,9 +139,10 @@ static int prep_new_page(struct page *page, int order, gfp_t gfp_flags)
 }
 ```
 
-__rmqueue
+order > 0 の場合は __rmqueue を試す。 buddyシステムの order に応じて探す?
 
  * __rmqueue_smallest を試す
+   * 連続したページを探す
  * free な page を取れないなら __rmqueue_fallback を試す
  * MIGRATE_RESERVE をつけてもういっぺん __rmqueue_smallest を試す
 
