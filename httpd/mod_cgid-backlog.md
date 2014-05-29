@@ -1,13 +1,15 @@
 # mod_cgid + backlog
 
+クライアントが多い際に mod_cgid の backlog が溢れていることでスループットが低下していないかどうか? のネタ
+
 ## 前置き
 
  * mod_cgid のソースは modules/generators/mod_cgid.c 
- * mod_cgid のソケットは AF_UNIX, SOCK_STREAM
+ * mod_cgid のソケットは UNIXドメインソケット(AF_UNIX, SOCK_STREAM)
 
 ## ソケットの backlog のサイズ
  
-mod_cgid のソケットの backlog は DEFAULT_CGID_LISTENBACKLOG で決定される
+mod_cgid のソケットの backlog は **DEFAULT_CGID_LISTENBACKLOG** (デフォルト値 100) で決定される
 
  * 大量の接続が来た場合は queue される
  * queue が溢れた場合は ECONNREFUSED で再接続を試みる
@@ -33,10 +35,14 @@ mod_cgid のソケットの backlog は DEFAULT_CGID_LISTENBACKLOG で決定さ�
     } 
 ```
 
-worker から mod_cgid に connect(2) する箇所のコード
+## worker から mod_cgid に connect(2) する箇所のコード
+
+connect_to_daemon のソースを読むと良い
 
  * connect して ECONNREFUSED を返した場合は **sliding_timer** の分 sleep してから再接続
-   * 2回目以降の再接続では **sliding_timer *=2** なので
+   * 1回目では 100ms sleep
+   * 2回目以降の再接続では **sliding_timer *=2** で 200, 400, 800, ... と sleep 時間が増える
+   * 再接続の回数は **DEFAULT_CONNECT_ATTEMPTS** (デフォルト値 15回)
 
 ```c
 static int connect_to_daemon(int *sdptr, request_rec *r,
@@ -92,6 +98,9 @@ static int connect_to_daemon(int *sdptr, request_rec *r,
 }
 ```
 
+## 再接続しているかどう調べるか?
+
+ * mod_cgid を strace -econnect して追う?
 
 
 ```
