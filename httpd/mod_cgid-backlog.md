@@ -133,7 +133,7 @@ static int connect_to_daemon(int *sdptr, request_rec *r,
 
 ここからはカーネルの話。調べ中
 
-## カーネルのバックログ上限
+## カーネルのUNIXドメインソケットバックログ上限
 
 sysctl の `net.unix.max_dgram_qlen` が backlog の上限。
 
@@ -141,6 +141,54 @@ sysctl の `net.unix.max_dgram_qlen` が backlog の上限。
 [vagrant@vagrant-centos65 ~]$ sysctl -a | grep unix
 net.unix.max_dgram_qlen = 10
 ```
+
+ * カーネルの内部では `unx.sysctl_max_dgram_qlen` として扱われる
+ * sk->sk_max_ack_backlog にセットされている
+
+```c
+static struct sock *unix_create1(struct net *net, struct socket *sock)
+{
+	struct sock *sk = NULL;
+	struct unix_sock *u;
+
+	atomic_long_inc(&unix_nr_socks);
+	if (atomic_long_read(&unix_nr_socks) > 2 * get_max_files())
+		goto out;
+
+	sk = sk_alloc(net, PF_UNIX, GFP_KERNEL, &unix_proto);
+	if (!sk)
+		goto out;
+
+	sock_init_data(sock, sk);
+	lockdep_set_class(&sk->sk_receive_queue.lock,
+				&af_unix_sk_receive_queue_lock_key);
+
+	sk->sk_write_space	= unix_write_space;
+	sk->sk_max_ack_backlog	= net->unx.sysctl_max_dgram_qlen;
+	sk->sk_destruct		= unix_sock_destructor;
+	u	  = unix_sk(sk);
+	u->dentry = NULL;
+	u->mnt	  = NULL;
+	spin_lock_init(&u->lock);
+	atomic_long_set(&u->inflight, 0);
+	INIT_LIST_HEAD(&u->link);
+	mutex_init(&u->readlock); /* single task reading lock */
+	init_waitqueue_head(&u->peer_wait);
+	unix_insert_socket(unix_sockets_unbound, sk);
+out:
+	if (sk == NULL)
+		atomic_long_dec(&unix_nr_socks);
+	else {
+		local_bh_disable();
+		sock_prot_inuse_add(sock_net(sk), sk->sk_prot, 1);
+		local_bh_enable();
+	}
+	return sk;
+}
+```
+
+ * sk->sk_max_ack_backlog は listen(2) の backlog サイズで上書きされている
+ * mod_cgid の場合は DEFAULT_CGID_LISTENBACKLOG で上書きされている、でいいのかな?
 
 ```c
 static int unix_listen(struct socket *sock, int backlog)
@@ -165,6 +213,7 @@ static int unix_listen(struct socket *sock, int backlog)
 	if (backlog > sk->sk_max_ack_backlog)
 		wake_up_interruptible_all(&u->peer_wait);
 
+    /* net.unix.max_dgram_qlen を上書き */
 	sk->sk_max_ack_backlog	= backlog;
 	sk->sk_state		= TCP_LISTEN;
 	/* set credentials so connect can copy them */
