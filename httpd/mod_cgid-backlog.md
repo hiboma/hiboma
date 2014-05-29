@@ -6,8 +6,7 @@
 
  * backlog 溢れると worker スレッドは sleep してから再接続する
  * 再接続したかどうかは debug でログ出さないと見れない
-
- backlog 溢れしてなければ別の要因がボトルネック (そらそうだ)
+ * backlog 溢れしてなければ別の要因がボトルネック (そらそうだ)
 
 ## ソース読む前に前置き
 
@@ -19,7 +18,7 @@
 
 ## mod_cgid ソケットの backlog のサイズ
  
-mod_cgid のソケットの backlog は **DEFAULT_CGID_LISTENBACKLOG** (デフォルト値 100) で決定される
+mod_cgid の UNIXドメインソケットの backlog は **DEFAULT_CGID_LISTENBACKLOG** (デフォルト値 100) で決定される
 
  * mod_cgid に大量の接続が来た場合は queue される
    * worker から DEFAULT_CGID_LISTENBACKLOG 以上の接続があれば溢れる(はず)
@@ -247,12 +246,12 @@ static inline int unix_recvq_full(struct sock const *sk)
 }
 ```
 
-## backlog を超えて sendmsg がブロックするケース
+## backlog を超えて sendmsg がブロック or EAGAIN 返すケース
 
  * SOCK_DGRAM で sendmsg -> recvmsg 
  * SOCK_STREAM は???
    * skb_queue_tail -> sk_data_ready -> skb_queue_tail -> ... の繰り返しで順次送るからブロックしない?
- * SOCK_STREAM で connect(2)
+ * SOCK_STREAM で connect(2) する際
 
 sk_receive_queue を sendmsg, connect で共有しているのが肝感ある 
 
@@ -328,7 +327,6 @@ static long unix_wait_for_peer(struct sock *other, long timeo)
 
 起床させるのはメッセージの受け取り側 = recvmsg
 
-```c
 ```c
 static int unix_dgram_recvmsg(struct kiocb *iocb, struct socket *sock,
 			      struct msghdr *msg, size_t size,
