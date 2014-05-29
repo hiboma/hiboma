@@ -249,8 +249,10 @@ static inline int unix_recvq_full(struct sock const *sk)
 
 ## backlog を超えて sendmsg がブロックするケース
 
- * SOCK_DGRAM で sendmsg -> recvmsg
+ * SOCK_DGRAM で sendmsg -> recvmsg 
  * SOCK_STREAM は???
+   * skb_queue_tail -> sk_data_ready -> skb_queue_tail -> ... の繰り返しで順次送るからブロックしない?
+ * SOCK_STREAM で connect(2) 
 
 ### SOCK_DGRAM の場合
 
