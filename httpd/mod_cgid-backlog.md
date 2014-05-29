@@ -7,11 +7,12 @@
  * mod_cgid のソースは modules/generators/mod_cgid.c 
  * mod_cgid のソケットは UNIXドメインソケット(AF_UNIX, SOCK_STREAM)
 
-## ソケットの backlog のサイズ
+## mod_cgid ソケットの backlog のサイズ
  
 mod_cgid のソケットの backlog は **DEFAULT_CGID_LISTENBACKLOG** (デフォルト値 100) で決定される
 
  * 大量の接続が来た場合は queue される
+   * worker から 100 以上の接続があれば溢れる 
  * queue が溢れた場合は ECONNREFUSED で再接続を試みる
 
 ```c
@@ -34,6 +35,8 @@ mod_cgid のソケットの backlog は **DEFAULT_CGID_LISTENBACKLOG** (デフ�
         return errno;
     } 
 ```
+
+再接続でどんな挙動をするかは ↓ に書く
 
 ## worker から mod_cgid に connect(2) する箇所のコード
 
@@ -101,7 +104,24 @@ static int connect_to_daemon(int *sdptr, request_rec *r,
 ## 再接続しているかどう調べるか?
 
  * mod_cgid を strace -econnect して追う?
+   * strace もそれなりにオーバーヘッドあるので要注意
+ * LogLevel を debug にすればログを出してくれるけど、 production では現実的でない
+   * LogLevel を変えるパッチを当てて様子するとか?
 
+```c
+                // connect_to_daemon の中
+                ap_log_rerror(APLOG_MARK, APLOG_DEBUG, errno, r,
+                              "connect #%d to cgi daemon failed, sleeping before retry",
+                              connect_tries);
+```
+
+----
+
+ここからはカーネルの話
+
+## カーネルのバックログ上限
+
+sysctl の `net.unix.max_dgram_qlen` が backlog の上限。調べ中
 
 ```
 [vagrant@vagrant-centos65 ~]$ sysctl -a | grep unix
