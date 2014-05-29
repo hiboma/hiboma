@@ -258,11 +258,13 @@ static int unix_dgram_sendmsg(struct kiocb *kiocb, struct socket *sock,
 
     // 相手側の sk->sk_receive_queue のバックログ溢れている
 	if (unix_peer(other) != sk && unix_recvq_full(other)) {
+        // NONBLOCK なら EAGAIN 返す
 		if (!timeo) {
 			err = -EAGAIN;
 			goto out_unlock;
 		}
 
+        // 待つ
 		timeo = unix_wait_for_peer(other, timeo);
 
 		err = sock_intr_errno(timeo);
@@ -271,4 +273,72 @@ static int unix_dgram_sendmsg(struct kiocb *kiocb, struct socket *sock,
 
 		goto restart;
 	}
+```
+
+バックログが溢れていたら unix_wait_for_peer で待ちに入る
+
+```c
+static long unix_wait_for_peer(struct sock *other, long timeo)
+{
+	struct unix_sock *u = unix_sk(other);
+	int sched;
+	DEFINE_WAIT(wait);
+
+    // シグナル受け付けるよ
+    // u->peer_wait が wait_queue_head_t
+	prepare_to_wait_exclusive(&u->peer_wait, &wait, TASK_INTERRUPTIBLE);
+
+    // 再度ソケットの状態を見る
+	sched = !sock_flag(other, SOCK_DEAD) &&
+		!(other->sk_shutdown & RCV_SHUTDOWN) &&
+		unix_recvq_full(other);
+
+	unix_state_unlock(other);
+
+    // 要スケジューリングということで待たされる
+	if (sched)
+		timeo = schedule_timeout(timeo);
+
+	finish_wait(&u->peer_wait, &wait);
+	return timeo;
+}
+```
+
+起床させるのはメッセージの受け取り側 = recvmsg
+
+```c
+static int unix_dgram_recvmsg(struct kiocb *iocb, struct socket *sock,
+			      struct msghdr *msg, size_t size,
+			      int flags)
+{
+	struct sock_iocb *siocb = kiocb_to_siocb(iocb);
+	struct scm_cookie tmp_scm;
+	struct sock *sk = sock->sk;
+	struct unix_sock *u = unix_sk(sk);
+	int noblock = flags & MSG_DONTWAIT;
+	struct sk_buff *skb;
+	int err;
+
+	err = -EOPNOTSUPP;
+	if (flags&MSG_OOB)
+		goto out;
+
+	msg->msg_namelen = 0;
+
+	mutex_lock(&u->readlock);
+
+	skb = skb_recv_datagram(sk, flags, noblock, &err);
+	if (!skb) {
+		unix_state_lock(sk);
+		/* Signal EOF on disconnected non-blocking SEQPACKET socket. */
+		if (sk->sk_type == SOCK_SEQPACKET && err == -EAGAIN &&
+		    (sk->sk_shutdown & RCV_SHUTDOWN))
+			err = 0;
+		unix_state_unlock(sk);
+		goto out_unlock;
+	}
+
+    // ここで sendmsg でブロックしているプロセスを起床させる
+    // 起床下側にコンテキストスイッチさせないで、継続するやつ?
+	wake_up_interruptible_sync(&u->peer_wait);    
 ```
