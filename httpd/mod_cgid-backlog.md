@@ -255,6 +255,11 @@ static inline int unix_recvq_full(struct sock const *sk)
 unix_dgram_sendmsg -----> [ sk->sk_receive_queue ] ---> unix_dgram_recvmsg
 ```
 
+ * sendmsg する際にバックログが溢れていないかを見る
+ * バックログが溢れていればブロックする
+ * バックログが溢れていなければ skb を sk->sk_receive_queue に繋ぐ
+   * ところで skb は kiocv を memcpy して作っている
+
 ```c
 static int unix_dgram_sendmsg(struct kiocb *kiocb, struct socket *sock,
 			      struct msghdr *msg, size_t len)
@@ -279,6 +284,10 @@ static int unix_dgram_sendmsg(struct kiocb *kiocb, struct socket *sock,
 
 		goto restart;
 	}
+
+    // sk->sk_receive_queue に skb を繋ぐ
+	maybe_add_creds(skb, sock, other);
+	skb_queue_tail(&other->sk_receive_queue, skb);
 ```
 
 バックログが溢れていたら unix_wait_for_peer で待ちに入る
