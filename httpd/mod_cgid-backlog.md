@@ -252,7 +252,9 @@ static inline int unix_recvq_full(struct sock const *sk)
  * SOCK_DGRAM で sendmsg -> recvmsg 
  * SOCK_STREAM は???
    * skb_queue_tail -> sk_data_ready -> skb_queue_tail -> ... の繰り返しで順次送るからブロックしない?
- * SOCK_STREAM で connect(2) 
+ * SOCK_STREAM で connect(2)
+
+sk_receive_queue を sendmsg, connect で共有しているのが肝感ある 
 
 ### SOCK_DGRAM の場合
 
