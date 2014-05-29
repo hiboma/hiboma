@@ -249,6 +249,12 @@ static inline int unix_recvq_full(struct sock const *sk)
 
 ## backlog を超えて sendmsg がブロックするケース
 
+### SOCK_DGRAM の場合
+
+```
+unix_dgram_sendmsg -----> [ sk->sk_receive_queue ] ---> unix_dgram_recvmsg
+```
+
 ```c
 static int unix_dgram_sendmsg(struct kiocb *kiocb, struct socket *sock,
 			      struct msghdr *msg, size_t len)
@@ -264,7 +270,7 @@ static int unix_dgram_sendmsg(struct kiocb *kiocb, struct socket *sock,
 			goto out_unlock;
 		}
 
-        // 待つ
+        // 相手側から起床ささてもらうのを待つ
 		timeo = unix_wait_for_peer(other, timeo);
 
 		err = sock_intr_errno(timeo);
@@ -307,6 +313,7 @@ static long unix_wait_for_peer(struct sock *other, long timeo)
 起床させるのはメッセージの受け取り側 = recvmsg
 
 ```c
+```c
 static int unix_dgram_recvmsg(struct kiocb *iocb, struct socket *sock,
 			      struct msghdr *msg, size_t size,
 			      int flags)
@@ -327,6 +334,7 @@ static int unix_dgram_recvmsg(struct kiocb *iocb, struct socket *sock,
 
 	mutex_lock(&u->readlock);
 
+    // 
 	skb = skb_recv_datagram(sk, flags, noblock, &err);
 	if (!skb) {
 		unix_state_lock(sk);
