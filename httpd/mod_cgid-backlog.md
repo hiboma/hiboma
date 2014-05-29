@@ -139,12 +139,14 @@ static int connect_to_daemon(int *sdptr, request_rec *r,
 
 ## カーネルのUNIXドメインソケットバックログ上限
 
-sysctl の `net.unix.max_dgram_qlen` が backlog の上限。
+sysctl の `net.unix.max_dgram_qlen` が backlog の上限?
 
 ```
 [vagrant@vagrant-centos65 ~]$ sysctl -a | grep unix
 net.unix.max_dgram_qlen = 10
 ```
+
+ソース読むと上書きされる値になっている
 
  * カーネルの内部では `unx.sysctl_max_dgram_qlen` として扱われる
  * sk->sk_max_ack_backlog にセットされている
@@ -168,6 +170,7 @@ static struct sock *unix_create1(struct net *net, struct socket *sock)
 				&af_unix_sk_receive_queue_lock_key);
 
 	sk->sk_write_space	= unix_write_space;
+    // ここでセット
 	sk->sk_max_ack_backlog	= net->unx.sysctl_max_dgram_qlen;
 	sk->sk_destruct		= unix_sock_destructor;
 	u	  = unix_sk(sk);
@@ -246,14 +249,74 @@ static inline int unix_recvq_full(struct sock const *sk)
 }
 ```
 
-## backlog を超えて sendmsg がブロック or EAGAIN 返すケース
+## unix_recvq_full (backlog が溢れて) で sendmsg がブロック or EAGAIN 返すケース
 
  * SOCK_DGRAM で sendmsg -> recvmsg 
  * SOCK_STREAM は???
    * skb_queue_tail -> sk_data_ready -> skb_queue_tail -> ... の繰り返しで順次送るからブロックしない?
  * SOCK_STREAM で connect(2) する際
 
-sk_receive_queue を sendmsg, connect で共有しているのが肝感ある 
+sk_receive_queue を sendmsg, connect で共有しているのが肝感ある
+
+### SOCK_STREAM
+
+```c
+static int unix_stream_connect(struct socket *sock, struct sockaddr *uaddr,
+			       int addr_len, int flags)
+{
+	struct sockaddr_un *sunaddr = (struct sockaddr_un *)uaddr;
+	struct sock *sk = sock->sk;
+	struct net *net = sock_net(sk);
+	struct unix_sock *u = unix_sk(sk), *newu, *otheru;
+	struct sock *newsk = NULL;
+	struct sock *other = NULL;
+	struct sk_buff *skb = NULL;
+	unsigned hash;
+	int st;
+	int err;
+	long timeo;
+
+//...    
+
+	if (unix_recvq_full(other)) {
+		err = -EAGAIN;
+		if (!timeo)
+			goto out_unlock;
+
+		timeo = unix_wait_for_peer(other, timeo);
+
+		err = sock_intr_errno(timeo);
+		if (signal_pending(current))
+			goto out;
+		sock_put(other);
+		goto restart;
+	}
+```
+
+```c
+static long unix_wait_for_peer(struct sock *other, long timeo)
+{
+	struct unix_sock *u = unix_sk(other);
+	int sched;
+	DEFINE_WAIT(wait);
+
+	prepare_to_wait_exclusive(&u->peer_wait, &wait, TASK_INTERRUPTIBLE);
+
+	sched = !sock_flag(other, SOCK_DEAD) &&
+		!(other->sk_shutdown & RCV_SHUTDOWN) &&
+		unix_recvq_full(other);
+
+	unix_state_unlock(other);
+
+	if (sched)
+		timeo = schedule_timeout(timeo);
+
+	finish_wait(&u->peer_wait, &wait);
+	return timeo;
+}
+```
+
+ECONNREFUSED 返さないよね。どゆこと?
 
 ### SOCK_DGRAM の場合
 
