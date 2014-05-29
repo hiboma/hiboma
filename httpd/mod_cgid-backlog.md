@@ -20,10 +20,11 @@
  
 mod_cgid の UNIXドメインソケットの backlog は **DEFAULT_CGID_LISTENBACKLOG** (デフォルト値 100) で決定される
 
- * mod_cgid に大量の接続が来た場合は queue される
+ * mod_cgid に大量の接続が来た場合は backlog に queue される
    * worker から DEFAULT_CGID_LISTENBACKLOG 以上の接続があれば溢れる(はず)
  * queue が溢れた場合は ECONNREFUSED を返し、 workerスレッドは再接続を試みる
 
+net/unix/af_unix.c 読むと connect(2) 時に ECONNREFUSED 返さなそうな。うーん
 
 ```c
 /* DEFAULT_CGID_LISTENBACKLOG controls the max depth on the unix socket's
@@ -114,8 +115,7 @@ static int connect_to_daemon(int *sdptr, request_rec *r,
 
 ## workerスレッドが再接続しているかどうかを調べる方法
 
- * worker スレッドを strace -econnect して追う?
-   * スレッドめちゃくちゃあるし現実的でなさそう
+ * worker スレッドを `strace -econnect` して追う?
    * strace もそれなりにオーバーヘッドあるので要注意
  * LogLevel を debug にすればログを出してくれる
    * production で debug にするのは現実的でない
@@ -127,7 +127,7 @@ static int connect_to_daemon(int *sdptr, request_rec *r,
                               "connect #%d to cgi daemon failed, sleeping before retry",
                               connect_tries);
 ```
- * mod_cgid の backlog のサイズを取る方法 (あるのかな?)
+ * mod_cgid のカレントの backlog のサイズを取る方法 (あるのかな?)
 
 ## 評価の方法
 
