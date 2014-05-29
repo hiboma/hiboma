@@ -1,17 +1,21 @@
 # mod_cgid + backlog
 
-クライアントが多い際に mod_cgid の backlog が溢れていることでスループットが低下していないかどうか? を調べるためにソースを読む
+クライアントが多い際に mod_cgid の backlog が溢れてスループットが低下していないかどうか? を調べるためにソースを読む
 
 ## まとめ
 
  * backlog 溢れると worker スレッドは sleep してから再接続する
  * 再接続したかどうかは debug でログ出さないと見れない
- * backlog 溢れしてなければ別の要因がボトルネック
 
-## 前置き
+ backlog 溢れしてなければ別の要因がボトルネック (そらそうだ)
+
+## ソース読む前に前置き
 
  * mod_cgid のソースは modules/generators/mod_cgid.c 
  * mod_cgid のソケットは UNIXドメインソケット(AF_UNIX, SOCK_STREAM)
+ * mod_cgid のアーキテクチャは ↓ な感じ
+
+![](http://f.st-hatena.com/images/fotolife/h/hiboma/20130314/20130314223222.png) 
 
 ## mod_cgid ソケットの backlog のサイズ
  
@@ -53,6 +57,7 @@ connect_to_daemon のソースを読むと良い
    * 1回目では 100ms sleep
    * 2回目以降の再接続では **sliding_timer *=2** で 200, 400, 800, ... と sleep 時間が増える
    * 再接続の回数は **DEFAULT_CONNECT_ATTEMPTS** (デフォルト値 15回)
+   * 再接続したかどうかは `LogLevel debug` じゃないと出ないぽい
 
 ```c
 static int connect_to_daemon(int *sdptr, request_rec *r,
@@ -131,7 +136,7 @@ static int connect_to_daemon(int *sdptr, request_rec *r,
 
 ----
 
-ここからはカーネルの話。調べ中
+ここからはカーネルの話。まだ調べ中
 
 ## カーネルのUNIXドメインソケットバックログ上限
 
