@@ -249,6 +249,9 @@ static inline int unix_recvq_full(struct sock const *sk)
 
 ## backlog を超えて sendmsg がブロックするケース
 
+ * SOCK_DGRAM で sendmsg -> recvmsg
+ * SOCK_STREAM は???
+
 ### SOCK_DGRAM の場合
 
 ```
