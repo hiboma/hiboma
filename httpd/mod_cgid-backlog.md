@@ -235,3 +235,40 @@ out:
 }
 ```
 
+sk->sk_max_ack_backlog を超えたかどうかは unix_recvq_full で見る
+
+ * sk->sk_receive_queue のサイズを比較
+ * read とか recvmsg で読み取り待ちキューのサイズ
+
+```c
+static inline int unix_recvq_full(struct sock const *sk)
+{
+	return skb_queue_len(&sk->sk_receive_queue) > sk->sk_max_ack_backlog;
+}
+```
+
+## backlog を超えて sendmsg がブロックするケース
+
+```c
+static int unix_dgram_sendmsg(struct kiocb *kiocb, struct socket *sock,
+			      struct msghdr *msg, size_t len)
+{
+
+// ...
+
+    // 相手側の sk->sk_receive_queue のバックログ溢れている
+	if (unix_peer(other) != sk && unix_recvq_full(other)) {
+		if (!timeo) {
+			err = -EAGAIN;
+			goto out_unlock;
+		}
+
+		timeo = unix_wait_for_peer(other, timeo);
+
+		err = sock_intr_errno(timeo);
+		if (signal_pending(current))
+			goto out_free;
+
+		goto restart;
+	}
+```
