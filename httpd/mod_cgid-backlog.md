@@ -2,6 +2,12 @@
 
 クライアントが多い際に mod_cgid の backlog が溢れていることでスループットが低下していないかどうか? を調べるためにソースを読む
 
+## まとめ
+
+ * backlog 溢れると worker スレッドは sleep してから再接続する
+ * 再接続したかどうかは debug でログ出さないと見れない
+ * backlog 溢れしてなければ別の要因がボトルネック
+
 ## 前置き
 
  * mod_cgid のソースは modules/generators/mod_cgid.c 
@@ -14,6 +20,7 @@ mod_cgid のソケットの backlog は **DEFAULT_CGID_LISTENBACKLOG** (デフ�
  * mod_cgid に大量の接続が来た場合は queue される
    * worker から DEFAULT_CGID_LISTENBACKLOG 以上の接続があれば溢れる(はず)
  * queue が溢れた場合は ECONNREFUSED を返し、 workerスレッドは再接続を試みる
+
 
 ```c
 /* DEFAULT_CGID_LISTENBACKLOG controls the max depth on the unix socket's
@@ -36,7 +43,7 @@ mod_cgid のソケットの backlog は **DEFAULT_CGID_LISTENBACKLOG** (デフ�
     } 
 ```
 
-再接続でどんな挙動をするかは ↓ に書く
+パッチ当てるなり make の際に指定すれば変更可能な数値です。再接続でどんな挙動をするかは ↓ に書く
 
 ## worker スレッドから mod_cgid に connect(2) する箇所のコード
 
@@ -120,19 +127,57 @@ static int connect_to_daemon(int *sdptr, request_rec *r,
 
 ## 評価の方法
 
-再接続する挙動が確認できなければ別の要因がボトルネックになっているので 考え直し
+再接続する挙動が確認できなければ別の要因がボトルネックになっているので考え直し....
 
 ----
 
-ここからはカーネルの話
+ここからはカーネルの話。調べ中
 
 ## カーネルのバックログ上限
 
-sysctl の `net.unix.max_dgram_qlen` が backlog の上限。調べ中
+sysctl の `net.unix.max_dgram_qlen` が backlog の上限。
 
 ```
 [vagrant@vagrant-centos65 ~]$ sysctl -a | grep unix
 net.unix.max_dgram_qlen = 10
 ```
 
+```c
+static int unix_listen(struct socket *sock, int backlog)
+{
+	int err;
+	struct sock *sk = sock->sk;
+	struct unix_sock *u = unix_sk(sk);
+	struct pid *old_pid = NULL;
+	const struct cred *old_cred = NULL;
+
+	err = -EOPNOTSUPP;
+	if (sock->type != SOCK_STREAM && sock->type != SOCK_SEQPACKET)
+		goto out;	/* Only stream/seqpacket sockets accept */
+	err = -EINVAL;
+	if (!u->addr)
+		goto out;	/* No listens on an unbound socket */
+	unix_state_lock(sk);
+	if (sk->sk_state != TCP_CLOSE && sk->sk_state != TCP_LISTEN)
+		goto out_unlock;
+
+	/* connect しているクライアントを起床させる。なんでだろう? */
+	if (backlog > sk->sk_max_ack_backlog)
+		wake_up_interruptible_all(&u->peer_wait);
+
+	sk->sk_max_ack_backlog	= backlog;
+	sk->sk_state		= TCP_LISTEN;
+	/* set credentials so connect can copy them */
+	init_peercred(sk);
+	err = 0;
+
+out_unlock:
+	unix_state_unlock(sk);
+	put_pid(old_pid);
+	if (old_cred)
+		put_cred(old_cred);
+out:
+	return err;
+}
+```
 
