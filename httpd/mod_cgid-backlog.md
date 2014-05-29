@@ -1,6 +1,6 @@
 # mod_cgid + backlog
 
-クライアントが多い際に mod_cgid の backlog が溢れていることでスループットが低下していないかどうか? のネタ
+クライアントが多い際に mod_cgid の backlog が溢れていることでスループットが低下していないかどうか? を調べるためにソースを読む
 
 ## 前置き
 
@@ -11,9 +11,9 @@
  
 mod_cgid のソケットの backlog は **DEFAULT_CGID_LISTENBACKLOG** (デフォルト値 100) で決定される
 
- * 大量の接続が来た場合は queue される
-   * worker から 100 以上の接続があれば溢れる 
- * queue が溢れた場合は ECONNREFUSED で再接続を試みる
+ * mod_cgid に大量の接続が来た場合は queue される
+   * worker から DEFAULT_CGID_LISTENBACKLOG 以上の接続があれば溢れる(はず)
+ * queue が溢れた場合は ECONNREFUSED を返し、 workerスレッドは再接続を試みる
 
 ```c
 /* DEFAULT_CGID_LISTENBACKLOG controls the max depth on the unix socket's
@@ -38,7 +38,7 @@ mod_cgid のソケットの backlog は **DEFAULT_CGID_LISTENBACKLOG** (デフ�
 
 再接続でどんな挙動をするかは ↓ に書く
 
-## worker から mod_cgid に connect(2) する箇所のコード
+## worker スレッドから mod_cgid に connect(2) する箇所のコード
 
 connect_to_daemon のソースを読むと良い
 
@@ -101,11 +101,13 @@ static int connect_to_daemon(int *sdptr, request_rec *r,
 }
 ```
 
-## 再接続しているかどう調べるか?
+## workerスレッドが再接続しているかどうかを調べる方法
 
- * mod_cgid を strace -econnect して追う?
+ * worker スレッドを strace -econnect して追う?
+   * スレッドめちゃくちゃあるし現実的でなさそう
    * strace もそれなりにオーバーヘッドあるので要注意
- * LogLevel を debug にすればログを出してくれるけど、 production では現実的でない
+ * LogLevel を debug にすればログを出してくれる
+   * production で debug にするのは現実的でない
    * LogLevel を変えるパッチを当てて様子するとか?
 
 ```c
@@ -114,6 +116,11 @@ static int connect_to_daemon(int *sdptr, request_rec *r,
                               "connect #%d to cgi daemon failed, sleeping before retry",
                               connect_tries);
 ```
+ * mod_cgid の backlog のサイズを取る方法 (あるのかな?)
+
+## 評価の方法
+
+再接続する挙動が確認できなければ別の要因がボトルネックになっているので 考え直し
 
 ----
 
