@@ -146,9 +146,10 @@ sysctl の `net.unix.max_dgram_qlen` が backlog の上限?
 net.unix.max_dgram_qlen = 10
 ```
 
-ソース読むと上書きされる値になっている
+~~ソース読むと上書きされる値になっている~~
 
  * カーネルの内部では `unx.sysctl_max_dgram_qlen` として扱われる
+   * connect(2) する側の backlog の最大値?
  * sk->sk_max_ack_backlog にセットされている
 
 ```c
@@ -194,8 +195,10 @@ out:
 }
 ```
 
- * sk->sk_max_ack_backlog は listen(2) の backlog サイズで上書きされている
- * mod_cgid の場合は DEFAULT_CGID_LISTENBACKLOG で上書きされている、でいいのかな?
+#### listen(2) ソケットの backlog サイズ
+
+ * sk->sk_max_ack_backlog は listen(2) の backlog サイズで設定されている
+ * mod_cgid の場合は DEFAULT_CGID_LISTENBACKLOG で設定される、でいいのかな?
 
 ```c
 static int unix_listen(struct socket *sock, int backlog)
