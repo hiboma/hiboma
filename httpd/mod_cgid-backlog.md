@@ -240,7 +240,8 @@ out:
 sk->sk_max_ack_backlog を超えたかどうかは unix_recvq_full で見る
 
  * sk->sk_receive_queue のサイズを比較
- * read とか recvmsg で読み取り待ちキューのサイズ
+ * read とか recvmsg で読み取り待ちキューのサイズと共有している
+   * connect と混じる事は無いか
 
 ```c
 static inline int unix_recvq_full(struct sock const *sk)
