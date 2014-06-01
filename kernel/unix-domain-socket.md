@@ -1,9 +1,26 @@
 # UNIX Domain Socket
 
+## backlog
+
+backlog + 1 のソケットを sk_receive_queue にいれて CONNECTING で待たせる
+
+ * `listen(sock, 0)` => 1
+ * `listen(sock, 1)` => 2
+ * ...
+
+うっかり間違えないように 
+
+```c 
+static inline int unix_recvq_full(struct sock const *sk)
+{
+	return skb_queue_len(&sk->sk_receive_queue) > sk->sk_max_ack_backlog;
+}
+``` 
+
 ## AF_UNIX + SOCK_STREAM
 
- * connect(2) して unix_recvq_full で溢れたソケットの数は `LISTENING の ref count - 2` で出る
- * CONNECTING は sk_receive_queue に入ったけれど accept(2) されていない ソケット
+ * connect(2) して unix_recvq_full で溢れたソケットは `LISTENING の ref count - 2` で数が出る
+ * connect(2) できて accept(2) されていない ソケットは CONNECTING
    * inode がふられていない
  
 ```
@@ -26,6 +43,7 @@ restart:
 
 // ...
 
+    // sk_receive_queue が溢れている
 	if (unix_recvq_full(other)) {
 		err = -EAGAIN;
 		if (!timeo)
