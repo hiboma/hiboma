@@ -68,6 +68,76 @@ unsigned int alarm_setitimer(unsigned int seconds)
 }
 ```
 
+do_setitimer がなかなごっつい
+
+ * tsk->signal->real_timer が struct hrtimer なのが味噌かな?
+ * hrtimer is **高精度カーネルタイマ** らしい
+
+```c
+int do_setitimer(int which, struct itimerval *value, struct itimerval *ovalue)
+{
+	struct task_struct *tsk = current;
+	struct hrtimer *timer;
+	ktime_t expires;
+
+	/*
+	 * Validate the timevals in value.
+	 */
+	if (!timeval_valid(&value->it_value) ||
+	    !timeval_valid(&value->it_interval))
+		return -EINVAL;
+
+	switch (which) {
+	case ITIMER_REAL:
+again:
+		spin_lock_irq(&tsk->sighand->siglock);
+        // プロセスのタイマを取る
+		timer = &tsk->signal->real_timer;
+		if (ovalue) {
+			ovalue->it_value = itimer_get_remtime(timer);
+			ovalue->it_interval
+				= ktime_to_timeval(tsk->signal->it_real_incr);
+		}
+		/* We are sharing ->siglock with it_real_fn() */
+		if (hrtimer_try_to_cancel(timer) < 0) {
+			spin_unlock_irq(&tsk->sighand->siglock);
+			goto again;
+		}
+		expires = timeval_to_ktime(value->it_value);
+		if (expires.tv64 != 0) {
+			tsk->signal->it_real_incr =
+				timeval_to_ktime(value->it_interval);
+
+            // ここでタイマを開始
+			hrtimer_start(timer, expires, HRTIMER_MODE_REL);
+		} else
+			tsk->signal->it_real_incr.tv64 = 0;
+
+		trace_itimer_state(ITIMER_REAL, value, 0);
+		spin_unlock_irq(&tsk->sighand->siglock);
+		break;
+```
+
+> 指定した時間の経過後に実行されるハンドラはit_real_fn関数です。
+
+```c
+/*
+ * The timer is automagically restarted, when interval != 0
+ */
+enum hrtimer_restart it_real_fn(struct hrtimer *timer)
+{
+	struct signal_struct *sig =
+		container_of(timer, struct signal_struct, real_timer);
+
+	trace_itimer_expire(ITIMER_REAL, sig->leader_pid, 0);
+
+    // SIGALRM を leader_pid に送っている
+	kill_pid_info(SIGALRM, SEND_SIG_PRIV, sig->leader_pid);
+
+	return HRTIMER_NORESTART;
+}
+```
+
 ## 4.8.2 実行時間指定タイマー
 
 ----
