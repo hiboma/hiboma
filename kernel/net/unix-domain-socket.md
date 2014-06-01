@@ -1,7 +1,12 @@
 # UNIX Domain Socket
 
  * ハードウェア割り込みが無い
- * softirq も無い
+ * SOFTIRQ も無い
+ * BSD層と proto_ops の実装だけ追えば理解できるので易しめ ...
+
+## TODO
+
+ * kiocb, sock_iocb でのデータ転送
 
 ## backlog のサイズ
 
@@ -21,6 +26,8 @@ static inline int unix_recvq_full(struct sock const *sk)
 ``` 
 
 ## AF_UNIX + SOCK_STREAM の backlog, 未 accept のソケット
+
+netstat の結果から読み取れる内容
 
  * connect(2) して unix_recvq_full で溢れたソケットは `LISTENING の ref count - 2` で数が出る
  * connect(2) できて accept(2) されていないソケットは CONNECTING
