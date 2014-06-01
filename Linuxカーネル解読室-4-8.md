@@ -146,6 +146,9 @@ enum hrtimer_restart it_real_fn(struct hrtimer *timer)
 
 ## 4.8.2 実行時間指定タイマー
 
+setitimer の ITIMER_VIRTUAL, ITIMER_PROF のこと
+ 
+
 ----
 
 寄り道
