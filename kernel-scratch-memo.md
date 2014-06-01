@@ -59,3 +59,16 @@ memset(p, 0, sizeof(type p))
  * tasklist_lock
    * __cacheline_aligned DEFINE_RWLOCK(tasklist_lock);  /* outer */
  * void *page_address(const struct page *page)
+
+
+ * 文字列のパスから path を探索
+   *flags … LOOKUP_FOLLOW
+```c   
+int kern_path(const char *name, unsigned int flags, struct path *path)
+```
+
+ * 親ディレクトリの探索
+```c
+path_lookup(sunaddr->sun_path, LOOKUP_PARENT, &nd);
+```
+ 
