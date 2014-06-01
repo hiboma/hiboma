@@ -14,7 +14,9 @@ setitimer, getitimer, alarm の仕組みの説明
  * alarm(2), setitimer(2) + ITMER_REAL のこと
  * alarm は精度が秒、setitimer はマイクロ秒かの違いなだけでどちらも do_setitimer でタイマをセットする.
 
-### alarm の実装を追ってみる
+### alarm(2) の実装を追ってみる
+
+素朴なインタフェース
 
 ```c
 /*
@@ -26,6 +28,8 @@ SYSCALL_DEFINE1(alarm, unsigned int, seconds)
 	return alarm_setitimer(seconds);
 }
 ```
+
+alarm_setitimer で、setitimer のインタフェースを使ってタイマをセットする
 
 ```c
 /**
@@ -119,6 +123,8 @@ again:
 ```
 
 > 指定した時間の経過後に実行されるハンドラはit_real_fn関数です。
+
+it_real_fn は copy_singal でセットされている
 
 ```c
 /*
