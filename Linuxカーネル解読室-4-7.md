@@ -97,6 +97,8 @@ static void run_timer_softirq(struct softirq_action *h)
 sysctl kernel.timer_migration = 1
 ```
 
+## 4.8 インターバルタイマー
+
 ----
 
 寄り道
