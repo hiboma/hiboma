@@ -3,6 +3,8 @@
  * AF_UNIX + SOCK_DGRAM
  * AF_UNIX + SOCK_SEQPACKET
  
+---- 
+ 
 
   type     | usage
 -----------|---------------------
@@ -10,6 +12,8 @@ struct proto_ops | sock->ops->method()
 
 
 ## AF_UNIX + SOCK_STREAM
+
+UNIXドメインソケットは BSD層と proto_ops を見れば実装が全て分かるのでシンプル
 
 ```
 static const struct proto_ops unix_stream_ops = {
@@ -59,7 +63,7 @@ static const struct proto_ops unix_dgram_ops = {
 };
 ```
 
-## AF_UNIX + SOCK_SEQPACKET?
+## AF_UNIX + SOCK_SEQPACKET
 
 ```
 static const struct proto_ops unix_seqpacket_ops = {
