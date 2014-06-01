@@ -20,14 +20,17 @@ static inline int unix_recvq_full(struct sock const *sk)
 ## AF_UNIX + SOCK_STREAM
 
  * connect(2) して unix_recvq_full で溢れたソケットは `LISTENING の ref count - 2` で数が出る
- * connect(2) できて accept(2) されていない ソケットは CONNECTING
+ * connect(2) できて accept(2) されていないソケットは CONNECTING
    * inode がふられていない
+   * sk_receive_queue で backlog 扱いのソケット
  
 ```
 unix  7      [ ACC ]     STREAM     LISTENING     67612  /tmp/unix.sock
 unix  2      [ ]         STREAM     CONNECTING    0      /tmp/unix.sock
 unix  2      [ ]         STREAM     CONNECTED     67614  /tmp/unix.sock
 ```
+
+該当のコードは以下の通り
 
 ```c
 static int unix_stream_connect(struct socket *sock, struct sockaddr *uaddr,
@@ -43,7 +46,7 @@ restart:
 
 // ...
 
-    // sk_receive_queue が溢れている
+    // sk_receive_queue が溢れているかどうか
 	if (unix_recvq_full(other)) {
 		err = -EAGAIN;
 		if (!timeo)
