@@ -167,7 +167,17 @@ struct signal_struct {
 	struct cpu_itimer it[2];
 ```
 
-check_process_timers の実装はごっついので省略
+check_process_timers の実装はごっついので省略。
+check_process_timers を呼び出すまでのコールスタックは次のような感じ
+
+```
+void tick_handle_periodic(struct clock_event_device *dev)
+static void tick_periodic(int cpu)
+void update_process_times(int user_tick)
+void run_posix_cpu_timers(struct task_struct *tsk)
+```
+
+ローカルタイマ割り込みの延長で確認される、でいいんだっけ?
 
 ----
 
