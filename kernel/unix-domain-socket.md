@@ -16,6 +16,13 @@ unix  2      [ ]         STREAM     CONNECTED     67614  /tmp/unix.sock
 static int unix_stream_connect(struct socket *sock, struct sockaddr *uaddr,
 			       int addr_len, int flags)
 {
+restart:
+	/*  Find listening sock. */
+    // ここで参照カウントが上がる
+	other = unix_find_other(net, sunaddr, addr_len, sk->sk_type, hash, &err);
+	if (!other)
+		goto out;
+
 
 // ...
 
@@ -24,6 +31,7 @@ static int unix_stream_connect(struct socket *sock, struct sockaddr *uaddr,
 		if (!timeo)
 			goto out_unlock;
 
+        // サーバから起床させてもらうのを待つ
 		timeo = unix_wait_for_peer(other, timeo);
 
 		err = sock_intr_errno(timeo);
@@ -38,7 +46,8 @@ static int unix_stream_connect(struct socket *sock, struct sockaddr *uaddr,
 
 setsockopt で SO_SNDTIMEO を指定すると connect のタイムアウトを指定できる
 
- * setsockopt は sk->sk_sndtimeo の数値
+ * setsockopt は sk->sk_sndtimeo にタイムアウトをセットしている
+ * sock_sndtimeo で読み取る
 
 #### 検証用クライアント
 
