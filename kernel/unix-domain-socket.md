@@ -4,8 +4,8 @@
 
 backlog + 1 のソケットを sk_receive_queue にいれて CONNECTING で待たせる
 
- * `listen(sock, 0)` => 1
- * `listen(sock, 1)` => 2
+ * `listen(sock, 0)` => バックログのサイズ 1
+ * `listen(sock, 1)` => バックログのサイズ 2
  * ...
 
 うっかり間違えないように 

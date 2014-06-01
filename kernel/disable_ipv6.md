@@ -4,7 +4,7 @@
 
 ユーザランドから AF_INET6 を使うかはどうやって決定されるか?
  
-## /etc/moroprobe.d で無効にする
+## /etc/modprobe.d で無効にする
 
 /etc/modprobe.d/disable-ipv6.conf とか作って `options ipv6 disable` するとブート時に下記の dmesg が出る
 
