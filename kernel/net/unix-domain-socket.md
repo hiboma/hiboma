@@ -1,6 +1,9 @@
 # UNIX Domain Socket
 
-## backlog
+ * ハードウェア割り込みが無い
+ * softirq も無い
+
+## backlog のサイズ
 
 backlog + 1 のソケットを sk_receive_queue にいれて CONNECTING で待たせる
 
@@ -8,7 +11,7 @@ backlog + 1 のソケットを sk_receive_queue にいれて CONNECTING で待�
  * `listen(sock, 1)` => バックログのサイズ 2
  * ...
 
-うっかり間違えないように 
+数字の計算をうっかり間違えないように :)
 
 ```c 
 static inline int unix_recvq_full(struct sock const *sk)
@@ -25,12 +28,12 @@ static inline int unix_recvq_full(struct sock const *sk)
    * sk_receive_queue で backlog 扱いのソケット
  
 ```
-unix  7      [ ACC ]     STREAM     LISTENING     67612  /tmp/unix.sock   # 5個のソケットが backlog 
-unix  2      [ ]         STREAM     CONNECTING    0      /tmp/unix.sock
+unix  7      [ ACC ]     STREAM     LISTENING     67612  /tmp/unix.sock # 5個のソケットが sk_receive_queue から溢れてる
+unix  2      [ ]         STREAM     CONNECTING    0      /tmp/unix.sock # 1個のソケットが backlog 
 unix  2      [ ]         STREAM     CONNECTED     67614  /tmp/unix.sock
 ```
 
-該当のコードは以下の通り
+該当の処理をしているコードは以下の通り。 sock->proto->connect からの呼び出しを受ける unix_stream_connect
 
 ```c
 static int unix_stream_connect(struct socket *sock, struct sockaddr *uaddr,
@@ -52,7 +55,8 @@ restart:
 		if (!timeo)
 			goto out_unlock;
 
-        // サーバから起床させてもらうのを待つ
+        // サーバから起床させてもらうのを待つので
+        // waitqueue で待つ
 		timeo = unix_wait_for_peer(other, timeo);
 
 		err = sock_intr_errno(timeo);
@@ -63,12 +67,14 @@ restart:
 	}
 ```
 
-## connect(2) と setsockopt(2) の SO_SNDTIMEO
+## connect(2) と setsockopt(2) の SO_SNDTIMEO のタイムアウト
 
 setsockopt で SO_SNDTIMEO を指定すると connect のタイムアウトを指定できる
 
  * setsockopt は sk->sk_sndtimeo にタイムアウトをセットしている
- * sock_sndtimeo で読み取る
+ * sock_sndtimeo でタイムアウト値読み取る
+
+次の検証用コードで connect(2) タイムアウトを検証できる
 
 #### 検証用クライアント
 
