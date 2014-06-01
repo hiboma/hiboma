@@ -147,7 +147,27 @@ enum hrtimer_restart it_real_fn(struct hrtimer *timer)
 ## 4.8.2 実行時間指定タイマー
 
 setitimer の ITIMER_VIRTUAL, ITIMER_PROF のこと
- 
+
+check_process_timers でタイマの計算をする
+
+ * RLIMIT_CPU を超えてないかどうかも見ている
+   * `sig->rlim[RLIMIT_CPU].rlim_cur`, 
+ * signal_struct の .it で CPUCLOCK_PROF, CPUCLOCK_VIRT のタイマを管理する
+
+```c
+struct signal_struct {
+
+// ...
+
+	/*
+	 * ITIMER_PROF and ITIMER_VIRTUAL timers for the process, we use
+	 * CPUCLOCK_PROF and CPUCLOCK_VIRT for indexing array as these
+	 * values are defined to 0 and 1 respectively
+	 */
+	struct cpu_itimer it[2];
+```
+
+check_process_timers の実装はごっついので省略
 
 ----
 
