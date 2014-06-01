@@ -99,6 +99,20 @@ sysctl kernel.timer_migration = 1
 
 ## 4.8 インターバルタイマー
 
+setitimer, getitimer, alarm の仕組みの説明
+
+ * SIGPROF
+ * SIGVTLALRM
+   * プロセスが実行中に減るタイマ
+ * SIGALRM
+   * 絶対時間 = 実時間でのタイマ
+
+## 4.8.1 絶対時間指定タイマー
+
+ * alarm(2), settitmer(2) + ITMER_REAL
+
+## 4.8.2 実行時間指定タイマー
+
 ----
 
 寄り道
