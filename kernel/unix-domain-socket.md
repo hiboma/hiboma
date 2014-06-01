@@ -17,7 +17,7 @@ static inline int unix_recvq_full(struct sock const *sk)
 }
 ``` 
 
-## AF_UNIX + SOCK_STREAM
+## AF_UNIX + SOCK_STREAM の backlog, 未 accept のソケット
 
  * connect(2) して unix_recvq_full で溢れたソケットは `LISTENING の ref count - 2` で数が出る
  * connect(2) できて accept(2) されていないソケットは CONNECTING
@@ -25,7 +25,7 @@ static inline int unix_recvq_full(struct sock const *sk)
    * sk_receive_queue で backlog 扱いのソケット
  
 ```
-unix  7      [ ACC ]     STREAM     LISTENING     67612  /tmp/unix.sock
+unix  7      [ ACC ]     STREAM     LISTENING     67612  /tmp/unix.sock   # 5個のソケットが backlog 
 unix  2      [ ]         STREAM     CONNECTING    0      /tmp/unix.sock
 unix  2      [ ]         STREAM     CONNECTED     67614  /tmp/unix.sock
 ```
