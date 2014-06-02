@@ -1,3 +1,8 @@
+# checkpw
+
+ * checkpw-1.02/checkpw.c
+
+```c
 #include <sys/stat.h>
 #include "error.h"
 #include "pathexec.h"
@@ -73,8 +78,12 @@ main(int argc,char **argv)
 
   i = 0;
   if (i >= uplen) _exit(2);
+
+  /* fd = 3 で read した文字列からログインアカウントを抜き出す */
   login = up + i;
   while (up[i++]) if (i >= uplen) _exit(2);
+
+  /* パスワードを抜き出す */
   password = up + i;
   if (i >= uplen) _exit(2);
   while (up[i++]) if (i >= uplen) _exit(2);
@@ -189,3 +198,4 @@ main(int argc,char **argv)
   pathexec(argv + 1);
   _exit(111);
 }
+```
