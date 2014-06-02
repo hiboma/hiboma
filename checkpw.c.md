@@ -81,7 +81,14 @@ main(int argc,char **argv)
 
   i = 0;
   ext = login + str_len(login);
+
+  /* ログインを試みるために getpwnam でアカウントを探す */
   for (;;) {
+
+   /*
+    * login はログインアカウント (例: test@example.com, example.com-test )
+    * ext   は拡張アドレス       (例: test-ext@exmaple.com なら test, test-ext@exmaple.com )
+    */
     pw = getpwnam(login);
     if (pw) break;
 
@@ -101,21 +108,39 @@ main(int argc,char **argv)
      * getpwnam でログインできるアカウントが無かったので 1 で exit
      */
     if (ext == login) die(1);
+
+    /*
+     * ?
+     */
     if (i) login[i] = '-';
     i = ext - login;
     login[i] = 0;
     ++ext;
   }
+  /* ここまできたらログインアカウントが見つかっている(認証はまだ) */
 
-  
+  /* ログインアカウントの $HOME に chdir */
   if (chdir(pw->pw_dir) == -1) die(111);
 
+  /* pwfile = $HOME + "/Maildir" な文字列を作る */
   if (!stralloc_copys(&pwfile, auto_maildir)) die(111);
+
+  /*
+   * 環境変数DASHと拡張メールアドレスが有効な場合は
+   *
+   *   pwfile = pwfile + ENV["DASH"] + ext
+   *
+   * な文字列を作る
+   */
   if (dash && *ext) {
     if (!stralloc_cats(&pwfile, dash)) die(111);
     if (!stralloc_cats(&pwfile, ext)) die(111);
   }
+
+  /* pwfile = pwfile + "/" */
   if (!stralloc_append(&pwfile, "/")) die(111);
+
+  /* pwfile = pwfile + ".password な文字列をつくる */
   if (!stralloc_cats(&pwfile, auto_password)) die(111);
   if (!stralloc_0(&pwfile)) die(111);
   if (stat(pwfile.s,&st) == -1) die(1);
