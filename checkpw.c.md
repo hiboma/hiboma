@@ -172,7 +172,10 @@ main(int argc,char **argv)
   /* .password とクライアントが入力したパスワードを比較 (平文!!!!) */
   if (!*stored.s || strcmp(password,stored.s)) die(1);
 
+  /* pw->pw_gid に setgid する */
   if (prot_gid((int) pw->pw_gid) == -1) die(1);
+
+  /* pw->pw_uid に setuid する */
   if (prot_uid((int) pw->pw_uid) == -1) die(1);
 
   if (!pathexec_env("USER",pw->pw_name)) die(111);
