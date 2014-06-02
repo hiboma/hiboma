@@ -117,7 +117,14 @@ main(int argc,char **argv)
     login[i] = 0;
     ++ext;
   }
-  /* ここまできたらログインアカウントが見つかっている(認証はまだ) */
+  
+  /*
+   * ここまできたらログインアカウントが見つかっている(認証はまだ)
+   * ログインしたアカウントのホームディレクトリの .password を探す
+   *
+   * pwfile という変数に .password のパスが格納される
+   * 例) vagrant なら "/home/vagrant/Maildir/.password"
+   */
 
   /* ログインアカウントの $HOME に chdir */
   if (chdir(pw->pw_dir) == -1) die(111);
@@ -142,16 +149,29 @@ main(int argc,char **argv)
 
   /* pwfile = pwfile + ".password な文字列をつくる */
   if (!stralloc_cats(&pwfile, auto_password)) die(111);
+
+  /* \0 終端にする? */
   if (!stralloc_0(&pwfile)) die(111);
+
+  /* $HOME/Maildir/.password を stat する。無ければ 1 で exit */
   if (stat(pwfile.s,&st) == -1) die(1);
+
+  /* $HOME/Maildir/.password の uid とログインアカウントの uid が一致するかどうかを見る */
   if (st.st_uid != pw->pw_uid) die(1);
+
+  /* ??? */
   if (st.st_mode & auto_patrn) die(111);
+
+  /* $HOME/Maildir/.password の中身を storead に読み込む */
   if (openreadclose(pwfile.s,&stored,32) != 1) die(111);
+
+  /* \0 終端にする ?*/
   if (!stralloc_0(&stored)) die(111);
   stored.s[str_chr(stored.s,'\n')] = 0;
- 
+
+  /* .password とクライアントが入力したパスワードを比較 (平文!!!!) */
   if (!*stored.s || strcmp(password,stored.s)) die(1);
- 
+
   if (prot_gid((int) pw->pw_gid) == -1) die(1);
   if (prot_uid((int) pw->pw_uid) == -1) die(1);
 
