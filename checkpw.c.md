@@ -178,11 +178,14 @@ main(int argc,char **argv)
   /* pw->pw_uid に setuid する */
   if (prot_uid((int) pw->pw_uid) == -1) die(1);
 
+  /* 環境変数をセット */
   if (!pathexec_env("USER",pw->pw_name)) die(111);
   if (!pathexec_env("EXT",ext)) die(111);
   if (!pathexec_env("HOME",pw->pw_dir)) die(111);
   if (!pathexec_env("SHELL",pw->pw_shell)) die(111);
   cleanup();
+
+  /* checkpw に渡したコマンドを execve */
   pathexec(argv + 1);
   _exit(111);
 }
