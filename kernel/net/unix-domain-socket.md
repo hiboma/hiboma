@@ -7,6 +7,7 @@
 ## TODO
 
  * kiocb, sock_iocb でのデータ転送
+ * unix_stream_recvmsg の MSG_WAITALL
 
 ## backlog のサイズ
 
