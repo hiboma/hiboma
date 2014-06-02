@@ -1,6 +1,6 @@
 # checkpw
 
- * checkpw-1.02/checkpw.c
+checkpw-1.02/checkpw.c
 
 ```c
 #include <sys/stat.h>
@@ -18,12 +18,16 @@
 #include <pwd.h>
 static struct passwd *pw;
 
-static char up[513];
+static char up[513]; /* ユーザからの入力をいれとく */
 static int uplen;
 
-static stralloc stored = {0};
-static stralloc pwfile = {0};
+static stralloc stored = {0};  /* $HOME/Maildir/.password をいれとく */
+static stralloc pwfile = {0};  /* $HOME/Maildir/.password へのパスをいれとく */
 
+/*
+ * stored が $HOME/Maildir/.password に書かれたパスワードを格納するメモリで
+ * あれこれ処理した後に \0 で明示的に上書きして破棄するセキュア実装
+ */
 void cleanup()
 {
   int i;
@@ -31,6 +35,7 @@ void cleanup()
   for (i = 0;i < stored.len;++i) stored.s[i] = 0;
 }
 
+/* 死ぬ */
 void die(int x)
 {
   cleanup();
@@ -49,7 +54,7 @@ main(int argc,char **argv)
  
   if (!argv[1]) _exit(2);
   
-  /* DASH=1 にしたりすると拡張アドレスを使って .password ファイルを探す */
+  /* DASH=1 にしたりすると拡張アドレスを使って .password ファイルを探す。後半読んで */
   dash = env_get("DASH");
  
   uplen = 0;
