@@ -1,5 +1,4 @@
-
-## SATA のディスクを一杯生やす
+# Vagrant に SATA のディスクを一杯生やす
 
 Vagrantfile に下記の設定を入れておく
 
