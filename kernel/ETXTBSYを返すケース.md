@@ -1,10 +1,10 @@
-# ETXTBSY
+# open や execve(2) で ETXTBSY を返すケース
 
-ETXTBSY を返すケースをまとめる
+ETXTBSY を返すケースをまとめる。なお Mac OSX だと挙動が全然違う
 
 ## ETXTBSY を返すケース
 
-#### 実行中のバイナリを O_WRONLY つけて open しようとすると返す
+#### 実行中のバイナリを O_WRONLY つけて open(2) しようとすると返す
 
 .sleep バイナリが他のプロセスによって実行中。この時 cp で上書きを試みると ETXTBSY を返す
 
@@ -23,7 +23,7 @@ open(".sleep", O_WRONLY)                = -1 ETXTBSY (Text file busy)
 
 #### O_WRONLY で open(2) 中のバイナリを execve(2) しようとすると返す
 
-.sleep バイナリを open + O_WRONLY していり状態を作っておく
+まずは .sleep バイナリを open + O_WRONLY していり状態を作っておく
 
 ```c
 	if (open(".sleep", O_WRONLY) == -1)
@@ -49,7 +49,7 @@ munmap(0x7fdd7cb8e000, 4096)            = 0
 exit_group(1)                           = ?
 ```
 
-バイナリを open(2)/write(2) で更新するのでなくて、rename(2) で置き換えるのが正解 (rsync)
+場合は バイナリを open(2)/write(2) で更新するのでなくて、rename(2) で置き換えるのが正解 (rsync)
 
 ## ETXTBSY を返すカーネル内のコード
 
