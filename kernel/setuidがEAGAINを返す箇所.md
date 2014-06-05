@@ -1,4 +1,4 @@
-## setuid(2) return -EAGAIN
+# setuid(2) return -EAGAIN
 
 setuid が EAGAIN を返す場所を探す
 
