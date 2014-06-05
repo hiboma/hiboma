@@ -4,9 +4,9 @@
 
 ```
  clear_refs	Clears page referenced bits shown in smaps output
-``` 
 
-```
+// ... snip 
+
 The /proc/PID/clear_refs is used to reset the PG_Referenced and ACCESSED/YOUNG
 bits on both physical and virtual pages associated with a process.
 To clear the bits for all the pages associated with the process
@@ -59,6 +59,11 @@ clear_refs_write では以下の三つのオペレーションを実行できる
 #define CLEAR_REFS_ANON 2
 #define CLEAR_REFS_MAPPED 3
 ```
+
+clear_refs_write の中身
+
+ * write された文字列を long 型に変換
+ * 対象プロセスの mm_struct を取って vm_area_struct を走査
 
 ```c
 static ssize_t clear_refs_write(struct file *file, const char __user *buf,
@@ -128,6 +133,11 @@ static ssize_t clear_refs_write(struct file *file, const char __user *buf,
 
 vm_area_struct を走査して clear_refs_pte_range を実行していく
 
+ * ptep_test_and_clear_young
+   * ページフレームの YOUNG フラグを落とす
+ * ClearPageReferenced
+   * ページの Referenced ビットを落とす?
+
 ```c
 static int clear_refs_pte_range(pmd_t *pmd, unsigned long addr,
 				unsigned long end, struct mm_walk *walk)
@@ -156,7 +166,7 @@ static int clear_refs_pte_range(pmd_t *pmd, unsigned long addr,
 		ptep_test_and_clear_young(vma, addr, pte);
 		ClearPageReferenced(page);
 	}
-    // unmap 
+
 	pte_unmap_unlock(pte - 1, ptl);
 	cond_resched();
 	return 0;
