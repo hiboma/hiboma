@@ -49,7 +49,7 @@ munmap(0x7fdd7cb8e000, 4096)            = 0
 exit_group(1)                           = ?
 ```
 
-バイナリを open(2)/write(2) で更新するのでなくて、rename(2) で置き換えるのが正解
+バイナリを open(2)/write(2) で更新するのでなくて、rename(2) で置き換えるのが正解 (rsync)
 
 ## ETXTBSY を返すカーネル内のコード
 
