@@ -1,4 +1,4 @@
-# open や execve(2) で ETXTBSY を返すケース
+# open(2) や execve(2) で ETXTBSY を返すケース
 
 ETXTBSY を返すケースをまとめる。なお Mac OSX だと挙動が全然違う
 
@@ -19,6 +19,24 @@ open(".sleep", O_WRONLY|O_TRUNC)        = -1 ETXTBSY (Text file busy)
 ```
 $ strace ./.open 
 open(".sleep", O_WRONLY)                = -1 ETXTBSY (Text file busy)
+```
+
+`cp --remove-destination` では unlink(2) してから open(2) するので ETXTBSY は返さない
+
+```
+$ strace cp --remove-destination /dev/null ./.sleep
+
+// ...
+
+stat("./.sleep", {st_mode=S_IFREG|0755, st_size=6532, ...}) = 0
+stat("/dev/null", {st_mode=S_IFCHR|0666, st_rdev=makedev(1, 3), ...}) = 0
+lstat("./.sleep", {st_mode=S_IFREG|0755, st_size=6532, ...}) = 0
+unlink("./.sleep")                      = 0
+open("/dev/null", O_RDONLY)             = 3
+fstat(3, {st_mode=S_IFCHR|0666, st_rdev=makedev(1, 3), ...}) = 0
+open("./.sleep", O_WRONLY|O_CREAT|O_EXCL, 0666) = 4
+fstat(4, {st_mode=S_IFREG|0644, st_size=0, ...}) = 0
+read(3, "", 32768)                      = 0
 ```
 
 #### O_WRONLY で open(2) 中のバイナリを execve(2) しようとすると返す
