@@ -49,6 +49,8 @@ munmap(0x7fdd7cb8e000, 4096)            = 0
 exit_group(1)                           = ?
 ```
 
+バイナリを open(2)/write(2) で更新するのでなくて、rename(2) で置き換えるのが正解
+
 ## ETXTBSY を返すカーネル内のコード
 
 いろいろあるけど、汎用っぽいのは fs/namei.c の次の二つ
@@ -199,7 +201,9 @@ static inline int __get_file_write_access(struct inode *inode,
 
 ## execve(2)
 
- * do_execve -> open_exec で deny_write_access している
+do_execve -> open_exec で deny_write_access
+
+ * execve したいバイナリが O_WRONLY で open(2) されていたら ETXTBSY が返る
 
 ```c
 struct file *open_exec(const char *name)
