@@ -1,5 +1,29 @@
 # /proc/<pid>clear_refs
 
+## Documantion/filesystems/proc.txt の説明
+
+```
+ clear_refs	Clears page referenced bits shown in smaps output
+``` 
+
+```
+The /proc/PID/clear_refs is used to reset the PG_Referenced and ACCESSED/YOUNG
+bits on both physical and virtual pages associated with a process.
+To clear the bits for all the pages associated with the process
+    > echo 1 > /proc/PID/clear_refs
+
+To clear the bits for the anonymous pages associated with the process
+    > echo 2 > /proc/PID/clear_refs
+
+To clear the bits for the file mapped pages associated with the process
+    > echo 3 > /proc/PID/clear_refs
+Any other value written to /proc/PID/clear_refs will have no effect.
+```
+
+smaps の `Referenced` のサイズが 0 になる。 対象を anon か file かを選べる
+
+## ソース
+
 proc/base.c で次の通りに定義されている 
 
 ```c
