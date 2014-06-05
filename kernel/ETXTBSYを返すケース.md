@@ -14,14 +14,14 @@ $ strace cp /dev/null .sleep
 open(".sleep", O_WRONLY|O_TRUNC)        = -1 ETXTBSY (Text file busy)
 ```
 
-最初の予想と違って O_TRUNC 有無は関係なかった
+最初の予想と違って O_TRUNC 有無は関係ない。 あと権限も関係無い。
 
 ```
 $ strace ./.open 
 open(".sleep", O_WRONLY)                = -1 ETXTBSY (Text file busy)
 ```
 
-`cp --remove-destination` では unlink(2) してから open(2) するので ETXTBSY は返さない
+`cp --remove-destination` にすると unlink(2) してから open(2) するので ETXTBSY は返さない
 
 ```
 $ strace cp --remove-destination /dev/null ./.sleep
@@ -35,6 +35,21 @@ unlink("./.sleep")                      = 0
 open("/dev/null", O_RDONLY)             = 3
 fstat(3, {st_mode=S_IFCHR|0666, st_rdev=makedev(1, 3), ...}) = 0
 open("./.sleep", O_WRONLY|O_CREAT|O_EXCL, 0666) = 4
+fstat(4, {st_mode=S_IFREG|0644, st_size=0, ...}) = 0
+read(3, "", 32768)                      = 0
+```
+
+`cp -f` にすると ETXTBSY が返ってきてから unlink(2) して open -> write を試みる
+
+```
+stat(".sleep", {st_mode=S_IFREG|0755, st_size=6532, ...}) = 0
+stat("/dev/null", {st_mode=S_IFCHR|0666, st_rdev=makedev(1, 3), ...}) = 0
+stat(".sleep", {st_mode=S_IFREG|0755, st_size=6532, ...}) = 0
+open("/dev/null", O_RDONLY)             = 3
+fstat(3, {st_mode=S_IFCHR|0666, st_rdev=makedev(1, 3), ...}) = 0
+open(".sleep", O_WRONLY|O_TRUNC)        = -1 ETXTBSY (Text file busy)
+unlink(".sleep")                        = 0
+open(".sleep", O_WRONLY|O_CREAT|O_EXCL, 0666) = 4
 fstat(4, {st_mode=S_IFREG|0644, st_size=0, ...}) = 0
 read(3, "", 32768)                      = 0
 ```
@@ -70,7 +85,9 @@ exit_group(1)                           = ?
 ### 考察
 
  * バイナリを open(2)/write(2) で更新するのでなくて、rename(2) で置き換えるのが正解? (rsync)
- * cp -f もしくは cp --remove-destination では unlink(2) してからコピー (open, write) するらしい
+ * `cp -f` もしくは `cp --remove-destination` では unlink(2) してからコピー (open, write) して ETXTBSY 回避できる
+   * 新しくバイナリを cp している間に、バイナリを execve(2) するプロセスがあると ETXTBSY で死ぬ問題がある
+   * となると rename(2) が atomic で安全なのではないか?
 
 ## ETXTBSY を返すカーネル内のコード
 
