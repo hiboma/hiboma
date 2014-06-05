@@ -22,19 +22,29 @@ Any other value written to /proc/PID/clear_refs will have no effect.
 
 smaps の `Referenced` のサイズが 0 になる。 対象を anon か file かを選べる
 
+shrink_active_list での relcaim に作用する
+
+ *  PageReferenced なページ => Active リストの先頭に繋
+ * !PageReferenced なページ => Inactive リストに繋ぐ
+
+この機能を使うと、pageout させたいプロセスを選択的にできる?
+
 ## ソース
 
 proc/base.c で次の通りに定義されている 
 
 ```c
 #ifdef CONFIG_PROC_PAGE_MONITOR
+                               // ->
 	REG("clear_refs", S_IWUSR, proc_clear_refs_operations),
 	REG("smaps",      S_IRUGO, proc_smaps_operations),
 	REG("pagemap",    S_IRUGO, proc_pagemap_operations),
 #endif
 ```
 
-file_operations を見た所 write(2) だけサポートしている
+proc_clear_refs_operations は file_operations
+
+file_operations のメンバを見た所 write(2) だけサポートしている
 
 ```c
 const struct file_operations proc_clear_refs_operations = {
@@ -42,7 +52,7 @@ const struct file_operations proc_clear_refs_operations = {
 };
 ```
 
-write で以下の三つのオペレーションを実行できる様子
+clear_refs_write では以下の三つのオペレーションを実行できる様子
 
 ```c
 #define CLEAR_REFS_ALL 1
