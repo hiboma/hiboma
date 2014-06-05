@@ -1,6 +1,12 @@
 # ETXTBSY
 
+ETXTBSY を返すケースをまとめる
+
+## ETXTBSY を返すケース
+
 #### 実行中のバイナリを O_WRONLY つけて open しようとすると返す
+
+.sleep バイナリが他のプロセスによって実行中。この時 cp で上書きを試みると ETXTBSY を返す
 
 ```
 $ strace cp /dev/null .sleep
@@ -8,30 +14,27 @@ $ strace cp /dev/null .sleep
 open(".sleep", O_WRONLY|O_TRUNC)        = -1 ETXTBSY (Text file busy)
 ```
 
-予想と違って O_TRUNC は関係なかった
+最初の予想と違って O_TRUNC 有無は関係なかった
 
 ```
-// open するだけのコード
-//	if (open(".sleep", O_WRONLY) == -1)
-//		perror("open");
-
 $ strace ./.open 
 open(".sleep", O_WRONLY)                = -1 ETXTBSY (Text file busy)
 ```
 
 #### O_WRONLY で open(2) 中のバイナリを execve(2) しようとすると返す
 
-.sleep を open + O_WRONLY しておいた状態で
+.sleep バイナリを open + O_WRONLY していり状態を作っておく
 
 ```c
 	if (open(".sleep", O_WRONLY) == -1)
 		perror("open");
+
     sleep(100);
 ```
 
-バイナリを実行しようとすると execve(2) が ETXTBSY を返す
+他のシェルで .sleep バイナリを実行しようとすると execve(2) が ETXTBSY を返す
 
-```c
+```
 [vagrant@vagrant-centos65 vagrant]$ strace ./.sleep 
 execve("./.sleep", ["./.sleep"], [/* 22 vars */]) = -1 ETXTBSY (Text file busy)
 dup(2)                                  = 3
@@ -46,7 +49,7 @@ munmap(0x7fdd7cb8e000, 4096)            = 0
 exit_group(1)                           = ?
 ```
 
-## ETXTBSY を返すコード
+## ETXTBSY を返すカーネル内のコード
 
 いろいろあるけど、汎用っぽいのは fs/namei.c の次の二つ
 
@@ -98,6 +101,7 @@ int deny_write_access(struct file * file)
 	struct inode *inode = file->f_path.dentry->d_inode;
 
 	spin_lock(&inode->i_lock);
+    // 対象の file が write で開かれているなら ETXTBSY になる
 	if (atomic_read(&inode->i_writecount) > 0) {
 		spin_unlock(&inode->i_lock);
 		return -ETXTBSY;
@@ -195,7 +199,7 @@ static inline int __get_file_write_access(struct inode *inode,
 
 ## execve(2)
 
-do_execve -> open_exec で deny_write_access している
+ * do_execve -> open_exec で deny_write_access している
 
 ```c
 struct file *open_exec(const char *name)
