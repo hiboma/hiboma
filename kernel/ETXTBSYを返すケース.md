@@ -49,7 +49,10 @@ munmap(0x7fdd7cb8e000, 4096)            = 0
 exit_group(1)                           = ?
 ```
 
-場合は バイナリを open(2)/write(2) で更新するのでなくて、rename(2) で置き換えるのが正解 (rsync)
+### 考察
+
+ * バイナリを open(2)/write(2) で更新するのでなくて、rename(2) で置き換えるのが正解? (rsync)
+ * cp -f もしくは cp --remove-destination では unlink(2) してからコピー (open, write) するらしい
 
 ## ETXTBSY を返すカーネル内のコード
 
