@@ -4,6 +4,8 @@
 
 split LRU 以前の図なので注意
 
+## 主要な関数群
+
  * mark_page_accessed
    * activate_page
  * page_referenced
