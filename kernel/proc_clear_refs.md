@@ -29,6 +29,22 @@ shrink_active_list での relcaim に作用する
 
 この機能を使うと、pageout させたいプロセスを選択的にできる?
 
+### 説明
+
+http://kernelnewbies.org/Linux_2_6_22
+
+```
+Process footprint measurement facility
+2.6.22 adds a "Referenced" line to each VMA in /proc/pid/smaps, which indicates how many pages within it are currently marked as referenced or accessed. There's also a new /proc/pid/clear_refs file. When any non-zero number is written to this clear_refs file, the Reference fiel is cleared-
+
+With those mechanism it is now possible to measure approximately how much memory a task is using by clearing the reference bits with "echo 1 > /proc/pid/clear_refs" and checking the reference count for each VMA from the /proc/pid/smaps output at a measured time interval (fe. 1 second). This is a valuable tool to get an approximate measurement of the memory footprint for a task.
+
+Code: (commit), (commit)
+```
+
+ * http://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/commit/?id=f79f177c25016647cc92ffac8afa7cb96ce47011
+ * http://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/commit/?id=b813e931b4c8235bb42e301096ea97dbdee3e8fe
+
 ## ソース
 
 proc/base.c で次の通りに定義されている 
