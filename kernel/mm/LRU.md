@@ -33,4 +33,33 @@ void mark_page_accessed(struct page *page)
 }
 
 EXPORT_SYMBOL(mark_page_accessed);
-``` 
+```
+
+### activate_page
+
+inactive -> active の LRU 移動
+
+```c
+/*
+ * FIXME: speed this up?
+ */
+void activate_page(struct page *page)
+{
+	struct zone *zone = page_zone(page);
+
+	spin_lock_irq(&zone->lru_lock);
+	if (PageLRU(page) && !PageActive(page) && !PageUnevictable(page)) {
+		int file = page_is_file_cache(page);
+		int lru = page_lru_base_type(page);
+		del_page_from_lru_list(zone, page, lru);
+
+		SetPageActive(page);
+		lru += LRU_ACTIVE;
+		add_page_to_lru_list(zone, page, lru);
+		__count_vm_event(PGACTIVATE);
+
+		update_page_reclaim_stat(zone, page, file, 1);
+	}
+	spin_unlock_irq(&zone->lru_lock);
+}
+```
