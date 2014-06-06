@@ -18,6 +18,8 @@
 
  * mark_page_accessed
  * page_referenced
+   * shrink_page_list -> page_check_references -> ... で呼び出しされる
+   * 名前と裏腹に副作用があるのだな
  * shrink_active_list
    * shrink_inactive_list も大事
  * activate_page
