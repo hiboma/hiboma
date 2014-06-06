@@ -35,6 +35,60 @@ void mark_page_accessed(struct page *page)
 EXPORT_SYMBOL(mark_page_accessed);
 ```
 
+### page_referenced
+
+```c
+/**
+ * page_referenced - test if the page was referenced
+ * @page: the page to test
+ * @is_locked: caller holds lock on the page
+ * @mem_cont: target memory controller
+ * @vm_flags: collect encountered vma->vm_flags who actually referenced the page
+ *
+ * Quick test_and_clear_referenced for all mappings to a page,
+ * returns the number of ptes which referenced the page.
+ */
+int page_referenced(struct page *page,
+		    int is_locked,
+		    struct mem_cgroup *mem_cont,
+		    unsigned long *vm_flags)
+{
+	int referenced = 0;
+	int we_locked = 0;
+
+	*vm_flags = 0;
+	if (page_mapped(page) &&  // アドレス空間にマップされているかどうか
+       page_rmapping(page)) { // ?
+       
+		if (!is_locked && (!PageAnon(page) || PageKsm(page))) {
+           // PG_locked をたてようとするt
+			we_locked = trylock_page(page);
+			if (!we_locked) {
+				referenced++;
+				goto out;
+			}
+		}
+		if (unlikely(PageKsm(page)))
+			referenced += page_referenced_ksm(page, mem_cont,
+								vm_flags);
+		else if (PageAnon(page))
+			referenced += page_referenced_anon(page, mem_cont,
+								vm_flags);
+		else if (page->mapping)
+			referenced += page_referenced_file(page, mem_cont,
+								vm_flags);
+		if (we_locked)
+			unlock_page(page);
+
+		if (page_test_and_clear_young(page))
+			referenced++;
+	}
+out:
+
+	return referenced;
+}
+```
+
 ### activate_page
 
 Inactive -> Active の LRU 移動
