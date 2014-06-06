@@ -6,7 +6,7 @@
 
 ----
 
-split LRU 以前の図なので注意
+一応 split LRU 以前の図なので注意
 
 ## 主要な関数群
 
@@ -14,6 +14,8 @@ split LRU 以前の図なので注意
  * page_referenced
  * shrink_active_list 
  * activate_page
+ * SetPageActive
+ * ClearPageActive
 
 ### mark_page_accessed 
 
