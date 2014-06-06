@@ -5,9 +5,9 @@
 split LRU 以前の図なので注意
 
  * mark_page_accessed
+   * activate_page
  * page_referenced
  * shrink_active_list
- * activate_page
 
 ### mark_page_accessed 
 
@@ -27,7 +27,7 @@ void mark_page_accessed(struct page *page)
 		activate_page(page);
 		ClearPageReferenced(page);
 	} else if (!PageReferenced(page)) {
-        // パターンB 
+        // パターンB referenced をつけるだけ
 		SetPageReferenced(page);
 	}
 }
