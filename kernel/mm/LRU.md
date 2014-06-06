@@ -104,6 +104,32 @@ out:
 }
 ```
 
+page_referenced_* 属は下記の用に潜っていく
+
+```
+page_referenced_ksm    page_referenced_anon    page_referenced_file
+               \                 |                   /
+                 \               |                 /
+                  +--------------+----------------+
+                                 |
+                                 |
+                        page_referenced_one
+                                 |
+                                 |
+                     ptep_clear_flush_young_notify
+                                 |
+                                 |
+                        ptep_clear_flush_young
+                                 |
+                                 |
+                      ptep_test_and_clear_young 
+                                 |
+                                 |   
+     test_and_clear_bit(_PAGE_BIT_ACCESSED, (unsigned long *) &ptep->pte);
+```
+
+pte_young == pte_flags(pte) & _PAGE_ACCESSED;
+
 ### activate_page
 
 Inactive -> Active の LRU 移動
