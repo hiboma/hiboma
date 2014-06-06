@@ -42,6 +42,8 @@ With those mechanism it is now possible to measure approximately how much memory
 Code: (commit), (commit)
 ```
 
+clear_refs で referenced 落とす => smaps で見る => 参照の度合いを計測できる
+
  * http://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/commit/?id=f79f177c25016647cc92ffac8afa7cb96ce47011
  * http://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/commit/?id=b813e931b4c8235bb42e301096ea97dbdee3e8fe
 

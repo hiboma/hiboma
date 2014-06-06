@@ -52,10 +52,18 @@ void activate_page(struct page *page)
 	if (PageLRU(page)    && // なんだっけ?
        !PageActive(page) && // 既に Active なら何もしない
        !PageUnevictable(page)) {
+
+       // file LRU に入れるべきかどうかを選択
+       // return !PageSwapBacked(page);
 		int file = page_is_file_cache(page);
+
+        // LRU_INACTIVE_FILE か LRU_INACTIVE_ANON かを選択
 		int lru = page_lru_base_type(page);
+
+        // LRU からページを消す
 		del_page_from_lru_list(zone, page, lru);
 
+        // Active
 		SetPageActive(page);
 		lru += LRU_ACTIVE;
 		add_page_to_lru_list(zone, page, lru);
