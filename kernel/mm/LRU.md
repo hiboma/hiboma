@@ -37,7 +37,7 @@ EXPORT_SYMBOL(mark_page_accessed);
 
 ### activate_page
 
-inactive -> active の LRU 移動
+Inactive -> Active の LRU 移動
 
 ```c
 /*
@@ -47,8 +47,11 @@ void activate_page(struct page *page)
 {
 	struct zone *zone = page_zone(page);
 
+    // LRU は zone ごとにあるので zone->lru_lock を取る
 	spin_lock_irq(&zone->lru_lock);
-	if (PageLRU(page) && !PageActive(page) && !PageUnevictable(page)) {
+	if (PageLRU(page)    && // なんだっけ?
+       !PageActive(page) && // 既に Active なら何もしない
+       !PageUnevictable(page)) {
 		int file = page_is_file_cache(page);
 		int lru = page_lru_base_type(page);
 		del_page_from_lru_list(zone, page, lru);
