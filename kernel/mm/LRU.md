@@ -39,6 +39,10 @@ EXPORT_SYMBOL(mark_page_accessed);
 
 Inactive -> Active の LRU 移動
 
+ * zone を選ぶ
+ * file か anon かを選ぶ
+ * SetPageActive
+
 ```c
 /*
  * FIXME: speed this up?
