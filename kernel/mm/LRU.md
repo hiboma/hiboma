@@ -8,3 +8,29 @@ split LRU 以前の図なので注意
  * page_referenced
  * shrink_active_list
  * activate_page
+
+### mark_page_accessed 
+
+```c 
+/*
+ * Mark a page as having seen activity.
+ *
+ * inactive,unreferenced	->	inactive,referenced   // B
+ * inactive,referenced		->	active,unreferenced   // A
+ * active,unreferenced		->	active,referenced     // B
+ */
+void mark_page_accessed(struct page *page)
+{
+	if (!PageActive(page) && !PageUnevictable(page) &&
+			PageReferenced(page) && PageLRU(page)) {
+        // パターンA active リストに繋いで referenced を落とす
+		activate_page(page);
+		ClearPageReferenced(page);
+	} else if (!PageReferenced(page)) {
+        // パターンB 
+		SetPageReferenced(page);
+	}
+}
+
+EXPORT_SYMBOL(mark_page_accessed);
+``` 
