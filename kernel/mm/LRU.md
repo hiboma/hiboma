@@ -198,7 +198,8 @@ int page_referenced_one(struct page *page, struct vm_area_struct *vma,
 			goto out;
 		}
 
-        // Referenced ビットを落とす
+        // PTE の Referenced ビットを落とす
+        // https://www.cs.uaf.edu/2007/fall/cs301/lecture/11_30_cache.png
 		if (ptep_clear_flush_young_notify(vma, address, pte)) {
 			/*
 			 * Don't treat a reference through a sequentially read
