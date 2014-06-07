@@ -279,6 +279,11 @@ void activate_page(struct page *page)
 
 shrink_mem_cgroup_zone の過程で呼び出される
 
+ * l_hold に deactivate 候補のページを集める
+   * isolate_pages でかき集める
+ * l_active にやっぱり active に戻すページを集める
+ * l_inactive に deactivate 対象のページを集める
+
 ```c
 static void shrink_active_list(unsigned long nr_pages,
 			       struct mem_cgroup_zone *mz,
