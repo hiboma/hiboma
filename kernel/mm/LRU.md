@@ -277,6 +277,8 @@ void activate_page(struct page *page)
 
 ### shrink_active_list
 
+shrink_mem_cgroup_zone の過程で呼び出される
+
 ```c
 static void shrink_active_list(unsigned long nr_pages,
 			       struct mem_cgroup_zone *mz,
