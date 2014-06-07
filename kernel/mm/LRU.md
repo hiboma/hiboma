@@ -313,6 +313,8 @@ static void shrink_active_list(unsigned long nr_pages,
 	lru_add_drain();
 	spin_lock_irq(&zone->lru_lock);
 
+    // nr_pages 分スキャンして deactivate 候補のページを探す
+    // isolate_pages はなかなか手強い
 	nr_taken = isolate_pages(nr_pages, mz, &l_hold,
 				 &pgscanned, order,
 				 ISOLATE_ACTIVE, 1, file);
@@ -330,6 +332,7 @@ static void shrink_active_list(unsigned long nr_pages,
 	__mod_zone_page_state(zone, NR_ISOLATED_ANON + file, nr_taken);
 	spin_unlock_irq(&zone->lru_lock);
 
+    // l_hold を走査する
 	while (!list_empty(&l_hold)) {
 		cond_resched();
 		page = lru_to_page(&l_hold);
@@ -386,5 +389,155 @@ static void shrink_active_list(unsigned long nr_pages,
 	__mod_zone_page_state(zone, NR_ISOLATED_ANON + file, -nr_taken);
 	spin_unlock_irq(&zone->lru_lock);
 	trace_mm_pagereclaim_shrinkactive(pgscanned, file, priority);  
+}
+```
+
+### isolate_lru_page
+
+```c
+/*
+ * zone->lru_lock is heavily contended.  Some of the functions that
+ * shrink the lists perform better by taking out a batch of pages
+ * and working on them outside the LRU lock.
+ *
+ * For pagecache intensive workloads, this function is the hottest
+ * spot in the kernel (apart from copy_*_user functions).
+ *
+ * Appropriate locks must be held before calling this function.
+ *
+ * @nr_to_scan:	The number of pages to look through on the list.
+ * @src:	The LRU list to pull pages off.
+ * @dst:	The temp list to put pages on to.
+ * @scanned:	The number of pages that were scanned.
+ * @order:	The caller's attempted allocation order
+ * @mode:	One of the LRU isolation modes
+ * @file:	True [1] if isolating file [!anon] pages
+ *
+ * returns how many pages were moved onto *@dst.
+ */
+static unsigned long isolate_lru_pages(unsigned long nr_to_scan,
+		struct list_head *src, struct list_head *dst,
+		unsigned long *scanned, int order, isolate_mode_t mode,
+		int file)
+{
+	unsigned long nr_taken = 0;
+	unsigned long nr_lumpy_taken = 0, nr_lumpy_dirty = 0, nr_lumpy_failed = 0;
+	unsigned long scan;
+
+	for (scan = 0; scan < nr_to_scan && !list_empty(src); scan++) {
+		struct page *page;
+		unsigned long pfn;
+		unsigned long end_pfn;
+		unsigned long page_pfn;
+		int zone_id;
+
+		page = lru_to_page(src);
+		prefetchw_prev_lru_page(page, src, flags);
+
+		VM_BUG_ON(!PageLRU(page));
+
+		switch (__isolate_lru_page(page, mode, file)) {
+		case 0:
+			mem_cgroup_lru_del(page);
+			list_move(&page->lru, dst);
+			nr_taken += hpage_nr_pages(page);
+			break;
+
+		case -EBUSY:
+			/* else it is being freed elsewhere */
+			list_move(&page->lru, src);
+			continue;
+
+		default:
+			BUG();
+		}
+
+		if (!order)
+			continue;
+
+		/*
+		 * Attempt to take all pages in the order aligned region
+		 * surrounding the tag page.  Only take those pages of
+		 * the same active state as that tag page.  We may safely
+		 * round the target page pfn down to the requested order
+		 * as the mem_map is guarenteed valid out to MAX_ORDER,
+		 * where that page is in a different zone we will detect
+		 * it from its zone id and abort this block scan.
+		 */
+		zone_id = page_zone_id(page);
+		page_pfn = page_to_pfn(page);
+		pfn = page_pfn & ~((1 << order) - 1);
+		end_pfn = pfn + (1 << order);
+		for (; pfn < end_pfn; pfn++) {
+			struct page *cursor_page;
+
+			/* The target page is in the block, ignore it. */
+			if (unlikely(pfn == page_pfn))
+				continue;
+
+			/* Avoid holes within the zone. */
+			if (unlikely(!pfn_valid_within(pfn)))
+				break;
+
+			cursor_page = pfn_to_page(pfn);
+
+			/* Check that we have not crossed a zone boundary. */
+			if (unlikely(page_zone_id(cursor_page) != zone_id))
+				break;
+
+			/*
+			 * If we don't have enough swap space, reclaiming of
+			 * anon page which don't already have a swap slot is
+			 * pointless.
+			 */
+			if (nr_swap_pages <= 0 && PageAnon(cursor_page) &&
+			    !PageSwapCache(cursor_page))
+				break;
+
+			if (__isolate_lru_page(cursor_page, mode, file) == 0) {
+				unsigned int isolated_pages;
+
+				mem_cgroup_lru_del(cursor_page);
+				list_move(&cursor_page->lru, dst);
+				isolated_pages = hpage_nr_pages(page);
+				nr_taken += isolated_pages;
+				nr_lumpy_taken += isolated_pages;
+				if (PageDirty(cursor_page))
+					nr_lumpy_dirty += isolated_pages;
+				scan++;
+				pfn += isolated_pages - 1;
+			} else {
+				/*
+				 * Check if the page is freed already.
+				 *
+				 * We can't use page_count() as that
+				 * requires compound_head and we don't
+				 * have a pin on the page here. If a
+				 * page is tail, we may or may not
+				 * have isolated the head, so assume
+				 * it's not free, it'd be tricky to
+				 * track the head status without a
+				 * page pin.
+				 */
+				if (!PageTail(cursor_page) &&
+				    !atomic_read(&cursor_page->_count))
+					continue;
+				break;
+			}
+		}
+
+		/* If we break out of the loop above, lumpy reclaim failed */
+		if (pfn < end_pfn)
+			nr_lumpy_failed++;
+	}
+
+	*scanned = scan;
+
+	trace_mm_vmscan_lru_isolate(order,
+			nr_to_scan, scan,
+			nr_taken,
+			nr_lumpy_taken, nr_lumpy_dirty, nr_lumpy_failed,
+			mode);
+	return nr_taken;
 }
 ```
