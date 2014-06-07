@@ -288,6 +288,8 @@ static void shrink_active_list(unsigned long nr_pages,
 	unsigned long nr_taken;
 	unsigned long pgscanned;
 	unsigned long vm_flags;
+
+    /* 関数無いでページを一時的に保持しておくようのリスト */
 	LIST_HEAD(l_hold);	/* The pages which were snipped off */
 	LIST_HEAD(l_active);
 	LIST_HEAD(l_inactive);
@@ -353,7 +355,7 @@ static void shrink_active_list(unsigned long nr_pages,
 			}
 		}
 
-        /* Active => Inactive へ移る */
+        /* Active => Inactive へ移す候補に入れる */
 		ClearPageActive(page);	/* we are de-activating */
 		list_add(&page->lru, &l_inactive);
 	}
