@@ -331,7 +331,7 @@ static void shrink_active_list(unsigned long nr_pages,
 			continue;
 		}
 
-        /* Referenced ビット落とすやつ */
+        /* Referenced ビットが立っているかどうかを見る */
 		if (page_referenced(page, 0, sc->target_mem_cgroup, &vm_flags)) {
 			nr_rotated += hpage_nr_pages(page);
 			/*
@@ -343,12 +343,17 @@ static void shrink_active_list(unsigned long nr_pages,
 			 * IO, plus JVM can create lots of anon VM_EXEC pages,
 			 * so we ignore them here.
 			 */
+             // ファイル backed な active ページを active list に戻す
+             // 実行コードがオンメモリに残りやすい
+             // anon ページは対象外
+             / JVM は VM_EXEC なページを大量に生成する。無視
 			if ((vm_flags & VM_EXEC) && page_is_file_cache(page)) {
 				list_add(&page->lru, &l_active);
 				continue;
 			}
 		}
 
+        /* Active => Inactive へ移る */
 		ClearPageActive(page);	/* we are de-activating */
 		list_add(&page->lru, &l_inactive);
 	}
