@@ -237,7 +237,7 @@ Inactive -> Active の LRU 移動
 
  * 対象の page から zone を選ぶ
  * page が file か anon かを選ぶ
- * SetPageActive
+ * SetPageActive する
 
 ```c
 /*
