@@ -229,14 +229,14 @@ out:
 }
 ```
 
-pte_young == pte_flags(pte) & _PAGE_ACCESSED;
+pte_young は pte_flags(pte) & _PAGE_ACCESSED の意らしい
 
 ### activate_page
 
 Inactive -> Active の LRU 移動
 
- * zone を選ぶ
- * file か anon かを選ぶ
+ * 対象の page から zone を選ぶ
+ * page が file か anon かを選ぶ
  * SetPageActive
 
 ```c
