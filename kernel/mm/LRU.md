@@ -198,6 +198,7 @@ int page_referenced_one(struct page *page, struct vm_area_struct *vma,
 			goto out;
 		}
 
+        // Referenced ビットを落とす
 		if (ptep_clear_flush_young_notify(vma, address, pte)) {
 			/*
 			 * Don't treat a reference through a sequentially read
