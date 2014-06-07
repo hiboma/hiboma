@@ -134,6 +134,99 @@ page_referenced_ksm    page_referenced_anon    page_referenced_file
      test_and_clear_bit(_PAGE_BIT_ACCESSED, (unsigned long *) &ptep->pte);
 ```
 
+#### page_referenced_one
+
+共通で呼び出される page_referenced_one の実装 
+
+```c
+/*
+ * Subfunctions of page_referenced: page_referenced_one called
+ * repeatedly from either page_referenced_anon or page_referenced_file.
+ */
+int page_referenced_one(struct page *page, struct vm_area_struct *vma,
+			unsigned long address, unsigned int *mapcount,
+			unsigned long *vm_flags)
+{
+	struct mm_struct *mm = vma->vm_mm;
+	int referenced = 0;
+
+	if (unlikely(PageTransHuge(page))) {
+		pmd_t *pmd;
+
+		spin_lock(&mm->page_table_lock);
+		/*
+		 * rmap might return false positives; we must filter
+		 * these out using page_check_address_pmd().
+		 */
+		pmd = page_check_address_pmd(page, mm, address,
+					     PAGE_CHECK_ADDRESS_PMD_FLAG);
+		if (!pmd) {
+			spin_unlock(&mm->page_table_lock);
+			goto out;
+		}
+
+		if (vma->vm_flags & VM_LOCKED) {
+			spin_unlock(&mm->page_table_lock);
+			*mapcount = 0;	/* break early from loop */
+			*vm_flags |= VM_LOCKED;
+			goto out;
+		}
+
+		/* go ahead even if the pmd is pmd_trans_splitting() */
+		if (pmdp_clear_flush_young_notify(vma, address, pmd))
+			referenced++;
+		spin_unlock(&mm->page_table_lock);
+	} else {
+        // 普通の呼び出しパスはこっちだろう
+        
+
+		pte_t *pte;      // typedef struct { pteval_t pte; } pte_t;
+		spinlock_t *ptl;
+
+		/*
+		 * rmap might return false positives; we must filter
+		 * these out using page_check_address().
+		 */
+		pte = page_check_address(page, mm, address, &ptl, 0);
+		if (!pte)
+			goto out;
+
+		if (vma->vm_flags & VM_LOCKED) {
+			pte_unmap_unlock(pte, ptl);
+			*mapcount = 0;	/* break early from loop */
+			*vm_flags |= VM_LOCKED;
+			goto out;
+		}
+
+		if (ptep_clear_flush_young_notify(vma, address, pte)) {
+			/*
+			 * Don't treat a reference through a sequentially read
+			 * mapping as such.  If the page has been used in
+			 * another mapping, we will catch it; if this other
+			 * mapping is already gone, the unmap path will have
+			 * set PG_referenced or activated the page.
+			 */
+			if (likely(!VM_SequentialReadHint(vma)))
+				referenced++;
+		}
+		pte_unmap_unlock(pte, ptl);
+	}
+
+	/* Pretend the page is referenced if the task has the
+	   swap token and is in the middle of a page fault. */
+	if (mm != current->mm && has_swap_token(mm) &&
+			rwsem_is_locked(&mm->mmap_sem))
+		referenced++;
+
+	(*mapcount)--;
+
+	if (referenced)
+		*vm_flags |= vma->vm_flags;
+out:
+	return referenced;
+}
+```
+
 pte_young == pte_flags(pte) & _PAGE_ACCESSED;
 
 ### activate_page
