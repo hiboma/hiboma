@@ -186,6 +186,7 @@ int page_referenced_one(struct page *page, struct vm_area_struct *vma,
 		 * rmap might return false positives; we must filter
 		 * these out using page_check_address().
 		 */
+         // mm->pgd から PGD -> PUD -> PMD と辿って PTE を取る
 		pte = page_check_address(page, mm, address, &ptl, 0);
 		if (!pte)
 			goto out;
