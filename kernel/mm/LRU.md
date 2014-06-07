@@ -300,6 +300,7 @@ static void shrink_active_list(unsigned long nr_pages,
 	if (!COMPACTION_BUILD)
 		order = sc->order;
 
+    // pagevecs ( per_cpu のリストの page 群) をLRU に移動させる?
 	lru_add_drain();
 	spin_lock_irq(&zone->lru_lock);
 
@@ -330,8 +331,8 @@ static void shrink_active_list(unsigned long nr_pages,
 			continue;
 		}
 
-		if (page_referenced(page, 0, sc->target_mem_cgroup,
-				    &vm_flags)) {
+        /* Referenced ビット落とすやつ */
+		if (page_referenced(page, 0, sc->target_mem_cgroup, &vm_flags)) {
 			nr_rotated += hpage_nr_pages(page);
 			/*
 			 * Identify referenced, file-backed active pages and
