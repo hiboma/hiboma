@@ -54,6 +54,10 @@ EXPORT_SYMBOL(mark_page_accessed);
 
 ### page_referenced
 
+ * KSM, anon, file によって分岐する
+ * 名前からは分からないけど referenced ビットを落とす副作用持っているので注意
+   * test_and_clear_referenced でビットを落とす
+
 ```c
 /**
  * page_referenced - test if the page was referenced
