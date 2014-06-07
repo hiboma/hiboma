@@ -150,6 +150,7 @@ int page_referenced_one(struct page *page, struct vm_area_struct *vma,
 	struct mm_struct *mm = vma->vm_mm;
 	int referenced = 0;
 
+    /* HugePage の場合 */
 	if (unlikely(PageTransHuge(page))) {
 		pmd_t *pmd;
 
@@ -158,6 +159,7 @@ int page_referenced_one(struct page *page, struct vm_area_struct *vma,
 		 * rmap might return false positives; we must filter
 		 * these out using page_check_address_pmd().
 		 */
+         /* pmd_t PMD があるかどうか */
 		pmd = page_check_address_pmd(page, mm, address,
 					     PAGE_CHECK_ADDRESS_PMD_FLAG);
 		if (!pmd) {
@@ -165,6 +167,7 @@ int page_referenced_one(struct page *page, struct vm_area_struct *vma,
 			goto out;
 		}
 
+        /* mlock(2) されてるページは対象外? */
 		if (vma->vm_flags & VM_LOCKED) {
 			spin_unlock(&mm->page_table_lock);
 			*mapcount = 0;	/* break early from loop */
