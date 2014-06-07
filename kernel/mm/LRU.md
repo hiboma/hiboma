@@ -178,7 +178,6 @@ int page_referenced_one(struct page *page, struct vm_area_struct *vma,
 		spin_unlock(&mm->page_table_lock);
 	} else {
         // 普通の呼び出しパスはこっちだろう
-        
 
 		pte_t *pte;      // typedef struct { pteval_t pte; } pte_t;
 		spinlock_t *ptl;
