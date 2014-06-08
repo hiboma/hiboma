@@ -2,8 +2,10 @@
 
 ## 5.2.1 システムコール呼び出し規約
 
- * inet     => iret
+ * int      => iret
  * sysenter => sysexit
+
+exit(2) を アセンブラ(リ) で書くと次のようなコードになる
 
 ```asm
 ;; http://www.tutorialspoint.com/assembly_programming/assembly_system_calls.htm
@@ -11,6 +13,8 @@
 mov	eax,1		; system call number (sys_exit)
 int	0x80		; call kernel
 ```
+
+write(2) を書いた場合は次のようなコードになる
 
 ```asm
 ;; http://www.tutorialspoint.com/assembly_programming/assembly_system_calls.htm
@@ -23,6 +27,8 @@ int	0x80		; call kernel
 ```
 
 ### syscall で getpid(2)
+
+glibc の syscall(3) からシステムコールを呼び出すす場合
 
 ```c
 #if 0
@@ -96,6 +102,8 @@ PSEUDO_END (syscall)
 ```
 
 #### glibc の getpid の実装を追う
+
+INTERNAL_SYSCALL でカーネルモードに移行する
 
 ```c
 /* Copyright (C) 2003, 2004 Free Software Foundation, Inc.
@@ -185,7 +193,7 @@ int $0x80 を直で呼び出す場合の実装は次の通り
     (int) resultvar; })
 ```
 
-_dl_sysinfo_int80 とかで見る奴。なんだっけ?
+_dl_sysinfo_int80 でカーネルモードに移行。これ なんだっけ?
 
 ```c
 #  define INTERNAL_SYSCALL(name, err, nr, args...) \
@@ -202,7 +210,7 @@ _dl_sysinfo_int80 とかで見る奴。なんだっけ?
     (int) resultvar; })
 ```
 
-### int 0x80 で getpid(2)
+### インラインアセンブラで int 0x80 で getpid(2)
 
 ```c
 #if 0
@@ -234,7 +242,7 @@ int main()
 
 ## 5.2.2 int 0x80/iret によるシステムコール
 
-2.6.32 ではコードが変わりまくりなので 2.6.15 を読む
+2.6.32 ではコードが変わりまくりなので、書籍に従って 2.6.15 を読む
 
 ```asm
 # int の時点で
