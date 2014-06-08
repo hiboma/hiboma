@@ -77,11 +77,15 @@ ENTRY(system_call)
     # 5. ↑の testw の結果が 0 でないなら ptrace されているのでジャンプ
 	jnz syscall_trace_entry
 
-    # eax がシステムコールの最大の番号を超えてたら EBADSYS
+    # 6. eax がシステムコールの最大の番号を超えてたら ENOSYS かえす
 	cmpl $(nr_syscalls), %eax
 	jae syscall_badsys
+
+    # 7 システムコールテーブルの %eax 番目を call する
 syscall_call:
 	call *sys_call_table(,%eax,4)
+
+    # 8. システムコールの戻り値を %eax に入れとく
 	movl %eax,EAX(%esp)		# store the return value
 syscall_exit:
 	cli				# make sure we don't miss an interrupt
