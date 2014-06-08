@@ -34,7 +34,23 @@
  * arch/x86/kernel/syscall_table_32.S
  * arch/x86/include/asm/unistd_64.h
 
-に一覧が載っている
+に一覧が載っている。
+
+perror(3) で errno と対応するメッセージが見れる。MySQLの依存コマンドだけど。
+
+```console
+$ perror 1
+OS error code   1:  Operation not permitted
+
+$ perror 2
+OS error code   2:  No such file or directory
+
+$ perror 4
+OS error code   4:  Interrupted system call
+
+$ perror 3
+OS error code   3:  No such process
+```
 
 ## 5.1.5 シグナルによる割り込み(システムコールの再起動とアボート)
 
