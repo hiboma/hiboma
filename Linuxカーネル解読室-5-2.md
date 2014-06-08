@@ -22,6 +22,30 @@ mov	eax,4		; system call number (sys_write)
 int	0x80		; call kernel
 ```
 
+### syscall で getpid(2)
+
+```c
+#if 0
+#!/bin/bash
+CFLAGS="-O2 -std=gnu99 -W -Wall -fPIE -D_FORTIFY_SOURCE=2"
+o=`basename $0`
+o=".${o%.*}"
+gcc ${CFLAGS} -o $o $0 && ./$o $*; exit
+#endif
+
+#define _GNU_SOURCE         /* See feature_test_macros(7) */
+#include <unistd.h>
+#include <sys/syscall.h>   /* For SYS_xxx definitions */
+#include <stdio.h>
+
+int main()
+{
+	long retval = syscall(39);
+	printf("getpid: %ld\n", retval);
+	return 0;
+}
+```
+
 ### int 0x80 で getpid(2)
 
 ```c

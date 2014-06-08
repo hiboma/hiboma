@@ -1,5 +1,8 @@
 # 5章 システムコール
 
+ * http://suneetsaini.blogspot.jp/2011/11/linux-system-call-operation-in-both.html
+   * ここの図解が良さそう。 Linuxカーネル本と似てるne ...
+
 ### コールゲート
 
 > コールゲートはx86 アーキテクチャのCPUに搭載されたセキュリティ機構である。CALL命令による呼び出しで上位の特権レベルのコードをあらかじめ登録されたものに限って実行することができる。
