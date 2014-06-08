@@ -74,7 +74,10 @@ ENTRY(system_call)
 					# system call tracing in operation / emulation
 	/* Note, _TIF_SECCOMP is bit number 8, and so it needs testw and not testb */
 	testw $(_TIF_SYSCALL_EMU|_TIF_SYSCALL_TRACE|_TIF_SECCOMP|_TIF_SYSCALL_AUDIT),TI_flags(%ebp)
+    # 5. ↑の testw の結果が 0 でないなら ptrace されているのでジャンプ
 	jnz syscall_trace_entry
+
+    # eax がシステムコールの最大の番号を超えてたら EBADSYS
 	cmpl $(nr_syscalls), %eax
 	jae syscall_badsys
 syscall_call:
@@ -114,3 +117,37 @@ iret_exc:
 	.long 1b,iret_exc
 .previous
 ```
+
+#### syscall_badsys
+
+ * eax に ENOSYS 入れる
+ * resume_userspace で復帰
+
+```
+syscall_badsys:
+	movl $-ENOSYS,EAX(%esp)
+	jmp resume_userspace
+```
+
+#### syscall_trace_entry
+
+do_syscall_trace に移ってデバッギにあれこて通知だすぽい
+
+```asm
+syscall_trace_entry:
+	movl $-ENOSYS,EAX(%esp)
+	movl %esp, %eax
+	xorl %edx,%edx
+	call do_syscall_trace
+	cmpl $0, %eax
+	jne resume_userspace		# ret != 0 -> running under PTRACE_SYSEMU,
+					# so must skip actual syscall
+	movl ORIG_EAX(%esp), %eax
+	cmpl $(nr_syscalls), %eax
+	jnae syscall_call
+	jmp syscall_exit
+
+	# perform syscall exit tracing
+	ALIGN
+```
+
