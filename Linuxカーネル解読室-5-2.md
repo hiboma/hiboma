@@ -24,7 +24,6 @@ int	0x80		; call kernel
 
 ### int 0x80 で getpid(2)
 
-
 ```c
 #if 0
 #!/bin/bash
@@ -51,4 +50,67 @@ int main()
 	printf("getpid: %ld\n", rax);
 	return 0;
 }
+```
+
+## 5.2.2 int 0x80/iret によるシステムコール
+
+```asm
+# int の時点で
+# - SS
+# - ESP
+# - EFLAGS
+# - CS
+# - EIP
+# が既にレジスタに積まれている
+ENTRY(system_call)
+    # 2. eax を退避
+	pushl %eax			# save orig_eax
+
+    # 3. その他汎用レジスタを pushl で退避
+	SAVE_ALL
+
+    # 4. 現在実行中のタスクのスタックを %ebp にセット   
+	GET_THREAD_INFO(%ebp)
+					# system call tracing in operation / emulation
+	/* Note, _TIF_SECCOMP is bit number 8, and so it needs testw and not testb */
+	testw $(_TIF_SYSCALL_EMU|_TIF_SYSCALL_TRACE|_TIF_SECCOMP|_TIF_SYSCALL_AUDIT),TI_flags(%ebp)
+	jnz syscall_trace_entry
+	cmpl $(nr_syscalls), %eax
+	jae syscall_badsys
+syscall_call:
+	call *sys_call_table(,%eax,4)
+	movl %eax,EAX(%esp)		# store the return value
+syscall_exit:
+	cli				# make sure we don't miss an interrupt
+					# setting need_resched or sigpending
+					# between sampling and the iret
+	movl TI_flags(%ebp), %ecx
+	testw $_TIF_ALLWORK_MASK, %cx	# current->work
+	jne syscall_exit_work
+
+restore_all:
+	movl EFLAGS(%esp), %eax		# mix EFLAGS, SS and CS
+	# Warning: OLDSS(%esp) contains the wrong/random values if we
+	# are returning to the kernel.
+	# See comments in process.c:copy_thread() for details.
+	movb OLDSS(%esp), %ah
+	movb CS(%esp), %al
+	andl $(VM_MASK | (4 << 8) | 3), %eax
+	cmpl $((4 << 8) | 3), %eax
+	je ldt_ss			# returning to user-space with LDT SS
+restore_nocheck:
+	RESTORE_REGS
+	addl $4, %esp
+1:	iret
+.section .fixup,"ax"
+iret_exc:
+	sti
+	pushl $0			# no error code
+	pushl $do_iret_error
+	jmp error_code
+.previous
+.section __ex_table,"a"
+	.align 4
+	.long 1b,iret_exc
+.previous
 ```
