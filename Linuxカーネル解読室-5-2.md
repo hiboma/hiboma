@@ -5,7 +5,25 @@
  * inet     => iret
  * sysenter => sysexit
 
+```asm
+;; http://www.tutorialspoint.com/assembly_programming/assembly_system_calls.htm
+;; exit(1) と同じ
+mov	eax,1		; system call number (sys_exit)
+int	0x80		; call kernel
+```
+
+```asm
+;; http://www.tutorialspoint.com/assembly_programming/assembly_system_calls.htm
+;; write(1, msg, 4) と同じ
+mov	edx,4		; message length
+mov	ecx,msg		; message to write
+mov	ebx,1		; file descriptor (stdout)
+mov	eax,4		; system call number (sys_write)
+int	0x80		; call kernel
+```
+
 ### int 0x80 で getpid(2)
+
 
 ```c
 #if 0
