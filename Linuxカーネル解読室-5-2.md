@@ -88,6 +88,7 @@ syscall_call:
     # 8. システムコールの戻り値を %eax に入れとく
 	movl %eax,EAX(%esp)		# store the return value
 syscall_exit:
+    # 9. cli で IF = 0 ハードウェア割り込みを無視
 	cli				# make sure we don't miss an interrupt
 					# setting need_resched or sigpending
 					# between sampling and the iret
@@ -96,6 +97,7 @@ syscall_exit:
 	jne syscall_exit_work
 
 restore_all:
+    # 10. レジスタの復帰
 	movl EFLAGS(%esp), %eax		# mix EFLAGS, SS and CS
 	# Warning: OLDSS(%esp) contains the wrong/random values if we
 	# are returning to the kernel.
@@ -108,6 +110,7 @@ restore_all:
 restore_nocheck:
 	RESTORE_REGS
 	addl $4, %esp
+    # 13 ユーザモードに復帰
 1:	iret
 .section .fixup,"ax"
 iret_exc:
@@ -122,12 +125,53 @@ iret_exc:
 .previous
 ```
 
+#### syscall_table.S
+
+システムコールのテーブル。配列
+
+```asm
+.data
+ENTRY(sys_call_table)
+	.long sys_restart_syscall	/* 0 - old "setup()" system call, used for restarting */
+	.long sys_exit
+	.long sys_fork
+	.long sys_read
+	.long sys_write
+	.long sys_open		/* 5 */
+	.long sys_close
+	.long sys_waitpid
+	.long sys_creat
+	.long sys_link
+	.long sys_unlink	/* 10 */
+	.long sys_execve
+	.long sys_chdir
+	.long sys_time
+	.long sys_mknod
+// ...    
+```
+
+#### syscall_exit_work
+
+```asm
+syscall_exit_work:
+	testb $(_TIF_SYSCALL_TRACE|_TIF_SYSCALL_AUDIT|_TIF_SINGLESTEP), %cl
+	jz work_pending
+    # IF = 0 ハードウェア割り込み許可
+	sti				# could let do_syscall_trace() call
+					# schedule() instead
+	movl %esp, %eax
+	movl $1, %edx
+    # ptrace とかあれこれ
+	call do_syscall_trace
+	jmp resume_userspace
+```
+
 #### syscall_badsys
 
  * eax に ENOSYS 入れる
  * resume_userspace で復帰
 
-```
+```asm
 syscall_badsys:
 	movl $-ENOSYS,EAX(%esp)
 	jmp resume_userspace
@@ -154,4 +198,6 @@ syscall_trace_entry:
 	# perform syscall exit tracing
 	ALIGN
 ```
+
+do_syscall_trace の ptrace_notify がおもしろそう
 
