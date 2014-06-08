@@ -24,9 +24,18 @@
 	}
 ```
 
-## システムコール番号とエントリテーブル
+### システムコール番号とエントリテーブル
 
  * /usr/include/asm/unistd_32.h
  * /usr/include/asm/unistd_64.h
 
-に番号と名前の一覧が載っている 
+に番号と名前の一覧が載っている。カーネルだと
+
+ * arch/x86/kernel/syscall_table_32.S
+ * arch/x86/include/asm/unistd_64.h
+
+に一覧が載っている
+
+## 5.1.5 シグナルによる割り込み(システムコールの再起動とアボート)
+
+EINTR の話
