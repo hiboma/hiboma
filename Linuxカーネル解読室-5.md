@@ -14,3 +14,19 @@
 ## 5.1.3 システムコールのインターフェイス
 
  * POSIX は関数のインターフェイスだけ規定。実装方法は規定ない
+
+```c
+	int fd = open("/mp/test.txt", O_WRONLY|O_CREAT, 0755);
+	if(fd == -1 ) {
+		fprintf(stderr, "failed to open(2): errno = %d, %s\n",
+			errno, strerror(errno));
+		exit(1);
+	}
+```
+
+## システムコール番号とエントリテーブル
+
+ * /usr/include/asm/unistd_32.h
+ * /usr/include/asm/unistd_64.h
+
+に番号と名前の一覧が載っている 
