@@ -56,4 +56,107 @@ OS error code   3:  No such process
 
 EINTR の話
 
- * sigaction(2) SA_RESTART
+ * sigaction(2) と SA_RESTART をセットした場合の話
+ * ERESTARTSYS
+
+#### 検証用コード
+
+別のセッションで `nc -l 8000` 等で適当なサーバを作って、下記のコードで繋いで検証する
+
+ * SA_RESTART が有効だと SIGINT で割り込みを入れても recv(2) が自動で再開する
+ * SA_RESTART が無効だと recv(2) が EINTR を返して終了する
+
+strace で観測すると ↓ な感じになる 。 脇道だけど [sigreturn(2)](http://linuxjm.sourceforge.jp/html/LDP_man-pages/man2/sigreturn.2.html) なるシステムコールを知る
+
+```
+--- SIGINT (Interrupt) @ 0 (0) ---
+rt_sigreturn(0x2)                       = 45
+recvfrom(3, 0x7fff4b4f1460, 51, 0, 0, 0) = ? ERESTARTSYS (To be restarted)
+--- SIGINT (Interrupt) @ 0 (0) ---
+rt_sigreturn(0x2)                       = 45
+recvfrom(3, 0x7fff4b4f1460, 51, 0, 0, 0) = ? ERESTARTSYS (To be restarted)
+--- SIGINT (Interrupt) @ 0 (0) ---
+rt_sigreturn(0x2)                       = 45
+recvfrom(3, 
+```
+
+```c
+ #if 0
+#!/bin/bash
+CFLAGS="-O2 -std=gnu99 -W -Wall -fPIE -D_FORTIFY_SOURCE=2"
+o=`basename $0`
+o=".${o%.*}"
+gcc ${CFLAGS} -o $o $0 && ./$o $*; exit
+#endif
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <errno.h>
+#include <signal.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+
+void handler_sighup(int __attribute__((__unused__)) sig)
+{
+	// unused の warning 止めるには これでも ok らしい
+	// (void)sig;
+}
+
+int main(int argc, char *argv[])
+{
+	int sock;
+	struct sockaddr_in sockaddr;
+	char buffer[50+1];
+	int port = 8000;
+
+	if (argc == 2)
+		port = atoi(argv[1]);
+	
+	memset(&sock, 0,sizeof(sock));
+
+	sock = socket(AF_INET, SOCK_STREAM, 0);
+	if (sock == -1) {
+		perror("socket");
+		exit(1);
+	}
+
+	sockaddr.sin_family = AF_INET;
+	sockaddr.sin_port   = htons(port);
+	inet_aton("127.0.0.1", &sockaddr.sin_addr);
+
+	if (connect(sock, (struct sockaddr *)&sockaddr, sizeof(sockaddr))) {
+		perror("connect");
+		exit(2);
+	}
+
+	struct sigaction act;
+	sigemptyset(&act.sa_mask);
+	act.sa_handler = handler_sighup;
+	act.sa_flags  |= SA_RESTART;
+	if (sigaction(SIGINT, &act, NULL) == -1) {
+		perror("sigaction");
+		exit(3);
+	}
+
+	for(;;) {
+		int ret;
+		ret = recv(sock, buffer, 50+1, 0);
+
+		if (ret == -1) {
+			perror("recv");
+			exit(4);
+		}
+		else if (ret == 0 ) {
+			puts("closed");
+			break;
+		}
+		else {
+			printf("%s\n", buffer);
+		}
+	}
+	
+	exit(0);
+}
+```
