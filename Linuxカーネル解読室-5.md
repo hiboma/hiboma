@@ -22,6 +22,8 @@
 			errno, strerror(errno));
 		exit(1);
 	}
+
+    write(fd, "hoge", 4);
 ```
 
 ### システムコール番号とエントリテーブル
@@ -159,3 +161,4 @@ int main(int argc, char *argv[])
 	exit(0);
 }
 ```
+
