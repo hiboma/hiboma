@@ -54,10 +54,9 @@ OS error code   3:  No such process
 
 ## 5.1.5 シグナルによる割り込み(システムコールの再起動とアボート)
 
-EINTR の話
-
- * sigaction(2) と SA_RESTART をセットした場合の話
- * ERESTARTSYS
+ * sigaction(2) と SA_RESTART でシグナルハンドラをセットしていてシグナルを受けた際の挙動の話
+   * EINTR を返すか、システムコールを自動で再開するか否か
+   * ERESTARTSYS
 
 #### 検証用コード
 
