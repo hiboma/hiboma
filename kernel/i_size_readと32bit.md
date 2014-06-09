@@ -42,3 +42,23 @@ static inline loff_t i_size_read(const struct inode *inode)
 #endif
 }
 ```
+
+inode->i_size の型 ***loff_t*** は `long long`
+
+```c
+#if defined(__GNUC__)
+typedef __kernel_loff_t		loff_t;
+#endif
+
+// arch/x86/include/asm/posix_types_32.h
+
+#ifdef __GNUC__
+typedef long long	__kernel_loff_t;
+#endif
+```
+
+ * 32bit だと1度のメモリアクセスだけで値をコピーできない
+ * SMP の場合、同時に他のCPUから更新がかかると中途なサイズを返す可能性がある
+ * CONFIG_PREEMPT が有効な場合、 i_size のコピー途中で preemption する可能性があるので、
+
+ということからクリティカルセクションとして保護して扱う必要がある?
