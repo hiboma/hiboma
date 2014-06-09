@@ -18,6 +18,7 @@
 
  * lru_cache_add, lru_cache_add_active
    * split LRU では lru_cache_add_file, lru_cache_add_anon, lru_cache_add_active_anon, lru_cache_add_active_file に分離
+   * いずれも __lru_cache_add を呼び出すので実装は一緒。対象とする LRU が違うだけ。
  * mark_page_accessed
  * page_referenced
    * shrink_page_list -> page_check_references -> ... で呼び出しされる
@@ -27,6 +28,27 @@
  * activate_page
  * SetPageActive
  * ClearPageActive
+
+### lru_cache_add
+
+ split LRU では lru_cache_add_file, lru_cache_add_anon が __lru_cache_add を呼び出す
+
+  * pagevec に繋ぐ
+
+```c
+ void __lru_cache_add(struct page *page, enum lru_list lru)
+{
+	struct pagevec *pvec = &get_cpu_var(lru_add_pvecs)[lru];
+
+	page_cache_get(page);
+	if (!pagevec_add(pvec, page))
+		____pagevec_lru_add(pvec, lru);
+	put_cpu_var(lru_add_pvecs);
+}
+EXPORT_SYMBOL(__lru_cache_add);
+```
+
+### lru_cache_add
 
 ### mark_page_accessed
 
