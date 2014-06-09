@@ -36,6 +36,7 @@
   * pagevec に繋ぐ
     * get_cpu_var でスピンロックのいらないリスト
   * pagevec が一杯なら __pagevec_lru_add で LRUリストに繋ぐ
+  * _active 属も一緒の実装
 
 ```c
  void __lru_cache_add(struct page *page, enum lru_list lru)
@@ -66,6 +67,8 @@ void ____pagevec_lru_add(struct pagevec *pvec, enum lru_list lru)
 
     // pagevec (vector = 配列) をイテレート
 	for (i = 0; i < pagevec_count(pvec); i++) {
+
+        // pagevec は zone の区別無くキャッシュしている
 		struct page *page = pvec->pages[i];
 		struct zone *pagezone = page_zone(page);
 		int file;
