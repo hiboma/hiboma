@@ -90,3 +90,34 @@ Kazuho さんの書かれている [Apache+mod_sslでSIGBUSが発生した件](h
 ```c
 #define VM_FAULT_SIGBUS	0x0002
 ```
+
+arch/x86/mm/fault.c では do_sigbus から force_sig_info_fault で SIGBUS を飛ばしている
+
+```c
+static void
+do_sigbus(struct pt_regs *regs, unsigned long error_code, unsigned long address,
+	  unsigned int fault)
+{
+	struct task_struct *tsk = current;
+	struct mm_struct *mm = tsk->mm;
+	int code = BUS_ADRERR;
+
+	up_read(&mm->mmap_sem);
+
+	/* Kernel mode? Handle exceptions or die: */
+	if (!(error_code & PF_USER)) {
+		no_context(regs, error_code, address);
+		return;
+	}
+
+	/* User-space => ok to do another page fault: */
+	if (is_prefetch(regs, error_code, address))
+		return;
+
+	tsk->thread.cr2		= address;
+	tsk->thread.error_code	= error_code;
+	tsk->thread.trap_no	= 14;
+
+	force_sig_info_fault(SIGBUS, code, address, tsk, fault);
+}
+```
