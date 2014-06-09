@@ -79,7 +79,7 @@ Kazuho さんの書かれている [Apache+mod_sslでSIGBUSが発生した件](h
 
  * mmap(2) した仮想アドレスを参照する
  * mmap(2) した直後で PTE が無いのでページフォルトする
- * アクセスしたアドレスのリージョンは MAP_FILE された vm_area_struct なので struct vm_operations のうんにゃらを呼ぶ
+ * アクセスしたアドレスのリージョンは MAP_FILE された vm_area_struct なので ~~struct vm_operations~~ struct vm_operations_struct のうんにゃらを呼ぶ
  * ファイルの中身をページイン? しようとするがサイズ0
  * => SIGBUS ?
 
@@ -123,6 +123,16 @@ do_sigbus(struct pt_regs *regs, unsigned long error_code, unsigned long address,
 ```
 
 VM_FAULT_SIGBUS を返すコードは filemap_fault が怪しい
+
+ * filemap_fault は vm_operations_struct の .fault メソッド
+ * 呼び出される箇所は後で調べる
+
+```c
+const struct vm_operations_struct generic_file_vm_ops = {
+	.fault		= filemap_fault,
+	.page_mkwrite	= filemap_page_mkwrite,
+};
+```
 
 ```c
 /**
