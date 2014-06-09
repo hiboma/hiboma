@@ -181,9 +181,13 @@ int filemap_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
 		 * We found the page, so try async readahead before
 		 * waiting for the lock.
 		 */
+         // 先読み
 		do_async_mmap_readahead(vma, ra, file, page, offset);
 	} else {
 		/* No page in the page cache at all */
+        // ページキャッシュのページが無い場合
+        
+         // 先読み
 		do_sync_mmap_readahead(vma, ra, file, offset);
 
         // mmap での読み込みはメジャーフォルトとして扱われる。
@@ -219,6 +223,8 @@ retry_find:
 	 * Found the page and have a reference on it.
 	 * We must recheck i_size under page lock.
 	 */
+     // 冒頭と同じサイズ確認
+     // オフセットが size 超えてたら SIGBUS
 	size = (i_size_read(inode) + PAGE_CACHE_SIZE - 1) >> PAGE_CACHE_SHIFT;
 	if (unlikely(offset >= size)) {
 		unlock_page(page);
