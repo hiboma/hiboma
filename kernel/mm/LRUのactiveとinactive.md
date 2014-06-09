@@ -16,6 +16,8 @@
 
 ## 主要な関数群
 
+ * lru_cache_add, lru_cache_add_active
+   * split LRU では lru_cache_add_file, lru_cache_add_anon, lru_cache_add_active_anon, lru_cache_add_active_file に分離
  * mark_page_accessed
  * page_referenced
    * shrink_page_list -> page_check_references -> ... で呼び出しされる
