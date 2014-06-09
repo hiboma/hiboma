@@ -134,6 +134,12 @@ const struct vm_operations_struct generic_file_vm_ops = {
 };
 ```
 
+filemap_fault
+
+ * page fault したら file を読み込む
+   * vma ページフォルト起こした struct vm_area_struct
+   * vmfs fault の詳細が入った struct vm_fault
+
 ```c
 /**
  * filemap_fault - read in file data for page fault handling
