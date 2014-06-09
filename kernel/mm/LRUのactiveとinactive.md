@@ -31,12 +31,14 @@
 
 ### lru_cache_add
 
- split LRU では lru_cache_add_file, lru_cache_add_anon が __lru_cache_add を呼び出す
+split LRU では lru_cache_add_file, lru_cache_add_anon が を呼び出す
+
+__lru_cache_add
 
   * pagevec に繋ぐ
     * get_cpu_var でスピンロックのいらないリスト
   * pagevec が一杯なら __pagevec_lru_add で LRUリストに繋ぐ
-  * _active 属も一緒の実装
+  * _active 属も一緒の実装を使う
 
 ```c
  void __lru_cache_add(struct page *page, enum lru_list lru)
@@ -51,7 +53,9 @@
 EXPORT_SYMBOL(__lru_cache_add);
 ```
 
-pagevec -> LRUリストに繋ぐ処理
+____pagevec_lru_add
+
+ * pagevec -> LRUリストに繋ぐ処理
 
 ```c
 /*
