@@ -258,8 +258,14 @@ no_cached_page:
 	 * system is low on memory, or a problem occurs while trying
 	 * to schedule I/O.
 	 */
+     // page_cache_read がコケる
+     // => page_cache_alloc_cold ENOMEM でコケるケース
+     // => 物理メモリがほんと足らんケースで OOM
 	if (error == -ENOMEM)
 		return VM_FAULT_OOM;
+
+    // ENOMEM でない場合???
+    // 何が返ってくるのか分からない
 	return VM_FAULT_SIGBUS;
 
 page_not_uptodate:
@@ -270,6 +276,8 @@ page_not_uptodate:
 	 * and we need to check for errors.
 	 */
 	ClearPageError(page);
+
+    // readpage でファイルの中身を page に読み込み?
 	error = mapping->a_ops->readpage(file, page);
 	if (!error) {
 		wait_on_page_locked(page);
