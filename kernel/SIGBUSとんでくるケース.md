@@ -1,6 +1,6 @@
 # SIGBUS
 
-### mmap(2) で MAP_FILE してファイルサイズの範囲外にアクセス
+## mmap(2) で MAP_FILE してファイルサイズの範囲外にアクセス
 
 下記のようなコードで検証再現できる
 
@@ -74,3 +74,19 @@ Bus error
 ```
 
 Kazuho さんの書かれている [Apache+mod_sslでSIGBUSが発生した件](http://blog.kazuhooku.com/2014/05/apachemodsslsigbus.html) が同種のバグになる
+
+### 実装の推測
+
+ * mmap(2) した仮想アドレスを参照する
+ * mmap(2) した直後で PTE が無いのでページフォルトする
+ * アクセスしたアドレスのリージョンは MAP_FILE された vm_area_struct なので struct vm_operations のうんにゃらを呼ぶ
+ * ファイルの中身をページイン? しようとするがサイズ0
+ * => SIGBUS ?
+
+### カーネルの実装を追う
+
+適当に grep すると VM_FAULT_SIGBUS なるフラグが見つかる
+
+```c
+#define VM_FAULT_SIGBUS	0x0002
+```
