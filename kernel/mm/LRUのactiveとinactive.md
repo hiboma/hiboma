@@ -34,6 +34,8 @@
  split LRU では lru_cache_add_file, lru_cache_add_anon が __lru_cache_add を呼び出す
 
   * pagevec に繋ぐ
+    * get_cpu_var でスピンロックのいらないリスト
+  * pagevec が一杯なら __pagevec_lru_add で LRUリストに繋ぐ
 
 ```c
  void __lru_cache_add(struct page *page, enum lru_list lru)
@@ -46,6 +48,62 @@
 	put_cpu_var(lru_add_pvecs);
 }
 EXPORT_SYMBOL(__lru_cache_add);
+```
+
+pagevec -> LRUリストに繋ぐ処理
+
+```c
+/*
+ * Add the passed pages to the LRU, then drop the caller's refcount
+ * on them.  Reinitialises the caller's pagevec.
+ */
+void ____pagevec_lru_add(struct pagevec *pvec, enum lru_list lru)
+{
+	int i;
+	struct zone *zone = NULL;
+
+	VM_BUG_ON(is_unevictable_lru(lru));
+
+    // pagevec (vector = 配列) をイテレート
+	for (i = 0; i < pagevec_count(pvec); i++) {
+		struct page *page = pvec->pages[i];
+		struct zone *pagezone = page_zone(page);
+		int file;
+		int active;
+
+        // 扱っている zone が違う。別のゾーンに繋ぐ
+		if (pagezone != zone) {
+			if (zone)
+				spin_unlock_irq(&zone->lru_lock);
+			zone = pagezone;
+			spin_lock_irq(&zone->lru_lock);
+		}
+		VM_BUG_ON(PageActive(page));
+		VM_BUG_ON(PageUnevictable(page));
+		VM_BUG_ON(PageLRU(page));
+
+        // LRU に載っているフラグ?
+		SetPageLRU(page);
+		active = is_active_lru(lru);
+		file = is_file_lru(lru);
+
+        // Active なページのフラグ
+		if (active)
+			SetPageActive(page);
+		update_page_reclaim_stat(zone, page, file, active);
+
+        // ここで LRUリストに繋ぐ
+		add_page_to_lru_list(zone, page, lru);
+	}
+	if (zone)
+		spin_unlock_irq(&zone->lru_lock);
+
+    // pagevec の page を消す?
+	release_pages(pvec->pages, pvec->nr, pvec->cold);
+	pagevec_reinit(pvec);
+}
+
+EXPORT_SYMBOL(____pagevec_lru_add);
 ```
 
 ### lru_cache_add
