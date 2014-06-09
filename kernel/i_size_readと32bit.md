@@ -1,10 +1,18 @@
 # i_size_read と 32bit
 
-i_size_read は struct inode の .i_size を返す
+i_size_read は struct inode の .i_size を返すインタフェースになっている
 
 ```
 static inline loff_t i_size_read(const struct inode *inode)
 ```
+
+使い方例は ↓ の通り
+
+```c
+	size = (i_size_read(inode) + PAGE_CACHE_SIZE - 1) >> PAGE_CACHE_SHIFT;
+```
+
+## 疑問
 
 で、32bit では次の通り何故かややこしい実装になっている
 
@@ -57,8 +65,10 @@ typedef long long	__kernel_loff_t;
 #endif
 ```
 
+## 結論
+
  * 32bit だと1度のメモリアクセスだけで値をコピーできない
- * SMP の場合、同時に他のCPUから更新がかかると中途なサイズを返す可能性がある
- * CONFIG_PREEMPT が有効な場合、 i_size のコピー途中で preemption する可能性があるので、
+   * SMP の場合、同時に他のCPUから更新がかかると中途なサイズを返す可能性がある
+   * CONFIG_PREEMPT が有効な場合、 i_size のコピー途中で preemption する可能性があるので preempt_disable が必要
 
 ということからクリティカルセクションとして保護して扱う必要がある?

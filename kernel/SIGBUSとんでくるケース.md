@@ -165,6 +165,9 @@ int filemap_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
 	pgoff_t size;
 	int ret = 0;
 
+    // 1. ページサイズにアラインした inode の size
+    // 2. offset が size を超えている場合は存在しないファイルを指している
+    // 3. SIGBUS を飛ばす
 	size = (i_size_read(inode) + PAGE_CACHE_SIZE - 1) >> PAGE_CACHE_SHIFT;
 	if (offset >= size)
 		return VM_FAULT_SIGBUS;
@@ -182,6 +185,8 @@ int filemap_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
 	} else {
 		/* No page in the page cache at all */
 		do_sync_mmap_readahead(vma, ra, file, offset);
+
+        // mmap での読み込みはメジャーフォルトとして扱われる。
 		count_vm_event(PGMAJFAULT);
 		ret = VM_FAULT_MAJOR;
 retry_find:
