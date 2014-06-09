@@ -39,7 +39,7 @@
  * arch/x86/kernel/syscall_table_32.S
  * arch/x86/include/asm/unistd_64.h
 
-に一覧が載っている。
+                         に一覧が載っている。
 
 perror(3) で errno と対応するメッセージが見れる。MySQLの依存コマンドだけど。
 
