@@ -673,7 +673,7 @@ int ssl3_get_client_key_exchange(SSL *s)
 				dh_srvr=s->s3->tmp.dh;
 			}
 
-        /* サーバーから受け取った公開鍵? */            
+        /* クライントから受け取った公開鍵? */            
 		pub=BN_bin2bn(p,i,NULL);
 		if (pub == NULL)
 			{
@@ -681,6 +681,8 @@ int ssl3_get_client_key_exchange(SSL *s)
 			goto err;
 			}
 
+        /* 自分の秘密鍵と空いての公開鍵から共有秘密(鍵?)を作る */
+        /* p が共有秘密書きのバッファ */
 		i=DH_compute_key(p,pub,dh_srvr);
 
 		if (i <= 0)
@@ -690,6 +692,7 @@ int ssl3_get_client_key_exchange(SSL *s)
 			goto err;
 			}
 
+        /* 共有秘密を生成したら DH オブジェクトはいらない */
 		DH_free(s->s3->tmp.dh);
 		s->s3->tmp.dh=NULL;
 
