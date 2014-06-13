@@ -290,6 +290,19 @@ CHECK_NRPE: Error receiving data from daemon.
 
 ## OpenSSL ADH
 
+### DHアルゴリズム
+
+ * p 素数
+   * (p-1)/2 「安全な素数」
+ * g 生成元
+   * 2〜5 が適正らしい
+ * priv_key 秘密鍵
+   * p, g から整数を無作為に選択
+   * priv_key から pub_key 公開鍵を生成
+   * priv_key 共通鍵暗号化方式の鍵に使える
+
+### ADH   
+
 include/openssl/ssl.h
 
 ```c
