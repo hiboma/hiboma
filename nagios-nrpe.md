@@ -401,6 +401,7 @@ int ssl3_get_key_exchange(SSL *s)
 
 ```c
 int ssl3_send_client_key_exchange(SSL *s)
+
 //...
 
 #ifndef OPENSSL_NO_DH
@@ -470,6 +471,128 @@ int ssl3_send_client_key_exchange(SSL *s)
 #endif
 ```
 
+```c
+int ssl3_check_cert_and_algorithm(SSL *s)
+	{
+	int i,idx;
+	long alg_k,alg_a;
+	EVP_PKEY *pkey=NULL;
+	SESS_CERT *sc;
+#ifndef OPENSSL_NO_RSA
+	RSA *rsa;
+#endif
+#ifndef OPENSSL_NO_DH
+	DH *dh;
+#endif
+
+//...
+
+#ifndef OPENSSL_NO_DH
+	if ((alg_k & SSL_kEDH) &&
+		!(has_bits(i,EVP_PK_DH|EVP_PKT_EXCH) || (dh != NULL)))
+		{
+		SSLerr(SSL_F_SSL3_CHECK_CERT_AND_ALGORITHM,SSL_R_MISSING_DH_KEY);
+		goto f_err;
+		}
+	else if ((alg_k & SSL_kDHr) && !has_bits(i,EVP_PK_DH|EVP_PKS_RSA))
+		{
+		SSLerr(SSL_F_SSL3_CHECK_CERT_AND_ALGORITHM,SSL_R_MISSING_DH_RSA_CERT);
+		goto f_err;
+		}
+```
+
+```c
+int ssl3_check_cert_and_algorithm(SSL *s)
+	{
+	int i,idx;
+	long alg_k,alg_a;
+	EVP_PKEY *pkey=NULL;
+	SESS_CERT *sc;
+#ifndef OPENSSL_NO_RSA
+	RSA *rsa;
+#endif
+#ifndef OPENSSL_NO_DH
+	DH *dh;
+#endif
+
+//...
+
+#ifndef OPENSSL_NO_DH
+			if (alg_k & (SSL_kEDH|SSL_kDHr|SSL_kDHd))
+			    {
+			    if (dh == NULL
+				|| DH_size(dh)*8 > SSL_C_EXPORT_PKEYLENGTH(s->s3->tmp.new_cipher))
+				{
+				SSLerr(SSL_F_SSL3_CHECK_CERT_AND_ALGORITHM,SSL_R_MISSING_EXPORT_TMP_DH_KEY);
+				goto f_err;
+				}
+			}
+		else
+#endif
+```
+
+```c
+int ssl3_send_server_key_exchange(SSL *s)
+
+//...
+
+#ifndef OPENSSL_NO_DH
+			if (type & SSL_kEDH)
+			{
+			dhp=cert->dh_tmp;
+			if ((dhp == NULL) && (s->cert->dh_tmp_cb != NULL))
+				dhp=s->cert->dh_tmp_cb(s,
+				      SSL_C_IS_EXPORT(s->s3->tmp.new_cipher),
+				      SSL_C_EXPORT_PKEYLENGTH(s->s3->tmp.new_cipher));
+			if (dhp == NULL)
+				{
+				al=SSL_AD_HANDSHAKE_FAILURE;
+				SSLerr(SSL_F_SSL3_SEND_SERVER_KEY_EXCHANGE,SSL_R_MISSING_TMP_DH_KEY);
+				goto f_err;
+				}
+
+			if (s->s3->tmp.dh != NULL)
+				{
+				SSLerr(SSL_F_SSL3_SEND_SERVER_KEY_EXCHANGE, ERR_R_INTERNAL_ERROR);
+				goto err;
+				}
+
+			if ((dh=DHparams_dup(dhp)) == NULL)
+				{
+				SSLerr(SSL_F_SSL3_SEND_SERVER_KEY_EXCHANGE,ERR_R_DH_LIB);
+				goto err;
+				}
+
+			s->s3->tmp.dh=dh;
+			if ((dhp->pub_key == NULL ||
+			     dhp->priv_key == NULL ||
+			     (s->options & SSL_OP_SINGLE_DH_USE)))
+				{
+				if(!DH_generate_key(dh))
+				    {
+				    SSLerr(SSL_F_SSL3_SEND_SERVER_KEY_EXCHANGE,
+					   ERR_R_DH_LIB);
+				    goto err;
+				    }
+				}
+			else
+				{
+				dh->pub_key=BN_dup(dhp->pub_key);
+				dh->priv_key=BN_dup(dhp->priv_key);
+				if ((dh->pub_key == NULL) ||
+					(dh->priv_key == NULL))
+					{
+					SSLerr(SSL_F_SSL3_SEND_SERVER_KEY_EXCHANGE,ERR_R_DH_LIB);
+					goto err;
+					}
+				}
+			r[0]=dh->p;
+			r[1]=dh->g;
+			r[2]=dh->pub_key;
+			}
+		else 
+#endif
+```
 
 ### SSL_aNULL
 
