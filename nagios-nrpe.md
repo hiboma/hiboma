@@ -432,6 +432,8 @@ int ssl3_send_client_key_exchange(SSL *s)
 				SSLerr(SSL_F_SSL3_SEND_CLIENT_KEY_EXCHANGE,ERR_R_DH_LIB);
 				goto err;
 				}
+
+            /* 鍵の生成 */
 			if (!DH_generate_key(dh_clnt))
 				{
 				SSLerr(SSL_F_SSL3_SEND_CLIENT_KEY_EXCHANGE,ERR_R_DH_LIB);
@@ -442,6 +444,7 @@ int ssl3_send_client_key_exchange(SSL *s)
 			/* use the 'p' output buffer for the DH key, but
 			 * make sure to clear it out afterwards */
 
+            /* p を buffer */
 			n=DH_compute_key(p,dh_srvr->pub_key,dh_clnt);
 
 			if (n <= 0)
