@@ -37,6 +37,84 @@ nrpe が syslog で出すログ
 										inet_ntoa(nptr->sin_addr));
 ```
 
+```c
+/* Checks connectiong host in ACL
+ *
+ * Returns:
+ * 1 - on success
+ * 0 - on failure
+ */
+
+int is_an_allowed_host(int family, void *host) {
+	struct ip_acl *ip_acl_curr = ip_acl_head;
+	int		nbytes;
+	int		x;
+	struct dns_acl *dns_acl_curr = dns_acl_head;
+	struct in_addr addr;
+	struct in6_addr addr6;
+	struct hostent *he;
+
+	while (ip_acl_curr != NULL) {
+		if(ip_acl_curr->family == family) {
+			switch(ip_acl_curr->family) {
+			case AF_INET:
+				if((((struct in_addr *)host)->s_addr & 
+						ip_acl_curr->mask.s_addr) == 
+						ip_acl_curr->addr.s_addr) {
+					return 1;
+					}
+				break;
+			case AF_INET6:
+				nbytes = sizeof(ip_acl_curr->mask6.s6_addr) / 
+						sizeof(ip_acl_curr->mask6.s6_addr[0]);
+				for(x = 0; x < nbytes; x++) {
+					if((((struct in6_addr *)host)->s6_addr[x] & 
+							ip_acl_curr->mask6.s6_addr[x]) != 
+							ip_acl_curr->addr6.s6_addr[x]) {
+						break;
+						}
+					}
+				if(x == nbytes) { 
+					/* All bytes in host's address pass the netmask mask */
+					return 1;
+					}
+				break;
+				}
+			}
+		ip_acl_curr = ip_acl_curr->next;
+        }
+
+	while(dns_acl_curr != NULL) {
+   		he = gethostbyname(dns_acl_curr->domain);
+		if (he == NULL) return 0;
+
+		while (*he->h_addr_list) {
+			switch(he->h_addrtype) {
+			case AF_INET:
+				memmove((char *)&addr,*he->h_addr_list++, sizeof(addr));
+				if (addr.s_addr == ((struct in_addr *)host)->s_addr) return 1;
+				break;
+			case AF_INET6:
+				memcpy((char *)&addr6, *he->h_addr_list++, sizeof(addr6));
+				for(x = 0; x < nbytes; x++) {
+					if(addr6.s6_addr[x] != 
+							((struct in6_addr *)host)->s6_addr[x]) {
+						break;
+						}
+					}
+				if(x == nbytes) { 
+					/* All bytes in host's address match the ACL */
+					return 1;
+					}
+				break;
+				}
+			}
+		dns_acl_curr = dns_acl_curr->next;
+		}
+	return 0;
+	}
+```
+
 ## CHECK_NRPE: Error - Could not complete SSL handshake
 
 原因のよく分からないエラーのあれ。nrpe-2.15/src/check_nrpe.c の実装を追うと下記の通り
