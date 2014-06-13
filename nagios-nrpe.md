@@ -277,21 +277,11 @@ CHECK_NRPE: Error receiving data from daemon.
 
 			if(rc!=1){
 				syslog(LOG_ERR,"Error: Could not complete SSL handshake. %d\n",SSL_get_error(ssl,rc));
-#ifdef DEBUG
-				errfp=fopen("/tmp/err.log","w");
-				ERR_print_errors_fp(errfp);
-				fclose(errfp);
-#endif
 				return;
 			        }
 		        }
 		else{
 			syslog(LOG_ERR,"Error: Could not create SSL connection structure.\n");
-#ifdef DEBUG
-			errfp=fopen("/tmp/err.log","w");
-			ERR_print_errors_fp(errfp);
-			fclose(errfp);
-#endif
 			return;
 		        }
 	        }
