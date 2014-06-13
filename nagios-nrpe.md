@@ -611,6 +611,8 @@ int ssl3_send_server_key_exchange(SSL *s)
 					goto err;
 					}
 				}
+
+            /* 型は BIGNUM *r[4] */
 			r[0]=dh->p;
 			r[1]=dh->g;
 			r[2]=dh->pub_key;
@@ -625,6 +627,10 @@ int ssl3_send_server_key_exchange(SSL *s)
 			nr[i]=BN_num_bytes(r[i]);
 			n+=2+nr[i];
 			}
+
+	s->state = SSL3_ST_SW_KEY_EXCH_B;
+	EVP_MD_CTX_cleanup(&md_ctx);
+	return(ssl3_do_write(s,SSL3_RT_HANDSHAKE));            
 ```
 
 ```c
