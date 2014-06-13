@@ -615,8 +615,16 @@ int ssl3_send_server_key_exchange(SSL *s)
 			r[1]=dh->g;
 			r[2]=dh->pub_key;
 			}
-		else 
+		else
 #endif
+
+//...
+
+		for (i=0; r[i] != NULL; i++)
+			{
+			nr[i]=BN_num_bytes(r[i]);
+			n+=2+nr[i];
+			}
 ```
 
 ```c
