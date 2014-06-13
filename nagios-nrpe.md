@@ -2,9 +2,21 @@
 
 nrpe が syslog で出すログ
 
- * allowed_hosts に含まれていない場合に弾く様子
+ * accpet -> getppername で ピア側の IP を出す
+ * IP が allowed_hosts に含まれていない場合に弾く様子
 
 ```c
+			/* accept a new connection request */
+			new_sd = accept(listen_socks[i], (struct sockaddr *)&from, &fromlen);
+
+//...
+
+					/* find out who just connected... */
+					addrlen=sizeof(addr);
+					rc=getpeername(new_sd, (struct sockaddr *)&addr, &addrlen);
+
+//...
+
 					/* is this is a blessed machine? */
 					if(allowed_hosts) {
 						switch(addr.ss_family) {
