@@ -673,6 +673,7 @@ int ssl3_get_client_key_exchange(SSL *s)
 				dh_srvr=s->s3->tmp.dh;
 			}
 
+        /* サーバーから受け取った公開鍵? */            
 		pub=BN_bin2bn(p,i,NULL);
 		if (pub == NULL)
 			{
