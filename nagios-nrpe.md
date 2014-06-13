@@ -711,7 +711,11 @@ int ssl3_get_client_key_exchange(SSL *s)
 
 ### SSL_aNULL
 
-証明書の検証(認証?)をすっ飛ばすフラグ?
+証明書(?)の検証(認証?)をすっ飛ばすフラグ?
+
+> https://www.openssl.org/docs/apps/ciphers.html
+> aNULL
+> the cipher suites offering no authentication. This is currently the anonymous DH algorithms and anonymous ECDH algorithms. These cipher suites are vulnerable to a ``man in the middle'' attack and so their use is normally discouraged.
 
 ssl/s3_clnt.c 
 
