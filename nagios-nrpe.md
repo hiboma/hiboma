@@ -1,11 +1,68 @@
 # nagios nrpe
 
-## OpenSSL
+## OpenSSL の実装メモ
 
-check_nrpe 側のコードだと
+check_nrpe 側のコードだと以下のふたつのコードで 非SSLのインタフェースを SSL に対応できるようにしている
 
+ * OpenSSL セットアップのコード
+
+```c
+#ifdef HAVE_SSL
+	/* initialize SSL */
+	if(use_ssl==TRUE){
+		SSL_library_init();
+		SSLeay_add_ssl_algorithms();
+		meth=SSLv23_client_method();
+		SSL_load_error_strings();
+		if((ctx=SSL_CTX_new(meth))==NULL){
+			printf("CHECK_NRPE: Error - could not create SSL context.\n");
+			exit(STATE_CRITICAL);
+		        }
+
+		/* ADDED 01/19/2004 */
+		/* use only TLSv1 protocol */
+		SSL_CTX_set_options(ctx,SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3);
+                }
+#endif
 ```
 
+* connect(2) した fd を使って SSL_connect するコード
+
+```c
+#ifdef HAVE_SSL
+	/* do SSL handshake */
+	if(result==STATE_OK && use_ssl==TRUE){
+		if((ssl=SSL_new(ctx))!=NULL){
+			SSL_CTX_set_cipher_list(ctx,"ADH");
+			SSL_set_fd(ssl,sd);
+			if((rc=SSL_connect(ssl))!=1){
+				printf("CHECK_NRPE: Error - Could not complete SSL handshake.\n");
+#ifdef DEBUG
+				printf("SSL_connect=%d\n",rc);
+				/*
+				rc=SSL_get_error(ssl,rc);
+				printf("SSL_get_error=%d\n",rc);
+				printf("ERR_get_error=%lu\n",ERR_get_error());
+				printf("%s\n",ERR_error_string(rc,NULL));
+				*/
+				ERR_print_errors_fp(stdout);
+#endif
+				result=STATE_CRITICAL;
+			        }
+		        }
+		else{
+			printf("CHECK_NRPE: Error - Could not create SSL connection structure.\n");
+			result=STATE_CRITICAL;
+		        }
+
+		/* bail if we had errors */
+		if(result!=STATE_OK){
+			SSL_CTX_free(ctx);
+			close(sd);
+			exit(result);
+		        }
+	        }
+#endif
 ```
 
 ### 暗号化方式
@@ -26,10 +83,11 @@ anonymous DH cipher suites, note that this does not include anonymous Elliptic C
 
 ## Host %s is not allowed to talk to us!
 
-nrpe が syslog で出すログ
+nrpe に繋いできたクライアントが allowed で無い場合に弾いて syslog に出るログ。
 
- * accpet -> getppername で ピア側の IP を出す
- * IP が allowed_hosts に含まれていない場合に弾く様子
+ * nrpe は accpet(2) -> getppername(2) で ピア側の IP を出す
+ * IP が allowed_hosts に含まれていない場合に上記メッセージを出して弾く様子
+ * **is_an_allowed_host** で弾くべきかどうかを判定する
 
 ```c
 			/* accept a new connection request */
