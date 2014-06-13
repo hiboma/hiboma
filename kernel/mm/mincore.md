@@ -1,5 +1,13 @@
 # mincore(2)
 
+## TODO
+
+非線形マッピング?( Nonlinear Mappings ) が分からない
+
+remap_file_pages
+
+## mincore(2) API
+
 ```c
 #include <unistd.h> 
 #include <sys/mman.h>
@@ -20,16 +28,15 @@ mincore の実装は仮想アドレスからページフレーム `pte_t *pte` �
  * `pud_offset(pgd, addr)` で pud を見つける
  * `pmd_offset(pud, addr)` で pmd を見つける
  * `pte_offset_map_lock(vma->vm_mm, pmd, addr, &ptl)` で ptep (ptd_tのポインタ) を出す
-   * pte_none(pte) なら mincore_unmapped_range
+   * pte_none(pte) なら 非線形マッピングか否かを見る
    * pte_present(pte) なら +1
-   * pte_file(pte) なら `find_get_page(mapping, pgoff)` で struct page を見つけたら +1
+   * pte_file(pte) なら `find_get_page(mapping, pgoff)` で radix ツリーから struct page を見つけたら +1
      * ページキャッシュだったら +1 てことだろう
+   * swap entry ? の場合も +1
 
 実際はアドレスのアラインしたり何なりで複雑だけど、だいたいの動きは ↑ な感じ。
 
 ![](https://camo.githubusercontent.com/a8c84292852eb14dd1aedd8a7f8c389788f27e14/68747470733a2f2f662e636c6f75642e6769746875622e636f6d2f6173736574732f3137323435362f323334313732392f33303963393066652d613465322d313165332d393038332d6434326534366366613638372e676966)
-
-非線形ページマッピング? が分からない
 
 ### mincore_pte_range
 
