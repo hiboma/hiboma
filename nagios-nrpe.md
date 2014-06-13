@@ -287,3 +287,123 @@ CHECK_NRPE: Error receiving data from daemon.
 	        }
 #endif
 ```
+
+## OpenSSL ADH
+
+include/openssl/ssl.h
+
+```c
+#define SSL_TXT_ADH		"ADH"
+```
+
+ssl/ssl_ciph.c
+
+```
+static const SSL_CIPHER cipher_aliases[]={
+//…
+	{0,SSL_TXT_ADH,0,     SSL_kEDH,SSL_aNULL,0,0,0,0,0,0,0},
+
+```
+
+```
+/* key exchange algorithm */
+#define SSL_kEDH		0x00000008L /* tmp DH key no DH cert */
+
+
+/* server authentication */
+#define SSL_aNULL 		0x00000004L /* no auth (i.e. use ADH or AECDH) */
+```
+
+```c
+/* used to hold info on the particular ciphers used */
+typedef struct ssl_cipher_st
+	{
+	int valid;
+	const char *name;		/* text name */
+	unsigned long id;		/* id, 4 bytes, first is version */
+
+	/* changed in 0.9.9: these four used to be portions of a single value 'algorithms' */
+	unsigned long algorithm_mkey;	/* key exchange algorithm */
+	unsigned long algorithm_auth;	/* server authentication */
+	unsigned long algorithm_enc;	/* symmetric encryption */
+	unsigned long algorithm_mac;	/* symmetric authentication */
+	unsigned long algorithm_ssl;	/* (major) protocol version */
+
+	unsigned long algo_strength;	/* strength and export flags */
+	unsigned long algorithm2;	/* Extra flags */
+	int strength_bits;		/* Number of bits really used */
+	int alg_bits;			/* Number of bits for algorithm */
+	} SSL_CIPHER;
+```
+
+### SSL_aNULL
+
+証明書の検証をすっ飛ばすフラグ?
+
+ssl/s3_clnt.c 
+
+ * algorithm_auth & SSL_aNULL なら ssl3_get_server_certificate をすっ飛ばしてる
+
+```c
+int ssl3_connect(SSL *s)
+	{
+//…
+
+	for (;;)
+		{
+		switch(s->state)
+			{
+		switch(s->state)
+//…
+		case SSL3_ST_CR_CERT_B:
+			/* Check if it is anon DH/ECDH */
+			/* or PSK */
+			if (!(s->s3->tmp.new_cipher->algorithm_auth & SSL_aNULL) &&
+			    !(s->s3->tmp.new_cipher->algorithm_mkey & SSL_kPSK))
+				{
+				ret=ssl3_get_server_certificate(s);
+				if (ret <= 0) goto end;
+			else
+				skip=1;
+```
+
+ssl3_check_cert_and_algorithm では証明書の検査を飛ばす
+
+```c
+int ssl3_check_cert_and_algorithm(SSL *s)
+	{
+	int i,idx;
+	long alg_k,alg_a;
+	EVP_PKEY *pkey=NULL;
+	SESS_CERT *sc;
+#ifndef OPENSSL_NO_RSA
+	RSA *rsa;
+#endif
+#ifndef OPENSSL_NO_DH
+	DH *dh;
+#endif
+
+	alg_k=s->s3->tmp.new_cipher->algorithm_mkey;
+	alg_a=s->s3->tmp.new_cipher->algorithm_auth;
+
+	/* we don't have a certificate */
+	if ((alg_a & (SSL_aDH|SSL_aNULL|SSL_aKRB5)) || (alg_k & SSL_kPSK))
+		return(1);
+```
+
+ssl/s3_srvr.c でも ssl3_send_server_certificate を飛ばしている
+
+```c
+		case SSL3_ST_SW_CERT_B:
+			/* Check if it is anon DH or anon ECDH, */
+			/* normal PSK or KRB5 */
+			if (!(s->s3->tmp.new_cipher->algorithm_auth & SSL_aNULL)
+				&& !(s->s3->tmp.new_cipher->algorithm_mkey & SSL_kPSK)
+				&& !(s->s3->tmp.new_cipher->algorithm_auth & SSL_aKRB5))
+				{
+				ret=ssl3_send_server_certificate(s);
+				if (ret <= 0) goto end;
+				}
+			else
+				skip=1;
+```
