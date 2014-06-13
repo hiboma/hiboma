@@ -4,7 +4,7 @@
 
 check_nrpe 側のコードだと以下のふたつのコードで 非SSLのインタフェースを SSL に対応できるようにしている
 
- * OpenSSL セットアップのコード
+### OpenSSL セットアップのコード
 
 ```c
 #ifdef HAVE_SSL
@@ -26,7 +26,7 @@ check_nrpe 側のコードだと以下のふたつのコードで 非SSLのイ�
 #endif
 ```
 
-* connect(2) した fd を使って SSL_connect するコード
+### connect(2) した fd を使って SSL_connect するコード
 
 ```c
 #ifdef HAVE_SSL
