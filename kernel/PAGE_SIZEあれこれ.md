@@ -27,17 +27,28 @@ page << PAGE_SHIFT
 
 #### PAGE_MASK
 
-PAGE_MASK
+```c
+        0x00000fff /* 32bit */
+0x0000000000000fff /* 64bit */
+```
 
-0x00000fff
+#### ~PAGE_MASK (~PAGE_CACHE_MASK)
 
-~PAGE_MASK
+```c
+        0xfffff000 /* 32bit */
+0xfffffffffffff000 /* 64bit */
+```
 
-0xfffff000
+#### pageサイズでアラインされているか否か
 
-addr & ~PAGE_MASK
+```c
+if (addr & ~PAGE_MASK) {
+    /* not aligned */
+}
+```
 
-page サイズでアライン
+#### 隣のページ
 
+```c
 addr + PAGE_SIZE
-
+```
