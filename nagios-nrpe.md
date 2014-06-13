@@ -92,13 +92,11 @@ nrpe に繋いできたクライアントが allowed で無い場合に弾いて
 ```c
 			/* accept a new connection request */
 			new_sd = accept(listen_socks[i], (struct sockaddr *)&from, &fromlen);
-
 //...
 
 					/* find out who just connected... */
 					addrlen=sizeof(addr);
 					rc=getpeername(new_sd, (struct sockaddr *)&addr, &addrlen);
-
 //...
 
 					/* is this is a blessed machine? */
@@ -254,7 +252,10 @@ DEBUG をつけないと errorno 等見れない。ヒドイわー。nrpe サー
 #endif
 ```
 
-一方の nrpe (デーモン) 側ではエラーを syslog で出す様だけど、SSL_accept の段階らしい
+一方の nrpe (デーモン) 側ではエラーを syslog で出す。SSL_accept の段階らしい
+
+ * SSL_accept する前に accept(2) + SSL_set_fd しているので TCP で ESTABLIHSED になっている
+ * nrpe のログを見ないと正確なエラーの原因が分からないことがよみとれる
 
 ```c
 #ifdef HAVE_SSL
