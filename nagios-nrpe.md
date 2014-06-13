@@ -336,6 +336,141 @@ typedef struct ssl_cipher_st
 	} SSL_CIPHER;
 ```
 
+### SSL_kEDH
+
+ssl/s3_clnt.c
+
+```c
+int ssl3_get_key_exchange(SSL *s)
+//...
+
+#ifndef OPENSSL_NO_DH
+	else if (alg_k & SSL_kEDH)
+		{
+		if ((dh=DH_new()) == NULL)
+			{
+			SSLerr(SSL_F_SSL3_GET_KEY_EXCHANGE,ERR_R_DH_LIB);
+			goto err;
+			}
+		n2s(p,i);
+		param_len=i+2;
+		if (param_len > n)
+			{
+			al=SSL_AD_DECODE_ERROR;
+			SSLerr(SSL_F_SSL3_GET_KEY_EXCHANGE,SSL_R_BAD_DH_P_LENGTH);
+			goto f_err;
+			}
+		if (!(dh->p=BN_bin2bn(p,i,NULL)))
+			{
+			SSLerr(SSL_F_SSL3_GET_KEY_EXCHANGE,ERR_R_BN_LIB);
+			goto err;
+			}
+		p+=i;
+
+		n2s(p,i);
+		param_len+=i+2;
+		if (param_len > n)
+			{
+			al=SSL_AD_DECODE_ERROR;
+			SSLerr(SSL_F_SSL3_GET_KEY_EXCHANGE,SSL_R_BAD_DH_G_LENGTH);
+			goto f_err;
+			}
+		if (!(dh->g=BN_bin2bn(p,i,NULL)))
+			{
+			SSLerr(SSL_F_SSL3_GET_KEY_EXCHANGE,ERR_R_BN_LIB);
+			goto err;
+			}
+		p+=i;
+
+		n2s(p,i);
+		param_len+=i+2;
+		if (param_len > n)
+			{
+			al=SSL_AD_DECODE_ERROR;
+			SSLerr(SSL_F_SSL3_GET_KEY_EXCHANGE,SSL_R_BAD_DH_PUB_KEY_LENGTH);
+			goto f_err;
+			}
+		if (!(dh->pub_key=BN_bin2bn(p,i,NULL)))
+			{
+			SSLerr(SSL_F_SSL3_GET_KEY_EXCHANGE,ERR_R_BN_LIB);
+			goto err;
+			}
+		p+=i;
+		n-=param_len;
+```
+
+```c
+int ssl3_send_client_key_exchange(SSL *s)
+//...
+
+#ifndef OPENSSL_NO_DH
+		else if (alg_k & (SSL_kEDH|SSL_kDHr|SSL_kDHd))
+			{
+			DH *dh_srvr,*dh_clnt;
+
+			if (s->session->sess_cert == NULL) 
+				{
+				ssl3_send_alert(s,SSL3_AL_FATAL,SSL_AD_UNEXPECTED_MESSAGE);
+				SSLerr(SSL_F_SSL3_SEND_CLIENT_KEY_EXCHANGE,SSL_R_UNEXPECTED_MESSAGE);
+				goto err;
+				}
+
+			if (s->session->sess_cert->peer_dh_tmp != NULL)
+				dh_srvr=s->session->sess_cert->peer_dh_tmp;
+			else
+				{
+				/* we get them from the cert */
+				ssl3_send_alert(s,SSL3_AL_FATAL,SSL_AD_HANDSHAKE_FAILURE);
+				SSLerr(SSL_F_SSL3_SEND_CLIENT_KEY_EXCHANGE,SSL_R_UNABLE_TO_FIND_DH_PARAMETERS);
+				goto err;
+				}
+			
+			/* generate a new random key */
+			if ((dh_clnt=DHparams_dup(dh_srvr)) == NULL)
+				{
+				SSLerr(SSL_F_SSL3_SEND_CLIENT_KEY_EXCHANGE,ERR_R_DH_LIB);
+				goto err;
+				}
+			if (!DH_generate_key(dh_clnt))
+				{
+				SSLerr(SSL_F_SSL3_SEND_CLIENT_KEY_EXCHANGE,ERR_R_DH_LIB);
+				DH_free(dh_clnt);
+				goto err;
+				}
+
+			/* use the 'p' output buffer for the DH key, but
+			 * make sure to clear it out afterwards */
+
+			n=DH_compute_key(p,dh_srvr->pub_key,dh_clnt);
+
+			if (n <= 0)
+				{
+				SSLerr(SSL_F_SSL3_SEND_CLIENT_KEY_EXCHANGE,ERR_R_DH_LIB);
+				DH_free(dh_clnt);
+				goto err;
+				}
+
+			/* generate master key from the result */
+			s->session->master_key_length=
+				s->method->ssl3_enc->generate_master_secret(s,
+					s->session->master_key,p,n);
+			/* clean up */
+			memset(p,0,n);
+
+			/* send off the data */
+			n=BN_num_bytes(dh_clnt->pub_key);
+			s2n(n,p);
+			BN_bn2bin(dh_clnt->pub_key,p);
+			n+=2;
+
+			DH_free(dh_clnt);
+
+			/* perhaps clean things up a bit EAY EAY EAY EAY*/
+			}
+#endif
+```
+
+
 ### SSL_aNULL
 
 証明書の検証をすっ飛ばすフラグ?
