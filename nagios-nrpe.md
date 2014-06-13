@@ -217,6 +217,12 @@ check_nrp の原因のよく分からないエラーとしてみるログ。nrpe
 
 DEBUG をつけないと errorno 等見れない。ヒドイわー。nrpe サーバ側のログを見て判定すべきなのだろう
 
+ちなみに `-n` を着けて SSL を無効にすると下記のログになる
+
+```
+CHECK_NRPE: Error receiving data from daemon.
+```
+
 ```c
 #ifdef HAVE_SSL
 	/* do SSL handshake */
