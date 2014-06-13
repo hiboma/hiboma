@@ -292,7 +292,7 @@ CHECK_NRPE: Error receiving data from daemon.
 
 ### DHアルゴリズム
 
-key agreemtn 
+鍵交換 key exchange => 鍵合意 key agreemnet
 
  * p 素数
    * (p-1)/2 「安全な素数」
@@ -459,7 +459,7 @@ int ssl3_send_client_key_exchange(SSL *s)
 			/* use the 'p' output buffer for the DH key, but
 			 * make sure to clear it out afterwards */
 
-            /* p を buffer */
+            /* p を buffer に載せる。ちゃんと消さないとならない */
 			n=DH_compute_key(p,dh_srvr->pub_key,dh_clnt);
 
 			if (n <= 0)
@@ -470,10 +470,13 @@ int ssl3_send_client_key_exchange(SSL *s)
 				}
 
 			/* generate master key from the result */
+            /* master key = 共有秘密? */
 			s->session->master_key_length=
 				s->method->ssl3_enc->generate_master_secret(s,
 					s->session->master_key,p,n);
+
 			/* clean up */
+            /* p を 0 化 */
 			memset(p,0,n);
 
 			/* send off the data */
