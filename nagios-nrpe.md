@@ -296,6 +296,8 @@ CHECK_NRPE: Error receiving data from daemon.
 
  * p 素数
    * (p-1)/2 「安全な素数」
+   * 一時鍵 512bit 以上
+   * 長期的な鍵 1024bit 以上
  * g 生成元
    * 2〜5 が適正らしい
  * priv_key 秘密鍵
