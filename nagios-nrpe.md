@@ -509,6 +509,7 @@ int ssl3_check_cert_and_algorithm(SSL *s)
 //...
 
 #ifndef OPENSSL_NO_DH
+    /* 十分に安全なビットを持ってるとかそんなこんな ?*/
 	if ((alg_k & SSL_kEDH) &&
 		!(has_bits(i,EVP_PK_DH|EVP_PKT_EXCH) || (dh != NULL)))
 		{
@@ -552,6 +553,8 @@ int ssl3_check_cert_and_algorithm(SSL *s)
 #endif
 ```
 
+ssl/s3_srvr.c
+
 ```c
 int ssl3_send_server_key_exchange(SSL *s)
 
@@ -589,6 +592,7 @@ int ssl3_send_server_key_exchange(SSL *s)
 			     dhp->priv_key == NULL ||
 			     (s->options & SSL_OP_SINGLE_DH_USE)))
 				{
+                /* か犠牲性 */
 				if(!DH_generate_key(dh))
 				    {
 				    SSLerr(SSL_F_SSL3_SEND_SERVER_KEY_EXCHANGE,
