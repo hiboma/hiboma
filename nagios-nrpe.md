@@ -126,6 +126,7 @@ is_an_allowed_host で許可されたホストかどうかの ACL 判定する�
  * ピアのIP を IP許可リストと照らし合わせる
  * ピアのIP を ホスト名での許可リストと照らし合わせる
    * gethostbyname(3) でホスト名を IP に変換してから比較する
+   * gethostbyname(3) がコケる場合 意図しない判定を返す可能性がある (DNS の障害, /etc/hosts の不備)
 
 ```c
 /* Checks connectiong host in ACL
@@ -208,10 +209,13 @@ int is_an_allowed_host(int family, void *host) {
 
 ## CHECK_NRPE: Error - Could not complete SSL handshake
 
-原因のよく分からないエラーのあれ。nrpe-2.15/src/check_nrpe.c の実装を追うと下記の通り
+check_nrp の原因のよく分からないエラーとしてみるログ。nrpe-2.15/src/check_nrpe.c の実装を追うと下記の通り
 
- * プラグインの SSL_connect が原因だが ..
- * DEBUG をつけないと errorno 等見れない。ヒドイ
+ * プラグインの SSL_connect が原因で出るログ
+ * **is_an_allowed_host** で弾かれるとこのログでコケる 
+ * connect(2) の fd を SSL_set_fd して SSL_connect しているので、TCP/IP で ESTABLIHSED であることは保証されているはず
+
+DEBUG をつけないと errorno 等見れない。ヒドイわー。nrpe サーバ側のログを見て判定すべきなのだろう
 
 ```c
 #ifdef HAVE_SSL
