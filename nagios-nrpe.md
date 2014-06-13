@@ -292,6 +292,8 @@ CHECK_NRPE: Error receiving data from daemon.
 
 ### DHアルゴリズム
 
+key agreemtn 
+
  * p 素数
    * (p-1)/2 「安全な素数」
  * g 生成元
