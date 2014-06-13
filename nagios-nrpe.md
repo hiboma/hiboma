@@ -37,6 +37,12 @@ nrpe が syslog で出すログ
 										inet_ntoa(nptr->sin_addr));
 ```
 
+is_an_allowed_host で許可されたホストかどうかの ACL 判定する。
+
+ * ピアのIP を IP許可リストと照らし合わせる
+ * ピアのIP を ホスト名での許可リストと照らし合わせる
+   * gethostbyname(3) でホスト名を IP に変換してから比較する
+
 ```c
 /* Checks connectiong host in ACL
  *
@@ -85,6 +91,7 @@ int is_an_allowed_host(int family, void *host) {
         }
 
 	while(dns_acl_curr != NULL) {
+        /* ホスト名を IP に返る */
    		he = gethostbyname(dns_acl_curr->domain);
 		if (he == NULL) return 0;
 
