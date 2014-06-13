@@ -1,3 +1,29 @@
+# nagios nrpe
+
+## OpenSSL
+
+check_nrpe 側のコードだと
+
+```
+
+```
+
+### 暗号化方式
+
+OpenSSL のADH を使っている
+
+```c
+			SSL_CTX_set_cipher_list(ctx,"ADH");
+```
+
+ADH は **anonymous DH cipher suite** の略。証明書を事前に用意しないやつかな
+
+```
+/* https://www.openssl.org/docs/apps/ciphers.html */
+ADH
+anonymous DH cipher suites, note that this does not include anonymous Elliptic Curve DH (ECDH) cipher suites.
+````
+
 ## Host %s is not allowed to talk to us!
 
 nrpe が syslog で出すログ
