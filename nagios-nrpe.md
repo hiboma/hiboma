@@ -594,6 +594,76 @@ int ssl3_send_server_key_exchange(SSL *s)
 #endif
 ```
 
+```c
+int ssl3_get_client_key_exchange(SSL *s)
+//...
+
+#ifndef OPENSSL_NO_DH
+		if (alg_k & (SSL_kEDH|SSL_kDHr|SSL_kDHd))
+		{
+		n2s(p,i);
+		if (n != i+2)
+			{
+			if (!(s->options & SSL_OP_SSLEAY_080_CLIENT_DH_BUG))
+				{
+				SSLerr(SSL_F_SSL3_GET_CLIENT_KEY_EXCHANGE,SSL_R_DH_PUBLIC_VALUE_LENGTH_IS_WRONG);
+				goto err;
+				}
+			else
+				{
+				p-=2;
+				i=(int)n;
+				}
+			}
+
+		if (n == 0L) /* the parameters are in the cert */
+			{
+			al=SSL_AD_HANDSHAKE_FAILURE;
+			SSLerr(SSL_F_SSL3_GET_CLIENT_KEY_EXCHANGE,SSL_R_UNABLE_TO_DECODE_DH_CERTS);
+			goto f_err;
+			}
+		else
+			{
+			if (s->s3->tmp.dh == NULL)
+				{
+				al=SSL_AD_HANDSHAKE_FAILURE;
+				SSLerr(SSL_F_SSL3_GET_CLIENT_KEY_EXCHANGE,SSL_R_MISSING_TMP_DH_KEY);
+				goto f_err;
+				}
+			else
+				dh_srvr=s->s3->tmp.dh;
+			}
+
+		pub=BN_bin2bn(p,i,NULL);
+		if (pub == NULL)
+			{
+			SSLerr(SSL_F_SSL3_GET_CLIENT_KEY_EXCHANGE,SSL_R_BN_LIB);
+			goto err;
+			}
+
+		i=DH_compute_key(p,pub,dh_srvr);
+
+		if (i <= 0)
+			{
+			SSLerr(SSL_F_SSL3_GET_CLIENT_KEY_EXCHANGE,ERR_R_DH_LIB);
+			BN_clear_free(pub);
+			goto err;
+			}
+
+		DH_free(s->s3->tmp.dh);
+		s->s3->tmp.dh=NULL;
+
+		BN_clear_free(pub);
+		pub=NULL;
+		s->session->master_key_length=
+			s->method->ssl3_enc->generate_master_secret(s,
+				s->session->master_key,p,i);
+		OPENSSL_cleanse(p,i);
+		}
+	else
+#endif
+```
+
 ### SSL_aNULL
 
 証明書の検証をすっ飛ばすフラグ?
