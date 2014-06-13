@@ -669,7 +669,7 @@ int ssl3_get_client_key_exchange(SSL *s)
 
 ### SSL_aNULL
 
-証明書の検証をすっ飛ばすフラグ?
+証明書の検証(認証?)をすっ飛ばすフラグ?
 
 ssl/s3_clnt.c 
 
