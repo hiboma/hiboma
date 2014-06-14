@@ -71,3 +71,35 @@ int main()
 	exit(0);
 }
 ```
+
+## カーネルのコード
+
+### open(2)
+
+__dentry_open で O_DIRECT 出来るメソッドがあるかどうか見る
+
+ * address_space_operations の .direct_IO
+ * address_space_operations の .get_xip_mem
+
+```c
+//    do_filp_open
+// -> nameidata_to_filp
+// -> __dentry_open
+//
+static struct file *__dentry_open(struct dentry *dentry, struct vfsmount *mnt,
+					struct file *f,
+					int (*open)(struct inode *, struct file *),
+					const struct cred *cred)
+{
+//...
+
+	/* NB: we're sure to have correct a_ops only after f_op->open */
+	if (f->f_flags & O_DIRECT) {
+		if (!f->f_mapping->a_ops ||
+		    ((!f->f_mapping->a_ops->direct_IO) &&
+		    (!f->f_mapping->a_ops->get_xip_mem))) {
+			fput(f);
+			f = ERR_PTR(-EINVAL);
+		}
+	}
+```
