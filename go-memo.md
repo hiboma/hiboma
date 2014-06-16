@@ -1,0 +1,1 @@
+http://stackoverflow.com/questions/24222999/linux-network-namespaces-unexpected-behavior
