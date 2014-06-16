@@ -359,7 +359,7 @@ syscall_exit_work:
 
 #### syscall_badsys
 
- * eax に ENOSYS 入れる
+ * eax (= ERRNO) に ENOSYS 入れてユーザ空間に返す
  * resume_userspace で復帰
 
 ```asm
@@ -392,3 +392,16 @@ syscall_trace_entry:
 
 do_syscall_trace の ptrace_notify がおもしろそう
 
+#### resume_userspace
+
+```asm
+ENTRY(resume_userspace)
+ 	cli				# make sure we don't miss an interrupt
+					# setting need_resched or sigpending
+					# between sampling and the iret
+	movl TI_flags(%ebp), %ecx
+	andl $_TIF_WORK_MASK, %ecx	# is there any work to be done on
+					# int/exception return?
+	jne work_pending
+	jmp restore_all
+```
