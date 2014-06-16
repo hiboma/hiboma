@@ -8,7 +8,40 @@
    * do_signal
  * iret or sysexit
 
-thread_info_flags ( _TIF_FOO_BAR なフラグ) によっていろいろ挙動が変わるのがポイント
+システムコール呼び出しのパスが thread_info_flags ( _TIF_FOO_BAR なフラグ) によっていろいろ挙動が変わるのがポイント
+
+```c
+/*
+ * thread information flags
+ * - these are process state flags that various assembly files
+ *   may need to access
+ * - pending work-to-be-done flags are in LSW
+ * - other flags in MSW
+ * Warning: layout of LSW is hardcoded in entry.S
+ */
+#define TIF_SYSCALL_TRACE	0	/* syscall trace active */
+#define TIF_NOTIFY_RESUME	1	/* callback before returning to user */
+#define TIF_SIGPENDING		2	/* signal pending */
+#define TIF_NEED_RESCHED	3	/* rescheduling necessary */
+#define TIF_SINGLESTEP		4	/* reenable singlestep on user return*/
+#define TIF_IRET		5	/* force IRET */
+#define TIF_SYSCALL_EMU		6	/* syscall emulation active */
+#define TIF_SYSCALL_AUDIT	7	/* syscall auditing active */
+#define TIF_SECCOMP		8	/* secure computing */
+#define TIF_MCE_NOTIFY		10	/* notify userspace of an MCE */
+#define TIF_USER_RETURN_NOTIFY	11	/* notify kernel of userspace return */
+#define TIF_NOTSC		16	/* TSC is not accessible in userland */
+#define TIF_IA32		17	/* 32bit process */
+#define TIF_FORK		18	/* ret_from_fork */
+#define TIF_MEMDIE		20
+#define TIF_DEBUG		21	/* uses debug registers */
+#define TIF_IO_BITMAP		22	/* uses I/O bitmap */
+#define TIF_FREEZE		23	/* is freezing for suspend */
+#define TIF_FORCED_TF		24	/* true if TF in eflags artificially */
+#define TIF_BLOCKSTEP		25	/* set when we want DEBUGCTLMSR_BTF */
+#define TIF_LAZY_MMU_UPDATES	27	/* task is updating the mmu lazily */
+#define TIF_SYSCALL_TRACEPOINT	28	/* syscall tracepoint instrumentation */
+```
  
 ## 5.2.1 システムコール呼び出し規約
 
