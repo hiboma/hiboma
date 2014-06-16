@@ -452,6 +452,8 @@ ENTRY(resume_userspace)
 
 ## do_signal
 
+システムコール復帰時にシグナルを受信していないかを見る
+
 ```c
 /*
  * Note that 'init' is a special process: it doesn't get signals it doesn't
@@ -480,6 +482,7 @@ static void do_signal(struct pt_regs *regs)
 	else
 		oldset = &current->blocked;
 
+    /* プロセスに届けられたシグナルを一個ずつ取り出して確認 */
 	signr = get_signal_to_deliver(&info, &ka, regs, NULL);
 	if (signr > 0) {
 		/*
