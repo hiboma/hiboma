@@ -6,6 +6,7 @@
    * do_syscall_trace
    * do_notify_resume
    * do_signal
+     * EINTR の実装部分が興味深い
  * iret or sysexit
 
 システムコール呼び出しのパスが thread_info_flags ( _TIF_FOO_BAR なフラグ) によっていろいろ挙動が変わるのがポイント
@@ -449,3 +450,86 @@ ENTRY(resume_userspace)
 	jmp restore_all
 ```
 
+## do_signal
+
+```c
+/*
+ * Note that 'init' is a special process: it doesn't get signals it doesn't
+ * want to handle. Thus you cannot kill init even with a SIGKILL even by
+ * mistake.
+ */
+static void do_signal(struct pt_regs *regs)
+{
+	struct k_sigaction ka;
+	siginfo_t info;
+	int signr;
+	sigset_t *oldset;
+
+	/*
+	 * We want the common case to go fast, which is why we may in certain
+	 * cases get here from kernel mode. Just return without doing anything
+	 * if so.
+	 * X86_32: vm86 regs switched out by assembly code before reaching
+	 * here, so testing against kernel CS suffices.
+	 */
+	if (!user_mode(regs))
+		return;
+
+	if (current_thread_info()->status & TS_RESTORE_SIGMASK)
+		oldset = &current->saved_sigmask;
+	else
+		oldset = &current->blocked;
+
+	signr = get_signal_to_deliver(&info, &ka, regs, NULL);
+	if (signr > 0) {
+		/*
+		 * Re-enable any watchpoints before delivering the
+		 * signal to user space. The processor register will
+		 * have been cleared if the watchpoint triggered
+		 * inside the kernel.
+		 */
+		if (current->thread.debugreg7)
+			set_debugreg(current->thread.debugreg7, 7);
+
+		/* Whee! Actually deliver the signal.  */
+		if (handle_signal(signr, &info, &ka, oldset, regs) == 0) {
+			/*
+			 * A signal was successfully delivered; the saved
+			 * sigmask will have been stored in the signal frame,
+			 * and will be restored by sigreturn, so we can simply
+			 * clear the TS_RESTORE_SIGMASK flag.
+			 */
+			current_thread_info()->status &= ~TS_RESTORE_SIGMASK;
+		}
+		return;
+	}
+
+	/* Did we come from a system call? */
+	if (syscall_get_nr(current, regs) >= 0) {
+		/* Restart the system call - no handlers present */
+		switch (syscall_get_error(current, regs)) {
+		case -ERESTARTNOHAND:
+		case -ERESTARTSYS:
+		case -ERESTARTNOINTR:
+			regs->ax = regs->orig_ax;
+			regs->ip -= 2;
+			break;
+
+        /* sys_restart_syscall で再開する */
+		case -ERESTART_RESTARTBLOCK:
+			regs->ax = NR_restart_syscall;
+			regs->ip -= 2;
+			break;
+		}
+	}
+
+	/*
+	 * If there's no signal to deliver, we just put the saved sigmask
+	 * back.
+	 */
+	if (current_thread_info()->status & TS_RESTORE_SIGMASK) {
+		current_thread_info()->status &= ~TS_RESTORE_SIGMASK;
+		sigprocmask(SIG_SETMASK, &current->saved_sigmask, NULL);
+	}
+}
+```
