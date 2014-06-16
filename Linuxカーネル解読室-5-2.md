@@ -452,6 +452,8 @@ ENTRY(resume_userspace)
 
 ## do_signal
 
+do_notify_resume から呼ばれる
+
 システムコール復帰時にシグナルを受信していないかを見る
 
 ```c
