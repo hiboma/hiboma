@@ -1,5 +1,15 @@
 # 5-2 プロセスからのカーネル呼び出し
 
+ * int 0x80 or sysenter
+   * レジスタの退避など
+     * システムコール呼び出し
+   * do_syscall_trace
+   * do_notify_resume
+   * do_signal
+ * iret or sysexit
+
+thread_info_flags ( _TIF_FOO_BAR なフラグ) によっていろいろ挙動が変わるのがポイント
+ 
 ## 5.2.1 システムコール呼び出し規約
 
  * int      => iret
@@ -405,3 +415,4 @@ ENTRY(resume_userspace)
 	jne work_pending
 	jmp restore_all
 ```
+
