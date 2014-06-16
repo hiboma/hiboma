@@ -505,8 +505,10 @@ static void do_signal(struct pt_regs *regs)
 	}
 
 	/* Did we come from a system call? */
+    /* resgs->orig_ax との比較 */
 	if (syscall_get_nr(current, regs) >= 0) {
 		/* Restart the system call - no handlers present */
+        /* regs->ax から errno を取る */
 		switch (syscall_get_error(current, regs)) {
 		case -ERESTARTNOHAND:
 		case -ERESTARTSYS:
@@ -520,6 +522,7 @@ static void do_signal(struct pt_regs *regs)
         /* sys_restart_syscall で再開する */
 		case -ERESTART_RESTARTBLOCK:
             /* rax(システムコールの番号)を NR_restart_syscall にセット */
+            /* iret した際に restart_syscall を再実行するはず */
 			regs->ax = NR_restart_syscall;
 			regs->ip -= 2;
 			break;
@@ -549,4 +552,12 @@ SYSCALL_DEFINE0(restart_syscall)
 	struct restart_block *restart = &current_thread_info()->restart_block;
 	return restart->fn(restart);
 }
+```
+
+ip を -2 するのは下記の通り?
+
+```
+int 0x80 / sysenter            // -2
+iret     / sysexit             // -1
+システムコール呼び出し後の命令 // 0
 ```
