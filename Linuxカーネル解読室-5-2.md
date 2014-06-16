@@ -510,13 +510,16 @@ static void do_signal(struct pt_regs *regs)
 		switch (syscall_get_error(current, regs)) {
 		case -ERESTARTNOHAND:
 		case -ERESTARTSYS:
+        /* ハンドラが無い場合。？ */
 		case -ERESTARTNOINTR:
 			regs->ax = regs->orig_ax;
+            /* インスクラションポインタを -2 するとどこ??? */
 			regs->ip -= 2;
 			break;
 
         /* sys_restart_syscall で再開する */
 		case -ERESTART_RESTARTBLOCK:
+            /* rax(システムコールの番号)を NR_restart_syscall にセット */
 			regs->ax = NR_restart_syscall;
 			regs->ip -= 2;
 			break;
@@ -531,5 +534,19 @@ static void do_signal(struct pt_regs *regs)
 		current_thread_info()->status &= ~TS_RESTORE_SIGMASK;
 		sigprocmask(SIG_SETMASK, &current->saved_sigmask, NULL);
 	}
+}
+```
+
+_-ERESTART_RESTARTBLOCK でシステムコールを再開する
+
+```c
+/*
+ * System call entry points.
+ */
+
+SYSCALL_DEFINE0(restart_syscall)
+{
+	struct restart_block *restart = &current_thread_info()->restart_block;
+	return restart->fn(restart);
 }
 ```
