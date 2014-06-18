@@ -8,6 +8,10 @@ SYSCALL_DEFINE(fadvise64_64)(int fd, loff_t offset, loff_t len, int advice)
 
 invalidate_mapping_pages が肝
 
+ * デスクリプタから `struct file` を参照
+ * `struct file` から `struct address_space` を参照
+ * `struct address_space` に map されている `sturct page` を invalidate_mapping_pages で破棄
+
 ```c
 	struct file *file = fget(fd);
 
