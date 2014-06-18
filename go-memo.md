@@ -6,3 +6,9 @@ func die(args ...string) {
 	os.Exit(1)
 }
 ```
+
+```go
+	var st int
+	defer func() { os.Exit(st) }()
+```    
+
