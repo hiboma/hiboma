@@ -1,4 +1,6 @@
 
+ * os.Stdin, os.Args
+   * http://qiita.com/ikawaha/items/28186d965780fab5533d
  * syscall 
    * http://stackoverflow.com/questions/24222999/linux-network-namespaces-unexpected-behavior
 
