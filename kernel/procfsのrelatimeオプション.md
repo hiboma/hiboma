@@ -6,6 +6,9 @@
 proc /proc proc rw,relatime 0 0
 ```
 
+ * /proc/<pid> は dentry cache に入る
+ * その他はいらないエントリがある。差は?
+
 ## MNT_RELATIME
 
 ```c
