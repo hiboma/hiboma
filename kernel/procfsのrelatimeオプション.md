@@ -9,6 +9,14 @@ proc /proc proc rw,relatime 0 0
  * /proc/<pid> は dentry cache に入る
  * その他はいらないエントリがある。差は?
 
+## atime の更新
+
+ * file_accessed
+   * inode->i_flags & O_NOATIME なら更新しない
+ * touch_atime
+   * S_NOATIME, MS_NODIRATIME, MNT_NOATIME らで条件分岐
+ * relatime_need_update
+
 ## MNT_RELATIME
 
 ```c
