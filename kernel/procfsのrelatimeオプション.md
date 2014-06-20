@@ -71,7 +71,7 @@ static int relatime_need_update(struct vfsmount *mnt, struct inode *inode,
 }
 ```
 
-relatime_need_update は touch_atime 
+relatime_need_update は touch_atime で実行される
 
 ```c
 /**
