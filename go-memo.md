@@ -28,7 +28,8 @@ func die(args ...string) {
  * https://code.google.com/p/go/issues/detail?id=5926
  * CC=clang
 
-
+ * chomp 
+   * http://qiita.com/kenjiskywalker/items/c328e39a0029e76e1fc3
 
 
 
