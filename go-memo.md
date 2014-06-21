@@ -23,6 +23,12 @@ func die(args ...string) {
 		{"b"},
 ```
 
+### clang: error: no such file or directory: 'libgcc.a'
+
+ * https://code.google.com/p/go/issues/detail?id=5926
+ * CC=clang
+
+
 
 
 
