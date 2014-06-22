@@ -11,10 +11,14 @@ func die(args ...string) {
 }
 ```
 
+## defer で exit
+
 ```go
 	var st int
 	defer func() { os.Exit(st) }()
 ```
+
+### 文字列の配列の配列
 
 ```go
 	whacky := [][]string{
@@ -28,8 +32,15 @@ func die(args ...string) {
  * https://code.google.com/p/go/issues/detail?id=5926
  * CC=clang
 
- * chomp 
+### chomp する
+
    * http://qiita.com/kenjiskywalker/items/c328e39a0029e76e1fc3
+
+### NULL を置換する
+   
+```go
+   strings.Replace(line, string(0), " ", -1)
+```   
 
 
 
