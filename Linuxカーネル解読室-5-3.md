@@ -196,6 +196,7 @@ int __init sysenter_setup(void)
 
     /* sysenter のサポートの有無 */
 	if (!boot_cpu_has(X86_FEATURE_SEP)) {
+        /* page に int80 を呼び出すコードをコピー ? /
 		memcpy(page,
 		       &vsyscall_int80_start,
 		       &vsyscall_int80_end - &vsyscall_int80_start);
