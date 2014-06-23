@@ -185,10 +185,16 @@ extern const char vsyscall_sysenter_start, vsyscall_sysenter_end;
 
 int __init sysenter_setup(void)
 {
+    /* vsyscall 用のページをあてる */
 	void *page = (void *)get_zeroed_page(GFP_ATOMIC);
 
+    /*
+     * __pa         => page から物理アドレスを出す
+     * __set_fixmap => 固定の PTE?
+     */
 	__set_fixmap(FIX_VSYSCALL, __pa(page), PAGE_READONLY_EXEC);
 
+    /* sysenter のサポートの有無 */
 	if (!boot_cpu_has(X86_FEATURE_SEP)) {
 		memcpy(page,
 		       &vsyscall_int80_start,
@@ -196,6 +202,7 @@ int __init sysenter_setup(void)
 		return 0;
 	}
 
+    /* sysenter をサポートしている */
 	memcpy(page,
 	       &vsyscall_sysenter_start,
 	       &vsyscall_sysenter_end - &vsyscall_sysenter_start);
