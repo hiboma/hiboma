@@ -175,6 +175,8 @@ __FINIT
 
 ## sysenter_setup
 
+vsyscall 用の struct page を PTE にマップして実行コードを貼付ける
+
 ```c
 /*
  * These symbols are defined by vsyscall.o to mark the bounds
