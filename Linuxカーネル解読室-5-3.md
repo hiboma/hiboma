@@ -198,7 +198,7 @@ int __init sysenter_setup(void)
 
     /* sysenter のサポートの有無 */
 	if (!boot_cpu_has(X86_FEATURE_SEP)) {
-        /* page に int80 を呼び出すコードをコピー ? /
+        /* page に int80 を呼び出すコードをコピー  /
 		memcpy(page,
 		       &vsyscall_int80_start,
 		       &vsyscall_int80_end - &vsyscall_int80_start);
@@ -234,9 +234,14 @@ int __init sysenter_setup(void)
 	gate_vma_init();
 #endif
 
+    /* vdso なるものが追加された */
+    // #define	vdso32_syscall()	(boot_cpu_has(X86_FEATURE_SYSCALL32))
+    // #define X86_FEATURE_SYSCALL32	(3*32+14) /* "" syscall in ia32 userspace */
 	if (vdso32_syscall()) {
 		vsyscall = &vdso32_syscall_start;
 		vsyscall_len = &vdso32_syscall_end - &vdso32_syscall_start;
+
+    // #define	vdso32_sysenter()	(boot_cpu_has(X86_FEATURE_SYSENTER32))
 	} else if (vdso32_sysenter()){
 		vsyscall = &vdso32_sysenter_start;
 		vsyscall_len = &vdso32_sysenter_end - &vdso32_sysenter_start;
