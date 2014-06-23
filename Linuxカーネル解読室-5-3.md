@@ -217,6 +217,7 @@ int __init sysenter_setup(void)
 #### CentOS6.5
 
  * vdso
+   * http://man7.org/linux/man-pages/man7/vdso.7.html
  * リロケータブルになっている
    * http://www.atmarkit.co.jp/flinux/rensai/watch2006/watch06b.html
 
