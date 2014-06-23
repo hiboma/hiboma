@@ -175,7 +175,7 @@ __FINIT
 
 ## sysenter_setup
 
-vsyscall 用の struct page を PTE にマップして実行コードを貼付ける
+2.6.15: vsyscall 用の struct page を PTE にマップして実行コードを貼付ける
 
 ```c
 /*
@@ -209,6 +209,43 @@ int __init sysenter_setup(void)
 	memcpy(page,
 	       &vsyscall_sysenter_start,
 	       &vsyscall_sysenter_end - &vsyscall_sysenter_start);
+
+	return 0;
+}
+```
+
+#### CentOS6.5
+
+ * vdso
+ * リロケータブルになっている
+   * http://www.atmarkit.co.jp/flinux/rensai/watch2006/watch06b.html
+
+```c
+int __init sysenter_setup(void)
+{
+	void *syscall_page = (void *)get_zeroed_page(GFP_ATOMIC);
+	const void *vsyscall;
+	size_t vsyscall_len;
+
+	vdso32_pages[0] = virt_to_page(syscall_page);
+
+#ifdef CONFIG_X86_32
+	gate_vma_init();
+#endif
+
+	if (vdso32_syscall()) {
+		vsyscall = &vdso32_syscall_start;
+		vsyscall_len = &vdso32_syscall_end - &vdso32_syscall_start;
+	} else if (vdso32_sysenter()){
+		vsyscall = &vdso32_sysenter_start;
+		vsyscall_len = &vdso32_sysenter_end - &vdso32_sysenter_start;
+	} else {
+		vsyscall = &vdso32_int80_start;
+		vsyscall_len = &vdso32_int80_end - &vdso32_int80_start;
+	}
+
+	memcpy(syscall_page, vsyscall, vsyscall_len);
+	relocate_vdso(syscall_page);
 
 	return 0;
 }
