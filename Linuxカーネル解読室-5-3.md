@@ -93,7 +93,7 @@ time_t __vsyscall(1) vtime(time_t *t)
 }
 ```
 
-vgettimeofday(2) の実装
+gettimeofday(2) の実装
 
  * read_seqbegin で複雑だけど gettimeofday を呼び出しているのが肝
  * gettimeofday は インラインアセンブラで呼び出しされてる
@@ -175,7 +175,9 @@ __FINIT
 
 ## sysenter_setup
 
-2.6.15: vsyscall 用の struct page を PTE にマップして実行コードを貼付ける
+#### 2.6.15
+
+vsyscall 用の struct page を PTE にマップして実行コードを貼付ける
 
 ```c
 /*
@@ -216,8 +218,9 @@ int __init sysenter_setup(void)
 
 #### CentOS6.5
 
- * vdso
-   * http://man7.org/linux/man-pages/man7/vdso.7.html
+ * vdso になった
+   * http://man7.org/linux/man-pages/man7/vdso.7.html の説明が詳しい
+   * getau
  * リロケータブルになっている
    * http://www.atmarkit.co.jp/flinux/rensai/watch2006/watch06b.html
 
@@ -251,6 +254,8 @@ int __init sysenter_setup(void)
 	}
 
 	memcpy(syscall_page, vsyscall, vsyscall_len);
+
+    // ELFバイナリとして展開する
 	relocate_vdso(syscall_page);
 
 	return 0;
