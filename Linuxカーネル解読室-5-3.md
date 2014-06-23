@@ -152,3 +152,54 @@ static __always_inline int gettimeofday(struct timeval *tv, struct timezone *tz)
 	return ret;
 }
 ```
+
+## vsyscall-sysenter.S
+
+```c
+#include <linux/init.h>
+
+__INITDATA
+
+	.globl vsyscall_int80_start, vsyscall_int80_end
+vsyscall_int80_start:
+	.incbin "arch/i386/kernel/vsyscall-int80.so"
+vsyscall_int80_end:
+
+	.globl vsyscall_sysenter_start, vsyscall_sysenter_end
+vsyscall_sysenter_start:
+	.incbin "arch/i386/kernel/vsyscall-sysenter.so"
+vsyscall_sysenter_end:
+
+__FINIT
+```
+
+## sysenter_setup
+
+```c
+/*
+ * These symbols are defined by vsyscall.o to mark the bounds
+ * of the ELF DSO images included therein.
+ */
+extern const char vsyscall_int80_start, vsyscall_int80_end;
+extern const char vsyscall_sysenter_start, vsyscall_sysenter_end;
+
+int __init sysenter_setup(void)
+{
+	void *page = (void *)get_zeroed_page(GFP_ATOMIC);
+
+	__set_fixmap(FIX_VSYSCALL, __pa(page), PAGE_READONLY_EXEC);
+
+	if (!boot_cpu_has(X86_FEATURE_SEP)) {
+		memcpy(page,
+		       &vsyscall_int80_start,
+		       &vsyscall_int80_end - &vsyscall_int80_start);
+		return 0;
+	}
+
+	memcpy(page,
+	       &vsyscall_sysenter_start,
+	       &vsyscall_sysenter_end - &vsyscall_sysenter_start);
+
+	return 0;
+}
+```
