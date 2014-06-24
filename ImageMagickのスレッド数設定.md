@@ -7,6 +7,11 @@ http://qiita.com/trapple/items/b36c49229b6077fffd74 で紹介されている奴
 magick/resource.c を見ると下記の通りの実装になっている
 
 ```c
+  /*
+   * 1. GetOpenMPMaximumThreads でスレッド数をセット
+   * 2. MAGICK_THREAD_LIMIT があればオーバーライド
+   */
+  (void) SetMagickResourceLimit(ThreadResource,GetOpenMPMaximumThreads());
   limit=GetEnvironmentValue("MAGICK_THREAD_LIMIT");
   if (limit != (char *) NULL)
     {
@@ -29,6 +34,10 @@ agickExport MagickBooleanType SetMagickResourceLimit(const ResourceType type,
 
 //...
 
+  /*
+   * 1. thread でスレッド数をセット
+   * 2. セットしたスレッド数が GetOpenMPMaximumThreads を超えていたら GetOpenMPMaximumThreads にならす
+   */
    case ThreadResource:
     {
       resource_info.thread_limit=limit;
