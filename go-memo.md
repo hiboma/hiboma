@@ -42,6 +42,7 @@ func die(args ...string) {
    strings.Replace(line, string(0), " ", -1)
 ```   
 
+### リフレクション
 
-
+ * https://github.com/imdario/mergo/blob/master/mergo.go#L34
 
