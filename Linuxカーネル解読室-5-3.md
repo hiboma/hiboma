@@ -301,11 +301,15 @@ int arch_setup_additional_pages(struct linux_binprm *bprm, int uses_interp)
 
 	current->mm->context.vdso = (void *)addr;
 
-    /* gdb で breakpoint 仕掛けられる! */
+    /*
+     * vm_area_struct で map する方法
+     * アドレスが固定にならない???
+     */
 	if (compat_uses_vma || !compat) {
 		/*
 		 * MAYWRITE to allow gdb to COW and set breakpoints
 		 */
+         /* MAYWRITE が立っていると gdb で breakpoint 仕掛けられる!!! */
          // current の mm_struct に vm_area_struct を突っ込む
 		ret = install_special_mapping(mm, addr, PAGE_SIZE,
 					      VM_READ|VM_EXEC|
@@ -329,6 +333,10 @@ int arch_setup_additional_pages(struct linux_binprm *bprm, int uses_interp)
 	return ret;
 }
 ```
+
+### install_special_mapping
+
+**specifla mapping** なる呼称があるらしい
 
 ```c
 /*
@@ -411,7 +419,7 @@ static void map_compat_vdso(int map)
 
 vsyscall, vdso のマップ作る奴
 
-```
+```c
 static inline void __set_fixmap(enum fixed_addresses idx,
 				phys_addr_t phys, pgprot_t flags)
 {
@@ -473,5 +481,48 @@ void set_pte_vaddr(unsigned long vaddr, pte_t pteval)
 	 * (PGE mappings get flushed as well)
 	 */
 	__flush_tlb_one(vaddr);
+}
+```
+
+## special_mapping_vmops
+
+```c
+static const struct vm_operations_struct special_mapping_vmops = {
+	.close = special_mapping_close,
+	.fault = special_mapping_fault,
+};
+```
+
+**special mapping**
+
+ * vm_file を持たない
+  *vmf->pgoff, vma->vm_pgoff でサイズを出す
+
+```c
+static int special_mapping_fault(struct vm_area_struct *vma,
+				struct vm_fault *vmf)
+{
+	pgoff_t pgoff;
+	struct page **pages;
+
+	/*
+	 * special mappings have no vm_file, and in that case, the mm
+	 * uses vm_pgoff internally. So we have to subtract it from here.
+	 * We are allowed to do this because we are the mm; do not copy
+	 * this code into drivers!
+	 */
+	pgoff = vmf->pgoff - vma->vm_pgoff;
+
+	for (pages = vma->vm_private_data; pgoff && *pages; ++pages)
+		pgoff--;
+
+	if (*pages) {
+		struct page *page = *pages;
+		get_page(page);
+		vmf->page = page;
+		return 0;
+	}
+
+	return VM_FAULT_SIGBUS;
 }
 ```
