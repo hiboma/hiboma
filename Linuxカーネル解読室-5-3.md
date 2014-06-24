@@ -496,7 +496,7 @@ static const struct vm_operations_struct special_mapping_vmops = {
 **special mapping**
 
  * vm_file を持たない
-  *vmf->pgoff, vma->vm_pgoff でサイズを出す
+  *vmf->pgoff, vma->vm_pgoff でページ?サイズを出す
 
 ```c
 static int special_mapping_fault(struct vm_area_struct *vma,
@@ -516,13 +516,17 @@ static int special_mapping_fault(struct vm_area_struct *vma,
 	for (pages = vma->vm_private_data; pgoff && *pages; ++pages)
 		pgoff--;
 
+    /* special mapping のページ */
 	if (*pages) {
 		struct page *page = *pages;
 		get_page(page);
+
+        /* vm_fault に page セットすればよいんだっけ? */
 		vmf->page = page;
 		return 0;
 	}
 
+    /* SIGBUS で死ぬ */
 	return VM_FAULT_SIGBUS;
 }
 ```
