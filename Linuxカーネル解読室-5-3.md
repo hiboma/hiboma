@@ -283,6 +283,8 @@ int arch_setup_additional_pages(struct linux_binprm *bprm, int uses_interp)
 	   changes it via sysctl */
 	compat = (vdso_enabled == VDSO_COMPAT);
 
+    /* __set_fixmap で固定アドレスにマップする古いやり方 */
+    /* 読み取り+実行 なページとしてマップする */
 	map_compat_vdso(compat);
 
 	if (compat)
@@ -394,5 +396,35 @@ static void map_compat_vdso(int map)
 
 	/* flush stray tlbs */
 	flush_tlb_all();
+}
+```
+
+### __set_fixmap
+
+vsyscall, vdso のマップ作る奴
+
+```
+static inline void __set_fixmap(enum fixed_addresses idx,
+				phys_addr_t phys, pgprot_t flags)
+{
+	native_set_fixmap(idx, phys, flags);
+}
+
+void native_set_fixmap(enum fixed_addresses idx, phys_addr_t phys,
+		       pgprot_t flags)
+{
+	__native_set_fixmap(idx, pfn_pte(phys >> PAGE_SHIFT, flags));
+}
+
+void __native_set_fixmap(enum fixed_addresses idx, pte_t pte)
+{
+	unsigned long address = __fix_to_virt(idx);
+
+	if (idx >= __end_of_fixed_addresses) {
+		BUG();
+		return;
+	}
+	set_pte_vaddr(address, pte);
+	fixmaps_set++;
 }
 ```
