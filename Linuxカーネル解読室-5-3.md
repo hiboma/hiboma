@@ -175,7 +175,7 @@ __FINIT
 
 ## sysenter_setup
 
-#### 2.6.15
+#### 2.6.15 の sysenter_setup
 
 vsyscall 用の struct page を PTE にマップして実行コードを貼付ける
 
@@ -216,7 +216,7 @@ int __init sysenter_setup(void)
 }
 ```
 
-#### CentOS6.5
+#### CentOS6.5 の sysenter_setup
 
  * vdso になった
    * http://man7.org/linux/man-pages/man7/vdso.7.html の説明が詳しい
@@ -238,12 +238,14 @@ int __init sysenter_setup(void)
 #endif
 
     /* vdso なるものが追加された */
+    // 定義は下記の通り
     // #define	vdso32_syscall()	(boot_cpu_has(X86_FEATURE_SYSCALL32))
     // #define X86_FEATURE_SYSCALL32	(3*32+14) /* "" syscall in ia32 userspace */
 	if (vdso32_syscall()) {
 		vsyscall = &vdso32_syscall_start;
 		vsyscall_len = &vdso32_syscall_end - &vdso32_syscall_start;
 
+    // 定義は下記の通り
     // #define	vdso32_sysenter()	(boot_cpu_has(X86_FEATURE_SYSENTER32))
 	} else if (vdso32_sysenter()){
 		vsyscall = &vdso32_sysenter_start;
@@ -374,6 +376,7 @@ int install_special_mapping(struct mm_struct *mm,
 	if (ret)
 		goto out;
 
+    /* 仮想メモリのサイズを len ページ分足す */
 	mm->total_vm += len >> PAGE_SHIFT;
 
 	perf_event_mmap(vma);
