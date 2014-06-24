@@ -261,3 +261,64 @@ int __init sysenter_setup(void)
 	return 0;
 }
 ```
+
+vdso32_pages は arch_setup_additional_pages でマップされう?
+
+```c
+/* Setup a VMA at program startup for the vsyscall page */
+int arch_setup_additional_pages(struct linux_binprm *bprm, int uses_interp)
+{
+	struct mm_struct *mm = current->mm;
+	unsigned long addr;
+	int ret = 0;
+	bool compat;
+
+    /* on/off 切り替えられる。ブートオプションに vdso=0/1/2 */
+	if (vdso_enabled == VDSO_DISABLED)
+		return 0;
+
+	down_write(&mm->mmap_sem);
+
+	/* Test compat mode once here, in case someone
+	   changes it via sysctl */
+	compat = (vdso_enabled == VDSO_COMPAT);
+
+	map_compat_vdso(compat);
+
+	if (compat)
+		addr = VDSO_HIGH_BASE;
+	else {
+		addr = get_unmapped_area_prot(NULL, 0, PAGE_SIZE, 0, 0, 1);
+		if (IS_ERR_VALUE(addr)) {
+			ret = addr;
+			goto up_fail;
+		}
+	}
+
+	current->mm->context.vdso = (void *)addr;
+
+	if (compat_uses_vma || !compat) {
+		/*
+		 * MAYWRITE to allow gdb to COW and set breakpoints
+		 */
+		ret = install_special_mapping(mm, addr, PAGE_SIZE,
+					      VM_READ|VM_EXEC|
+					      VM_MAYREAD|VM_MAYWRITE|VM_MAYEXEC,
+					      vdso32_pages);
+
+		if (ret)
+			goto up_fail;
+	}
+
+	current_thread_info()->sysenter_return =
+		VDSO32_SYMBOL(addr, SYSENTER_RETURN);
+
+  up_fail:
+	if (ret)
+		current->mm->context.vdso = NULL;
+
+	up_write(&mm->mmap_sem);
+
+	return ret;
+}
+```
