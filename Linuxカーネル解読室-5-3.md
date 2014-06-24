@@ -262,7 +262,7 @@ int __init sysenter_setup(void)
 }
 ```
 
-vdso32_pages は arch_setup_additional_pages でマップされる。load_elf_binary で呼び出されているので、exec する過程
+vdso32_pages は arch_setup_additional_pages でマップされる。load_elf_binary で呼び出されているので、exec する過程でセットされる
 
 ```c
 /* Setup a VMA at program startup for the vsyscall page */
@@ -273,7 +273,7 @@ int arch_setup_additional_pages(struct linux_binprm *bprm, int uses_interp)
 	int ret = 0;
 	bool compat;
 
-    /* on/off 切り替えられる。ブートオプションに vdso=0/1/2 */
+    /* on/off 切り替えられる。ブートオプションに vdso=0/1/2 をセットすればよい様子 */
 	if (vdso_enabled == VDSO_DISABLED)
 		return 0;
 
