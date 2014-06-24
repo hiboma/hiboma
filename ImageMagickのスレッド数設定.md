@@ -21,3 +21,23 @@ magick/resource.c を見ると下記の通りの実装になっている
 ### CentOS6.5
 
 /usr/lib64/ImageMagick-6.5.4/config/policy.xml でスレッド数を指定できる
+
+```c
+agickExport MagickBooleanType SetMagickResourceLimit(const ResourceType type,
+  const MagickSizeType limit)
+{
+
+//...
+
+   case ThreadResource:
+    {
+      resource_info.thread_limit=limit;
+      value=GetPolicyValue("thread");
+      if (value != (char *) NULL)
+        resource_info.thread_limit=MagickMin(limit,StringToSizeType(value,
+          100.0));
+      if (resource_info.thread_limit > GetOpenMPMaximumThreads())
+        resource_info.thread_limit=GetOpenMPMaximumThreads();
+      break;
+    }
+ ```
