@@ -1,7 +1,5 @@
 # SIGBUS
 
-## special mapping の範囲外にアクセス
-
 ## mmap(2) で MAP_FILE してファイルサイズの範囲外にアクセス
 
 下記のようなコードで検証再現できる
@@ -297,3 +295,41 @@ page_not_uptodate:
 }
 EXPORT_SYMBOL(filemap_fault);
 ```
+
+## special mapping の範囲外にアクセス
+
+VDSO を map しているページ。どういうケースで発生するのか分からん
+
+```c
+static int special_mapping_fault(struct vm_area_struct *vma,
+				struct vm_fault *vmf)
+{
+	pgoff_t pgoff;
+	struct page **pages;
+
+	/*
+	 * special mappings have no vm_file, and in that case, the mm
+	 * uses vm_pgoff internally. So we have to subtract it from here.
+	 * We are allowed to do this because we are the mm; do not copy
+	 * this code into drivers!
+	 */
+	pgoff = vmf->pgoff - vma->vm_pgoff;
+
+	for (pages = vma->vm_private_data; pgoff && *pages; ++pages)
+		pgoff--;
+
+    /* special mapping のページ */
+	if (*pages) {
+		struct page *page = *pages;
+		get_page(page);
+
+        /* vm_fault に page セットしておく。 __do_fault であれこれ処理される */
+		vmf->page = page;
+		return 0;
+	}
+
+    /* __do_fault に SIGBUS を返して死ぬ */
+	return VM_FAULT_SIGBUS;
+}
+```
+

@@ -139,7 +139,7 @@ static __always_inline void do_vgettimeofday(struct timeval * tv)
 }
 ```
 
-gettimeofday のインラインアセンブラ
+gettimeofday のインラインアセンブラ。 __NR_gettimeofday を読んでいる
 
 ```c
 static __always_inline int gettimeofday(struct timeval *tv, struct timezone *tz)
