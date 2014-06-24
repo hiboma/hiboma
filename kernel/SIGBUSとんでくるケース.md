@@ -1,5 +1,7 @@
 # SIGBUS
 
+## special mapping の範囲外にアクセス
+
 ## mmap(2) で MAP_FILE してファイルサイズの範囲外にアクセス
 
 下記のようなコードで検証再現できる

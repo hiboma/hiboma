@@ -521,12 +521,12 @@ static int special_mapping_fault(struct vm_area_struct *vma,
 		struct page *page = *pages;
 		get_page(page);
 
-        /* vm_fault に page セットすればよいんだっけ? */
+        /* vm_fault に page セットしておく。 __do_fault であれこれ処理される */
 		vmf->page = page;
 		return 0;
 	}
 
-    /* SIGBUS で死ぬ */
+    /* __do_fault に SIGBUS を返して死ぬ */
 	return VM_FAULT_SIGBUS;
 }
 ```
