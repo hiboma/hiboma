@@ -262,7 +262,7 @@ int __init sysenter_setup(void)
 }
 ```
 
-vdso32_pages は arch_setup_additional_pages でマップされう?
+vdso32_pages は arch_setup_additional_pages でマップされる。load_elf_binary で呼び出されているので、exec する過程
 
 ```c
 /* Setup a VMA at program startup for the vsyscall page */
@@ -297,10 +297,12 @@ int arch_setup_additional_pages(struct linux_binprm *bprm, int uses_interp)
 
 	current->mm->context.vdso = (void *)addr;
 
+    /* gdb で breakpoint 仕掛けられる! */
 	if (compat_uses_vma || !compat) {
 		/*
 		 * MAYWRITE to allow gdb to COW and set breakpoints
 		 */
+         // current の mm_struct に vm_area_struct を突っ込む
 		ret = install_special_mapping(mm, addr, PAGE_SIZE,
 					      VM_READ|VM_EXEC|
 					      VM_MAYREAD|VM_MAYWRITE|VM_MAYEXEC,
@@ -310,6 +312,7 @@ int arch_setup_additional_pages(struct linux_binprm *bprm, int uses_interp)
 			goto up_fail;
 	}
 
+    /* sysenter のコード? */
 	current_thread_info()->sysenter_return =
 		VDSO32_SYMBOL(addr, SYSENTER_RETURN);
 
@@ -320,5 +323,76 @@ int arch_setup_additional_pages(struct linux_binprm *bprm, int uses_interp)
 	up_write(&mm->mmap_sem);
 
 	return ret;
+}
+```
+
+```c
+/*
+ * Called with mm->mmap_sem held for writing.
+ * Insert a new vma covering the given region, with the given flags.
+ * Its pages are supplied by the given array of struct page *.
+ * The array can be shorter than len >> PAGE_SHIFT if it's null-terminated.
+ * The region past the last page supplied will always produce SIGBUS.
+ * The array pointer and the pages it points to are assumed to stay alive
+ * for as long as this mapping might exist.
+ */
+int install_special_mapping(struct mm_struct *mm,
+			    unsigned long addr, unsigned long len,
+			    unsigned long vm_flags, struct page **pages)
+{
+	int ret;
+	struct vm_area_struct *vma;
+
+	vma = kmem_cache_zalloc(vm_area_cachep, GFP_KERNEL);
+	if (unlikely(vma == NULL))
+		return -ENOMEM;
+
+	INIT_LIST_HEAD(&vma->anon_vma_chain);
+	vma->vm_mm = mm;
+	vma->vm_start = addr;
+	vma->vm_end = addr + len;
+
+	vma->vm_flags = vm_flags | mm->def_flags | VM_DONTEXPAND;
+	vma->vm_page_prot = vm_get_page_prot(vma->vm_flags);
+
+    /* スペシャルな vmops */
+	vma->vm_ops = &special_mapping_vmops;
+	vma->vm_private_data = pages;
+
+	ret = security_file_mmap(NULL, 0, 0, 0, vma->vm_start, 1);
+	if (ret)
+		goto out;
+
+	ret = insert_vm_struct(mm, vma);
+	if (ret)
+		goto out;
+
+	mm->total_vm += len >> PAGE_SHIFT;
+
+	perf_event_mmap(vma);
+
+	return 0;
+
+out:
+	kmem_cache_free(vm_area_cachep, vma);
+	return ret;
+}
+```
+
+``c
+static void map_compat_vdso(int map)
+{
+	static int vdso_mapped;
+
+	if (map == vdso_mapped)
+		return;
+
+	vdso_mapped = map;
+
+	__set_fixmap(FIX_VDSO, page_to_pfn(vdso32_pages[0]) << PAGE_SHIFT,
+		     map ? PAGE_READONLY_EXEC : PAGE_NONE);
+
+	/* flush stray tlbs */
+	flush_tlb_all();
 }
 ```
