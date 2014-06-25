@@ -50,3 +50,5 @@ agickExport MagickBooleanType SetMagickResourceLimit(const ResourceType type,
       break;
     }
 ```
+
+
