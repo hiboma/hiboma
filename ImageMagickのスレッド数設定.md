@@ -49,4 +49,4 @@ agickExport MagickBooleanType SetMagickResourceLimit(const ResourceType type,
         resource_info.thread_limit=GetOpenMPMaximumThreads();
       break;
     }
- ```
+```
