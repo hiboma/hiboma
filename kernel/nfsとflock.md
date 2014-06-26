@@ -1,10 +1,11 @@
 # NFS と flock(2)
 
-ソースは神妙な理由で 2.6.18
+ソースは深淵な理由で 2.6.18
 
 ## TODO
 
  * statd, lockd
+   * http://server-helper.doorblog.jp/archives/3107753.html
  * sysrq でバックトレース取れる?
  * mount のオプション
    * -onolock ( NFS_MOUNT_NONLM )
