@@ -259,7 +259,6 @@ int flock_lock_file_wait(struct file *filp, struct file_lock *fl)
 
 do_setlk と同様に BKL を取ってから do_vfs_lock を呼ぶ
 
-
 ```c
 static int do_unlk(struct file *filp, int cmd, struct file_lock *fl)
 {
