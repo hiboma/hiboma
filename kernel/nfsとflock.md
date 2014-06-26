@@ -165,10 +165,13 @@ static int do_setlk(struct file *filp, int cmd, struct file_lock *fl)
 	 * Flush all pending writes before doing anything
 	 * with locks..
 	 */
+    // dirty なページを同期
 	status = nfs_sync_mapping(filp->f_mapping);
 	if (status != 0)
 		goto out;
 
+    // do_vfs_lock を排他する
+    // state は down() が失敗した場合に __down_failed で TASK_UNINTERRUPTIBLE に移行する
 	lock_kernel();
 	/* Use local locking if mounted with "-onolock" */
 	if (!(NFS_SERVER(inode)->flags & NFS_MOUNT_NONLM)) {
