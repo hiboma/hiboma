@@ -6,7 +6,9 @@
 
  * statd, lockd
  * sysrq でバックトレース取れる?
-
+ * mount のオプション
+   * -onolock ( NFS_MOUNT_NONLM )
+ 
 ## strct file_operations
 
 nfs_file_operations の .flock が flock(2) の concrete method
@@ -250,5 +252,38 @@ int flock_lock_file_wait(struct file *filp, struct file_lock *fl)
 		break;
 	}
 	return error;
+}
+```
+
+## do_unlk
+
+do_setlk と同様に BKL を取ってから do_vfs_lock を呼ぶ
+
+
+```c
+static int do_unlk(struct file *filp, int cmd, struct file_lock *fl)
+{
+	struct inode *inode = filp->f_mapping->host;
+	int status;
+
+	/*
+	 * Flush all pending writes before doing anything
+	 * with locks..
+	 */
+    // dirty なページの書き出し
+	nfs_sync_mapping(filp->f_mapping);
+
+	/* NOTE: special case
+	 * 	If we're signalled while cleaning up locks on process exit, we
+	 * 	still need to complete the unlock.
+	 */
+	lock_kernel();
+	/* Use local locking if mounted with "-onolock" */
+	if (!(NFS_SERVER(inode)->flags & NFS_MOUNT_NONLM))
+		status = NFS_PROTO(inode)->lock(filp, cmd, fl);
+	else
+		status = do_vfs_lock(filp, fl);
+	unlock_kernel();
+	return status;
 }
 ```
