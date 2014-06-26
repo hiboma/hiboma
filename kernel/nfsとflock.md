@@ -5,6 +5,7 @@
 ## TODO
 
  * statd, lockd
+ * sysrq でバックトレース取れる?
 
 ## strct file_operations
 
@@ -170,7 +171,7 @@ static int do_setlk(struct file *filp, int cmd, struct file_lock *fl)
 	if (status != 0)
 		goto out;
 
-    // do_vfs_lock を排他する
+    // do_vfs_lock を排他する BKL = Big Kernel Lock
     // state は down() が失敗した場合に __down_failed で TASK_UNINTERRUPTIBLE に移行する
 	lock_kernel();
 	/* Use local locking if mounted with "-onolock" */
@@ -197,5 +198,57 @@ static int do_setlk(struct file *filp, int cmd, struct file_lock *fl)
 	nfs_zap_caches(inode);
 out:
 	return status;
+}
+```
+
+FL_FLOCK の場合は flock_lock_file_wait -> flock_lock_file でロックを取る
+
+```c
+static int do_vfs_lock(struct file *file, struct file_lock *fl)
+{
+	int res = 0;
+	switch (fl->fl_flags & (FL_POSIX|FL_FLOCK)) {
+		case FL_POSIX:
+			res = posix_lock_file_wait(file, fl);
+			break;
+		case FL_FLOCK:
+			res = flock_lock_file_wait(file, fl);
+			break;
+		default:
+			BUG();
+	}
+	if (res < 0)
+		printk(KERN_WARNING "%s: VFS is out of sync with lock manager!\n",
+				__FUNCTION__);
+	return res;
+}
+```
+
+flock_lock_file_wait は flock_lock_file でロックを取る。ブロックする場合は state が TASK_INTERRUPTIBLE
+
+```c
+/**
+ * flock_lock_file_wait - Apply a FLOCK-style lock to a file
+ * @filp: The file to apply the lock to
+ * @fl: The lock to be applied
+ *
+ * Add a FLOCK style lock to a file.
+ */
+int flock_lock_file_wait(struct file *filp, struct file_lock *fl)
+{
+	int error;
+	might_sleep();
+	for (;;) {
+		error = flock_lock_file(filp, fl);
+		if ((error != -EAGAIN) || !(fl->fl_flags & FL_SLEEP))
+			break;
+		error = wait_event_interruptible(fl->fl_wait, !fl->fl_next);
+		if (!error)
+			continue;
+
+		locks_delete_block(fl);
+		break;
+	}
+	return error;
 }
 ```
