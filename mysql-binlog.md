@@ -1,4 +1,77 @@
 
+```c
+Query_log_event::Query_log_event(THD* thd_arg, const char* query_arg,
+				 ulong query_length, bool using_trans,
+				 bool suppress_use, THD::killed_state killed_status_arg)
+  :Log_event(thd_arg,
+             ((thd_arg->tmp_table_used || thd_arg->thread_specific_used) ? 
+	        LOG_EVENT_THREAD_SPECIFIC_F : 0) |
+	      (suppress_use ? LOG_EVENT_SUPPRESS_USE_F : 0),
+	     using_trans),
+   data_buf(0), query(query_arg), catalog(thd_arg->catalog),
+   db(thd_arg->db), q_len((uint32) query_length),
+   thread_id(thd_arg->thread_id),
+   /* save the original thread id; we already know the server id */
+   slave_proxy_id(thd_arg->variables.pseudo_thread_id),
+   flags2_inited(1), sql_mode_inited(1), charset_inited(1),
+   sql_mode(thd_arg->variables.sql_mode),
+   auto_increment_increment(thd_arg->variables.auto_increment_increment),
+   auto_increment_offset(thd_arg->variables.auto_increment_offset),
+   lc_time_names_number(thd_arg->variables.lc_time_names->number),
+   charset_database_number(0),
+   table_map_for_update((ulonglong)thd_arg->table_map_for_update)
+{
+  time_t end_time;
+
+  DBUG_EXECUTE_IF("debug_lock_before_query_log_event",
+                  DBUG_SYNC_POINT("debug_lock.before_query_log_event", 10););
+
+  if (killed_status_arg == THD::KILLED_NO_VALUE)
+    killed_status_arg= thd_arg->killed;
+  error_code=
+    (killed_status_arg == THD::NOT_KILLED) ? thd_arg->net.last_errno :
+    ((thd_arg->system_thread & SYSTEM_THREAD_DELAYED_INSERT) ? 0 :
+     thd->killed_errno());
+  
+  time(&end_time);
+  exec_time = (ulong) (end_time  - thd->start_time);
+  catalog_len = (catalog) ? (uint32) strlen(catalog) : 0;
+  /* status_vars_len is set just before writing the event */
+  db_len = (db) ? (uint32) strlen(db) : 0;
+  if (thd_arg->variables.collation_database != thd_arg->db_charset)
+    charset_database_number= thd_arg->variables.collation_database->number;
+  
+  /*
+    If we don't use flags2 for anything else than options contained in
+    thd->options, it would be more efficient to flags2=thd_arg->options
+    (OPTIONS_WRITTEN_TO_BINLOG would be used only at reading time).
+    But it's likely that we don't want to use 32 bits for 3 bits; in the future
+    we will probably want to reclaim the 29 bits. So we need the &.
+  */
+  flags2= (uint32) (thd_arg->options & OPTIONS_WRITTEN_TO_BIN_LOG);
+  DBUG_ASSERT(thd->variables.character_set_client->number < 256*256);
+  DBUG_ASSERT(thd->variables.collation_connection->number < 256*256);
+  DBUG_ASSERT(thd->variables.collation_server->number < 256*256);
+  int2store(charset, thd_arg->variables.character_set_client->number);
+  int2store(charset+2, thd_arg->variables.collation_connection->number);
+  int2store(charset+4, thd_arg->variables.collation_server->number);
+  if (thd_arg->time_zone_used)
+  {
+    /*
+      Note that our event becomes dependent on the Time_zone object
+      representing the time zone. Fortunately such objects are never deleted
+      or changed during mysqld's lifetime.
+    */
+    time_zone_len= thd_arg->variables.time_zone->get_name()->length();
+    time_zone_str= thd_arg->variables.time_zone->get_name()->ptr();
+  }
+  else
+    time_zone_len= 0;
+  DBUG_PRINT("info",("Query_log_event has flags2: %lu  sql_mode: %lu",
+                     (ulong) flags2, sql_mode));
+}
+```
+
 Q_TIME_ZONE_CODE
 
 ```
