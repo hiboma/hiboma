@@ -127,9 +127,11 @@ $ sudo hexdump -C /var/lib/mysql/test-bin.000001
 
 再現手順とどういうバグなのかは okkun が全部まとめてくれていたのでかなり楽を出来た :sushi:
 
+これ以降はどうやって冒頭のバグレポートに辿り着いたかを連ねています。(後からまとめた物で細部ははしょっています)
+
 ## strace でシステムコールを調べる
 
-問題のある
+まずは問題のあるクエリの strace を取ってみてた
 
 ```
 mysql> use kowareru;
@@ -173,15 +175,17 @@ mysql> INSERT INTO `testtable` (`name`, `create_date`) VALUES ('@@@@@@@@@@@@@@@@
 
 ### ltrace でメモリの操作を調べる
 
-strace はシステムコールを追う事はできるが、 MySQL がメモリをどう操作したか (malloc や memcpy 等) は追えない
+strace はシステムコールを追う事はできるが、 システムコール以外、例えば MySQL がメモリをどう操作したか (malloc や memcpy 等) は追えない
 
-ltrace でトレースを取る
+ということで ltrace でトレースを取った
 
 ```
 sudo ltrace -p `sudo cat /var/lib/mysql/customer-db001.heteml.dev.pid`
 ```
 
 #### バグバイナリ
+
+ltrace から下記の出力が binlog の操作っぽいのを見つけた
 
 ```
 # 一部省略しています
@@ -225,7 +229,10 @@ sudo ltrace -p `sudo cat /var/lib/mysql/customer-db001.heteml.dev.pid`
 
 ## gdb でソースを探す
 
-memcpy をしているコードが分からないので gdb で探した。どこにブレークポイントしかけたらいいか分からないので write(2) で。
+memcpy をしている箇所のコードが分からないので gdb で探した
+
+ * どこにブレークポイントしかけたらいいか分からないので適当に write(2) で
+ * 何度も実行して
 
 ```
 $ sudo gdb -p `sudo cat /var/lib/mysql/customer-db001.heteml.dev.pid`
