@@ -149,9 +149,15 @@ Query_log_event::Query_log_event(const char* buf, uint event_len,
 }
 ```
 
+### strace でシステムコールを調べる
+
 ### ltrace でメモリの操作を調べる
 
 strace はシステムコールを追う事はできるが、 mysql がメモリをどう操作したかは追えない
+
+```
+sudo ltrace -p `sudo cat /var/lib/mysql/customer-db001.heteml.dev.pid`
+```
 
 バグ版バイナリ
 
