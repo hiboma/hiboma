@@ -68,15 +68,32 @@ INSERT INTO `testtable` (`name`, `create_date`) VALUES ('@@@@@@@@@@@@@@@@@@@@@@@
  3. binlog が物故割れてしまい `use kowareru` じゃなくて `SYSTEMkowreu` になっている
 
 ```
-$ sudo hexdump -C /var/lib/mysql/foo-bar-bin.000005 
-00000000  fe 62 69 6e e2 fd b0 53  0f 01 00 00 00 5e 00 00  |.bin...S.....^..|
+$ sudo mysqlbinlog /var/lib/mysql/test-bin.000001 
+/*!40019 SET @@session.max_insert_delayed_threads=0*/;
+/*!50003 SET @OLD_COMPLETION_TYPE=@@COMPLETION_TYPE,COMPLETION_TYPE=0*/;
+DELIMITER /*!*/;
+# at 4
+#140630 15:09:33 server id 1  end_log_pos 98    Start: binlog v 4, server v 5.0.82-community-log created 140630 15:09:33 at startup
+# Warning: this binlog was not closed properly. Most probably mysqld crashed writing it.
+ROLLBACK/*!*/;
+# at 98
+#140630 15:09:55 server id 1  end_log_pos 126   Intvar
+SET INSERT_ID=137/*!*/;
+ERROR: Error in Log_event::read_log_event(): 'Found invalid event in binary log', data_len: 161, event_type: 2
+DELIMITER ;
+# End of log file
+ROLLBACK /* added by mysqlbinlog */;
+/*!50003 SET COMPLETION_TYPE=@OLD_COMPLETION_TYPE*/;
+
+$ sudo hexdump -C /var/lib/mysql/test-bin.000001 
+00000000  fe 62 69 6e 1d ff b0 53  0f 01 00 00 00 5e 00 00  |.bin...S.....^..|
 00000010  00 62 00 00 00 01 00 04  00 35 2e 30 2e 38 32 2d  |.b.......5.0.82-|
 00000020  63 6f 6d 6d 75 6e 69 74  79 2d 6c 6f 67 00 00 00  |community-log...|
 00000030  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  |................|
-00000040  00 00 00 00 00 00 00 00  00 00 00 e2 fd b0 53 13  |..............S.|
+00000040  00 00 00 00 00 00 00 00  00 00 00 1d ff b0 53 13  |..............S.|
 00000050  38 0d 00 08 00 12 00 04  04 04 04 12 00 00 4b 00  |8.............K.|
-00000060  04 1a ee fd b0 53 05 01  00 00 00 1c 00 00 00 7e  |.....S.........~|
-00000070  00 00 00 00 00 02 88 00  00 00 00 00 00 00 ee fd  |................|
+00000060  04 1a 33 ff b0 53 05 01  00 00 00 1c 00 00 00 7e  |..3..S.........~|
+00000070  00 00 00 00 00 02 89 00  00 00 00 00 00 00 33 ff  |..............3.|
 00000080  b0 53 02 01 00 00 00 a1  00 00 00 1f 01 00 00 00  |.S..............|
 00000090  00 01 00 00 00 00 00 00  00 08 00 00 19 00 00 00  |................|
 000000a0  40 00 00 01 00 00 00 00  00 00 00 00 06 03 04 08  |@...............|
@@ -94,6 +111,7 @@ $ sudo hexdump -C /var/lib/mysql/foo-bar-bin.000005
 ## バグを再現する環境
 
  * CentOS6.5 x86_64
+ * 
  * 内製のパッケージは他のVMで過去にビルドされたもので 5.0.82
  * 再度ビルドしたパッケージではバグが再現しない
 
