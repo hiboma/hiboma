@@ -1,5 +1,7 @@
 # SHOW BINLOG EVENTS: Wrong offset or I/O error
 
+下記のバグを踏んでいる MySQL をデバッグした話になります。いろいろ調べてこのバグレポートを見つけました
+
  * https://gcc.gnu.org/bugzilla/show_bug.cgi?id=38562
  * http://bugs.mysql.com/bug.php?id=48357
 
@@ -38,17 +40,20 @@ version. You can access the patch from:
 [12 Nov 2009 22:34] Omer Barnir
 ````
 
-## gdb memo
-
- * x/100s
- * display
- * watch
-
 ## バグの再現
 
-okkun が見つけてきたやつを、ちょっと手を加えて書いています
+私が遭遇したバグではなくて、後輩の okkun が見つけてきたやつを、ちょっと手を加えて書いています
 
- 1. テーブルを作る
+#### 1. イナリログを出す設定にしておく
+
+``` 
+# /etc/my.cnf
+log_bin=test-bin
+```
+
+バイナリログ意外の設定はバグの再現に影響しないので、任意でよい
+
+#### 2. テーブルを作る
 
 ```
 CREATE TABLE `testtable` (
@@ -59,13 +64,16 @@ CREATE TABLE `testtable` (
 );
 ```
 
- 2. 適当に INSERT する
+#### 3. 適当に INSERT する
 
 ```
+# 目grep しやすいように @@@@@@ を混ぜてます
 INSERT INTO `testtable` (`name`, `create_date`) VALUES ('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@', NOW()
 ```
 
- 3. binlog が物故割れてしまい `use kowareru` じゃなくて `SYSTEMkowreu` になっている
+#### 4. binlog が物故割れている
+
+`use kowareru` じゃなくて `SYSTEMkowreu` になっている
 
 ```
 $ sudo mysqlbinlog /var/lib/mysql/test-bin.000001 
@@ -108,21 +116,26 @@ $ sudo hexdump -C /var/lib/mysql/test-bin.000001
 00000125
 ```
 
+再現手順とどういうバグなのかは okkun が全部まとめてくれていたのでかなり楽を出来た
+
 ## バグを再現する環境
 
  * CentOS6.5 x86_64
- * 
- * 内製のパッケージは他のVMで過去にビルドされたもので 5.0.82
- * 再度ビルドしたパッケージではバグが再現しない
+ * MySQL が自前ビルドの MySQL-server-community-5.0.82
+   * 他のVMで過去にビルドされたものなのでビルド環境の gcc などのバージョンが分からない
+ * 再ビルドしたパッケージではバグが再現しなかった
+   * 以降、バグを含むバイナリを **バグバイナリ** 、再ビルドしたものを **修正バイナリ** として呼びます
 
 ## strace でシステムコールを調べる
+
+問題のある
 
 ```
 mysql> use kowareru;
 mysql> INSERT INTO `testtable` (`name`, `create_date`) VALUES ('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@', NOW())
 ```
 
-#### バグ版バイナリ
+#### バグバイナリ
 
 ```
 [pid 18263] read(27, "\3INSERT INTO `testtable` (`name`, `create_date`) VALUES ('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@', NOW())", 96) = 96
@@ -138,7 +151,7 @@ mysql> INSERT INTO `testtable` (`name`, `create_date`) VALUES ('@@@@@@@@@@@@@@@@
 \0\0\0\0\6\3\4\10\0\10\0!\0\5\6SYSTEMkowareru\0INSERT INTO `testtable` (`name`, `create_date`) VALUES ('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@', NOW())", 195) = 195
 ```
 
-#### 修正版バイナリ
+#### 修正バイナリ
 
 ```
 [pid 19004] read(27, "\3INSERT INTO `testtable` (`name`, `create_date`) VALUES ('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@', NOW())", 96) = 96
@@ -167,7 +180,7 @@ ltrace でトレースを取る
 sudo ltrace -p `sudo cat /var/lib/mysql/customer-db001.heteml.dev.pid`
 ```
 
-#### バグ版バイナリ
+#### バグバイナリ
 
 ```
 # 一部省略しています
@@ -185,7 +198,7 @@ sudo ltrace -p `sudo cat /var/lib/mysql/customer-db001.heteml.dev.pid`
 [pid 11915] memcpy(0x1b97ce4, "INSERT INTO `testtable` (`name`,"..., 95)  
 ```
 
-#### 修正版バイナリ
+#### 修正バイナリ
 
 ```
 # 0x34b2220 がヒープに確保しているバッファ
@@ -245,9 +258,9 @@ Breakpoint 1, 0x00007f9b36fab6d0 in write () from /lib64/libpthread.so.0
 
 ltrace で見つけた memcpy の長さの違い (31 と 34) gdb のステップ実行と `display` を使った
 
-#### バグ版バイナリ
+#### バグバイナリ
 
-バグ版バイナリではアドレスの長さが途中 19 => 17 に後退している。ポインタを増減させる操作しかしてないのに長さが減っていて怪しい
+バグバイナリではアドレスの長さが途中 19 => 17 に後退している。ポインタを増減させる操作しかしてないのに長さが減っていて怪しい
 
 ```
 (gdb) display start - start_of_status
@@ -456,5 +469,5 @@ $1 = (void (*)(void)) 0x5d98d3 <Query_log_event::write(IO_CACHE*)+1171>
   5d9909:       00 
 ```
 
- * 修正バイナリとバグ版バイナリとで命令が全然違う
-   * バグ版は memcpy の呼び出しが無い
+ * 修正バイナリとバグバイナリとで命令が全然違う
+   * バグは memcpy の呼び出しが無い
