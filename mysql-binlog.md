@@ -40,6 +40,15 @@ version. You can access the patch from:
 [12 Nov 2009 22:34] Omer Barnir
 ````
 
+## バグを再現する環境
+
+ * CentOS6.5 x86_64
+ * MySQL は自前ビルドの MySQL-server-community-5.0.82
+   * 他のVMで過去にビルドされたもの
+   * ビルド環境の **gcc などのバージョンが分からない**
+ * 再ビルドしたパッケージではバグが再現しなかった
+   * 以降、バグを含むバイナリを **バグバイナリ** 、再ビルドしたものを **修正バイナリ** として呼びます
+
 ## バグの再現
 
 私が遭遇したバグではなくて、後輩の okkun が見つけてきたやつを、ちょっと手を加えて書いています
@@ -73,7 +82,7 @@ INSERT INTO `testtable` (`name`, `create_date`) VALUES ('@@@@@@@@@@@@@@@@@@@@@@@
 
 #### 4. binlog が物故割れている
 
-`use kowareru` じゃなくて `SYSTEMkowreu` になっている
+`use kowareru` じゃなくて `SYSTEMkowreu` になっている。クエリによってはもっと複雑な壊れかたをする
 
 ```
 $ sudo mysqlbinlog /var/lib/mysql/test-bin.000001 
@@ -116,15 +125,8 @@ $ sudo hexdump -C /var/lib/mysql/test-bin.000001
 00000125
 ```
 
-再現手順とどういうバグなのかは okkun が全部まとめてくれていたのでかなり楽を出来た
+再現手順とどういうバグなのかは okkun が全部まとめてくれていたのでかなり楽を出来た :sushi:
 
-## バグを再現する環境
-
- * CentOS6.5 x86_64
- * MySQL が自前ビルドの MySQL-server-community-5.0.82
-   * 他のVMで過去にビルドされたものなのでビルド環境の gcc などのバージョンが分からない
- * 再ビルドしたパッケージではバグが再現しなかった
-   * 以降、バグを含むバイナリを **バグバイナリ** 、再ビルドしたものを **修正バイナリ** として呼びます
 
 ## strace でシステムコールを調べる
 
