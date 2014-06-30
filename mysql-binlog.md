@@ -81,10 +81,11 @@ INSERT INTO `testtable` (`name`, `create_date`) VALUES ('@@@@@@@@@@@@@@@@@@@@@@@
 
 #### 4. binlog が物故割れている
 
+ここからがバグの症状
+
  * binlog のデータが壊れているため読み出せない
  * hexdump を取ると `use kowareru` じゃなくて `SYSTEMkowreu` になっている
    * クエリによってはもっと複雑な壊れかたをする
-   * 
 
 ```
 $ sudo mysqlbinlog /var/lib/mysql/test-bin.000001 
@@ -129,11 +130,17 @@ $ sudo hexdump -C /var/lib/mysql/test-bin.000001
 
 再現手順とどういうバグなのかは okkun が全部まとめてくれていたのでかなり楽を出来た :sushi:
 
-これ以降はどうやって冒頭のバグレポートに辿り着いたかを連ねています。(後からまとめた物で細部ははしょっています)
+----
+
+これ以降はどうやって冒頭のバグレポートに辿り着いたかを連ねています。後からまとめた物なので細部ははしょっています。すんなり調べられた訳じゃなくて いろいろハマって時間がかかっています
 
 ## strace でシステムコールを調べる
 
 まずは問題のあるクエリの strace を取ってみてた
+
+```
+$ sudo gdb -p `sudo cat /var/lib/mysql/foo-bar.pid`
+```
 
 ```
 mysql> use kowareru;
@@ -182,7 +189,7 @@ strace はシステムコールを追う事はできるが、 システムコー
 ということで ltrace でトレースを取った
 
 ```
-sudo ltrace -p `sudo cat /var/lib/mysql/customer-db001.heteml.dev.pid`
+sudo ltrace -p `sudo cat /var/lib/mysql/foo-bar.pid`
 ```
 
 #### バグバイナリ
@@ -227,16 +234,15 @@ ltrace から下記の出力が binlog の操作っぽいのを見つけた
  * memcpy の長さが違う => アドレスがズレる
  * 意図しない文字列が混入する原因では?
 
-とアタりをつけていった
+として、gdb も使いつつで調査を進めました。
 
 ## gdb でソースを探す
 
-memcpy をしている箇所のコードが分からないので gdb で探した
-
+ * memcpy をしている箇所のコードが分からないので gdb で探しました
  * どこにブレークポイントしかけたらいいか分からないので適当に write(2) でアタリをつけて探した
 
 ```
-$ sudo gdb -p `sudo cat /var/lib/mysql/customer-db001.heteml.dev.pid`
+$ sudo gdb -p `sudo cat /var/lib/mysql/foo-bar.pid`
 (gdb) b write
 Breakpoint 1 at 0x7f9b36fab6d0
 
@@ -260,7 +266,7 @@ Breakpoint 1, 0x00007f9b36fab6d0 in write () from /lib64/libpthread.so.0
 #12 0x00007f9b3661db6d in clone () from /lib64/libc.so.6
 ```
 
-MYSQL_LOG::write 付近からもぐっていって `Query_log_event::write` に辿り着いた
+上記ログの `MYSQL_LOG::write` 付近のソースを読みつつ、最終的に `Query_log_event::write` に辿り着いた
 
 ```c++
 /* 長いのでコメント部分は削った */
