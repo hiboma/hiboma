@@ -44,7 +44,7 @@ version. You can access the patch from:
 
  * CentOS6.5 x86_64
   * MySQL は自前ビルドの MySQL-server-community-5.0.82
-   * 他のVMで過去にビルドされたもの。gcc は `gcc-4.4.7-4.el6.x86_64`
+  * 過去にビルドされたもで gcc は `gcc-4.4.7-4.el6.x86_64`
  * `gcc-4.4.7-4.el6.x86_64` で再ビルドしたパッケージではバグが再現しなかった
 
 以降、バグを含むバイナリを **バグバイナリ** 、再ビルドしたものを **修正バイナリ** として呼びます
