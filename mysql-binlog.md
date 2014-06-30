@@ -258,9 +258,9 @@ Breakpoint 1, 0x00007f9b36fab6d0 in write () from /lib64/libpthread.so.0
 #12 0x00007f9b3661db6d in clone () from /lib64/libc.so.6
 ```
 
-MYSQL_LOG::write 付近からもぐっていって、後述する ltrace とかも取りつつして問題のコード `Query_log_event::write` に辿り着いた
+MYSQL_LOG::write 付近からもぐっていって `Query_log_event::write` に辿り着いた
 
-```c
+```c++
 /* 長いのでコメント部分は削った */
 
 bool Query_log_event::write(IO_CACHE* file)
@@ -357,18 +357,23 @@ bool Query_log_event::write(IO_CACHE* file)
 }
 ```
 
-もっと楽に絞り込める方法あると思うんだけど分からん
-
-
 ## gdb でステップ実行
 
-ltrace で見つけた memcpy の長さの違い (31 と 34) gdb のステップ実行と `display` を使った
+`Query_log_event::write` まで絞り込めたので、ltrace で見つけた memcpy の長さの違い (31 と 34) がどこで生じているのか gdb のステップ実行と `display` を使っておった
 
 #### バグバイナリ
+
+ソースを読んだ感じだと `display start - start_of_status` が memcpy の長さに相当しているようだったので、この数値を追ってみる事にした
+
+```c
+          my_b_safe_write(file, (byte*) start_of_status,
+                          (uint) (start-start_of_status)) ||
+```
 
 バグバイナリではアドレスの長さが途中 19 => 17 に後退している。ポインタを増減させる操作しかしてないのに長さが減っていて怪しい
 
 ```
+# dispaly を使うと、ステップを実行するたびに式を評価してくれる
 (gdb) display start - start_of_status
 1: start - start_of_status = 0
 (gdb) n
