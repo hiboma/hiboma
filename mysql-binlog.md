@@ -44,10 +44,25 @@ version. You can access the patch from:
  * display
  * watch
 
-## バグの状態
+## バグの再現
+
+okkun が見つけてきたやつを、ちょっと手を加えて書いています
+
+ 1. テーブルを作る
 
 ```
+CREATE TABLE `testtable` (
+  `test_id` int(2) NOT NULL auto_increment,
+  `create_date` datetime NOT NULL default '0000-00-00 00:00:00',
+  `name` text,
+  PRIMARY KEY  (`test_id`)
+);
+```
 
+ 2. 適当に INSERT する
+
+```
+INSERT INTO `testtable` (`name`, `create_date`) VALUES ('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@', NOW()
 ```
 
  * 内製のパッケージは他のVMで過去にビルドされたもので 5.0.82
