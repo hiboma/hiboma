@@ -44,9 +44,14 @@ version. You can access the patch from:
  * display
  * watch
 
-### strace でシステムコールを調べる
+## strace でシステムコールを調べる
 
-バグ版バイナリ
+```
+mysql> use kowareru;
+mysql> INSERT INTO `testtable` (`name`, `create_date`) VALUES ('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@', NOW())
+```
+
+#### バグ版バイナリ
 
 ```
 [pid 18263] read(27, "\3INSERT INTO `testtable` (`name`, `create_date`) VALUES ('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@', NOW())", 96) = 96
@@ -62,7 +67,7 @@ version. You can access the patch from:
 \0\0\0\0\6\3\4\10\0\10\0!\0\5\6SYSTEMkowareru\0INSERT INTO `testtable` (`name`, `create_date`) VALUES ('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@', NOW())", 195) = 195
 ```
 
-修正版バイナリ
+#### 修正版バイナリ
 
 ```
 [pid 19004] read(27, "\3INSERT INTO `testtable` (`name`, `create_date`) VALUES ('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@', NOW())", 96) = 96
@@ -77,17 +82,20 @@ version. You can access the patch from:
 0\0\6\3std\4\10\0\10\0!\0\5\6SYSTEMkowareru\0INSERT INTO `testtable` (`name`, `create_date`) VALUES ('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@', NOW())", 198) = 198
 ```
 
-strace だと違いがよく分からない。書き込んでいる文字列の長さは違う
+ * strace だと違いがよく分からない
+ * 書き込んでいる文字列の長さは違う
 
 ### ltrace でメモリの操作を調べる
 
-strace はシステムコールを追う事はできるが、 mysql がメモリをどう操作したかは追えない
+strace はシステムコールを追う事はできるが、 MySQL がメモリをどう操作したか (malloc や memcpy 等) は追えない
+
+ltrace でトレースを取る
 
 ```
 sudo ltrace -p `sudo cat /var/lib/mysql/customer-db001.heteml.dev.pid`
 ```
 
-バグ版バイナリ
+#### バグ版バイナリ
 
 ```
 [pid 11915] memcpy(0x1b97c80, "\031)\260S\005\001", 19)                   
@@ -101,7 +109,7 @@ sudo ltrace -p `sudo cat /var/lib/mysql/customer-db001.heteml.dev.pid`
 [pid 11915] memcpy(0x1b97ce4, "INSERT INTO `testtable` (`name`,"..., 95)  
 ```
 
-修正版バイナリ
+#### 修正版バイナリ
 
 ```
 [pid 12382] memcpy(0x34b2220, "\356)\260S\005\001", 19)                   
