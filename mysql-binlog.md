@@ -151,6 +151,32 @@ Query_log_event::Query_log_event(const char* buf, uint event_len,
 
 ### strace でシステムコールを調べる
 
+[pid 18263] read(27, "\3INSERT INTO `testtable` (`name`, `create_date`) VALUES ('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@', NOW())", 96) = 96
+[pid 18263] rt_sigprocmask(SIG_BLOCK, ~[RTMIN RT_1], [HUP INT QUIT PIPE ALRM TERM TSTP], 8) = 0
+[pid 18263] rt_sigprocmask(SIG_SETMASK, [HUP INT QUIT PIPE ALRM TERM TSTP], NULL, 8) = 0
+[pid 18263] fcntl(27, F_SETFL, O_RDWR|O_NONBLOCK) = 0
+[pid 18263] gettimeofday({1404098263, 181455}, NULL) = 0
+[pid 18263] sched_setscheduler(18263, SCHED_OTHER, { 6 }) = -1 EINVAL (Invalid argument)
+[pid 18263] gettimeofday({1404098263, 181601}, NULL) = 0
+[pid 18263] pwrite(29, "\1\0-\0\376\200\0\0\0\17\235\32[Q\22\0\0\35\0@@@@@@@@@@@@@@@@@@@@@@@@@@@@@", 48, 5380) = 48
+[pid 18263] gettimeofday({1404098263, 181987}, NULL) = 0
+[pid 18263] write(11, "\327\326\260S\5\1\0\0\0\34\0\0\0\"\5\0\0\0\0\2\200\0\0\0\0\0\0\0\327\326\260S\2\1\0\0\0\241\0\0\0\303\5\0\0\0\0\2\0\0\0\0\0\0\0\10\0\0\31\0\0\0@\0\0\1\0\0\0\0
+\0\0\0\0\6\3\4\10\0\10\0!\0\5\6SYSTEMkowareru\0INSERT INTO `testtable` (`name`, `create_date`) VALUES ('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@', NOW())", 195) = 195
+
+
+```
+[pid 19004] read(27, "\3INSERT INTO `testtable` (`name`, `create_date`) VALUES ('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@', NOW())", 96) = 96
+[pid 19004] rt_sigprocmask(SIG_BLOCK, ~[RTMIN RT_1], [HUP INT QUIT PIPE ALRM TERM TSTP], 8) = 0
+[pid 19004] rt_sigprocmask(SIG_SETMASK, [HUP INT QUIT PIPE ALRM TERM TSTP], NULL, 8) = 0
+[pid 19004] fcntl(27, F_SETFL, O_RDWR|O_NONBLOCK) = 0
+[pid 19004] gettimeofday({1404098513, 629372}, NULL) = 0
+[pid 19004] sched_setscheduler(19004, SCHED_OTHER, { 6 }) = -1 EINVAL (Invalid argument)
+[pid 19004] gettimeofday({1404098513, 629624}, NULL) = 0
+[pid 19004] gettimeofday({1404098513, 630857}, NULL) = 0
+[pid 19004] write(11, "\321\327\260S\5\1\0\0\0\34\0\0\0~\0\0\0\0\0\2\204\0\0\0\0\0\0\0\321\327\260S\2\1\0\0\0\252\0\0\0(\1\0\0\0\0\2\0\0\0\0\0\0\0\10\0\0\"\0\0\0@\0\0\1\0\0\0\0\0\0\
+0\0\6\3std\4\10\0\10\0!\0\5\6SYSTEMkowareru\0INSERT INTO `testtable` (`name`, `create_date`) VALUES ('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@', NOW())", 198) = 198
+```
+
 ### ltrace でメモリの操作を調べる
 
 strace はシステムコールを追う事はできるが、 mysql がメモリをどう操作したかは追えない
