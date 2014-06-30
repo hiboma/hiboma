@@ -231,8 +231,7 @@ ltrace から下記の出力が binlog の操作っぽいのを見つけた
 
 memcpy をしている箇所のコードが分からないので gdb で探した
 
- * どこにブレークポイントしかけたらいいか分からないので適当に write(2) で
- * 何度も実行して
+ * どこにブレークポイントしかけたらいいか分からないので適当に write(2) でアタリをつけた
 
 ```
 $ sudo gdb -p `sudo cat /var/lib/mysql/customer-db001.heteml.dev.pid`
@@ -258,9 +257,6 @@ Breakpoint 1, 0x00007f9b36fab6d0 in write () from /lib64/libpthread.so.0
 #11 0x00007f9b36fa49d1 in start_thread () from /lib64/libpthread.so.0
 #12 0x00007f9b3661db6d in clone () from /lib64/libc.so.6
 ```
-
- * 複数の箇所でブレークするので、何度も実行してソースと見合わせて絞っていった。
-   * もっと楽に絞り込める方法あると思うんだけど分からん
 
 ## gdb でステップ実行
 
