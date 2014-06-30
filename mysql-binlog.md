@@ -82,7 +82,8 @@ mysql> INSERT INTO `testtable` (`name`, `create_date`) VALUES ('@@@@@@@@@@@@@@@@
 0\0\6\3std\4\10\0\10\0!\0\5\6SYSTEMkowareru\0INSERT INTO `testtable` (`name`, `create_date`) VALUES ('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@', NOW())", 198) = 198
 ```
 
- * strace だと違いがよく分からない
+ * クライアントから read(2) しているクエリは特に異常が無さそう
+ * write(2) する際に `SYSTEM` が混入しているが、成否の違いがよく分からない
  * 書き込んでいる文字列の長さは違う
 
 ### ltrace でメモリの操作を調べる
@@ -98,10 +99,14 @@ sudo ltrace -p `sudo cat /var/lib/mysql/customer-db001.heteml.dev.pid`
 #### バグ版バイナリ
 
 ```
+# 一部省略しています
+
+# 0x1b97c80 がヒープに確保しているバッファ
+
 [pid 11915] memcpy(0x1b97c80, "\031)\260S\005\001", 19)                   
 [pid 11915] memcpy(0x1b97c93, "\002O", 9)                                 
 [pid 11915] memmove(0x7fdd5072618d, 0x8203ab, 3, 0, 0x1410000)            
-[pid 11915] memmove(0x7fdd50726196, 0x86d9f9, 6, 524296, 0x1410000)       
+[pid 11915] memmove(0x7fdd50726196, 0x86d9f9, 6, 524296, 0x1410000)       # SYSTEM の文字列をコピーしている
 [pid 11915] memcpy(0x1b97c9c, "\031)\260S\002\001", 19)                   
 [pid 11915] memcpy(0x1b97caf, "\001", 13)                                 
 [pid 11915] memcpy(0x1b97cbc, "", 31)         # ここの長さが違う
@@ -112,11 +117,13 @@ sudo ltrace -p `sudo cat /var/lib/mysql/customer-db001.heteml.dev.pid`
 #### 修正版バイナリ
 
 ```
+# 0x34b2220 がヒープに確保しているバッファ
+
 [pid 12382] memcpy(0x34b2220, "\356)\260S\005\001", 19)                   
 [pid 12382] memcpy(0x34b2233, "\002P", 9)                                 
 [pid 12382] memmove(0x7fdfd56a428d, 0x959004, 3, 0x959004, 0x7e0000)      
 [pid 12382] memcpy(0x7fdfd56a4291, "\b", 6)                               
-[pid 12382] memmove(0x7fdfd56a4299, 0x9df2bf, 6, 0x9df2bf, 0x7e0000)      
+[pid 12382] memmove(0x7fdfd56a4299, 0x9df2bf, 6, 0x9df2bf, 0x7e0000)      # SYSTEM の文字列をコピーしている
 [pid 12382] memcpy(0x34b223c, "\356)\260S\002\001", 19)                   
 [pid 12382] memcpy(0x34b224f, "\002", 13)                                 
 [pid 12382] memcpy(0x34b225c, "", 34)          # ここの長さが違う
@@ -124,17 +131,18 @@ sudo ltrace -p `sudo cat /var/lib/mysql/customer-db001.heteml.dev.pid`
 [pid 12382] memcpy(0x34b2287, "INSERT INTO `testtable` (`name`,"..., 95)  
 ```
 
-コピーしている値は違っていても、長さが同じ。ただし一カ所だけ memcpy している長さが違う場所がある
+コピーしている値は違っていても、長さが同じである。ただし一カ所だけ memcpy している長さが違う場所がある
 
- * memcpy の長さが違う
- * アドレスがズレている
+ * memcpy の長さが違う => アドレスがズレる
  * 意図しない文字列が混入する原因では?
 
 とアタりをつけた
 
 ### gdb でステップ実行
 
-31 と 34 の違いを追うために gdb の `display` を使った
+ltrace で見つけた memcpy の長さの違い (31 と 34) gdb のステップ実行と `display` を使った
+
+#### バグ版バイナリ
 
 バグ版バイナリではアドレスの長さが途中 19 => 17 に後退している。ポインタを増減させる操作しかしてないのに長さが減っていて怪しい
 
