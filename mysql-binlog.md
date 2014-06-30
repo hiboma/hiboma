@@ -173,7 +173,7 @@ mysql> INSERT INTO `testtable` (`name`, `create_date`) VALUES ('@@@@@@@@@@@@@@@@
  * write(2) する際に `SYSTEM` が混入しているが、成否の違いがよく分からない
  * 書き込んでいる文字列の長さは違う
 
-### ltrace でメモリの操作を調べる
+ ## ltrace でメモリの操作を調べる
 
 strace はシステムコールを追う事はできるが、 システムコール以外、例えば MySQL がメモリをどう操作したか (malloc や memcpy 等) は追えない
 
@@ -225,13 +225,13 @@ ltrace から下記の出力が binlog の操作っぽいのを見つけた
  * memcpy の長さが違う => アドレスがズレる
  * 意図しない文字列が混入する原因では?
 
-とアタりをつけた
+とアタりをつけていった
 
 ## gdb でソースを探す
 
 memcpy をしている箇所のコードが分からないので gdb で探した
 
- * どこにブレークポイントしかけたらいいか分からないので適当に write(2) でアタリをつけた
+ * どこにブレークポイントしかけたらいいか分からないので適当に write(2) でアタリをつけて探した
 
 ```
 $ sudo gdb -p `sudo cat /var/lib/mysql/customer-db001.heteml.dev.pid`
@@ -257,6 +257,108 @@ Breakpoint 1, 0x00007f9b36fab6d0 in write () from /lib64/libpthread.so.0
 #11 0x00007f9b36fa49d1 in start_thread () from /lib64/libpthread.so.0
 #12 0x00007f9b3661db6d in clone () from /lib64/libc.so.6
 ```
+
+MYSQL_LOG::write 付近からもぐっていって、後述する ltrace とかも取りつつして問題のコード `Query_log_event::write` に辿り着いた
+
+```c
+/* 長いのでコメント部分は削った */
+
+bool Query_log_event::write(IO_CACHE* file)
+{
+  uchar buf[QUERY_HEADER_LEN + MAX_SIZE_LOG_EVENT_STATUS];
+  uchar *start, *start_of_status;
+  ulong event_length;
+
+  if (!query)
+    return 1;                                   // Something wrong with event
+
+  int4store(buf + Q_THREAD_ID_OFFSET, slave_proxy_id);
+  int4store(buf + Q_EXEC_TIME_OFFSET, exec_time);
+  buf[Q_DB_LEN_OFFSET] = (char) db_len;
+  int2store(buf + Q_ERR_CODE_OFFSET, error_code);
+
+  start_of_status= start= buf+QUERY_HEADER_LEN;
+  if (flags2_inited)
+  {
+    *start++= Q_FLAGS2_CODE;
+    int4store(start, flags2);
+    start+= 4;
+  }
+  if (sql_mode_inited)
+  {
+    *start++= Q_SQL_MODE_CODE;
+    int8store(start, (ulonglong)sql_mode);
+    start+= 8;
+  }
+  if (catalog_len) // i.e. this var is inited (false for 4.0 events)
+  {
+    write_str_with_code_and_len((char **)(&start),
+                                catalog, catalog_len, Q_CATALOG_NZ_CODE);
+  }
+  if (auto_increment_increment != 1)
+  {
+    *start++= Q_AUTO_INCREMENT;
+    int2store(start, auto_increment_increment);
+    int2store(start+2, auto_increment_offset);
+    start+= 4;
+  }
+  if (charset_inited)
+  {
+    *start++= Q_CHARSET_CODE;
+    memcpy(start, charset, 6);
+    start+= 6;
+  }
+  if (time_zone_len)
+  {
+    /* In the TZ sys table, column Name is of length 64 so this should be ok */
+    DBUG_ASSERT(time_zone_len <= MAX_TIME_ZONE_NAME_LENGTH);
+    write_str_with_code_and_len((char **)(&start),
+                                time_zone_str, time_zone_len, Q_TIME_ZONE_CODE);
+  }
+  if (lc_time_names_number)
+  {
+    DBUG_ASSERT(lc_time_names_number <= 0xFFFF);
+    *start++= Q_LC_TIME_NAMES_CODE;
+    int2store(start, lc_time_names_number);
+    start+= 2;
+  }
+  if (charset_database_number)
+  {
+    DBUG_ASSERT(charset_database_number <= 0xFFFF);
+    *start++= Q_CHARSET_DATABASE_CODE;
+    int2store(start, charset_database_number);
+    start+= 2;
+  }
+  if (table_map_for_update)
+  {
+    *start++= Q_TABLE_MAP_FOR_UPDATE_CODE;
+    int8store(start, table_map_for_update);
+    start+= 8;
+  }
+
+  /* Store length of status variables */
+  status_vars_len= (uint) (start-start_of_status);
+  DBUG_ASSERT(status_vars_len <= MAX_SIZE_LOG_EVENT_STATUS);
+  int2store(buf + Q_STATUS_VARS_LEN_OFFSET, status_vars_len);
+
+  /*
+    Calculate length of whole event
+    The "1" below is the \0 in the db's length
+  */
+  event_length= (uint) (start-buf) + get_post_header_size_for_derived() + db_len + 1 + q_len;
+
+  return (write_header(file, event_length) ||
+          my_b_safe_write(file, (byte*) buf, QUERY_HEADER_LEN) ||
+          write_post_header_for_derived(file) ||
+          my_b_safe_write(file, (byte*) start_of_status,
+                          (uint) (start-start_of_status)) ||
+          my_b_safe_write(file, (db) ? (byte*) db : (byte*)"", db_len + 1) ||
+          my_b_safe_write(file, (byte*) query, q_len)) ? 1 : 0;
+}
+```
+
+もっと楽に絞り込める方法あると思うんだけど分からん
+
 
 ## gdb でステップ実行
 
