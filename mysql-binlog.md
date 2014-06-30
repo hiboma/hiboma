@@ -140,12 +140,16 @@ sudo ltrace -p `sudo cat /var/lib/mysql/customer-db001.heteml.dev.pid`
 
 ## gdb でソースを探す
 
-memcpy をしているコードが分からないので gdb で探した
+memcpy をしているコードが分からないので gdb で探した。どこにブレークポイントしかけたらいいか分からないので write(2) で。
 
 ```
 $ sudo gdb -p `sudo cat /var/lib/mysql/customer-db001.heteml.dev.pid`
 (gdb) b write
 Breakpoint 1 at 0x7f9b36fab6d0
+```
+
+```
+
 ```
 
 複数の箇所でブレークするので、何度も実行してソースと見合わせて絞っていった。
