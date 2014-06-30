@@ -151,6 +151,9 @@ Query_log_event::Query_log_event(const char* buf, uint event_len,
 
 ### strace でシステムコールを調べる
 
+バグ版バイナリ
+
+```
 [pid 18263] read(27, "\3INSERT INTO `testtable` (`name`, `create_date`) VALUES ('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@', NOW())", 96) = 96
 [pid 18263] rt_sigprocmask(SIG_BLOCK, ~[RTMIN RT_1], [HUP INT QUIT PIPE ALRM TERM TSTP], 8) = 0
 [pid 18263] rt_sigprocmask(SIG_SETMASK, [HUP INT QUIT PIPE ALRM TERM TSTP], NULL, 8) = 0
@@ -162,7 +165,9 @@ Query_log_event::Query_log_event(const char* buf, uint event_len,
 [pid 18263] gettimeofday({1404098263, 181987}, NULL) = 0
 [pid 18263] write(11, "\327\326\260S\5\1\0\0\0\34\0\0\0\"\5\0\0\0\0\2\200\0\0\0\0\0\0\0\327\326\260S\2\1\0\0\0\241\0\0\0\303\5\0\0\0\0\2\0\0\0\0\0\0\0\10\0\0\31\0\0\0@\0\0\1\0\0\0\0
 \0\0\0\0\6\3\4\10\0\10\0!\0\5\6SYSTEMkowareru\0INSERT INTO `testtable` (`name`, `create_date`) VALUES ('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@', NOW())", 195) = 195
+```
 
+修正版バイナリ
 
 ```
 [pid 19004] read(27, "\3INSERT INTO `testtable` (`name`, `create_date`) VALUES ('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@', NOW())", 96) = 96
@@ -214,13 +219,13 @@ sudo ltrace -p `sudo cat /var/lib/mysql/customer-db001.heteml.dev.pid`
 [pid 12382] memcpy(0x34b2287, "INSERT INTO `testtable` (`name`,"..., 95)  
 ```
 
-memcpy している長さが違うことが分かる。
+コピーしている値は違っていても、長さが同じ。ただし一カ所だけ memcpy している長さが違う場所がある
 
  * memcpy の長さが違う
  * アドレスがズレている
  * 意図しない文字列が混入する原因では?
 
- とアタりをつけた
+とアタりをつけた
 
 ### gdb でステップ実行
 
