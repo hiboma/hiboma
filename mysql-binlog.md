@@ -148,3 +148,221 @@ Query_log_event::Query_log_event(const char* buf, uint event_len,
   DBUG_VOID_RETURN;
 }
 ```
+
+###
+
+31 と 34 の違いを追うために gdb の `display` を使った
+
+バグ版バイナリではアドレスの長さが途中 19 => 17 に後退している。ここが非常に怪しい
+
+```
+(gdb) display start - start_of_status
+1: start - start_of_status = 0
+(gdb) n
+
+// 中略...
+
+1203        start+= 4;
+1: start - start_of_status = 0
+(gdb)
+1205      if (sql_mode_inited)
+1: start - start_of_status = 5
+(gdb)
+1207        *start++= Q_SQL_MODE_CODE;
+1: start - start_of_status = 5
+(gdb)
+1208        int8store(start, (ulonglong)sql_mode);
+1: start - start_of_status = 6
+(gdb)
+
+// ...
+
+(gdb)
+1211      if (catalog_len) // i.e. this var is inited (false for 4.0 events)
+1: start - start_of_status = 14
+(gdb)
+1214                                    catalog, catalog_len, Q_CATALOG_NZ_CODE);
+1: start - start_of_status = 14
+(gdb)
+1234      if (auto_increment_increment != 1)
+1: start - start_of_status = 19
+(gdb)
+
+// ...
+
+(gdb)
+1244        memcpy(start, charset, 6);
+1: start - start_of_status = 17
+(gdb)
+1245        start+= 6;
+1: start - start_of_status = 17
+(gdb)
+1247      if (time_zone_len)
+1: start - start_of_status = 23
+(gdb)
+1252                                    time_zone_str, time_zone_len, Q_TIME_ZONE_CODE);
+1: start - start_of_status = 23
+(gdb)
+1254      if (lc_time_names_number)
+1: start - start_of_status = 31
+(gdb)
+
+// ...
+
+(gdb)
+1142    bool Query_log_event::write(IO_CACHE* file)
+1: start - start_of_status = 31
+(gdb)
+```
+
+#### 修正バイナリ
+
+```
+1199      if (flags2_inited)
+1: start - start_of_status = 0
+(gdb)
+1201        *start++= Q_FLAGS2_CODE;
+1: start - start_of_status = 0
+(gdb)
+1202        int4store(start, flags2);
+1: start - start_of_status = 1
+(gdb)
+1203        start+= 4;
+1: start - start_of_status = 1
+(gdb)
+1205      if (sql_mode_inited)
+1: start - start_of_status = 5
+(gdb)
+1207        *start++= Q_SQL_MODE_CODE;
+1: start - start_of_status = 5
+(gdb)
+1208        int8store(start, (ulonglong)sql_mode);
+1: start - start_of_status = 6
+(gdb)
+1209        start+= 8;
+1: start - start_of_status = 6
+(gdb)
+1211      if (catalog_len) // i.e. this var is inited (false for 4.0 events)
+1: start - start_of_status = 14
+(gdb)
+1214                                    catalog, catalog_len, Q_CATALOG_NZ_CODE);
+1: start - start_of_status = 14
+(gdb)
+1234      if (auto_increment_increment != 1)
+1: start - start_of_status = 19
+(gdb)
+1241      if (charset_inited)
+1: start - start_of_status = 19
+(gdb)
+1243        *start++= Q_CHARSET_CODE;
+1: start - start_of_status = 19
+(gdb)
+1244        memcpy(start, charset, 6);
+1: start - start_of_status = 20
+(gdb)
+1245        start+= 6;
+1: start - start_of_status = 20
+(gdb)
+1247      if (time_zone_len)
+1: start - start_of_status = 26
+(gdb)
+1250        DBUG_ASSERT(time_zone_len <= MAX_TIME_ZONE_NAME_LENGTH);
+1: start - start_of_status = 26
+(gdb)
+1252                                    time_zone_str, time_zone_len, Q_TIME_ZONE_CODE);
+1: start - start_of_status = 26
+(gdb)
+1254      if (lc_time_names_number)
+1: start - start_of_status = 34
+(gdb)
+1261      if (charset_database_number)
+1: start - start_of_status = 34
+(gdb)
+1268      if (table_map_for_update)
+1: start - start_of_status = 34
+(gdb)
+1289      status_vars_len= (uint) (start-start_of_status);
+1: start - start_of_status = 34
+(gdb)
+1290      DBUG_ASSERT(status_vars_len <= MAX_SIZE_LOG_EVENT_STATUS);
+1: start - start_of_status = 34
+(gdb)
+1291      int2store(buf + Q_STATUS_VARS_LEN_OFFSET, status_vars_len);
+1: start - start_of_status = 34
+(gdb)
+1297      event_length= (uint) (start-buf) + get_post_header_size_for_derived() + db_len + 1 + q_len;
+1: start - start_of_status = 34
+(gdb)
+1305              my_b_safe_write(file, (byte*) query, q_len)) ? 1 : 0;
+1: start - start_of_status = 34
+(gdb)
+1301              write_post_header_for_derived(file) ||
+1: start - start_of_status = 34
+(gdb)
+1305              my_b_safe_write(file, (byte*) query, q_len)) ? 1 : 0;
+1: start - start_of_status = 34
+(gdb)
+1306    }
+```
+
+### disassemble しての比較
+
+gdb で`$rip` (Instruction Pointer) を取れば命令のアドレスを取れる。
+
+
+
+```
+(gdb) p $rip
+$6 = (void (*)(void)) 0x672175 <Query_log_event::write(IO_CACHE*)+967>
+```
+
+バイナリを objdump して $rip が一致する行を頑張って探す
+
+```
+  672142:       74 3d                   je     672181 <_ZN15Query_log_event5writeEP11st_io_cache+0x3d3>
+  672144:       48 8b 45 b0             mov    -0x50(%rbp),%rax
+  672148:       c6 00 04                movb   $0x4,(%rax)        #     *start++= Q_CHARSET_CODE;
+  67214b:       48 83 c0 01             add    $0x1,%rax
+  67214f:       48 89 45 b0             mov    %rax,-0x50(%rbp)
+  672153:       48 8b 85 68 fd ff ff    mov    -0x298(%rbp),%rax
+  67215a:       48 8d 88 a8 00 00 00    lea    0xa8(%rax),%rcx
+  672161:       48 8b 45 b0             mov    -0x50(%rbp),%rax
+  672165:       ba 06 00 00 00          mov    $0x6,%edx
+  67216a:       48 89 ce                mov    %rcx,%rsi
+  67216d:       48 89 c7                mov    %rax,%rdi
+  672170:       e8 bb 14 e8 ff          callq  4f3630 <memcpy@plt>
+  672175:       48 8b 45 b0             mov    -0x50(%rbp),%rax
+  672179:       48 83 c0 06             add    $0x6,%rax         #     start+= 6;
+  67217d:       48 89 45 b0             mov    %rax,-0x50(%rbp)
+  672181:       48 8b 85 68 fd ff ff    mov    -0x298(%rbp),%rax
+  672188:       8b 80 b0 00 00 00       mov    0xb0(%rax),%eax
+  67218e:       85 c0                   test   %eax,%eax
+```
+
+```
+(gdb) p $rip
+$1 = (void (*)(void)) 0x5d98d3 <Query_log_event::write(IO_CACHE*)+1171>
+(gdb) 
+```
+
+```
+  5d98c9:       e9 c3 fc ff ff          jmpq   5d9591 <_ZN15Query_log_event5writeEP11st_io_cache+0x151>
+  5d98ce:       66 90                   xchg   %ax,%ax             
+  5d98d0:       c6 00 04                movb   $0x4,(%rax)          #  
+  5d98d3:       8b 8b a8 00 00 00       mov    0xa8(%rbx),%ecx      # 
+  5d98d9:       48 8d 50 01             lea    0x1(%rax),%rdx       # 
+  5d98dd:       48 89 94 24 38 02 00    mov    %rdx,0x238(%rsp)     # 
+  5d98e4:       00 
+  5d98e5:       89 48 01                mov    %ecx,0x1(%rax)       # 
+  5d98e8:       0f b7 83 ac 00 00 00    movzwl 0xac(%rbx),%eax     
+  5d98ef:       66 89 42 04             mov    %ax,0x4(%rdx)
+  5d98f3:       4c 8b b4 24 38 02 00    mov    0x238(%rsp),%r14     # 
+  5d98fa:       00 
+  5d98fb:       49 8d 7e 06             lea    0x6(%r14),%rdi       # 
+  5d98ff:       49 89 fe                mov    %rdi,%r14
+  5d9902:       48 89 bc 24 38 02 00    mov    %rdi,0x238(%rsp)
+  5d9909:       00 
+```
+
+ * 修正バイナリとバグ版バイナリとで命令が全然違う
+   * バグ版は memcpy の呼び出しが無い
