@@ -46,6 +46,10 @@ version. You can access the patch from:
 
 ## バグの状態
 
+```
+
+```
+
  * 内製のパッケージは他のVMで過去にビルドされたもので 5.0.82
  * 再度ビルドしたパッケージではバグが再現しない
 
@@ -336,8 +340,6 @@ ltrace で見つけた memcpy の長さの違い (31 と 34) gdb のステップ
 ### disassemble しての比較
 
 gdb で`$rip` (Instruction Pointer) を取れば命令のアドレスを取れる。
-
-
 
 ```
 (gdb) p $rip
