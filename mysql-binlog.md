@@ -1,6 +1,6 @@
 # SHOW BINLOG EVENTS: Wrong offset or I/O error
 
-下記のバグを踏んでいる MySQL をデバッグした話になります。いろいろ調べてこのバグレポートを見つけました
+次に書かれているバグを踏んでいる MySQL をデバッグした話になります。いろいろ調べてこのバグレポートを見つけました
 
  * https://gcc.gnu.org/bugzilla/show_bug.cgi?id=38562
  * http://bugs.mysql.com/bug.php?id=48357
@@ -45,7 +45,6 @@ version. You can access the patch from:
  * CentOS6.5 x86_64
   * MySQL は自前ビルドの MySQL-server-community-5.0.82
   * 過去にビルドされたもで gcc は `gcc-4.4.7-4.el6.x86_64`
- * `gcc-4.4.7-4.el6.x86_64` で再ビルドしたパッケージではバグが再現しなかった
 
 以降、バグを含むバイナリを **バグバイナリ** 、再ビルドしたものを **修正バイナリ** として呼びます
 
@@ -60,7 +59,7 @@ okkun が見つけてきたやつを、ちょっと手を加えて書いてい�
 log_bin=test-bin
 ```
 
-バイナリログ意外の設定はバグの再現に影響しないので、任意でよい
+バイナリログ意外の設定はバグの再現に影響しないため任意の記述で構いません
 
 #### 2. テーブルを作る
 
@@ -82,7 +81,10 @@ INSERT INTO `testtable` (`name`, `create_date`) VALUES ('@@@@@@@@@@@@@@@@@@@@@@@
 
 #### 4. binlog が物故割れている
 
-`use kowareru` じゃなくて `SYSTEMkowreu` になっている。クエリによってはもっと複雑な壊れかたをする
+ * binlog のデータが壊れているため読み出せない
+ * hexdump を取ると `use kowareru` じゃなくて `SYSTEMkowreu` になっている
+   * クエリによってはもっと複雑な壊れかたをする
+   * 
 
 ```
 $ sudo mysqlbinlog /var/lib/mysql/test-bin.000001 
@@ -582,3 +584,17 @@ $1 = (void (*)(void)) 0x5d98d3 <Query_log_event::write(IO_CACHE*)+1171>
 
  * 修正バイナリとバグバイナリとで命令が全然違う
    * バグは memcpy の呼び出しが無い
+
+## SHOW BINLOG EVENTS: Wrong offset or I/O error
+
+バイナリを見てて詰みゲー感が出てきたので、 Query_log_event::write でググっていたら冒頭のバグレポートのページに辿り着いた
+
+SHOW BINLOG EVENTS 知っていればもっと早く気がついたかも?
+
+## mysql-test のテストスイート
+
+```
+cp /usr/sbin/mysqld ~/rpmbuild/BUILD/mysql-5.0.82/sql
+cd ~/rpmbuild/BUILD/mysql-5.0.82/mysql-test
+./mtr t/binlog.t
+``
