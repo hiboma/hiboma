@@ -44,6 +44,11 @@ version. You can access the patch from:
  * display
  * watch
 
+## バグの状態
+
+ * 内製のパッケージは他のVMで過去にビルドされたもので 5.0.82
+ * 再度ビルドしたパッケージではバグが再現しない
+
 ## strace でシステムコールを調べる
 
 ```
@@ -146,13 +151,29 @@ memcpy をしているコードが分からないので gdb で探した。ど�
 $ sudo gdb -p `sudo cat /var/lib/mysql/customer-db001.heteml.dev.pid`
 (gdb) b write
 Breakpoint 1 at 0x7f9b36fab6d0
+
+Breakpoint 1, 0x00007f9b36fab6d0 in write () from /lib64/libpthread.so.0
+(gdb) bt
+#0  0x00007f9b36fab6d0 in write () from /lib64/libpthread.so.0
+#1  0x000000000089cef8 in my_write (Filedes=11, Buffer=0x2135220 "\212\356\260S\005\001", Count=198, MyFlags=52) at my_write.c:38
+#2  0x00000000008a462f in my_b_flush_io_cache (info=0xdd6bb8, need_append_buffer_lock=0) at mf_iocache.c:1750
+#3  0x000000000066a84c in MYSQL_LOG::flush_and_sync (this=0xdd6a00) at log.cc:1818
+#4  0x000000000066b065 in MYSQL_LOG::write (this=0xdd6a00, event_info=0x7f9b34945690) at log.cc:2001
+#5  0x0000000000645eea in mysql_insert (thd=0x2976e00, table_list=0x7f9b20004ba8, fields=..., values_list=..., update_fields=..., update_values=..., duplic=DUP_ERROR, ignore=false)
+    at sql_insert.cc:925
+#6  0x00000000005cb50c in mysql_execute_command (thd=0x2976e00) at sql_parse.cc:3833
+#7  0x00000000005d3119 in mysql_parse (thd=0x2976e00, inBuf=0x7f9b20004a70 "INSERT INTO `testtable` (`name`, `create_date`) VALUES ('", '@' <repeats 29 times>, "', NOW())", 
+    length=95, found_semicolon=0x7f9b34946c10) at sql_parse.cc:6452
+#8  0x00000000005c6122 in dispatch_command (command=COM_QUERY, thd=0x2976e00, 
+    packet=0x2978fd1 "INSERT INTO `testtable` (`name`, `create_date`) VALUES ('", '@' <repeats 29 times>, "', NOW())", packet_length=96) at sql_parse.cc:1973
+#9  0x00000000005c52bf in do_command (thd=0x2976e00) at sql_parse.cc:1654
+#10 0x00000000005c4274 in handle_one_connection (arg=0x2976e00) at sql_parse.cc:1246
+#11 0x00007f9b36fa49d1 in start_thread () from /lib64/libpthread.so.0
+#12 0x00007f9b3661db6d in clone () from /lib64/libc.so.6
 ```
 
-```
-
-```
-
-複数の箇所でブレークするので、何度も実行してソースと見合わせて絞っていった。
+ * 複数の箇所でブレークするので、何度も実行してソースと見合わせて絞っていった。
+   * もっと楽に絞り込める方法あると思うんだけど分からん
 
 ## gdb でステップ実行
 
