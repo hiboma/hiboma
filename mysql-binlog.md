@@ -268,6 +268,11 @@ Breakpoint 1, 0x00007f9b36fab6d0 in write () from /lib64/libpthread.so.0
 
 上記ログの `MYSQL_LOG::write` 付近のソースを読みつつ、最終的に `Query_log_event::write` に辿り着いた
 
+ * バッファに `SYSTEMkowreu` が書き出される箇所をステップ実行探した
+ * memcpy しか手がかりが無いのでどう探したら効率が良いのか、TODO
+
+Query_log_event::write は次の通り 
+
 ```c++
 /* 長いのでコメント部分は削った */
 
