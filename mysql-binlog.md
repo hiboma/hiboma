@@ -149,11 +149,52 @@ Query_log_event::Query_log_event(const char* buf, uint event_len,
 }
 ```
 
-###
+### ltrace でメモリの操作を調べる
+
+strace はシステムコールを追う事はできるが、 mysql がメモリをどう操作したかは追えない
+
+バグ版バイナリ
+
+```
+[pid 11915] memcpy(0x1b97c80, "\031)\260S\005\001", 19)                   
+[pid 11915] memcpy(0x1b97c93, "\002O", 9)                                 
+[pid 11915] memmove(0x7fdd5072618d, 0x8203ab, 3, 0, 0x1410000)            
+[pid 11915] memmove(0x7fdd50726196, 0x86d9f9, 6, 524296, 0x1410000)       
+[pid 11915] memcpy(0x1b97c9c, "\031)\260S\002\001", 19)                   
+[pid 11915] memcpy(0x1b97caf, "\001", 13)                                 
+[pid 11915] memcpy(0x1b97cbc, "", 31)         # ここの長さが違う
+[pid 11915] memcpy(0x1b97cdb, "kowareru", 9)                              
+[pid 11915] memcpy(0x1b97ce4, "INSERT INTO `testtable` (`name`,"..., 95)  
+```
+
+修正版バイナリ
+
+```
+[pid 12382] memcpy(0x34b2220, "\356)\260S\005\001", 19)                   
+[pid 12382] memcpy(0x34b2233, "\002P", 9)                                 
+[pid 12382] memmove(0x7fdfd56a428d, 0x959004, 3, 0x959004, 0x7e0000)      
+[pid 12382] memcpy(0x7fdfd56a4291, "\b", 6)                               
+[pid 12382] memmove(0x7fdfd56a4299, 0x9df2bf, 6, 0x9df2bf, 0x7e0000)      
+[pid 12382] memcpy(0x34b223c, "\356)\260S\002\001", 19)                   
+[pid 12382] memcpy(0x34b224f, "\002", 13)                                 
+[pid 12382] memcpy(0x34b225c, "", 34)          # ここの長さが違う
+[pid 12382] memcpy(0x34b227e, "kowareru", 9)                              
+[pid 12382] memcpy(0x34b2287, "INSERT INTO `testtable` (`name`,"..., 95)  
+```
+
+memcpy している長さが違うことが分かる。
+
+ * memcpy の長さが違う
+ * アドレスがズレている
+ * 意図しない文字列が混入する原因では?
+
+ とアタりをつけた
+
+### gdb でステップ実行
 
 31 と 34 の違いを追うために gdb の `display` を使った
 
-バグ版バイナリではアドレスの長さが途中 19 => 17 に後退している。ここが非常に怪しい
+バグ版バイナリではアドレスの長さが途中 19 => 17 に後退している。ポインタを増減させる操作しかしてないのに長さが減っていて怪しい
 
 ```
 (gdb) display start - start_of_status
