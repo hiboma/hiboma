@@ -84,6 +84,8 @@
         SAFE_ACCEPT(accept_mutex_off());      /* unlock after "accept" */
 ```
 
+### SAFE_ACCEPT
+
 ```c
 /* On some architectures it's safe to do unserialized accept()s in the single
  * Listen case.  But it's never safe to do it in the case where there's
