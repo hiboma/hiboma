@@ -637,7 +637,7 @@ ltrace に `-i` を渡すとライブラリを呼び出す際の Instruction Poi
 [pid 28991] [0x79640d] write(10, "\303\311\262S\005\001", 203)                                                  = 203
 ```
 
-ip (rip, eip) を取れれば gdb でブレークポイントを設定できる。問題と思われる memcpy を実行している `0x7997a2` をブレークポイントにしてみよう
+ip (rip, eip) を取れれば gdb でブレークポイントを設定できる。問題の memcpy を実行している `0x7997a2` をブレークポイントにしてみよう
 
 ```
 (gdb) b *0x7997a2
@@ -662,6 +662,8 @@ Breakpoint 1, 0x00000000007997a2 in my_b_safe_write (info=0xc58dd8, Buffer=<valu
 #10 0x00007fd3785fb9d1 in start_thread () from /lib64/libpthread.so.0
 #11 0x00007fd377c74b6d in clone () from /lib64/libc.so.6
 ```
+
+あれ、ちょっと場所が違うな。うーん。でもちまちまソース読んで探すよりは楽か
 
  * ip にブレークポイントを貼る場合はアドレスに * を付ける
  * ブレークポイントに達したら backtrace をとればどこから呼び出されているか分かって便利!!!
