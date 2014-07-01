@@ -537,32 +537,6 @@ bool Query_log_event::write(IO_CACHE* file)
 1306    }
 ```
 
-### ltrace で Instruction Pointer を表示、gdb でソースを探す 
-
-調査後に知ったのだけど、 ltrace に `-i` を渡すとライブラリを呼び出す際の Instruction Pointer を出力できる
-
-```
-[pid 28991] [0x5d7985] strlen("std")                                                                            = 3
-[pid 28991] [0x5d799b] strlen("kowareru")                                                                       = 8
-[pid 28991] [0x5d3b64] pthread_mutex_lock(0xc58ce8, 0x7fd34c90e640, 0, 48, 0)                                   = 0
-[pid 28991] [0x7997a2] memcpy(0x298f520, "\303\311\262S\005\001", 19)                                           = 0x298f520
-[pid 28991] [0x7997a2] memcpy(0x298f533, "\002\262", 9)                                                         = 0x298f533
-[pid 28991] [0x5d9821] memmove(0x7fd34c90e18d, 0x8203ab, 3, 0, 0x1490000)                                       = 0x7fd34c90e18d
-[pid 28991] [0x5d98b5] memmove(0x7fd34c90e196, 0x29afdf8, 6, 786444, 0x1490000)                                 = 0x7fd34c90e196
-[pid 28991] [0x7997a2] memcpy(0x298f53c, "\303\311\262S\002\001", 19)                                           = 0x298f53c
-[pid 28991] [0x7997a2] memcpy(0x298f54f, "\001", 13)                                                            = 0x298f54f
-[pid 28991] [0x7997a2] memcpy(0x298f55c, "", 31)                                                                = 0x298f55c
-[pid 28991] [0x7997a2] memcpy(0x298f57b, "kowareru", 9)                                                         = 0x298f57b
-[pid 28991] [0x7997a2] memcpy(0x298f584, "INSERT INTO `testtable` (`name`, `create_date`) VALUES ('@@@@@@@@@@@@@@@@@@@fdksajlk@@@@@@@@@@', NOW())", 103) = 0x298f584
-[pid 28991] [0x79640d] write(10, "\303\311\262S\005\001", 203)                                                  = 203
-```
-
-IP (rip, eip) を取れれば gdb でブレークポイントを設定できる。 問題の `0x7997a2` をブレークポイントにする
-
-```
-
-```
-
 ### disassemble しての比較
 
 gdb で`$rip` (Instruction Pointer) を取れば命令のアドレスを取れる。
@@ -636,3 +610,60 @@ cp /usr/sbin/mysqld ~/rpmbuild/BUILD/mysql-5.0.82/sql
 cd ~/rpmbuild/BUILD/mysql-5.0.82/mysql-test
 ./mtr t/binlog.t
 ``
+
+----
+
+# メモ
+
+調査後に気がついたメモ
+
+## ltrace で Instruction Pointer を表示、gdb でソースを探す 
+
+ltrace に `-i` を渡すとライブラリを呼び出す際の Instruction Pointer を出力できる
+
+```
+[pid 28991] [0x5d7985] strlen("std")                                                                            = 3
+[pid 28991] [0x5d799b] strlen("kowareru")                                                                       = 8
+[pid 28991] [0x5d3b64] pthread_mutex_lock(0xc58ce8, 0x7fd34c90e640, 0, 48, 0)                                   = 0
+[pid 28991] [0x7997a2] memcpy(0x298f520, "\303\311\262S\005\001", 19)                                           = 0x298f520
+[pid 28991] [0x7997a2] memcpy(0x298f533, "\002\262", 9)                                                         = 0x298f533
+[pid 28991] [0x5d9821] memmove(0x7fd34c90e18d, 0x8203ab, 3, 0, 0x1490000)                                       = 0x7fd34c90e18d
+[pid 28991] [0x5d98b5] memmove(0x7fd34c90e196, 0x29afdf8, 6, 786444, 0x1490000)                                 = 0x7fd34c90e196
+[pid 28991] [0x7997a2] memcpy(0x298f53c, "\303\311\262S\002\001", 19)                                           = 0x298f53c
+[pid 28991] [0x7997a2] memcpy(0x298f54f, "\001", 13)                                                            = 0x298f54f
+[pid 28991] [0x7997a2] memcpy(0x298f55c, "", 31)                                                                = 0x298f55c
+[pid 28991] [0x7997a2] memcpy(0x298f57b, "kowareru", 9)                                                         = 0x298f57b
+[pid 28991] [0x7997a2] memcpy(0x298f584, "INSERT INTO `testtable` (`name`, `create_date`) VALUES ('@@@@@@@@@@@@@@@@@@@fdksajlk@@@@@@@@@@', NOW())", 103) = 0x298f584
+[pid 28991] [0x79640d] write(10, "\303\311\262S\005\001", 203)                                                  = 203
+```
+
+ip (rip, eip) を取れれば gdb でブレークポイントを設定できる。 問題の `0x7997a2` をブレークポイントにする
+
+ * ip にブレークポイントを貼る場合はアドレスに * を付ける
+ * ブレークポイントに達したら backtrace をとればどこから呼び出されているか分かって便利!!!
+
+```
+(gdb) b *0x7997a2
+Breakpoint 1 at 0x7997a2: file mf_iocache.c, line 1618.
+(gdb) c
+Continuing.
+[Switching to Thread 0x7fd34c910700 (LWP 28991)]
+
+Breakpoint 1, 0x00000000007997a2 in my_b_safe_write (info=0xc58dd8, Buffer=<value optimized out>, Count=19) at mf_iocache.c:1618
+(gdb) bt
+#0  0x00000000007997a2 in my_b_safe_write (info=0xc58dd8, Buffer=<value optimized out>, Count=19) at mf_iocache.c:1618
+#1  0x00000000005d8baa in Log_event::write_header (this=0x7fd34c90e4e0, file=0xc58dd8, event_data_length=<value optimized out>) at log_event.cc:658
+#2  0x00000000005d91dd in Intvar_log_event::write (this=<value optimized out>, file=0xc58dd8) at log_event.cc:3648
+#3  0x00000000005d3ed5 in MYSQL_LOG::write (this=0xc58ce0, event_info=0x7fd34c90e640) at log.cc:1965
+#4  0x00000000005be44f in mysql_insert (thd=0x2998190, table_list=0x7fd348004af0, fields=..., values_list=..., update_fields=..., update_values=..., duplic=DUP_ERROR, ignore=false)
+    at sql_insert.cc:925
+#5  0x000000000056a235 in mysql_execute_command (thd=0x2998190) at sql_parse.cc:3833
+#6  0x000000000056f33e in mysql_parse (thd=0x2998190, inBuf=<value optimized out>, length=<value optimized out>, found_semicolon=0x7fd34c90fc40) at sql_parse.cc:6452
+#7  0x0000000000570ac9 in dispatch_command (command=COM_QUERY, thd=0x2998190, packet=<value optimized out>, packet_length=<value optimized out>) at sql_parse.cc:1973
+#8  0x0000000000571a15 in do_command (arg=<value optimized out>) at sql_parse.cc:1654
+#9  handle_one_connection (arg=<value optimized out>) at sql_parse.cc:1246
+#10 0x00007fd3785fb9d1 in start_thread () from /lib64/libpthread.so.0
+#11 0x00007fd377c74b6d in clone () from /lib64/libc.so.6
+```
+
+これが分かっていればもっと楽に解決できた ...
