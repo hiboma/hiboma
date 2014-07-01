@@ -84,7 +84,7 @@
         SAFE_ACCEPT(accept_mutex_off());      /* unlock after "accept" */
 ```
 
-## 2.2.26/core/prefork accept_mutex_on, accept_mutex_off
+### 2.2.26/core/prefork accept_mutex_on, accept_mutex_off
 
 ```c
 static void accept_mutex_on(void)
@@ -124,5 +124,15 @@ static void accept_mutex_off(void)
             exit(APEXIT_CHILDFATAL);
         }
     }
+}
+```
+
+### 2.2.26/srclib/apr/locks/unix/
+
+
+```c
+APR_DECLARE(apr_status_t) apr_proc_mutex_lock(apr_proc_mutex_t *mutex)
+{
+    return mutex->meth->acquire(mutex);
 }
 ```
