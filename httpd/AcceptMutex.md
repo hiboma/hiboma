@@ -84,6 +84,19 @@
         SAFE_ACCEPT(accept_mutex_off());      /* unlock after "accept" */
 ```
 
+```c
+/* On some architectures it's safe to do unserialized accept()s in the single
+ * Listen case.  But it's never safe to do it in the case where there's
+ * multiple Listen statements.  Define SINGLE_LISTEN_UNSERIALIZED_ACCEPT
+ * when it's safe in the single Listen case.
+ */
+#ifdef SINGLE_LISTEN_UNSERIALIZED_ACCEPT
+#define SAFE_ACCEPT(stmt) do {if (ap_listeners->next) {stmt;}} while(0)
+#else
+#define SAFE_ACCEPT(stmt) do {stmt;} while(0)
+#endif
+```
+
 ### 2.2.26/core/prefork accept_mutex_on, accept_mutex_off
 
 ```c
@@ -136,3 +149,4 @@ APR_DECLARE(apr_status_t) apr_proc_mutex_lock(apr_proc_mutex_t *mutex)
     return mutex->meth->acquire(mutex);
 }
 ```
+
