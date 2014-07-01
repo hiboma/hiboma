@@ -537,6 +537,32 @@ bool Query_log_event::write(IO_CACHE* file)
 1306    }
 ```
 
+### ltrace で Instruction Pointer を表示、gdb でソースを探す 
+
+調査後に知ったのだけど、 ltrace に `-i` を渡すとライブラリを呼び出す際の Instruction Pointer を出力できる
+
+```
+[pid 28991] [0x5d7985] strlen("std")                                                                            = 3
+[pid 28991] [0x5d799b] strlen("kowareru")                                                                       = 8
+[pid 28991] [0x5d3b64] pthread_mutex_lock(0xc58ce8, 0x7fd34c90e640, 0, 48, 0)                                   = 0
+[pid 28991] [0x7997a2] memcpy(0x298f520, "\303\311\262S\005\001", 19)                                           = 0x298f520
+[pid 28991] [0x7997a2] memcpy(0x298f533, "\002\262", 9)                                                         = 0x298f533
+[pid 28991] [0x5d9821] memmove(0x7fd34c90e18d, 0x8203ab, 3, 0, 0x1490000)                                       = 0x7fd34c90e18d
+[pid 28991] [0x5d98b5] memmove(0x7fd34c90e196, 0x29afdf8, 6, 786444, 0x1490000)                                 = 0x7fd34c90e196
+[pid 28991] [0x7997a2] memcpy(0x298f53c, "\303\311\262S\002\001", 19)                                           = 0x298f53c
+[pid 28991] [0x7997a2] memcpy(0x298f54f, "\001", 13)                                                            = 0x298f54f
+[pid 28991] [0x7997a2] memcpy(0x298f55c, "", 31)                                                                = 0x298f55c
+[pid 28991] [0x7997a2] memcpy(0x298f57b, "kowareru", 9)                                                         = 0x298f57b
+[pid 28991] [0x7997a2] memcpy(0x298f584, "INSERT INTO `testtable` (`name`, `create_date`) VALUES ('@@@@@@@@@@@@@@@@@@@fdksajlk@@@@@@@@@@', NOW())", 103) = 0x298f584
+[pid 28991] [0x79640d] write(10, "\303\311\262S\005\001", 203)                                                  = 203
+```
+
+IP (rip, eip) を取れれば gdb でブレークポイントを設定できる。 問題の `0x7997a2` をブレークポイントにする
+
+```
+
+```
+
 ### disassemble しての比較
 
 gdb で`$rip` (Instruction Pointer) を取れば命令のアドレスを取れる。
