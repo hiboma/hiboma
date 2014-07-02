@@ -93,7 +93,7 @@ bool Log_event::write_header(IO_CACHE* file, ulong event_data_length)
  + 4bytes LOG_POS_OFFSET    log_pos
  + 2bytes FLAGS_OFFSET      flags
  ------------------------------------------
-  19bytes
+   19bytes
 
 ```
 
@@ -215,4 +215,8 @@ bool Query_log_event::write(IO_CACHE* file)
 ```
 
 
-  QUERY_HEADER_LEN
+```
+
+
+
+```
