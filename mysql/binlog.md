@@ -86,12 +86,13 @@ bool Log_event::write_header(IO_CACHE* file, ulong event_data_length)
 |****|****|****|****|**|
 +----+----+----+----+--+
 
-   4bytes timestamp
- + 4bytes server_id
- + 4bytes data_written
- + 4bytes log_pos
- + 2bytes flags
- ----------------------
+   4bytes                   timestamp
+ + 1bytes EVENT_TYPE_OFFSET event type?   
+ + 4bytes SERVER_ID_OFFSET  server_id
+ + 4bytes EVENT_LEN_OFFSET  data_written
+ + 4bytes LOG_POS_OFFSET    log_pos
+ + 2bytes FLAGS_OFFSET      flags
+ ------------------------------------------
   19bytes
 
 ```
@@ -212,3 +213,6 @@ bool Query_log_event::write(IO_CACHE* file)
           my_b_safe_write(file, (byte*) query, q_len)) ? 1 : 0;
 }
 ```
+
+
+  QUERY_HEADER_LEN
