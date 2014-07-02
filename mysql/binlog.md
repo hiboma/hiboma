@@ -26,3 +26,20 @@ bool Log_event::write_header(IO_CACHE* file, ulong event_data_length)
   int2store(header+ FLAGS_OFFSET, flags);
 }
 ```
+
+```
+ /*   Event Header  */
+
++----+----+----+----+--+
+|****|****|****|****|**|
++----+----+----+----+--+
+
+   4bytes timestamp
+ + 4bytes server_id
+ + 4bytes data_written
+ + 4bytes log_pos
+ + 2bytes flags
+ ----------------------
+  19bytes
+
+```
