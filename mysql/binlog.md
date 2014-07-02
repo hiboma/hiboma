@@ -4,7 +4,53 @@
 
 ## メモ
 
- * いろんな Event が定義されていて、それぞれに write メソッドが用意されてるa
+ * いろんな Event が定義されていて、それぞれに write メソッドが用意されてる
+   * Query_log_event
+   * Load_log_event
+   * Log_event
+   * Rotate_log_event
+   * Create_file_log_event ...
+
+```c
+enum Log_event_type
+{
+  /*
+    Every time you update this enum (when you add a type), you have to
+    fix Format_description_log_event::Format_description_log_event().
+  */
+  UNKNOWN_EVENT= 0,
+  START_EVENT_V3= 1,
+  QUERY_EVENT= 2,
+  STOP_EVENT= 3,
+  ROTATE_EVENT= 4,
+  INTVAR_EVENT= 5,
+  LOAD_EVENT= 6,
+  SLAVE_EVENT= 7,
+  CREATE_FILE_EVENT= 8,
+  APPEND_BLOCK_EVENT= 9,
+  EXEC_LOAD_EVENT= 10,
+  DELETE_FILE_EVENT= 11,
+  /*
+    NEW_LOAD_EVENT is like LOAD_EVENT except that it has a longer
+    sql_ex, allowing multibyte TERMINATED BY etc; both types share the
+    same class (Load_log_event)
+  */
+  NEW_LOAD_EVENT= 12,
+  RAND_EVENT= 13,
+  USER_VAR_EVENT= 14,
+  FORMAT_DESCRIPTION_EVENT= 15,
+  XID_EVENT= 16,
+  BEGIN_LOAD_QUERY_EVENT= 17,
+  EXECUTE_LOAD_QUERY_EVENT= 18,
+
+  /*
+    Add new events here - right above this comment!
+    Existing events (except ENUM_END_EVENT) should never change their numbers
+  */
+
+  ENUM_END_EVENT /* end marker */
+};
+```
 
 ## Event Header
 
