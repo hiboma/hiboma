@@ -218,6 +218,11 @@ bool Query_log_event::write(IO_CACHE* file)
 ```
 # * は任意
 
+ヘッダ部分
+event_length= (uint) (start-buf) + get_post_header_size_for_derived() + db_len + 1 + q_l
+
+# buffer 部分
+
   4bytes Q_THREAD_ID_OFFSET          slave_proxy_id
 + 4bytes Q_EXEC_TIME_OFFSET          exec_time
 + 1bytes Q_DB_LEN_OFFSET             db_len
@@ -228,7 +233,7 @@ bool Query_log_event::write(IO_CACHE* file)
 * 2bytes Q_AUTO_INCREMENT            auto_increment_increment
 * 2bytes ...                          auto_increment_offset
 * 6bytes Q_CHARSET_CODE              charset
-*        Q_TIME_ZONE_CODE            time_zone_str
+* ?bytes Q_TIME_ZONE_CODE            time_zone_str
          ...                         time_zone_len
 * 2bytes Q_LC_TIME_NAMES_CODE        lc_time_names_number
 * 2bytes Q_CHARSET_DATABASE_CODE     charset_database_number
@@ -236,4 +241,7 @@ bool Query_log_event::write(IO_CACHE* file)
 * 2bytes Q_STATUS_VARS_LEN_OFFSET    status_vars_len
 * db_len+1                           db
 * q_len                              query
+-------------------------------------------------------------
+
+
 ```
