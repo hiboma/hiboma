@@ -217,6 +217,16 @@ bool Query_log_event::write(IO_CACHE* file)
 
 ```
 
-
+  4bytes Q_THREAD_ID_OFFSET slave_proxy_id
++ 4bytes Q_EXEC_TIME_OFFSET exec_time
++ 1bytes Q_DB_LEN_OFFSET    db_len
++ 2bytes Q_ERR_CODE_OFFSET  error_code
+* 4bytes Q_FLAGS2_CODE      flags2
+* 8bytes Q_SQL_MODE_CODE    sql_mode
+* ?      Q_CATALOG_NZ_CODE  catalog
+* 2bytes Q_AUTO_INCREMENT   auto_increment_increment
+* 2bytes                    auto_increment_offset
+* 6bytes Q_CHARSET_CODE     charset
+*        Q_TIME_ZONE_CODE time_zone_len
 
 ```
