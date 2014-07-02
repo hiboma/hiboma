@@ -224,7 +224,7 @@ bool Query_log_event::write(IO_CACHE* file)
 + 2bytes Q_ERR_CODE_OFFSET           error_code
 ------------------------------------------------------------ 11bytes = QUERY_HEADER_MINIMAL_LEN
   2bytes Q_STATUS_VARS_LEN_OFFSET    status_vars_len
-------------------------------------------------------------
+------------------------------------------------------------ 13bytes = QUERY_HEADER_LEN
 * 4bytes Q_FLAGS2_CODE               flags2
 * 8bytes Q_SQL_MODE_CODE             sql_mode
 * ?      Q_CATALOG_NZ_CODE           catalog
@@ -236,10 +236,10 @@ bool Query_log_event::write(IO_CACHE* file)
 * 2bytes Q_LC_TIME_NAMES_CODE        lc_time_names_number
 * 2bytes Q_CHARSET_DATABASE_CODE     charset_database_number
 * 8bytes Q_TABLE_MAP_FOR_UPDATE_CODE table_map_for_update
-------------------------------------------------------------
+------------------------------------------------------------ (start - start_of_status) bytes
 * db_len+1                           db    
 * q_len                              query
 -------------------------------------------------------------
-  event_length= (uint) (start-buf) + get_post_header_size_for_derived() + db_len + 1 + q_l
+  event_length= (uint) (start-buf) + get_post_header_size_for_derived() + db_len + 1 + q_len
 
 ```
