@@ -1,5 +1,11 @@
 
 
+ * my_b_safe_write
+
+## メモ
+
+ * いろんな Event が定義されていて、それぞれに write メソッドが用意されてるa
+
 ## Event Header
 
 ```cc
@@ -43,3 +49,5 @@ bool Log_event::write_header(IO_CACHE* file, ulong event_data_length)
   19bytes
 
 ```
+
+## Query_log_event::
