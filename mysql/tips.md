@@ -8,6 +8,12 @@
 rpmbuild -bb --define='runselftest 0' rpmbuild/SPECS/mysql.spec
 ```
 
+```
+# http://d.hatena.ne.jp/sh2/20090707
+export MYSQL_RPMBUILD_TEST=no
+rpmbuild -bb --define='community 1' rpmbuild/SPECS/mysql-*.*.spec
+```
+
 テストすっ飛ばす代償は言わずもがななので、RPM作る際の試行錯誤する際にかなー
 
 
