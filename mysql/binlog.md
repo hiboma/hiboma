@@ -135,8 +135,10 @@ bool Query_log_event::write(IO_CACHE* file)
 
   if (flags2_inited)
   {
-    /* 値があるかどうか分からないので type を埋める必要がある */
+    /* 値があるかどうか分からないので値の前に type を埋める必要がある */
     *start++= Q_FLAGS2_CODE;
+
+    /* こっちが値 */
     int4store(start, flags2);
     start+= 4;
   }
