@@ -3,6 +3,10 @@
 
 SIGSEGV を出した際に ***$_siginfo*** を参照すると si_code から **SEGV_MAPERR** なのか **SEGV_ACCERR** なのかとか、アドレスだったりあれこれ取れるのだった
 
+#### TODO
+
+ * siginfo って union ?
+
 #### サンプルソース
 
 ```
@@ -83,6 +87,8 @@ Mapped address spaces:
 
 ## ヌルポ
 
+NULLポインタで SIGSEGV を起こす例
+
 #### サンプルソース
 
 ```c
@@ -105,19 +111,18 @@ Program received signal SIGSEGV, Segmentation fault.
 Missing separate debuginfos, use: debuginfo-install glibc-2.12-1.132.el6.x86_64
 (gdb) bt
 #0  0x000000000040047f in main ()
-(gdb) p p $_siginfo
-No symbol table is loaded.  Use the "file" command.
 (gdb) p $_siginfo
 $1 = {si_signo = 11, si_errno = 0, si_code = 1, _sifields = {_pad = {0, 0, 0, 0, 0, 0, 34542288, 0, 34478944, 0, 0, 0, 2075, -1, 7, 1, -2027080368, 32767, 4195455, 0, -2027080368, 
       32767, 0, 0, 34542288, 0, 0, 0}, _kill = {si_pid = 0, si_uid = 0}, _timer = {si_tid = 0, si_overrun = 0, si_sigval = {sival_int = 0, sival_ptr = 0x0}}, _rt = {si_pid = 0, 
       si_uid = 0, si_sigval = {sival_int = 0, sival_ptr = 0x0}}, _sigchld = {si_pid = 0, si_uid = 0, si_status = 0, si_utime = 0, si_stime = 148357997289013248}, _sigfault = {
       si_addr = 0x0}, _sigpoll = {si_band = 0, si_fd = 0}}}
-(gdb) p p $_siginfo.si_code
-No symbol table is loaded.  Use the "file" command.
 (gdb) p $_siginfo.si_code
 $2 = 1
 (gdb) p $_siginfo._sifields._sigfault.si_addr 
 $3 = (void *) 0x0
 ```
 
-`_sigfault = {si_addr = 0x0}` になる
+ * $_siginfo.si_code = 1 なので SEGV_MAPERR 
+ * $_siginfo._sifields._sigfault.si_addr = 0x0 でヌルポインタ
+
+で NULLポインタへの書き込みで SIGSEGV なのだと判定できる 
