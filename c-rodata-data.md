@@ -103,4 +103,4 @@ $1 = {si_signo = 11, si_errno = 0, si_code = 2, _sifields = {_pad = {4195832, 0,
  * si_code = 2 で SEGV_ACCERR が原因
  * si_addr = 0x4005f8 が原因のアドレス
 
-と探していける 
+と探していける 。ヌルポだと `_sigfault = {si_addr = 0x0}` になる
