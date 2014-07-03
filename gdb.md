@@ -83,6 +83,22 @@ Mapped address spaces:
 
 ## ヌルポ
 
+#### サンプルソース
+
+```c
+#include <stdlib.h>
+
+static char *null_string = NULL;
+
+int main()
+{
+	null_string[0] = '0';
+	return 0;
+}
+```
+
+### gdb 実行例
+
 ```
 Program received signal SIGSEGV, Segmentation fault.
 0x000000000040047f in main ()
