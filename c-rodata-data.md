@@ -74,3 +74,21 @@ Contents of section .data:
 ```
 
 rodata のデータは書き込み権限の無いメモリリージョンに配置されるので、変更を加えようとすると SIGSEGV を出す
+
+#### おまけ
+
+
+
+```
+(gdb) r
+Starting program: /vagrant/a.out 
+
+Program received signal SIGSEGV, Segmentation fault.
+0x00000000004004ed in main ()
+Missing separate debuginfos, use: debuginfo-install glibc-2.12-1.132.el6.x86_64
+(gdb) p $_siginfo
+$1 = {si_signo = 11, si_errno = 0, si_code = 2, _sifields = {_pad = {4195832, 0, 0, 0, 0, 0, 30930208, 0, 30866336, 0, 0, 0, 1995, -1, 7, 1, -1792949920, 32767, 4195565, 0, -1792949920, 32767, 0, 0, 30930208, 0, 0, 0}, _kill = {
+      si_pid = 4195832, si_uid = 0}, _timer = {si_tid = 4195832, si_overrun = 0, si_sigval = {sival_int = 0, sival_ptr = 0x0}}, _rt = {si_pid = 4195832, si_uid = 0, si_sigval = {sival_int = 0, sival_ptr = 0x0}}, _sigchld = {
+      si_pid = 4195832, si_uid = 0, si_status = 0, si_utime = 0, si_stime = 132844231818477568}, _sigfault = {si_addr = 0x4005f8}, _sigpoll = {si_band = 4195832, si_fd = 0}}}
+(gdb) 
+```
