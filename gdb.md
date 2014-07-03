@@ -3,6 +3,20 @@
 
 SIGSEGV を出した際に ***$_siginfo*** を参照すると si_code から **SEGV_MAPERR** なのか **SEGV_ACCERR** なのかとか、アドレスだったりあれこれ取れるのだった
 
+#### サンプルソース
+
+```
+static char *readonly_string = "abcdefghijklmn\n";
+
+int main()
+{
+	readonly_string[0] = '0';
+	return 0;
+}
+```
+
+#### gdb の実行例
+
 ```
 (gdb) r
 Starting program: /vagrant/a.out 
@@ -38,4 +52,7 @@ $4 = (void *) 0x400588
  * $_siginfo.si_code = 2 で SEGV_ACCERR が原因
  * $_siginfo._sifields._sigfault.si_addr  = 0x4005f8 がフォールトを起こしたアドレス
 
-と探していける 。ヌルポだと `_sigfault = {si_addr = 0x0}` になる
+と探していける 。
+
+
+ヌルポだと `_sigfault = {si_addr = 0x0}` になる
