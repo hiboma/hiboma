@@ -1,6 +1,6 @@
 # SHOW BINLOG EVENTS: Wrong offset or I/O error
 
-次に書かれているバグを踏んでいる MySQL をデバッグした話になります。いろいろ調べてこのバグレポートを見つけました
+48357 のバグを踏んでいる MySQL をデバッグした話になります。いろいろ調べてこのバグレポートを見つけました
 
  * https://gcc.gnu.org/bugzilla/show_bug.cgi?id=38562
  * http://bugs.mysql.com/bug.php?id=48357
@@ -43,8 +43,8 @@ version. You can access the patch from:
 ## バグを再現する環境
 
  * CentOS6.5 x86_64
-  * MySQL は自前ビルドの MySQL-server-community-5.0.82
-  * 過去にビルドされたもで gcc は `gcc-4.4.7-4.el6.x86_64`
+ * MySQL は自前ビルドの MySQL-server-community-5.0.82
+ * 過去にビルドされたもで gcc は `gcc-4.4.7-4.el6.x86_64`
 
 以降、バグを含むバイナリを **バグバイナリ** 、再ビルドしたものを **修正バイナリ** として呼びます
 
@@ -132,7 +132,9 @@ $ sudo hexdump -C /var/lib/mysql/test-bin.000001
 
 ----
 
-これ以降はどうやって冒頭のバグレポートに辿り着いたかを連ねています。後からまとめた物なので細部ははしょっています。すんなり調べられた訳じゃなくて いろいろハマって時間がかかっています
+これ以降はどうやって冒頭のバグレポートに辿り着いたかを連ねています。
+後からまとめた物なので細部ははしょっています。
+すんなり調べられた訳じゃなくて いろいろハマって時間がかかっています
 
 ## strace でシステムコールを調べる
 
@@ -663,9 +665,15 @@ Breakpoint 1, 0x00000000007997a2 in my_b_safe_write (info=0xc58dd8, Buffer=<valu
 #11 0x00007fd377c74b6d in clone () from /lib64/libc.so.6
 ```
 
-あれ、ちょっと場所が違うな。うーん。でもちまちまソース読んで探すよりは楽か
+期待していたのとちょっと場所が違う... ちまちまソース読んで探すよりは楽かな
 
  * ip にブレークポイントを貼る場合はアドレスに * を付ける
  * ブレークポイントに達したら backtrace をとればどこから呼び出されているか分かって便利!!!
 
 これが分かっていればもっと楽に解決できた ...
+
+
+const char *
+idn_version_getstring(void) {
+	return IDNKIT_VERSION;
+}
