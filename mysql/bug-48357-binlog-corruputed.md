@@ -140,7 +140,7 @@ $ sudo hexdump -C /var/lib/mysql/test-bin.000001
 
 まずは問題のあるクエリの strace を取ってみてた
 
-```
+```sh
 $ sudo gdb -p `sudo cat /var/lib/mysql/foo-bar.pid`
 ```
 
@@ -184,13 +184,13 @@ mysql> INSERT INTO `testtable` (`name`, `create_date`) VALUES ('@@@@@@@@@@@@@@@@
  * write(2) する際に `SYSTEM` が混入しているが、成否の違いがよく分からない
  * 書き込んでいる文字列の長さは違う
 
- ## ltrace でメモリの操作を調べる
+## ltrace でメモリの操作を調べる
 
 strace はシステムコールを追う事はできるが、 システムコール以外、例えば MySQL がメモリをどう操作したか (malloc や memcpy 等) は追えない
 
 ということで ltrace でトレースを取った
 
-```
+```sh
 sudo ltrace -p `sudo cat /var/lib/mysql/foo-bar.pid`
 ```
 
@@ -244,8 +244,10 @@ ltrace から下記の出力が binlog の操作っぽいのを見つけた
    * ltrace で Instruction Pointer を取る方法があった。後述
  * どこにブレークポイントしかけたらいいか分からないので適当に write(2) でアタリをつけて探した
 
-```
+```sh
 $ sudo gdb -p `sudo cat /var/lib/mysql/foo-bar.pid`
+```
+```
 (gdb) b write
 Breakpoint 1 at 0x7f9b36fab6d0
 
@@ -271,10 +273,12 @@ Breakpoint 1, 0x00007f9b36fab6d0 in write () from /lib64/libpthread.so.0
 
 上記ログの `MYSQL_LOG::write` 付近のソースを読みつつ、最終的に `Query_log_event::write` に辿り着いた
 
- * バッファに `SYSTEMkowreu` が書き出される箇所をステップ実行探した
- * memcpy しか手がかりが無いのでどう探したら効率が良いのか、TODO
+ * バッファに `SYSTEMkowreu` が書き出される箇所をステップ実行して探した
+ * ほんと一個一個実行して、手作業 ...
 
-Query_log_event::write は次の通り 
+#### 問題のソース
+
+Query_log_event::write は次の通り
 
 ```c++
 /* 長いのでコメント部分は削った */
@@ -375,18 +379,19 @@ bool Query_log_event::write(IO_CACHE* file)
 
 ## gdb でステップ実行
 
-`Query_log_event::write` まで絞り込めたので、ltrace で見つけた memcpy の長さの違い (31 と 34) がどこで生じているのか gdb のステップ実行と `display` を使っておった
+問題の箇所が `Query_log_event::write` にあることまで絞り込めました。
+ltrace で見つけた memcpy の長さの違い (31 と 34) がどこで生じているのか分からないので gdb のステップ実行と `display` を使って追いかけました
 
 #### バグバイナリ
 
 ソースを読んだ感じだと `display start - start_of_status` が memcpy の長さに相当しているようだったので、この数値を追ってみる事にした
 
-```c
+```c++
           my_b_safe_write(file, (byte*) start_of_status,
                           (uint) (start-start_of_status)) ||
 ```
 
-バグバイナリではアドレスの長さが途中 19 => 17 に後退している。ポインタを増減させる操作しかしてないのに長さが減っていて怪しい
+バグバイナリを実行していくと、アドレスの長さが途中 19 => 17 に減っている。ポインタを増減させる操作しかしてないのに長さが減っていて怪しい
 
 ```
 # dispaly を使うと、ステップを実行するたびに式を評価してくれる
@@ -450,6 +455,8 @@ bool Query_log_event::write(IO_CACHE* file)
 ```
 
 #### 修正バイナリ
+
+こちらは単調に長さが増えていっている
 
 ```
 1199      if (flags2_inited)
@@ -541,7 +548,7 @@ bool Query_log_event::write(IO_CACHE* file)
 
 ### disassemble しての比較
 
-gdb で`$rip` (Instruction Pointer) を取れば命令のアドレスを取れる。
+gdb で`$rip` (Instruction Pointer) を取れば命令のアドレスを取れる
 
 ```
 (gdb) p $rip
@@ -549,6 +556,8 @@ $6 = (void (*)(void)) 0x672175 <Query_log_event::write(IO_CACHE*)+967>
 ```
 
 バイナリを objdump して $rip が一致する行を頑張って探す
+
+#### 修正バイナリ
 
 ```
   672142:       74 3d                   je     672181 <_ZN15Query_log_event5writeEP11st_io_cache+0x3d3>
@@ -570,6 +579,8 @@ $6 = (void (*)(void)) 0x672175 <Query_log_event::write(IO_CACHE*)+967>
   672188:       8b 80 b0 00 00 00       mov    0xb0(%rax),%eax
   67218e:       85 c0                   test   %eax,%eax
 ```
+
+#### バグバイナリ
 
 ```
 (gdb) p $rip
