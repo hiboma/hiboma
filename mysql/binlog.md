@@ -221,6 +221,15 @@ bool Query_log_event::write(IO_CACHE* file)
 
 
 ```
+# header
+
+  
+ + 1bytes EVENT_TYPE_OFFSET event type?   
+ + 4bytes SERVER_ID_OFFSET  server_id
+ + 4bytes EVENT_LEN_OFFSET  data_written
+ + 4bytes LOG_POS_OFFSET    log_pos
+ + 2bytes FLAGS_OFFSET      flags
+------------------------------------------------------------> 
   4bytes Q_THREAD_ID_OFFSET            slave_proxy_id
 + 4bytes Q_EXEC_TIME_OFFSET            exec_time
 + 1bytes Q_DB_LEN_OFFSET               db_len
