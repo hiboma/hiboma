@@ -221,12 +221,12 @@ bool Query_log_event::write(IO_CACHE* file)
 
 
 ```
-  4bytes Q_THREAD_ID_OFFSET          slave_proxy_id
-+ 4bytes Q_EXEC_TIME_OFFSET          exec_time
-+ 1bytes Q_DB_LEN_OFFSET             db_len
-+ 2bytes Q_ERR_CODE_OFFSET           error_code
+  4bytes Q_THREAD_ID_OFFSET            slave_proxy_id
++ 4bytes Q_EXEC_TIME_OFFSET            exec_time
++ 1bytes Q_DB_LEN_OFFSET               db_len
++ 2bytes Q_ERR_CODE_OFFSET             error_code
 ------------------------------------------------------------> 11bytes = QUERY_HEADER_MINIMAL_LEN
-  2bytes Q_STATUS_VARS_LEN_OFFSET    status_vars_len
++ 2bytes Q_STATUS_VARS_LEN_OFFSET      status_vars_len
 ------------------------------------------------------------> 13bytes = QUERY_HEADER_LEN
 ? 1+4bytes Q_FLAGS2_CODE               flags2
 ? 1+8bytes Q_SQL_MODE_CODE             sql_mode
@@ -241,8 +241,8 @@ bool Query_log_event::write(IO_CACHE* file)
 ? 1+2bytes Q_CHARSET_DATABASE_CODE     charset_database_number
 ? 1+8bytes Q_TABLE_MAP_FOR_UPDATE_CODE table_map_for_update
 ------------------------------------------------------------ (start - start_of_status) bytes = MAX_SIZE_LOG_EVENT_STATUS
-* db_len+1                           db    
-* q_len                              query
+* db_len+1                             db    
+* q_len                                query
 -------------------------------------------------------------
   event_length= (uint) (start-buf) + get_post_header_size_for_derived() + db_len + 1 + q_len
 
