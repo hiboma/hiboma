@@ -131,8 +131,11 @@ bool Query_log_event::write(IO_CACHE* file)
     knows.
   */
   start_of_status= start= buf+QUERY_HEADER_LEN;
+
+
   if (flags2_inited)
   {
+    /* 値があるかどうか分からないので type を埋める必要がある */
     *start++= Q_FLAGS2_CODE;
     int4store(start, flags2);
     start+= 4;
@@ -235,7 +238,7 @@ bool Query_log_event::write(IO_CACHE* file)
 ? 1+2bytes Q_LC_TIME_NAMES_CODE        lc_time_names_number
 ? 1+2bytes Q_CHARSET_DATABASE_CODE     charset_database_number
 ? 1+8bytes Q_TABLE_MAP_FOR_UPDATE_CODE table_map_for_update
------------------------------------------------------------- (start - start_of_status) bytes
+------------------------------------------------------------ (start - start_of_status) bytes = MAX_SIZE_LOG_EVENT_STATUS
 * db_len+1                           db    
 * q_len                              query
 -------------------------------------------------------------
