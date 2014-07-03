@@ -622,7 +622,7 @@ SHOW BINLOG EVENTS 知っていればもっと早く気がついたかも?
 cp /usr/sbin/mysqld ~/rpmbuild/BUILD/mysql-5.0.82/sql
 cd ~/rpmbuild/BUILD/mysql-5.0.82/mysql-test
 ./mtr t/binlog.t
-``
+```
 
 ----
 
