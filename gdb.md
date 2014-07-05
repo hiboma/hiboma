@@ -1,7 +1,7 @@
 
-## システムコールをブレークポイントにする
+## システムコールを catchpointsにする
 
-`catch syscall` を使う
+ブレークポイントではなくて、 **catchpoints** らしい `catch syscall` を使う
 
 ```
 (gdb) catch syscall
