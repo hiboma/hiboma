@@ -1,3 +1,23 @@
+## ptype 型を表示
+
+```
+(gdb) ptype $_siginfo
+type = struct {
+    int si_signo;
+    int si_errno;
+    int si_code;
+    union {
+        int _pad[28];
+        struct {...} _kill;
+        struct {...} _timer;
+        struct {...} _rt;
+        struct {...} _sigchld;
+        struct {...} _sigfault;
+        struct {...} _sigpoll;
+    } _sifields;
+}
+```
+
 ## disassemble
 
 `/m` つけるとソースも一緒に出してくれて便利
