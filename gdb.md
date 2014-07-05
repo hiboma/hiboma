@@ -184,9 +184,11 @@ $1 = {si_signo = 11, si_errno = 0, si_code = 2, _sifields = {_pad = {4195720, 0,
         sival_ptr = 0x0}}, _rt = {si_pid = 4195720, si_uid = 0, si_sigval = {sival_int = 0, sival_ptr = 0x0}}, _sigchld = {si_pid = 4195720, si_uid = 0, si_status = 0, 
       si_utime = 0, si_stime = 98273043620560896}, _sigfault = {si_addr = 0x400588}, _sigpoll = {si_band = 4195720, si_fd = 0}}}
 
+/* シグナルが飛んできた理由。 2 = SEGV_ACCERR */
 (gdb) p $_siginfo.si_code
 $5 = 2
 
+/* フォールトを起こしたアドレス */
 (gdb) p $_siginfo._sifields._sigfault.si_addr 
 $4 = (void *) 0x400588
 
@@ -235,7 +237,7 @@ Mapped address spaces:
 
 と探していける
 
-## ヌルポ
+## ヌルポ で SIGSEGV を gdb する
 
 NULLポインタで SIGSEGV を起こす例
 
@@ -266,8 +268,12 @@ $1 = {si_signo = 11, si_errno = 0, si_code = 1, _sifields = {_pad = {0, 0, 0, 0,
       32767, 0, 0, 34542288, 0, 0, 0}, _kill = {si_pid = 0, si_uid = 0}, _timer = {si_tid = 0, si_overrun = 0, si_sigval = {sival_int = 0, sival_ptr = 0x0}}, _rt = {si_pid = 0, 
       si_uid = 0, si_sigval = {sival_int = 0, sival_ptr = 0x0}}, _sigchld = {si_pid = 0, si_uid = 0, si_status = 0, si_utime = 0, si_stime = 148357997289013248}, _sigfault = {
       si_addr = 0x0}, _sigpoll = {si_band = 0, si_fd = 0}}}
+
+/* 1 = SEGV_MAPERR */      
 (gdb) p $_siginfo.si_code
 $2 = 1
+
+/* ぬるぽ */
 (gdb) p $_siginfo._sifields._sigfault.si_addr 
 $3 = (void *) 0x0
 ```
