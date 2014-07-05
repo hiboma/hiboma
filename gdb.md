@@ -1,4 +1,40 @@
 
+## システムコールをブレークポイントにする
+
+`catch syscall` を使う
+
+```
+(gdb) catch syscall
+Catchpoint 1 (any syscall)
+(gdb) r
+Starting program: /vagrant/a.out 
+
+Catchpoint 1 (call to syscall 'brk'), 0x00007ffff7df318a in brk () from /lib64/ld-linux-x86-64.so.2
+Missing separate debuginfos, use: debuginfo-install glibc-2.12-1.132.el6.x86_64
+(gdb) bt
+#0  0x00007ffff7df318a in brk () from /lib64/ld-linux-x86-64.so.2
+#1  0x00007ffff7df29b5 in _dl_sysdep_start () from /lib64/ld-linux-x86-64.so.2
+#2  0x00007ffff7dde4a4 in _dl_start () from /lib64/ld-linux-x86-64.so.2
+#3  0x00007ffff7dddb08 in _start () from /lib64/ld-linux-x86-64.so.2
+#4  0x0000000000000001 in ?? ()
+#5  0x00007fffffffe7d3 in ?? ()
+#6  0x0000000000000000 in ?? ()
+(gdb) n
+Single stepping until exit from function brk,
+which has no line number information.
+0x00007ffff7df29b5 in _dl_sysdep_start () from /lib64/ld-linux-x86-64.so.2
+(gdb) bt
+#0  0x00007ffff7df29b5 in _dl_sysdep_start () from /lib64/ld-linux-x86-64.so.2
+#1  0x00007ffff7dde4a4 in _dl_start () from /lib64/ld-linux-x86-64.so.2
+#2  0x00007ffff7dddb08 in _start () from /lib64/ld-linux-x86-64.so.2
+#3  0x0000000000000001 in ?? ()
+#4  0x00007fffffffe7d3 in ?? ()
+#5  0x0000000000000000 in ?? ()
+(gdb) n
+```
+
+refs https://sourceware.org/gdb/onlinedocs/gdb/Set-Catchpoints.html#Set-Catchpoints
+
 ## SIGSEGV と $_siginfo
 
 SIGSEGV を出した際に ***$_siginfo*** を参照すると si_code から **SEGV_MAPERR** なのか **SEGV_ACCERR** なのかとか、アドレスだったりあれこれ取れるのだった
