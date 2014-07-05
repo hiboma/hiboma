@@ -135,9 +135,27 @@ refs https://sourceware.org/gdb/onlinedocs/gdb/Set-Catchpoints.html#Set-Catchpoi
 
 SIGSEGV を出した際に ***$_siginfo*** を参照すると si_code から **SEGV_MAPERR** なのか **SEGV_ACCERR** なのかとか、アドレスだったりあれこれ取れるのだった
 
-#### TODO
+#### siginfo の union
 
- * siginfo って union ?
+いろんなシグナルのデータを取れるように _sifields が union になっている
+
+```
+(gdb) ptype $_siginfo
+type = struct {
+    int si_signo;
+    int si_errno;
+    int si_code;
+    union {
+        int _pad[28];
+        struct {...} _kill;
+        struct {...} _timer;
+        struct {...} _rt;
+        struct {...} _sigchld;
+        struct {...} _sigfault;
+        struct {...} _sigpoll;
+    } _sifields;
+}
+```
 
 #### サンプルソース
 
