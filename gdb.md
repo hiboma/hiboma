@@ -1,5 +1,7 @@
 
-## info auxv auxiliary vector を表示
+## info auxv
+
+auxiliary vector を表示
 
 ```
 (gdb) info auxv
