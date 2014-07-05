@@ -1,3 +1,29 @@
+
+## auxiliary vector を表示
+
+```
+(gdb) info auxv
+33   AT_SYSINFO_EHDR      System-supplied DSO's ELF header 0x7ffff7ffb000
+16   AT_HWCAP             Machine-dependent CPU capability hints 0x78bfbff
+6    AT_PAGESZ            System page size               4096
+17   AT_CLKTCK            Frequency of times()           100
+3    AT_PHDR              Program headers for program    0x400040
+4    AT_PHENT             Size of program header entry   56
+5    AT_PHNUM             Number of program headers      8
+7    AT_BASE              Base address of interpreter    0x7ffff7ddd000
+8    AT_FLAGS             Flags                          0x0
+9    AT_ENTRY             Entry point of program         0x400420
+11   AT_UID               Real user ID                   500
+12   AT_EUID              Effective user ID              500
+13   AT_GID               Real group ID                  500
+14   AT_EGID              Effective group ID             500
+23   AT_SECURE            Boolean, was exec setuid-like? 0
+25   AT_RANDOM            Address of 16 random bytes     0x7fffffffe7b9
+31   AT_EXECFN            File name of executable        0x7fffffffefe9 "/vagrant/a.out"
+15   AT_PLATFORM          String identifying platform    0x7fffffffe7c9 "x86_64"
+0    AT_NULL              End of vector                  0x0
+```
+
 ## ptype 型を表示
 
 ```
