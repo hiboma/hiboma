@@ -1,3 +1,51 @@
+## disassemble
+
+`/m` つけるとソースも一緒に出してくれて便利
+
+```
+(gdb) disassemble /m
+Dump of assembler code for function main:
+7	{
+   0x0000000000400504 <+0>:	push   %rbp
+   0x0000000000400505 <+1>:	mov    %rsp,%rbp
+   0x0000000000400508 <+4>:	sub    $0x10,%rsp
+
+8		int i = 0;
+   0x000000000040050c <+8>:	movl   $0x0,-0xc(%rbp)
+
+9		for(i = 0; i < 3; i++) {
+   0x0000000000400513 <+15>:	movl   $0x0,-0xc(%rbp)
+   0x000000000040051a <+22>:	jmp    0x400539 <main+53>
+   0x0000000000400535 <+49>:	addl   $0x1,-0xc(%rbp)
+   0x0000000000400539 <+53>:	cmpl   $0x2,-0xc(%rbp)
+   0x000000000040053d <+57>:	jle    0x40051c <main+24>
+
+10			printf("＼(^o^)／\n");
+   0x000000000040051c <+24>:	mov    $0x400658,%edi
+   0x0000000000400521 <+29>:	callq  0x4003f0 <puts@plt>
+
+11			usleep(800000);
+   0x0000000000400526 <+34>:	mov    $0xc3500,%edi
+   0x000000000040052b <+39>:	mov    $0x0,%eax
+   0x0000000000400530 <+44>:	callq  0x400410 <usleep@plt>
+
+12		}
+13	
+14		void *a = null_string[0];
+   0x000000000040053f <+59>:	mov    0x2003ca(%rip),%rax        # 0x600910 <null_string>
+=> 0x0000000000400546 <+66>:	movzbl (%rax),%eax
+   0x0000000000400549 <+69>:	movsbq %al,%rax
+   0x000000000040054d <+73>:	mov    %rax,-0x8(%rbp)
+
+15		return 0;
+   0x0000000000400551 <+77>:	mov    $0x0,%eax
+
+16	}
+   0x0000000000400556 <+82>:	leaveq 
+   0x0000000000400557 <+83>:	retq   
+```
+
+refs http://visualgdb.com/gdbreference/commands/disassemble
 
 ## システムコールを catchpointsにする
 
