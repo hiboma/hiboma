@@ -109,7 +109,9 @@ Jul  6 04:01:43 vagrant-centos65 kernel:
 Jul  6 04:01:43 vagrant-centos65 kernel: Call Trace:
 ```
 
-レジスタのダンプがでてる。でも、これでデバッグするのは難儀だな
+レジスタのダンプがでてる。でも、これでデバッグするのは難儀だな...
+
+# SIGSEGV を出すコード
 
 ## bad_area
 
@@ -118,7 +120,7 @@ Jul  6 04:01:43 vagrant-centos65 kernel: Call Trace:
  * bad_area_access_error = SEGV_ACCERR
    * フォールト時の権限が vm_area_struct とマッチしなかった
 
-```
+```c
 static noinline void
 bad_area(struct pt_regs *regs, unsigned long error_code, unsigned long address)
 {
@@ -126,7 +128,7 @@ bad_area(struct pt_regs *regs, unsigned long error_code, unsigned long address)
 }
 ```
 
-```
+```c
 static noinline void
 bad_area_access_error(struct pt_regs *regs, unsigned long error_code,
 		      unsigned long address)
