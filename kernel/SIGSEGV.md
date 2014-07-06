@@ -132,8 +132,6 @@ bad_area_access_error(struct pt_regs *regs, unsigned long error_code,
 }
 ```
 
-##
-
 ```c
 static void
 __bad_area_nosemaphore(struct pt_regs *regs, unsigned long error_code,
@@ -204,7 +202,7 @@ force_sig_info_fault(int si_signo, int si_code, unsigned long address,
 
 ## __do_page_fault
 
-x86_64 では bad_area, bad_area_access_error 共に __do_page_fault でのみ使われている
+x86_64 では、 bad_area, bad_area_access_error 共に __do_page_fault でのみ使われている。ここを読めば SIGSEGV の仕組みを知れる
 
 ```
 static inline void __do_page_fault(struct pt_regs *regs, unsigned long address, unsigned long error_code)
