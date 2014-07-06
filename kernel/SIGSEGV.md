@@ -106,14 +106,10 @@ Jul  6 04:01:43 vagrant-centos65 kernel: Call Trace:
 
 ## bad_area
 
-```
-static noinline void
-bad_area_nosemaphore(struct pt_regs *regs, unsigned long error_code,
-		     unsigned long address)
-{
-	__bad_area_nosemaphore(regs, error_code, address, SEGV_MAPERR);
-}
-```
+ * bad_area = SEGV_MAPERR
+   * vm_area_struct がマップされていないアドレスにアクセスしようとした
+ * bad_area_access_error = SEGV_ACCERR
+   * フォールト時の権限が vm_area_struct とマッチしなかった
 
 ```
 static noinline void
@@ -131,6 +127,8 @@ bad_area_access_error(struct pt_regs *regs, unsigned long error_code,
 	__bad_area(regs, error_code, address, SEGV_ACCERR);
 }
 ```
+
+bad_area, bad_area_access_error 共に __bad_area_nosemaphore を呼び出す
 
 ```c
 static void
@@ -176,7 +174,7 @@ __bad_area_nosemaphore(struct pt_regs *regs, unsigned long error_code,
 }
 ```
 
-## force_sig_info_fault
+__bad_area_nosemaphore は force_sig_info_fault で SIGSEGV を強制して飛ばす
 
 ```c
 static void
