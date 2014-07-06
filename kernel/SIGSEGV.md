@@ -8,6 +8,12 @@ $ ./owata
 Segmentation fault
 ```
 
+## kernel.print-fatal-signals
+
+```
+sudo sysctl -w kernel.print-fatal-signals=1
+```
+
 ## bad_area
 
 ```
