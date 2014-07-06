@@ -10,17 +10,38 @@ $ ./owata
 Segmentation fault
 ```
 
+owata.c
+
+```c
+#include <stdlib.h>
+#include <stdio.h>
+
+static char *null_string = NULL;
+
+int main()
+{
+	int i = 0;
+	for(i = 0; i < 3; i++) {
+		printf("＼(^o^)／\n");
+		usleep(800000);
+	}
+	
+	void *a = null_string[0];
+	return 0;
+}
+```
+
 仕組みが分かれば SIGSEGV は怖くない
 
 ## sysctl debug.exception-trace
 
 syslog に segfault とかのログだすやつ
 
-```
+```sh
 $ sudo debug.exception-trace=1
 ```
 
-```
+```c
 static struct ctl_table debug_table[] = {
 #if defined(CONFIG_X86) || defined(CONFIG_PPC)
 	{
@@ -48,7 +69,7 @@ Jul  6 04:01:43 vagrant-centos65 kernel: a.out[25311]: segfault at 0 ip 00000000
 
 を探れるくらい?  SIGSEGV の際にログを出すのは show_signal_msg 
 
-```
+```c
 /*
  * Print out info about fatal segfaults, if the show_unhandled_signals
  * sysctl is set:
