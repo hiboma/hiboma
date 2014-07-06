@@ -8,10 +8,20 @@ $ ./owata
 Segmentation fault
 ```
 
-## debug.exception-trace
+## sysctl debug.exception-trace
 
 ```
-
+static struct ctl_table debug_table[] = {
+#if defined(CONFIG_X86) || defined(CONFIG_PPC)
+	{
+		.ctl_name	= CTL_UNNUMBERED,
+		.procname	= "exception-trace",
+		.data		= &show_unhandled_signals,
+		.maxlen		= sizeof(int),
+		.mode		= 0644,
+		.proc_handler	= proc_dointvec_minmax,
+		.extra1		= &zero,
+	},
 ```
 
 ## kernel.print-fatal-signals
