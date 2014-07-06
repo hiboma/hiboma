@@ -1,6 +1,8 @@
 # SIGSEGV
 
-```
+![owata](https://cloud.githubusercontent.com/assets/172456/3488071/eaca2692-04c5-11e4-92bc-1eda5879e1a0.gif)
+
+```console
 $ ./owata 
 ＼(^o^)／
 ＼(^o^)／
@@ -11,6 +13,8 @@ Segmentation fault
 仕組みが分かれば SIGSEGV は怖くない
 
 ## sysctl debug.exception-trace
+
+syslog に segfault とかのログだすやつ
 
 ```
 $ sudo debug.exception-trace=1
@@ -105,7 +109,7 @@ Jul  6 04:01:43 vagrant-centos65 kernel:
 Jul  6 04:01:43 vagrant-centos65 kernel: Call Trace:
 ```
 
-レジスタのダンプがでてる
+レジスタのダンプがでてる。でも、これでデバッグするのは難儀だな
 
 ## bad_area
 
