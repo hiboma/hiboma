@@ -11,6 +11,10 @@ Segmentation fault
 ## sysctl debug.exception-trace
 
 ```
+$ sudo debug.exception-trace=1
+```
+
+```
 static struct ctl_table debug_table[] = {
 #if defined(CONFIG_X86) || defined(CONFIG_PPC)
 	{
@@ -24,7 +28,20 @@ static struct ctl_table debug_table[] = {
 	},
 ```
 
-## kernel.print-fatal-signals
+/var/log/messages にフォールトを起こしたログを出す
+
+```
+Jul  6 04:01:43 vagrant-centos65 kernel: a.out[25311]: segfault at 0 ip 0000000000400546 sp 00007fff2fb08610 error 4 in a.out[400000+1000]
+```
+
+```
+	printk("%s%s[%d]: segfault at %lx ip %p sp %p error %lx",
+		task_pid_nr(tsk) > 1 ? KERN_INFO : KERN_EMERG,
+		tsk->comm, task_pid_nr(tsk), address,
+		(void *)regs->ip, (void *)regs->sp, error_code);
+```
+
+## sysctl kernel.print-fatal-signals
 
 ```
 sudo sysctl -w kernel.print-fatal-signals=1
