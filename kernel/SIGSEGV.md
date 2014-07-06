@@ -8,6 +8,8 @@ $ ./owata
 Segmentation fault
 ```
 
+仕組みが分かれば SIGSEGV は怖くない
+
 ## sysctl debug.exception-trace
 
 ```
@@ -38,6 +40,7 @@ Jul  6 04:01:43 vagrant-centos65 kernel: a.out[25311]: segfault at 0 ip 00000000
 
  * `at 0` から NULLポインタでのフォールト
  * ip から実行中のアドレス
+ * error 4 からユーザ空間でのフォールト
 
 を探れるくらい?  SIGSEGV の際にログを出すのは show_signal_msg 
 
