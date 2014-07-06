@@ -102,6 +102,8 @@ Jul  6 04:01:43 vagrant-centos65 kernel:
 Jul  6 04:01:43 vagrant-centos65 kernel: Call Trace:
 ```
 
+レジスタのダンプがでてる
+
 ## bad_area
 
 ```
