@@ -8,6 +8,12 @@ $ ./owata
 Segmentation fault
 ```
 
+## debug.exception-trace
+
+```
+
+```
+
 ## kernel.print-fatal-signals
 
 ```
