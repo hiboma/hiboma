@@ -14,6 +14,31 @@ Segmentation fault
 sudo sysctl -w kernel.print-fatal-signals=1
 ```
 
+```
+Jul  6 04:01:43 vagrant-centos65 kernel: a.out[25311]: segfault at 0 ip 0000000000400546 sp 00007fff2fb08610 error 4 in a.out[400000+1000]
+Jul  6 04:01:43 vagrant-centos65 kernel: a.out/25311: potentially unexpected fatal signal 11.
+Jul  6 04:01:43 vagrant-centos65 kernel: 
+Jul  6 04:01:43 vagrant-centos65 kernel: CPU 0 
+Jul  6 04:01:43 vagrant-centos65 kernel: Modules linked in: ipt_addrtype xt_conntrack iptable_filter ipt_MASQUERADE iptable_nat nf_nat nf_conntrack_ipv4 nf_conntrack nf_defrag_ipv4 ip_tables bridge stp llc dm_thin_pool dm_bio_prison dm_persistent_data dm_bufio libcrc32c vboxsf(U) ipv6 ppdev parport_pc parport sg i2c_piix4 i2c_core vboxguest(U) virtio_net ext4 jbd2 mbcache sd_mod crc_t10dif ahci virtio_pci virtio_ring virtio dm_mirror dm_region_hash dm_log dm_mod [last unloaded: scsi_wait_scan]
+Jul  6 04:01:43 vagrant-centos65 kernel: 
+Jul  6 04:01:43 vagrant-centos65 kernel: Pid: 25311, comm: a.out Tainted: G           --------------- H  2.6.32-431.el6.x86_64 #1 innotek GmbH VirtualBox/VirtualBox
+Jul  6 04:01:43 vagrant-centos65 kernel: RIP: 0033:[<0000000000400546>]  [<0000000000400546>] 0x400546
+Jul  6 04:01:43 vagrant-centos65 kernel: RSP: 002b:00007fff2fb08610  EFLAGS: 00010202
+Jul  6 04:01:43 vagrant-centos65 kernel: RAX: 0000000000000000 RBX: 0000000000000000 RCX: 00007ff900c7ecc0
+Jul  6 04:01:43 vagrant-centos65 kernel: RDX: 0000000000000000 RSI: 0000000000000000 RDI: 00007fff2fb085f0
+Jul  6 04:01:43 vagrant-centos65 kernel: RBP: 00007fff2fb08620 R08: 000000000000000b R09: 00007ff90117b700
+Jul  6 04:01:43 vagrant-centos65 kernel: R10: 00007fff2fb08390 R11: 0000000000000246 R12: 0000000000400420
+Jul  6 04:01:43 vagrant-centos65 kernel: R13: 00007fff2fb08720 R14: 0000000000000000 R15: 0000000000000000
+Jul  6 04:01:43 vagrant-centos65 kernel: FS:  00007ff90117b700(0000) GS:ffff880002200000(0000) knlGS:0000000000000000
+Jul  6 04:01:43 vagrant-centos65 kernel: CS:  0010 DS: 0000 ES: 0000 CR0: 000000008005003b
+Jul  6 04:01:43 vagrant-centos65 kernel: CR2: 0000000000000000 CR3: 000000003bdab000 CR4: 00000000000006f0
+Jul  6 04:01:43 vagrant-centos65 kernel: DR0: 0000000000000000 DR1: 0000000000000000 DR2: 0000000000000000
+Jul  6 04:01:43 vagrant-centos65 kernel: DR3: 0000000000000000 DR6: 00000000ffff4ff0 DR7: 0000000000000400
+Jul  6 04:01:43 vagrant-centos65 kernel: Process a.out (pid: 25311, threadinfo ffff88003bd56000, task ffff88003c7d8aa0)
+Jul  6 04:01:43 vagrant-centos65 kernel: 
+Jul  6 04:01:43 vagrant-centos65 kernel: Call Trace:
+```
+
 ## bad_area
 
 ```
