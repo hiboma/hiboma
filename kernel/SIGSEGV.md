@@ -8,6 +8,8 @@ $ ./owata
 Segmentation fault
 ```
 
+## bad_area
+
 ```
 static noinline void
 bad_area_nosemaphore(struct pt_regs *regs, unsigned long error_code,
@@ -31,6 +33,76 @@ bad_area_access_error(struct pt_regs *regs, unsigned long error_code,
 		      unsigned long address)
 {
 	__bad_area(regs, error_code, address, SEGV_ACCERR);
+}
+```
+
+##
+
+```c
+static void
+__bad_area_nosemaphore(struct pt_regs *regs, unsigned long error_code,
+		       unsigned long address, int si_code)
+{
+	struct task_struct *tsk = current;
+
+	/* User mode accesses just cause a SIGSEGV */
+	if (error_code & PF_USER) {
+		/*
+		 * It's possible to have interrupts off here:
+		 */
+		local_irq_enable();
+
+		/*
+		 * Valid to do another page fault here because this one came
+		 * from user space:
+		 */
+		if (is_prefetch(regs, error_code, address))
+			return;
+
+		if (is_errata100(regs, address))
+			return;
+
+		if (unlikely(show_unhandled_signals))
+			show_signal_msg(regs, error_code, address, tsk);
+
+		/* Kernel addresses are always protection faults: */
+		tsk->thread.cr2		= address;
+		tsk->thread.error_code	= error_code | (address >= TASK_SIZE);
+		tsk->thread.trap_no	= 14;
+
+		force_sig_info_fault(SIGSEGV, si_code, address, tsk, 0);
+
+		return;
+	}
+
+	if (is_f00f_bug(regs, address))
+		return;
+
+	no_context(regs, error_code, address);
+}
+```
+
+## force_sig_info_fault
+
+```c
+static void
+force_sig_info_fault(int si_signo, int si_code, unsigned long address,
+		     struct task_struct *tsk, int fault)
+{
+	unsigned lsb = 0;
+	siginfo_t info;
+
+	info.si_signo	= si_signo;
+	info.si_errno	= 0;
+	info.si_code	= si_code;
+	info.si_addr	= (void __user *)address;
+	if (fault & VM_FAULT_HWPOISON_LARGE)
+		lsb = hstate_index_to_shift(VM_FAULT_GET_HINDEX(fault)); 
+	if (fault & VM_FAULT_HWPOISON)
+		lsb = PAGE_SHIFT;
+	info.si_addr_lsb = lsb;
+
+	force_sig_info(si_signo, &info, tsk);
 }
 ```
 
