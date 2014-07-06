@@ -28,24 +28,54 @@ static struct ctl_table debug_table[] = {
 	},
 ```
 
-/var/log/messages にフォールトを起こしたログを出す
+/var/log/messages にフォールトを起こしたログを出す sysctl 設定。 CentOS6.5 は デフォルト = 1
 
 ```
 Jul  6 04:01:43 vagrant-centos65 kernel: a.out[25311]: segfault at 0 ip 0000000000400546 sp 00007fff2fb08610 error 4 in a.out[400000+1000]
 ```
 
+ログは出ても詳細は分かりにくいなー。
+
+ * `at 0` から NULLポインタでのフォールト
+ * ip から実行中のアドレス
+
+を探れるくらい?  SIGSEGV の際にログを出すのは show_signal_msg 
+
 ```
+/*
+ * Print out info about fatal segfaults, if the show_unhandled_signals
+ * sysctl is set:
+ */
+static inline void
+show_signal_msg(struct pt_regs *regs, unsigned long error_code,
+		unsigned long address, struct task_struct *tsk)
+{
+	if (!unhandled_signal(tsk, SIGSEGV))
+		return;
+
+	if (!printk_ratelimit())
+		return;
+
 	printk("%s%s[%d]: segfault at %lx ip %p sp %p error %lx",
 		task_pid_nr(tsk) > 1 ? KERN_INFO : KERN_EMERG,
 		tsk->comm, task_pid_nr(tsk), address,
 		(void *)regs->ip, (void *)regs->sp, error_code);
+
+	print_vma_addr(KERN_CONT " in ", regs->ip);
+
+	printk(KERN_CONT "\n");
+}
 ```
+
+*segfault* 以外にも *trap* とか *generate protection* とかで出すのもある
 
 ## sysctl kernel.print-fatal-signals
 
 ```
 sudo sysctl -w kernel.print-fatal-signals=1
 ```
+
+debug.exception-trace よりもうちょっと詳しいログを出してくれる
 
 ```
 Jul  6 04:01:43 vagrant-centos65 kernel: a.out[25311]: segfault at 0 ip 0000000000400546 sp 00007fff2fb08610 error 4 in a.out[400000+1000]
