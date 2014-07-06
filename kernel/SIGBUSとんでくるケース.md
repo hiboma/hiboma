@@ -73,6 +73,41 @@ mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_SHARED, 3, 0) = 0x7ffe6da4f000
 Bus error
 ```
 
+gdb でキャッチしよう
+
+```
+(gdb) r
+Starting program: /vagrant/a.out 
+
+Program received signal SIGBUS, Bus error.
+0x0000000000400665 in main () at mmap.c:28
+28	    p[0] = 1;
+
+/* si_code = 2 => BUS_ADRERR */
+(gdb) p $_siginfo.si_code
+$3 = 2
+
+/* SIGBUS を起こしたアドレス */
+(gdb) p $_siginfo._sifields._sigfault 
+$4 = {si_addr = 0x7ffff7ff9000}
+```
+
+si_code は下記の通りに定義されている
+
+```c
+/*
+ * SIGBUS si_codes
+ */
+#define BUS_ADRALN	(__SI_FAULT|1)	/* invalid address alignment */
+#define BUS_ADRERR	(__SI_FAULT|2)	/* non-existant physical address */
+#define BUS_OBJERR	(__SI_FAULT|3)	/* object specific hardware error */
+/* hardware memory error consumed on a machine check: action required */
+#define BUS_MCEERR_AR	(__SI_FAULT|4)
+/* hardware memory error detected in process but not consumed: action optional*/
+#define BUS_MCEERR_AO	(__SI_FAULT|5)
+#define NSIGBUS		5
+```
+
 Kazuho さんの書かれている [Apache+mod_sslでSIGBUSが発生した件](http://blog.kazuhooku.com/2014/05/apachemodsslsigbus.html) が同種のバグになる
 
 ### 実装の推測
