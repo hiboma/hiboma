@@ -90,6 +90,8 @@ USER_DS は下記の通りの定義
 
 ## __addr_ok マクロ
 
+アドレスが addr_limit 以下になっているかどうかをみるマクロ
+
 ```c
 #define __addr_ok(addr)					\
 	((unsigned long __force)(addr) <		\
