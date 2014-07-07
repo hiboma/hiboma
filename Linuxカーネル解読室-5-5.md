@@ -2,6 +2,8 @@
 
 ## 5.5.1 アドレス範囲チェック
 
+アドレスがユーザ空間を差しているかどうかを確認する術についての章
+
 thread_info の addr_limit がプロセスのアクセス可能範囲に使われている
 
 ```c
@@ -90,12 +92,65 @@ USER_DS は下記の通りの定義
 
 ## __addr_ok マクロ
 
-アドレスが addr_limit 以下になっているかどうかをみるマクロ
+アドレスが addr_limit 以下になっているか(ユーザ空間のアドレス) どうかをみるマクロ
 
 ```c
 #define __addr_ok(addr)					\
 	((unsigned long __force)(addr) <		\
 	 (current_thread_info()->addr_limit.seg))
+```
+
+access_ok マクロ
+
+ * x86 では type は使われていない
+ * __range_not_ok が 0 ならユーザ空間のアドレスとする
+
+```c
+/**
+ * access_ok: - Checks if a user space pointer is valid
+ * @type: Type of access: %VERIFY_READ or %VERIFY_WRITE.  Note that
+ *        %VERIFY_WRITE is a superset of %VERIFY_READ - if it is safe
+ *        to write to a block, it is always safe to read from it.
+ * @addr: User space pointer to start of block to check
+ * @size: Size of block to check
+ *
+ * Context: User context only.  This function may sleep.
+ *
+ * Checks if a pointer to a block of memory in user space is valid.
+ *
+ * Returns true (nonzero) if the memory block may be valid, false (zero)
+ * if it is definitely invalid.
+ *
+ * Note that, depending on architecture, this function probably just
+ * checks that the pointer is in the user space range - after calling
+ * this function, memory access functions may still return -EFAULT.
+ */
+#define access_ok(type, addr, size) (likely(__range_not_ok(addr, size) == 0))
+```
+
+__range_not_ok は addr + size が addr_limit を超えていないかをみるマクロ
+
+```c
+/*
+ * Test whether a block of memory is a valid user space address.
+ * Returns 0 if the range is valid, nonzero otherwise.
+ *
+ * This is equivalent to the following test:
+ * (u33)addr + (u33)size >= (u33)current->addr_limit.seg (u65 for x86_64)
+ *
+ * This needs 33-bit (65-bit for x86_64) arithmetic. We have a carry...
+ */
+
+#define __range_not_ok(addr, size)					\
+({									\
+	unsigned long flag, roksum;					\
+	__chk_user_ptr(addr);						\
+	asm("add %3,%1 ; sbb %0,%0 ; cmp %1,%4 ; sbb $0,%0"		\
+	    : "=&r" (flag), "=r" (roksum)				\
+	    : "1" (addr), "g" ((long)(size)),				\
+	      "rm" (current_thread_info()->addr_limit.seg));		\
+	flag;								\
+})
 ```
 
 ## 5.5.2 例外テーブルの作成
@@ -110,3 +165,29 @@ struct exception_table_entry {
 
  * insn 例外(fault) を許可するアドレス
  * fixup 例外発生後に継続して実行するアドレス
+
+## 5.5.2.1 例外テーブルと fixup
+
+
+```c
+int fixup_exception(struct pt_regs *regs)
+{
+	const struct exception_table_entry *fixup;
+
+//..    
+
+	fixup = search_exception_tables(regs->ip);
+	if (fixup) {
+		/* If fixup is less than 16, it means uaccess error */
+		if (fixup->fixup < 16) {
+			current_thread_info()->uaccess_err = -EFAULT;
+			regs->ip += fixup->fixup;
+			return 1;
+		}
+		regs->ip = fixup->fixup;
+		return 1;
+	}
+
+	return 0;
+}
+```
