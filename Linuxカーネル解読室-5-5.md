@@ -168,7 +168,6 @@ struct exception_table_entry {
 
 ## 5.5.2.1 例外テーブルと fixup
 
-
 ```c
 int fixup_exception(struct pt_regs *regs)
 {
@@ -191,4 +190,49 @@ int fixup_exception(struct pt_regs *regs)
 
 	return 0;
 }
+```
+
+fixup_exception は do_general_protection で呼び出される
+
+ * ユーザモードであれば SIGSEGV を飛ばす
+ * カーネルモードであれば fixup_exception で fixup? できないかどうかを試す
+
+```c
+dotraplinkage void __kprobes
+do_general_protection(struct pt_regs *regs, long error_code)
+{
+	struct task_struct *tsk;
+
+	conditional_sti(regs);
+
+	tsk = current;
+	if (!user_mode(regs))
+		goto gp_in_kernel;
+
+	tsk->thread.error_code = error_code;
+	tsk->thread.trap_no = 13;
+
+	if (show_unhandled_signals && unhandled_signal(tsk, SIGSEGV) &&
+			printk_ratelimit()) {
+		printk(KERN_INFO
+			"%s[%d] general protection ip:%lx sp:%lx error:%lx",
+			tsk->comm, task_pid_nr(tsk),
+			regs->ip, regs->sp, error_code);
+		print_vma_addr(" in ", regs->ip);
+		printk("\n");
+	}
+
+	force_sig(SIGSEGV, tsk);
+	return;
+
+gp_in_kernel:
+	if (fixup_exception(regs))
+		return;
+
+	tsk->thread.error_code = error_code;
+	tsk->thread.trap_no = 13;
+	if (notify_die(DIE_GPF, "general protection fault", regs,
+				error_code, 13, SIGSEGV) == NOTIFY_STOP)
+		return;
+	die("general protection fault", regs, error_code);
 ```
