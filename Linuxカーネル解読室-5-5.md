@@ -196,6 +196,7 @@ fixup_exception は do_general_protection で呼び出される
 
  * ユーザモードであれば SIGSEGV を飛ばす
  * カーネルモードであれば fixup_exception で fixup? できないかどうかを試す
+ * fixup でかなかったら oops ?
 
 ```c
 dotraplinkage void __kprobes
@@ -225,10 +226,12 @@ do_general_protection(struct pt_regs *regs, long error_code)
 	force_sig(SIGSEGV, tsk);
 	return;
 
+    /* カーネルモードでの例外ハンドリング */
 gp_in_kernel:
 	if (fixup_exception(regs))
 		return;
 
+    /* fixup できなかった */
 	tsk->thread.error_code = error_code;
 	tsk->thread.trap_no = 13;
 	if (notify_die(DIE_GPF, "general protection fault", regs,
