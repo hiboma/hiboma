@@ -88,6 +88,14 @@ USER_DS は下記の通りの定義
 #define TASK_SIZE_MAX	((1UL << 47) - PAGE_SIZE)
 ```
 
+## __addr_ok マクロ
+
+```c
+#define __addr_ok(addr)					\
+	((unsigned long __force)(addr) <		\
+	 (current_thread_info()->addr_limit.seg))
+```
+
 ## 5.5.2 例外テーブルの作成
 
 struct exception_table_entry
