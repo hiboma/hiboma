@@ -2,7 +2,7 @@
 
 ## 5.5.1 アドレス範囲チェック
 
-thread_info の addr_limit がプロセスのアクセス可能範囲
+thread_info の addr_limit がプロセスのアクセス可能範囲に使われている
 
 ```c
 struct thread_info {
@@ -11,8 +11,14 @@ struct thread_info {
 
 	mm_segment_t		addr_limit;
 ```
+
+addr_limit の取りうる値は次の通り
                
- * 32bit では 0x00000000 〜 0xC000000000
+ * 32bit では 0x00000000   〜 0xC000000000
+ * 62bit では 0x0000000000 〜 0x800000000000 (1 << 47)
+
+addr_limit の設定方法
+ 
  * set_fs で設定、get_fs で値を取り出す
 
 ```c 
@@ -20,7 +26,9 @@ struct thread_info {
 #define set_fs(x)	(current_thread_info()->addr_limit = (x))
 ```
 
-load_elf_binary の中で addr_limit が設定される
+#### addr_limit がどこで設定されるか?
+
+load_elf_binary の中で start_thread が呼ばれ addr_limit が設定される
 
 ```c
 static int load_elf_binary(struct linux_binprm *bprm, struct pt_regs *regs)
@@ -32,7 +40,7 @@ static int load_elf_binary(struct linux_binprm *bprm, struct pt_regs *regs)
 	retval = 0;
 ```
 
-start_thread の実装。 `set_fs(USER_DS)` で addr_limit のセット
+start_thread の実装。 `set_fs(USER_DS)` として addr_limit をセットしている
 
 ```c
 void
@@ -58,6 +66,8 @@ start_thread(struct pt_regs *regs, unsigned long new_ip, unsigned long new_sp)
 }
 EXPORT_SYMBOL_GPL(start_thread);
 ```
+
+USER_DS は下記の通りの定義
 
 ```
 #define USER_DS 	MAKE_MM_SEG(TASK_SIZE_MAX)
