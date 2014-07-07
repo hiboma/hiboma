@@ -174,8 +174,9 @@ int fixup_exception(struct pt_regs *regs)
 {
 	const struct exception_table_entry *fixup;
 
-//..    
+//...
 
+    /* ソート済み配列の2分探索 */
 	fixup = search_exception_tables(regs->ip);
 	if (fixup) {
 		/* If fixup is less than 16, it means uaccess error */
