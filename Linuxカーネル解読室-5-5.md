@@ -207,12 +207,14 @@ do_general_protection(struct pt_regs *regs, long error_code)
 	conditional_sti(regs);
 
 	tsk = current;
+    /* ユーザモードかどうか */
 	if (!user_mode(regs))
 		goto gp_in_kernel;
 
 	tsk->thread.error_code = error_code;
 	tsk->thread.trap_no = 13;
 
+    /* syslog に出すやつ */
 	if (show_unhandled_signals && unhandled_signal(tsk, SIGSEGV) &&
 			printk_ratelimit()) {
 		printk(KERN_INFO
