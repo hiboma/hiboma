@@ -2,7 +2,8 @@
 
 ptrace_notify でデバッガにイベントを通知する
 
- * SIGTRAP を siginfo_t にのせて飛ばす
+ * SIGTRAP を siginfo_t に載せて飛ばす
+ * デバッガは SIGTRAP をハンドリングして、デバッギを操作する
 
 ```c
 void ptrace_notify(int exit_code)
@@ -19,6 +20,8 @@ void ptrace_notify(int exit_code)
 
 	/* Let the debugger run.  */
 	spin_lock_irq(&current->sighand->siglock);
+
+    /* デバッギを TASK_TRACED = STATE T で止める */
 	ptrace_stop(exit_code, 1, &info);
 	spin_unlock_irq(&current->sighand->siglock);
 }
