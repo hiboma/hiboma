@@ -87,3 +87,16 @@ USER_DS は下記の通りの定義
  */
 #define TASK_SIZE_MAX	((1UL << 47) - PAGE_SIZE)
 ```
+
+## 5.5.2 例外テーブルの作成
+
+struct exception_table_entry
+
+```c
+struct exception_table_entry {
+	unsigned long insn, fixup;
+};
+```
+
+ * insn 例外(fault) を許可するアドレス
+ * fixup 例外発生後に継続して実行するアドレス
