@@ -196,7 +196,7 @@ fixup_exception は do_general_protection で呼び出される
 
  * ユーザモードであれば SIGSEGV を飛ばす
  * カーネルモードであれば fixup_exception で fixup? できないかどうかを試す
- * fixup でかなかったら oops ?
+  * fixup でかなかったら oops ?
 
 ```c
 dotraplinkage void __kprobes
