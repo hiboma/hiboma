@@ -1,9 +1,9 @@
-# limits
+# limits.h
 
  * http://www.unix.com/man-page/opensolaris/3head/limits.h/
  * http://libc.blog47.fc2.com/blog-entry-10.html
 
-型の規格の話は難しいなー
+型の規格の話は難しいなー。数値型以外にも **PASS_MAX** とかいろいろ定義されている
 
 ```c
 #if 0
