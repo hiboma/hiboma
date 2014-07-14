@@ -1,4 +1,4 @@
-## port 0番
+## TCP の port 0番
 
 ```c
 /* Obtain a reference to a local port for the given sock,
