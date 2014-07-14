@@ -193,3 +193,12 @@ __alloc_pages(unsigned int gfp_mask, unsigned int order,
 ```
 
 zone の min に protection の値を加算することで、zone の空きページが min 以下にならんようにするてな感じ?
+
+`echo m /proc/sysrq-trigeger` で printk しているコードは下記の通り
+
+```
+       /* mm/page_alloc.c */
+		printk("protections[]:");
+		for (i = 0; i < MAX_NR_ZONES; i++)
+			printk(" %lu", zone->protection[i]);
+```
