@@ -30,6 +30,8 @@ Apr 1 11:26:03 foobar kernel: Out of Memory: Killed process 15527 (httpd).
 
 ## higherzone_val
 
+**sysctl_lower_zone_protection** が使われているのは下記のコード
+
 ```c
 static unsigned long higherzone_val(struct zone *z, int max_zone,
 					int alloc_type)
@@ -67,10 +69,14 @@ static unsigned long higherzone_val(struct zone *z, int max_zone,
 pages += higherzone->pages_low * sysctl_lower_zone_protection;
 ```
 
-ZONE_HIGHMEM の min を元に計算される
+ * 上位のゾーンの **Low** のページ数 * sysctl_lower_zone_protection
+   * NORMAL なら HIGHMEM の low を元に計算
+   * DMA なら NORMAL の low を元に計算
+
+することになる   
 
 ```
-# ZONE_HIGHMEM の pages_log * 100 の例
+# ZONE_HIGHMEM の pages_low * 100 の例
 1024KB * 100 = 10MB
 ```
 
