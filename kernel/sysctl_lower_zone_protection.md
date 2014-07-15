@@ -203,6 +203,7 @@ zone の min に protection の値を加算することで、zone の空きペ�
        /* ZONE_DMA -> ZONE_NORMAL -> ZONE_HIGHMEM でイテレート */
 		printk("protections[]:");
 		for (i = 0; i < MAX_NR_ZONES; i++)
+            /* 単位は pages */
 			printk(" %lu", zone->protection[i]);
 ```
 
