@@ -200,6 +200,7 @@ zone の min に protection の値を加算することで、zone の空きペ�
 
 ```
        /* mm/page_alloc.c */
+       /* ZONE_DMA -> ZONE_NORMAL -> ZONE_HIGHMEM でイテレート */
 		printk("protections[]:");
 		for (i = 0; i < MAX_NR_ZONES; i++)
 			printk(" %lu", zone->protection[i]);
