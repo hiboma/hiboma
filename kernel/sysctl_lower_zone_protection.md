@@ -1,6 +1,8 @@
 # sysctl_lower_zone_protection
 
-とある OOM Killer
+CentOS6.5 だと zone->lowmem_reserve
+
+## とある OOM Killer
 
 ```
 Apr 1 11:26:02 foobar kernel: Free pages:       17752kB (1600kB HighMem)
@@ -202,3 +204,4 @@ zone の min に protection の値を加算することで、zone の空きペ�
 		for (i = 0; i < MAX_NR_ZONES; i++)
 			printk(" %lu", zone->protection[i]);
 ```
+
