@@ -4,6 +4,12 @@
 # CONFIG_X86_4G マクロ
 
  * 4g/4g split
+ * TLB フラッシュのコスト
+    * user mode <=> kernel mode
+    * system call
+    * page faults
+    * user mode での IRQ
+    * kernel space と user-space でのメモリコピー
 
 ```
 config X86_4G
