@@ -50,11 +50,31 @@ config X86_4G
 ```
 
  * [4G/4G split on x86, 64 GB RAM (and more) support](http://lwn.net/Articles/39283/)
- 
-> Despite highmem being utilized by a number of large-size caches, one of the most crutial data structures, the mem_map[], is allocated out of the 1 GB kernel VM.
 
-> With 32 GB of RAM the remaining 0.5
-GB lowmem area is quite limited and only represents 1.5% of all RAM.
+> Despite highmem being utilized by a number of large-size
+> caches, one of the most crutial data structures, the mem_map[], is
+> allocated out of the 1 GB kernel VM. With 32 GB of RAM the remaining 0.5
+> GB lowmem area is quite limited and only represents 1.5% of all RAM.
+> Various common workloads exhaust the lowmem area and create artificial
+> bottlenecks. With 64 GB RAM, the mem_map[] alone takes up nearly 1 GB of
+> RAM, making the kernel unable to boot.
+
+> the stack ends at 0xff000000 (4GB minus 16MB). The kernel has a 4GB lowmem
+
+>  This causes TLB
+> flushes, which are quite expensive, not so much in terms of TLB misses
+> (which are quite fast on Intel CPUs if they come from caches), but in
+> terms of the direct TLB flushing cost (%cr3 manipulation) done on
+> system-entry.
+ 
+> i'd guess that the 4G/4G patch is not worth the overhead for systems with
+> less than 16 GB of RAM (although exceptions might exist, for particularly
+> lowmem-intensive/sensitive workloads). 32 GB RAM systems run into lowmem
+> limitations quite frequently so the 4G/4G patch is quite recommended
+> there, and for 64 GB and larger systems it's a must i think.
+
+
+
 
  * http://docs.oracle.com/cd/E16338_01/server.112/b56317/appi_vlm.htm
  * http://sourceforge.jp/magazine/03/07/10/034238
