@@ -1,8 +1,8 @@
 # kernel-hugemem
 
+## CONFIG_X86_4G マクロ
 
-# CONFIG_X86_4G マクロ
-
+ * 3/1 split 0x00000000-0xbfffffff 〜 0xc0000000-0xffffffff
  * 4g/4g split
  * TLB フラッシュのコスト
     * user mode <=> kernel mode
@@ -47,9 +47,15 @@ config X86_4G
           systems that benefit from this option. Systems with less than 4 GB
           of RAM will rarely see a benefit from this option - but it's not
           out of question, the exact circumstances have to be considered.
+```
+
+ * [4G/4G split on x86, 64 GB RAM (and more) support](http://lwn.net/Articles/39283/)
  
-``` 
- * http://lwn.net/Articles/39283/
+> Despite highmem being utilized by a number of large-size caches, one of the most crutial data structures, the mem_map[], is allocated out of the 1 GB kernel VM.
+
+> With 32 GB of RAM the remaining 0.5
+GB lowmem area is quite limited and only represents 1.5% of all RAM.
+
  * http://docs.oracle.com/cd/E16338_01/server.112/b56317/appi_vlm.htm
  * http://sourceforge.jp/magazine/03/07/10/034238
 
