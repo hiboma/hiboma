@@ -110,6 +110,8 @@ arch/i386/kernel/setup.c
 
 arch/i386/mm/fault.c
 
+ * 4G/4G split で、kernel mode の際に fault して、アドレスが 0xc0000000-0xffffffff のハンドリング?
+
 ```c
 asmlinkage void do_page_fault(struct pt_regs *regs, unsigned long error_code) {
 
