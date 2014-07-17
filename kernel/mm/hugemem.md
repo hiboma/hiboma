@@ -1,5 +1,7 @@
 # kernel-hugemem
 
+32bit つらぽよー
+
 ## CONFIG_X86_4G マクロ
 
  * 3/1 split 0x00000000-0xbfffffff 〜 0xc0000000-0xffffffff
@@ -66,15 +68,19 @@ config X86_4G
 > (which are quite fast on Intel CPUs if they come from caches), but in
 > terms of the direct TLB flushing cost (%cr3 manipulation) done on
 > system-entry.
+
+> the typical cost of 4G/4G on typical x86 servers is +3 usecs of syscall
+> latency (this is in addition to the ~1 usec null syscall latency).
+> Depending on the workload this can cause a typical measurable wall-clock
+> overhead from 0% to 30%, for typical application workloads (DB workload,
+> networking workload, etc.). Isolated microbenchmarks can show a bigger
+> slowdown as well - due to the syscall latency increase.
  
 > i'd guess that the 4G/4G patch is not worth the overhead for systems with
 > less than 16 GB of RAM (although exceptions might exist, for particularly
 > lowmem-intensive/sensitive workloads). 32 GB RAM systems run into lowmem
 > limitations quite frequently so the 4G/4G patch is quite recommended
 > there, and for 64 GB and larger systems it's a must i think.
-
-
-
 
  * http://docs.oracle.com/cd/E16338_01/server.112/b56317/appi_vlm.htm
  * http://sourceforge.jp/magazine/03/07/10/034238
