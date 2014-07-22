@@ -165,12 +165,16 @@ struct vm_struct {
 
 __get_vm_area の実装を追って行く
 
+ * start - end のアドレス内で vm_sturct を割り当てる
+ * start - end (VmallocTotal?) で収まらなきゃ、"allocation failed: out of vmalloc space - use vmalloc=<size> to increase size.\n" を出す
+
+のが肝だろうか 
+
 ```c
 struct vm_struct *__get_vm_area(unsigned long size, unsigned long flags,
 				unsigned long start, unsigned long end)
 {
-    /* start = VMALLOC_START */
-    /* end   = VMALLOC_END   */
+    /* start = VMALLOC_START,  end   = VMALLOC_END   */
 	struct vm_struct **p, *tmp, *area;
 	unsigned long align = 1;
 	unsigned long addr;
@@ -247,6 +251,8 @@ out:
 ```
 
 ## map_vm_area
+
+vm_struct を init_mm? の PGD にぶら下げる?
 
 ```c
 int map_vm_area(struct vm_struct *area, pgprot_t prot, struct page ***pages)
