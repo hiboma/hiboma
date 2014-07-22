@@ -163,10 +163,14 @@ struct vm_struct {
 };
 ```
 
+__get_vm_area の実装を追って行く
+
 ```c
 struct vm_struct *__get_vm_area(unsigned long size, unsigned long flags,
 				unsigned long start, unsigned long end)
 {
+    /* start = VMALLOC_START */
+    /* end   = VMALLOC_END   */
 	struct vm_struct **p, *tmp, *area;
 	unsigned long align = 1;
 	unsigned long addr;
@@ -181,6 +185,8 @@ struct vm_struct *__get_vm_area(unsigned long size, unsigned long flags,
 
 		align = 1ul << bit;
 	}
+
+    /* アラインされた開始のアドレス */
 	addr = ALIGN(start, align);
 
 	area = kmalloc(sizeof(*area), GFP_KERNEL);
@@ -198,6 +204,7 @@ struct vm_struct *__get_vm_area(unsigned long size, unsigned long flags,
 
 	write_lock(&vmlist_lock);
     /* vmlist (strcut vm_struct) がグローバル変数。 vmalloc 用の vm_struct リスト */
+    /* start 〜 end 内で収まるように走査? */
 	for (p = &vmlist; (tmp = *p) != NULL ;p = &tmp->next) {
 		if ((unsigned long)tmp->addr < addr) {
 			if((unsigned long)tmp->addr + tmp->size >= addr)
