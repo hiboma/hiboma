@@ -127,6 +127,13 @@ struct vm_struct *get_vm_area(unsigned long size, unsigned long flags)
 
 #### VMALLOC_START
 
+i386
+
+```c
+#define VMALLOC_START	(((unsigned long) high_memory + vmalloc_earlyreserve + \
+			2*VMALLOC_OFFSET-1) & ~(VMALLOC_OFFSET-1))
+```
+
 #### VMALLOC_END
 
 
