@@ -125,17 +125,27 @@ struct vm_struct *get_vm_area(unsigned long size, unsigned long flags)
 }
 ```
 
-#### VMALLOC_START
+### VMALLOC_START, VMALLOC_END
 
-i386
+#### i386
+
+high_memory と vmalloc_earlyreserve のサイズで可変になる
 
 ```c
 #define VMALLOC_START	(((unsigned long) high_memory + vmalloc_earlyreserve + \
 			2*VMALLOC_OFFSET-1) & ~(VMALLOC_OFFSET-1))
+
+# define VMALLOC_END	(PKMAP_BASE-2*PAGE_SIZE)
 ```
 
-#### VMALLOC_END
+#### x86_64
 
+固定のアドレスになっている
+
+```c
+#define VMALLOC_START    0xffffff0000000000UL
+#define VMALLOC_END      0xffffff7fffffffffUL
+```
 
 __get_vm_area で vm_struct を確保する ( vm_area_struct とは違うので注意 )。
 
