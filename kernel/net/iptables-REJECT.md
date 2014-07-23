@@ -1,8 +1,16 @@
 # iptables REJECT
 
-_net/ipv4/netfilter/ipt_REJECT.c_ に実装がある。何となく意味を類推して読めるレベル
+## sample
 
-ところで ipt_DROP.c は無い。
+```
+iptables -A FORWARD -p TCP --dport 22 -j REJECT --reject-with tcp-reset
+```
+
+## ソース
+
+_net/ipv4/netfilter/ipt_REJECT.c_ に実装がある。何となく意味を類推して読めるレベル。ターゲットがどのようにして呼び出されるかは複雑そうだけど、ターゲット個別に見ると処理はシンプル (...?)
+
+ところでよく対比の対象となる DROPターゲットの ipt_DROP.c は無い。 ( NF_DROP を辿るのがよさそ)
 
 ## reject_tg_reg
 
@@ -13,11 +21,19 @@ _net/ipv4/netfilter/ipt_REJECT.c_ に実装がある。何となく意味を類�
 static struct xt_target reject_tg_reg __read_mostly = {
 	.name		= "REJECT",
 	.family		= NFPROTO_IPV4,
+    /* ターゲットにマッチした際の処理 */
 	.target		= reject_tg,
+
 	.targetsize	= sizeof(struct ipt_reject_info),
+
+    /* 有効なテーブル */
 	.table		= "filter",
+
+    /* 有効なフックの種類か? /
 	.hooks		= (1 << NF_INET_LOCAL_IN) | (1 << NF_INET_FORWARD) |
 			  (1 << NF_INET_LOCAL_OUT),
+
+    /* エントリ追加時のバリデーション */
 	.checkentry	= reject_tg_check,
 	.me		= THIS_MODULE,
 };
@@ -38,7 +54,7 @@ module_exit(reject_tg_exit);
 
 struct ipt_reject_info とその中身.  **--reject-with** をどれにするかしか保持していない
 
-```
+```c
 #ifndef _IPT_REJECT_H
 #define _IPT_REJECT_H
 
@@ -61,12 +77,6 @@ struct ipt_reject_info {
 #endif /*_IPT_REJECT_H*/
 ```
 
-## sample
-
-```
-iptables -A FORWARD -p TCP --dport 22 -j REJECT --reject-with tcp-reset
-```
-
 ## --reject-with
 
  * icmp-net-unreachable,
@@ -78,7 +88,7 @@ iptables -A FORWARD -p TCP --dport 22 -j REJECT --reject-with tcp-reset
  * tcp-reset
  * echo-reply
 
-**--reject-with** によって下記の通りに応答を返す分岐が実装されているが、 reject_tg を見ると案外分かりやすい
+**--reject-with** によって下記の通りに応答を返す分岐が実装されているが、 reject_tg を見ると案外分かりやすい。それぞれの詳細は ICMP のプロトコル仕様と TCP RST を追うのがよいかな
 
 ```c
 static unsigned int
@@ -122,11 +132,11 @@ reject_tg(struct sk_buff *skb, const struct xt_target_param *par)
 }
 ```
 
-## .checkentry
+## .checkentry is なに?
 
 ルール(エントリ?)追加時のバリデーションなのかな?
 
-```
+```c
 static bool reject_tg_check(const struct xt_tgchk_param *par)
 {
 	const struct ipt_reject_info *rejinfo = par->targinfo;
