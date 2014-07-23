@@ -21,16 +21,5 @@ int getsockopt(int sockfd, int level, int optname, void *optval, socklen_t *optl
 int setsockopt(int sockfd, int level, int optname, const void *optval, socklen_t optlen);
 ```
 
-~~0x40~~, 0x41 のオプション名が分からないなー
+0x40, 0x41 のオプション名が分からないなー
 
-```
-/* flags, invflags: */
-#define IPT_CONNTRACK_STATE     0x01
-#define IPT_CONNTRACK_PROTO     0x02
-#define IPT_CONNTRACK_ORIGSRC   0x04
-#define IPT_CONNTRACK_ORIGDST   0x08
-#define IPT_CONNTRACK_REPLSRC   0x10
-#define IPT_CONNTRACK_REPLDST   0x20
-#define IPT_CONNTRACK_STATUS    0x40
-#define IPT_CONNTRACK_EXPIRES   0x80
-```
