@@ -52,3 +52,16 @@ int setsockopt(int sockfd, int level, int optname, const void *optval, socklen_t
 /* Something else about the proto */
 #define NFC_IP_PROTO_UNKNOWN	0x2000
 ```
+
+```
+int nf_setsockopt(struct sock *sk, int pf, int val, char __user *opt,
+		  int len)
+{
+	return nf_sockopt(sk, pf, val, opt, &len, 0);
+}
+
+int nf_getsockopt(struct sock *sk, int pf, int val, char __user *opt, int *len)
+{
+	return nf_sockopt(sk, pf, val, opt, len, 1);
+}
+```
