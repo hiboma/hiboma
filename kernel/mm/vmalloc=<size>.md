@@ -32,6 +32,11 @@ vmalloc の配置イメージ
 
 /proc/meminfo の統計値をだしている関数
 
+ * vm_list ... vm_struct のリスト
+   * vm_struct のサイズを加算したもの vmi.used = **VmallocUsed**
+   * vm_struct の空きスペース? vmi.largest_chunk = **VmallocChunk**
+   * VMALLOC_END-VMALLOC_START = **VmallocTotal**
+
 ```c
 static struct vmalloc_info get_vmalloc_info(void)
 {
@@ -65,7 +70,10 @@ static struct vmalloc_info get_vmalloc_info(void)
 }
 ```
 
-VMALLOC_START
+## VMALLOC_START
+
+ * high_memory
+ * vmalloc_earlyreserve
 
 ```
 #define VMALLOC_START	(((unsigned long) high_memory + vmalloc_earlyreserve + \
