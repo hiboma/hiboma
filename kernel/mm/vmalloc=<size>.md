@@ -2,7 +2,7 @@
 
 ## 2.6.9
 
-fs/proc/proc_misc.c
+/proc/meminfo のコードは _fs/proc/proc_misc.c_ に書かれている
 
 ```c
 //...
@@ -23,8 +23,14 @@ fs/proc/proc_misc.c
 		);
 ```
 
- * http://www.csn.ul.ie/~mel/projects/vm/guide/text/graphs/vmalloc_address.png
- * http://img.my.csdn.net/uploads/201105/8/0_1304840785zUQS.gif
+vmalloc の配置イメージ
+
+![](http://www.csn.ul.ie/~mel/projects/vm/guide/text/graphs/vmalloc_address.png)
+![](http://img.my.csdn.net/uploads/201105/8/0_1304840785zUQS.gif)
+
+## get_vmalloc_info
+
+/proc/meminfo の統計値をだしている関数
 
 ```c
 static struct vmalloc_info get_vmalloc_info(void)
