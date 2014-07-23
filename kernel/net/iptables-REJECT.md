@@ -1,6 +1,13 @@
 # iptables REJECT
 
-ipt_REJECT.c に実装がある。何となく意味を類推して読めるレベル
+_net/ipv4/netfilter/ipt_REJECT.c_ に実装がある。何となく意味を類推して読めるレベル
+
+ところで ipt_DROP.c は無い。
+
+## reject_tg_reg
+
+ * **struct xt_target** が iptables のターゲット ?
+ * reject_tg_reg として扱われている
 
 ```c
 static struct xt_target reject_tg_reg __read_mostly = {
@@ -29,7 +36,7 @@ module_init(reject_tg_init);
 module_exit(reject_tg_exit);
 ```
 
-struct ipt_reject_info と中身
+struct ipt_reject_info とその中身.  **--reject-with** をどれにするかしか保持していない
 
 ```
 #ifndef _IPT_REJECT_H
@@ -71,7 +78,7 @@ iptables -A FORWARD -p TCP --dport 22 -j REJECT --reject-with tcp-reset
  * tcp-reset
  * echo-reply
 
-**--reject-with** によって下記の通りに応答を返す分岐が実装されている
+**--reject-with** によって下記の通りに応答を返す分岐が実装されているが、 reject_tg を見ると案外分かりやすい
 
 ```c
 static unsigned int
@@ -112,5 +119,30 @@ reject_tg(struct sk_buff *skb, const struct xt_target_param *par)
 	}
 
 	return NF_DROP;
+}
+```
+
+## .checkentry
+
+ルール(エントリ?)追加時のバリデーションなのかな?
+
+```
+static bool reject_tg_check(const struct xt_tgchk_param *par)
+{
+	const struct ipt_reject_info *rejinfo = par->targinfo;
+	const struct ipt_entry *e = par->entryinfo;
+
+	if (rejinfo->with == IPT_ICMP_ECHOREPLY) {
+		printk("ipt_REJECT: ECHOREPLY no longer supported.\n");
+		return false;
+	} else if (rejinfo->with == IPT_TCP_RESET) {
+		/* Must specify that it's a TCP packet */
+		if (e->ip.proto != IPPROTO_TCP
+		    || (e->ip.invflags & XT_INV_PROTO)) {
+			printk("ipt_REJECT: TCP_RESET invalid for non-tcp\n");
+			return false;
+		}
+	}
+	return true;
 }
 ```
