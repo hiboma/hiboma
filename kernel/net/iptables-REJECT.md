@@ -14,6 +14,8 @@ _net/ipv4/netfilter/ipt_REJECT.c_ に実装がある。何となく意味を類�
 
 ## reject_tg_reg
 
+ * xt = extensions らしい。
+   * 拡張扱いなの?
  * **struct xt_target** が iptables のターゲット ?
  * reject_tg_reg として扱われている
 
@@ -52,7 +54,7 @@ module_init(reject_tg_init);
 module_exit(reject_tg_exit);
 ```
 
-struct ipt_reject_info とその中身.  **--reject-with** をどれにするかしか保持していない
+struct ipt_reject_info とその中身を見てみよう  **--reject-with** をどれにするかしか保持していない
 
 ```c
 #ifndef _IPT_REJECT_H
@@ -77,7 +79,7 @@ struct ipt_reject_info {
 #endif /*_IPT_REJECT_H*/
 ```
 
-## --reject-with
+## --reject-with の種類
 
  * icmp-net-unreachable,
  * icmp-host-unreachable
@@ -87,6 +89,8 @@ struct ipt_reject_info {
  * icmp-host-prohibited
  * tcp-reset
  * echo-reply
+
+いっぱいあるけど、日和ってはいけない
 
 **--reject-with** によって下記の通りに応答を返す分岐が実装されているが、 reject_tg を見ると案外分かりやすい。それぞれの詳細は ICMP のプロトコル仕様と TCP RST を追うのがよいかな
 
@@ -131,6 +135,8 @@ reject_tg(struct sk_buff *skb, const struct xt_target_param *par)
 	return NF_DROP;
 }
 ```
+
+send_reset, send_unreach は後で。
 
 ## .checkentry is なに?
 
