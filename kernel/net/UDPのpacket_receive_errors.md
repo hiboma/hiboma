@@ -80,7 +80,7 @@ static int __udp_queue_rcv_skb(struct sock *sk, struct sk_buff *skb)
 
 ## sock_queue_rcv_skb ?
 
- * &sk->sk_rmem_alloc) >= sk->sk_rcvbuf で ENOMEM
+ * &sk->sk_rmem_alloc >= sk->sk_rcvbuf で ENOMEM
 
 ```c
 int sock_queue_rcv_skb(struct sock *sk, struct sk_buff *skb)
@@ -127,3 +127,5 @@ out:
 }
 EXPORT_SYMBOL(sock_queue_rcv_skb);
 ```
+
+**net.core.rmem_alloc** を上げたら解消するかもってのはこういう原理なのですな
