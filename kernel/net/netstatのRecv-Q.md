@@ -1,0 +1,73 @@
+# netstat の Recv-Q
+
+
+```
+[root@*** ~]# cat /proc/net/udp
+  sl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt   uid  timeout inode ref pointer drops             
+  31: 00000000:A7E4 00000000:0000 07 00000000:00000000 00:00000000 00000000   494        0 13344 2 ffff88086aca8700 0          
+  42: 00000000:006F 00000000:0000 07 00000000:00000000 00:00000000 00000000     0        0 11656 2 ffff88086aca8080 0          
+  54: 4165A8C0:007B 00000000:0000 07 00000000:00000000 00:00000000 00000000     0        0 12127 2 ffff88106adc00c0 0          
+  54: CFD95EDB:007B 00000000:0000 07 00000000:00000000 00:00000000 00000000     0        0 12126 2 ffff88106989d0c0 0          
+  54: 0100007F:007B 00000000:0000 07 00000000:00000000 00:00000000 00000000     0        0 12125 2 ffff88106989d400 0          
+  54: 00000000:007B 00000000:0000 07 00000000:00000000 00:00000000 00000000     0        0 12117 2 ffff88106989da80 0          
+  70: 00000000:028B 00000000:0000 07 00000000:00000000 00:00000000 00000000     0        0 11660 2 ffff88086aca83c0 0          
+  91: 00000000:5EA0 00000000:0000 07 00000000:00037F00 00:00000000 00000000   494        0 13359 2 ffff88086aca8a40 0          
+```
+
+## IPv4 + UDP
+
+sk_rmem_alloc_get の数値を読んでる
+
+```
+static void udp4_format_sock(struct sock *sp, struct seq_file *f,
+		int bucket, int *len)
+{
+	struct inet_sock *inet = inet_sk(sp);
+	__be32 dest = inet->daddr;
+	__be32 src  = inet->rcv_saddr;
+	__u16 destp	  = ntohs(inet->dport);
+	__u16 srcp	  = ntohs(inet->sport);
+
+	seq_printf(f, "%4d: %08X:%04X %08X:%04X"
+		" %02X %08X:%08X %02X:%08lX %08X %5d %8d %lu %d %p %d%n",
+		bucket, src, srcp, dest, destp, sp->sk_state,
+		sk_wmem_alloc_get(sp),   /* これが tx_queue */
+		sk_rmem_alloc_get(sp),   /* これが rx_queue */
+		0, 0L, 0, sock_i_uid(sp), 0, sock_i_ino(sp),
+		atomic_read(&sp->sk_refcnt), sp,
+		atomic_read(&sp->sk_drops), len);
+}
+
+int udp4_seq_show(struct seq_file *seq, void *v)
+{
+	if (v == SEQ_START_TOKEN)
+		seq_printf(seq, "%-127s\n",
+			   "  sl  local_address rem_address   st tx_queue "
+			   "rx_queue tr tm->when retrnsmt   uid  timeout "
+			   "inode ref pointer drops");
+	else {
+		struct udp_iter_state *state = seq->private;
+		int len;
+
+		udp4_format_sock(v, seq, state->bucket, &len);
+		seq_printf(seq, "%*s\n", 127 - len, "");
+	}
+	return 0;
+}
+```
+
+sk_rmem_alloc_get の中身は下記の通りで、 **sock->sk_rmem_alloc** である
+
+```
+/**
+ * sk_rmem_alloc_get - returns read allocations
+ * @sk: socket
+ *
+ * Returns sk_rmem_alloc
+ */
+static inline int sk_rmem_alloc_get(const struct sock *sk)
+{
+	return atomic_read(&sk->sk_rmem_alloc);
+	
+}
+```
