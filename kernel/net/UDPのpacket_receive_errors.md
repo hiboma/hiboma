@@ -5,7 +5,7 @@
 
 ## とある td-agent サーバー
 
-`netstat -su` で表示される `packet receive errors` の意味が分からない
+`netstat -su` で表示される `packet receive errors` の意味が分からないのでソースを読んで調べる
 
 ```
 [root@*** ~]# netstat -su
@@ -16,7 +16,7 @@ Udp:
     16445537 packets sent
 ```
 
-strace を取ると `packet receive errors` は _/proc/net/snmp_ を読んでるのが分かる
+`netstat -su` の strace を取ると `packet receive errors` は _/proc/net/snmp_ を読んでるのが分かる
 
 ```
 [root@*** ~]# cat /proc/net/snmp
@@ -34,7 +34,7 @@ UdpLite: InDatagrams NoPorts InErrors OutDatagrams RcvbufErrors SndbufErrors
 UdpLite: 0 0 0 0 0 0
 ```
 
-**InDatagrams** で grep すると snmp4_udp_list なる配列が見つかる。 **RcvbufErrors** がそれっぽい数値に見える
+/proc/net/snmp に書かれいてる文字列を元に **InDatagrams** で grep すると snmp4_udp_list なる配列が見つかる。 **RcvbufErrors** がそれっぽい数値に見える
 
 ```c
 static const struct snmp_mib snmp4_udp_list[] = {
@@ -53,6 +53,7 @@ static const struct snmp_mib snmp4_udp_list[] = {
 UDP_MIB_RCVBUFERRORS は **__udp_queue_rcv_skb** で統計を取っている。
 
  * sock_queue_rcv_skb が **ENOMEM** を返したら UDP_MIB_RCVBUFERRORS 統計値が ++ される
+ * ネットワークスタックの中で何が起こっているのか調べるには これらの数値を追うしかなさげ
 
 ```c
 static int __udp_queue_rcv_skb(struct sock *sk, struct sk_buff *skb)
@@ -80,17 +81,6 @@ static int __udp_queue_rcv_skb(struct sock *sk, struct sk_buff *skb)
 	return 0;
 }
 ```
-
-ところで **__udp_queue_rcv_skb** は UDPのバックログに突っ込むメソッド
-
-```c
-struct proto udp_prot = {
-
-//...
-	.backlog_rcv	   = __udp_queue_rcv_skb,
-```
-
-バックロッグに追加できるかどうかの判定に使われている様子。当然、バックログに突っ込めなかったパケットは DROP される
 
 ## sock_queue_rcv_skb ?
 
@@ -145,7 +135,19 @@ EXPORT_SYMBOL(sock_queue_rcv_skb);
 
 **net.core.rmem_alloc** を上げたら解消するかもってのはこういう原理なのですな
 
+
 ## sk->sk_backlog_rcv
+
+ところで **__udp_queue_rcv_skb** は UDPのバックログに突っ込むメソッドである
+
+```c
+struct proto udp_prot = {
+
+//...
+	.backlog_rcv	   = __udp_queue_rcv_skb,
+```
+
+バックロッグに追加できるかどうかの判定に使われている様子。当然、バックログに突っ込めなかったパケットは DROP される
 
 inet_crete で struct sock の初期化の際に sk_backlog_rcv メソッドがセットされる
 
@@ -162,7 +164,7 @@ static inline int sk_backlog_rcv(struct sock *sk, struct sk_buff *skb)
 }
 ```
 
-sk_backlog_rcv は sk_receive_skb で呼び出されている
+sk_backlog_rcv は sk_receive_skb で呼び出されている。 sk_receive_skb 呼び出すソースが見つからない
 
 ```c
 int sk_receive_skb(struct sock *sk, struct sk_buff *skb, const int nested)
