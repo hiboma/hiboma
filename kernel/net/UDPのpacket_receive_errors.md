@@ -1,5 +1,8 @@
 # netstat -su (UDP) の packet receive errors
 
+ * UDP のバックログが溢れてパケットが DROP された際に出る
+ * rmem_alloc を上げるなどして対応可能
+
 ## とある td-agent サーバー
 
 `netstat -su` で表示される `packet receive errors` の意味が分からない
@@ -141,3 +144,11 @@ EXPORT_SYMBOL(sock_queue_rcv_skb);
 ```
 
 **net.core.rmem_alloc** を上げたら解消するかもってのはこういう原理なのですな
+
+## sk->sk_backlog_rcv
+
+メソッドがセットされる
+
+```c
+	sk->sk_backlog_rcv = sk->sk_prot->backlog_rcv;
+```
