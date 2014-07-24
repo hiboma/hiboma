@@ -18,6 +18,8 @@ Udp:
 
 だがしかし、この数値が正確に意味するが分からないのでソースを読んで調べます
 
+## packet receive errors
+
 `netstat -su` の strace を取ると `packet receive errors` は _/proc/net/snmp_ を読んでるのが分かる
 
 ```
@@ -36,7 +38,7 @@ UdpLite: InDatagrams NoPorts InErrors OutDatagrams RcvbufErrors SndbufErrors
 UdpLite: 0 0 0 0 0 0
 ```
 
-/proc/net/snmp に書かれいてる文字列を元に **InDatagrams** で grep すると snmp4_udp_list なる配列が見つかる。 **RcvbufErrors** がそれっぽい数値に見える
+/proc/net/snmp に書かれいてる文字列を元に、カーネルのソースを **InDatagrams** で grep すると snmp4_udp_list なる配列が見つかる。 **RcvbufErrors** がそれっぽい数値に見える
 
 ```c
 static const struct snmp_mib snmp4_udp_list[] = {
@@ -50,12 +52,13 @@ static const struct snmp_mib snmp4_udp_list[] = {
 };
 ```
 
+UDP_MIB_RCVBUFERRORS を探っていきます
+
 ## ("RcvbufErrors", UDP_MIB_RCVBUFERRORS),
 
 UDP_MIB_RCVBUFERRORS は **__udp_queue_rcv_skb** で統計を取っている。
 
  * sock_queue_rcv_skb が **ENOMEM** を返したら UDP_MIB_RCVBUFERRORS 統計値が ++ される
- * ネットワークスタックの中で何が起こっているのか調べるには これらの数値を追うしかなさげ
 
 ```c
 static int __udp_queue_rcv_skb(struct sock *sk, struct sk_buff *skb)
@@ -84,13 +87,15 @@ static int __udp_queue_rcv_skb(struct sock *sk, struct sk_buff *skb)
 }
 ```
 
-## sock_queue_rcv_skb ?
+ネットワークスタックの中の異常を調べるにはこれらの数値を追うしかなさげ。
+
+## sock_queue_rcv_skb の実装は ?
 
  * sk_buff を sock の sk_receive_queue に繋ぐ
  * `&sk->sk_rmem_alloc >= sk->sk_rcvbuf` の際に ENOMEM を返す
  * sk_data_ready で通知
 
-ENOMEM を返した際は、プロセスに通知もされずしれっと DROP されている? 
+**ENOMEM** を返した際は、プロセスに通知もされずしれっと DROP されている? 
 
 ```c
 int sock_queue_rcv_skb(struct sock *sk, struct sk_buff *skb)
