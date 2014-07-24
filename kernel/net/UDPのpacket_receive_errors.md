@@ -47,7 +47,9 @@ static const struct snmp_mib snmp4_udp_list[] = {
 
 ## SNMP_MIB_ITEM("RcvbufErrors", UDP_MIB_RCVBUFERRORS),
 
-UDP_MIB_RCVBUFERRORS は **__udp_queue_rcv_skb** で統計を取っている。sock_queue_rcv_skb が ENOMEM を返したら ++ される
+UDP_MIB_RCVBUFERRORS は **__udp_queue_rcv_skb** で統計を取っている。
+
+ * sock_queue_rcv_skb が **ENOMEM** を返したら UDP_MIB_RCVBUFERRORS 統計値が ++ される
 
 ```c
 static int __udp_queue_rcv_skb(struct sock *sk, struct sk_buff *skb)
@@ -77,6 +79,8 @@ static int __udp_queue_rcv_skb(struct sock *sk, struct sk_buff *skb)
 ```
 
 ## sock_queue_rcv_skb ?
+
+ * &sk->sk_rmem_alloc) >= sk->sk_rcvbuf で ENOMEM
 
 ```c
 int sock_queue_rcv_skb(struct sock *sk, struct sk_buff *skb)
