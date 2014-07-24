@@ -147,8 +147,80 @@ EXPORT_SYMBOL(sock_queue_rcv_skb);
 
 ## sk->sk_backlog_rcv
 
-メソッドがセットされる
+inet_crete で struct sock の初期化の際に sk_backlog_rcv メソッドがセットされる
 
 ```c
 	sk->sk_backlog_rcv = sk->sk_prot->backlog_rcv;
+```
+
+sk->sk_backlog_rcv を呼び出すのは **sk_backlog_rcv**
+
+```
+static inline int sk_backlog_rcv(struct sock *sk, struct sk_buff *skb)
+{
+	return sk->sk_backlog_rcv(sk, skb);
+}
+```
+
+sk_backlog_rcv は sk_receive_skb で呼び出されている
+
+```c
+int sk_receive_skb(struct sock *sk, struct sk_buff *skb, const int nested)
+{
+	int rc = NET_RX_SUCCESS;
+
+	if (socsk_filter(sk, skb))
+		goto discard_and_relse;
+
+	skb->dev = NULL;
+
+    // バックログ + rmem_alloc のサイズを見て、rcvqueue が溢れていないかどうか
+    // /*
+    //  * Take into account size of receive queue and backlog queue
+    //  * Do not take into account this skb truesize,
+    //  * to allow even a single big packet to come.
+    //  */
+    // static inline bool sk_rcvqueues_full(const struct sock *sk, const struct sk_buff *skb,
+    // 				     unsigned int limit)
+    // {
+    // 	unsigned int qsize = sk_extended(sk)->sk_backlog.len +
+    // 			     atomic_read(&sk->sk_rmem_alloc);
+    // 
+    // 	return qsize > limit;
+    // }
+	if (sk_rcvqueues_full(sk, skb, sk->sk_rcvbuf)) {
+		atomic_inc(&sk->sk_drops);
+		goto discard_and_relse;
+	}
+	if (nested)
+		bh_lock_sock_nested(sk);
+	else
+		bh_lock_sock(sk);
+
+    /* ??? */    
+	if (!sock_owned_by_user(sk)) {
+		/*
+		 * trylock + unlock semantics:
+		 */
+		mutex_acquire(&sk->sk_lock.dep_map, 0, 1, _RET_IP_);
+
+        /* ここで sk_backlog_rcv */
+		rc = sk_backlog_rcv(sk, skb);
+
+		mutex_release(&sk->sk_lock.dep_map, 1, _RET_IP_);
+	} else if (sk_add_backlog(sk, skb, sk->sk_rcvbuf)) {
+		bh_unlock_sock(sk);
+		atomic_inc(&sk->sk_drops);
+		goto discard_and_relse;
+	}
+
+	bh_unlock_sock(sk);
+out:
+	sock_put(sk);
+	return rc;
+discard_and_relse:
+	kfree_skb(skb);
+	goto out;
+}
+EXPORT_SYMBOL(sk_receive_skb);
 ```
