@@ -1,24 +1,35 @@
 # netstat の Recv-Q
 
+## とある td-agent サーバ
+
+```
+[root@*** ~]# netstat -aun 
+Active Internet connections (servers and established)
+Proto Recv-Q Send-Q Local Address               Foreign Address             State      
+udp        0      0 0.0.0.0:651                 0.0.0.0:*                               
+udp   229120      0 0.0.0.0:24224               0.0.0.0:*                               
+udp        0      0 :::111                      :::*                                    
+```
+
+netstat は `/proc/net/udp` を読んでいる
 
 ```
 [root@*** ~]# cat /proc/net/udp
   sl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt   uid  timeout inode ref pointer drops             
-  31: 00000000:A7E4 00000000:0000 07 00000000:00000000 00:00000000 00000000   494        0 13344 2 ffff88086aca8700 0          
-  42: 00000000:006F 00000000:0000 07 00000000:00000000 00:00000000 00000000     0        0 11656 2 ffff88086aca8080 0          
-  54: 4165A8C0:007B 00000000:0000 07 00000000:00000000 00:00000000 00000000     0        0 12127 2 ffff88106adc00c0 0          
-  54: CFD95EDB:007B 00000000:0000 07 00000000:00000000 00:00000000 00000000     0        0 12126 2 ffff88106989d0c0 0          
-  54: 0100007F:007B 00000000:0000 07 00000000:00000000 00:00000000 00000000     0        0 12125 2 ffff88106989d400 0          
   54: 00000000:007B 00000000:0000 07 00000000:00000000 00:00000000 00000000     0        0 12117 2 ffff88106989da80 0          
   70: 00000000:028B 00000000:0000 07 00000000:00000000 00:00000000 00000000     0        0 11660 2 ffff88086aca83c0 0          
   91: 00000000:5EA0 00000000:0000 07 00000000:00037F00 00:00000000 00000000   494        0 13359 2 ffff88086aca8a40 0          
 ```
 
-## IPv4 + UDP
+**Recv-Q** は **rx_queue** どの数値を読んでる様子
+
+## rx_queue
+
+### IPv4 + UDP の場合
 
 sk_rmem_alloc_get の数値を読んでる
 
-```
+```c
 static void udp4_format_sock(struct sock *sp, struct seq_file *f,
 		int bucket, int *len)
 {
