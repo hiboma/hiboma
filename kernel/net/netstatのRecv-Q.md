@@ -2,6 +2,8 @@
 
 ## とある td-agent サーバ
 
+Recv-Q のサイズがやたら大きい
+
 ```
 [root@*** ~]# netstat -aun 
 Active Internet connections (servers and established)
@@ -11,7 +13,7 @@ udp   229120      0 0.0.0.0:24224               0.0.0.0:*
 udp        0      0 :::111                      :::*                                    
 ```
 
-netstat は `/proc/net/udp` を読んでいる
+netstat は `/proc/net/udp` を読んでいるので、ここから実装を辿れる
 
 ```
 [root@*** ~]# cat /proc/net/udp
@@ -21,13 +23,15 @@ netstat は `/proc/net/udp` を読んでいる
   91: 00000000:5EA0 00000000:0000 07 00000000:00037F00 00:00000000 00000000   494        0 13359 2 ffff88086aca8a40 0          
 ```
 
-**Recv-Q** は **rx_queue** どの数値を読んでる様子
+**Recv-Q** は **rx_queue** の数値を読んでる様子
 
-## rx_queue
+## rx_queue を元に探す
+
+grep でがんばる
 
 ### IPv4 + UDP の場合
 
-sk_rmem_alloc_get の数値を読んでる
+udp4_format_sock で sk_rmem_alloc_get の数値を読んで出力しているのが分かる
 
 ```c
 static void udp4_format_sock(struct sock *sp, struct seq_file *f,
@@ -49,6 +53,7 @@ static void udp4_format_sock(struct sock *sp, struct seq_file *f,
 		atomic_read(&sp->sk_drops), len);
 }
 
+/* /proc/net/udp のヘッダを出力 */
 int udp4_seq_show(struct seq_file *seq, void *v)
 {
 	if (v == SEQ_START_TOKEN)
