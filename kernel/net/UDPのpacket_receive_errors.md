@@ -84,7 +84,11 @@ static int __udp_queue_rcv_skb(struct sock *sk, struct sk_buff *skb)
 
 ## sock_queue_rcv_skb ?
 
-`&sk->sk_rmem_alloc >= sk->sk_rcvbuf` の際に ENOMEM を返す
+ * sk_buff を sock の sk_receive_queue に繋ぐ
+ * `&sk->sk_rmem_alloc >= sk->sk_rcvbuf` の際に ENOMEM を返す
+ * sk_data_ready で通知
+
+ENOMEM を返した際は、プロセスに通知もされずしれっと DROP されている? 
 
 ```c
 int sock_queue_rcv_skb(struct sock *sk, struct sk_buff *skb)
@@ -125,6 +129,7 @@ int sock_queue_rcv_skb(struct sock *sk, struct sk_buff *skb)
 	__skb_queue_tail(list, skb);
 	spin_unlock_irqrestore(&list->lock, flags);
 
+    /* プロセスに通知 */
 	if (!sock_flag(sk, SOCK_DEAD))
 		sk->sk_data_ready(sk, skb_len);
 out:
@@ -135,6 +140,7 @@ EXPORT_SYMBOL(sock_queue_rcv_skb);
 
 **net.core.rmem_alloc** を上げたら解消するかもってのはこういう原理なのですな
 
+----
 
 ## sk->sk_backlog_rcv
 
@@ -142,12 +148,11 @@ EXPORT_SYMBOL(sock_queue_rcv_skb);
 
 ```c
 struct proto udp_prot = {
-
 //...
 	.backlog_rcv	   = __udp_queue_rcv_skb,
 ```
 
-バックロッグに追加できるかどうかの判定に使われている様子。当然、バックログに突っ込めなかったパケットは DROP される
+バックロッグのパケットを rcv するのに使われている様子
 
 inet_crete で struct sock の初期化の際に sk_backlog_rcv メソッドがセットされる
 
