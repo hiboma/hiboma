@@ -5,7 +5,7 @@
 
 ## とある td-agent サーバー
 
-`netstat -su` で表示される `packet receive errors` の意味が分からないのでソースを読んで調べる
+`netstat -su` で表示される `packet receive errors` の数値が激しく高い
 
 ```
 [root@*** ~]# netstat -su
@@ -15,6 +15,8 @@ Udp:
     275593336 packet receive errors
     16445537 packets sent
 ```
+
+だがしかし、この数値が正確に意味するが分からないのでソースを読んで調べます
 
 `netstat -su` の strace を取ると `packet receive errors` は _/proc/net/snmp_ を読んでるのが分かる
 
