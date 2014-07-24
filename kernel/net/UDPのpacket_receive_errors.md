@@ -45,7 +45,7 @@ static const struct snmp_mib snmp4_udp_list[] = {
 };
 ```
 
-## SNMP_MIB_ITEM("RcvbufErrors", UDP_MIB_RCVBUFERRORS),
+## ("RcvbufErrors", UDP_MIB_RCVBUFERRORS),
 
 UDP_MIB_RCVBUFERRORS は **__udp_queue_rcv_skb** で統計を取っている。
 
@@ -78,9 +78,20 @@ static int __udp_queue_rcv_skb(struct sock *sk, struct sk_buff *skb)
 }
 ```
 
+ところで **__udp_queue_rcv_skb** は UDPのバックログに突っ込むメソッド
+
+```c
+struct proto udp_prot = {
+
+//...
+	.backlog_rcv	   = __udp_queue_rcv_skb,
+```
+
+バックロッグに追加できるかどうかの判定に使われている様子。当然、バックログに突っ込めなかったパケットは DROP される
+
 ## sock_queue_rcv_skb ?
 
- * &sk->sk_rmem_alloc >= sk->sk_rcvbuf で ENOMEM
+`&sk->sk_rmem_alloc >= sk->sk_rcvbuf` の際に ENOMEM を返す
 
 ```c
 int sock_queue_rcv_skb(struct sock *sk, struct sk_buff *skb)
@@ -90,6 +101,7 @@ int sock_queue_rcv_skb(struct sock *sk, struct sk_buff *skb)
 	unsigned long flags;
 	struct sk_buff_head *list = &sk->sk_receive_queue;
 
+    /* ここ */
 	if (atomic_read(&sk->sk_rmem_alloc) >= sk->sk_rcvbuf) {
 		err = -ENOMEM;
 		trace_sock_rcvqueue_full(sk, skb);
