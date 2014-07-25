@@ -50,6 +50,8 @@ UdpLite: InDatagrams NoPorts InErrors OutDatagrams RcvbufErrors SndbufErrors
 UdpLite: 0 0 0 0 0 0
 ```
 
+## カーネルのソースを辿る
+
 /proc/net/snmp に書かれいてる文字列を元に、カーネルのソースを **InDatagrams** で grep すると snmp4_udp_list なる配列が見つかる。 **RcvbufErrors** がそれっぽい数値に見える
 
 ```c
@@ -64,13 +66,14 @@ static const struct snmp_mib snmp4_udp_list[] = {
 };
 ```
 
-UDP_MIB_RCVBUFERRORS を探っていきます
+UDP_MIB_RCVBUFERRORS を手がかりにソースを探っていきます
 
 ## ("RcvbufErrors", UDP_MIB_RCVBUFERRORS),
 
 UDP_MIB_RCVBUFERRORS は **__udp_queue_rcv_skb** で統計を取っている。
 
  * sock_queue_rcv_skb が **ENOMEM** を返したら UDP_MIB_RCVBUFERRORS 統計値が ++ される
+ * sock_queue_rcv_skb がどういう状態の際に ENOMEM を返すのか?
 
 ```c
 static int __udp_queue_rcv_skb(struct sock *sk, struct sk_buff *skb)
@@ -99,15 +102,14 @@ static int __udp_queue_rcv_skb(struct sock *sk, struct sk_buff *skb)
 }
 ```
 
-ネットワークスタックの中の異常を調べるにはこれらの数値を追うしかなさげ。
-
 ## sock_queue_rcv_skb の実装は ?
 
- * sk_buff を sock の sk_receive_queue に繋ぐ
- * `&sk->sk_rmem_alloc >= sk->sk_rcvbuf` の際に ENOMEM を返す
- * sk_data_ready で通知
+`&sk->sk_rmem_alloc >= sk->sk_rcvbuf` の際に ENOMEM を返す
 
-**ENOMEM** を返した際は、プロセスに通知もされずしれっと DROP されている? 
+ * sk_buff を sock の sk_receive_queue に繋ぐ
+ * sk_data_ready で通知
+ * **ENOMEM** を返した際は、デーモンに通知もされずしれっと DROP される
+   * 加えて、UDPなのでクライアント側で気がつく方法も無い
 
 ```c
 int sock_queue_rcv_skb(struct sock *sk, struct sk_buff *skb)
@@ -157,11 +159,11 @@ out:
 EXPORT_SYMBOL(sock_queue_rcv_skb);
 ```
 
-**net.core.rmem_alloc** を上げたら解消するかもってのはこういう原理なのですな
+**net.core.rmem_alloc** を上げると sk->sk_rmem_alloc の数値が上がるはず。チューニングの肝はこの点。
 
 ----
 
-## sk->sk_backlog_rcv
+## sk->sk_backlog_rcv とは何か?
 
 ところで **__udp_queue_rcv_skb** は UDPのバックログに突っ込むメソッドである
 
