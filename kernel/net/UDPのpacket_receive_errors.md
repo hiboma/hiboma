@@ -189,11 +189,27 @@ sk->sk_rmem_alloc の取りうる最大値。単位は bytes
 
 ```
   *	@sk_rcvbuf: size of receive buffer in bytes
-```  
+```
+
+inet_crete -> sock_init_data で **sysctl_rmem_default** で初期化される
+
+```
+void sock_init_data(struct socket *sock, struct sock *sk)
+{
+
+//...
+
+	sk->sk_allocation	=	GFP_KERNEL;
+	sk->sk_rcvbuf		=	sysctl_rmem_default;
+	sk->sk_sndbuf		=	sysctl_wmem_default;
+	sk->sk_state		=	TCP_CLOSE;
+```
+
+saetsockopt(2) + SO_RCVBUF でも変更されうる。 sysctl_wmem_default は AF_INET なソケットに対してグローバルに影響することが読み取れる
 
 ## sk->sk_backlog_rcv とは何か?
 
-ところで **__udp_queue_rcv_skb** は UDPのバックログに突っ込むメソッドである
+**__udp_queue_rcv_skb** は UDPのバックログに突っ込むメソッドである
 
 ```c
 struct proto udp_prot = {
