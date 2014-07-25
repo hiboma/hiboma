@@ -281,7 +281,9 @@ EXPORT_SYMBOL(sk_receive_skb);
 
 ----
 
-quote from http://www.haifux.org/lectures/217/netLec5.pdf
+ * http://vger.kernel.org/~davem/skb_sk.html
+ * http://www.haifux.org/lectures/217/netLec5.pdf
+
 
 > When do RcvbufErrors occur ?
 > The total number of bytes queued in sk_receive_queue queue of a socket is sk->sk_rmem_alloc.
