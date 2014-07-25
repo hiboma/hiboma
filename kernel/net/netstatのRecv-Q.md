@@ -1,8 +1,10 @@
 # netstat の Recv-Q
 
-## とある td-agent サーバ
+netstat の Recv-Q の数値が何なのかを調べる
 
-Recv-Q のサイズがやたら大きい
+## とある td-agent サーバの netstat 
+
+Recv-Q のサイズがやたら大きいですね。プロトコルは UDP です
 
 ```
 [root@*** ~]# netstat -aun 
@@ -13,7 +15,7 @@ udp   229120      0 0.0.0.0:24224               0.0.0.0:*
 udp        0      0 :::111                      :::*                                    
 ```
 
-netstat は `/proc/net/udp` を読んでいるので、ここから実装を辿れる
+netstat は `/proc/net/udp` を読んでいるので、ここから netstatとカーネルの実装を辿れます
 
 ```
 [root@*** ~]# cat /proc/net/udp
@@ -23,15 +25,15 @@ netstat は `/proc/net/udp` を読んでいるので、ここから実装を辿�
   91: 00000000:5EA0 00000000:0000 07 00000000:00037F00 00:00000000 00000000   494        0 13359 2 ffff88086aca8a40 0          
 ```
 
-**Recv-Q** は **rx_queue** の数値を読んでる様子
+**Recv-Q** は **rx_queue** の数値を読んでる様子です
 
-## rx_queue を元に探す
+## カーネルから rx_queue を元に探す
 
 grep でがんばる
 
 ### IPv4 + UDP の場合
 
-udp4_format_sock で sk_rmem_alloc_get の数値を読んで出力しているのが分かる
+**udp4_format_sock** で **sk_rmem_alloc_get** の数値を読んで出力しているのが /proc/net/udp なのだと分かる
 
 ```c
 static void udp4_format_sock(struct sock *sp, struct seq_file *f,
@@ -72,7 +74,7 @@ int udp4_seq_show(struct seq_file *seq, void *v)
 }
 ```
 
-sk_rmem_alloc_get の中身は下記の通りで、 **sock->sk_rmem_alloc** である
+sk_rmem_alloc_get の中身は下記の通りで、 **sock->sk_rmem_alloc** である。単位は bytes なはず
 
 ```
 /**
@@ -87,3 +89,5 @@ static inline int sk_rmem_alloc_get(const struct sock *sk)
 	
 }
 ```
+
+sk->sk_rmem_alloc が何なのか? 長いので別で調べます
