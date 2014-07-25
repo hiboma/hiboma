@@ -291,4 +291,9 @@ EXPORT_SYMBOL(sk_receive_skb);
 > The total allowed memory of a socket is sk->sk_rcvbuf. It can be retrieved with getsockopt() using SO_RCVBUF.
 
 > Each time a packet is received, the sk- >sk_rmem_alloc is incremented by skb->truesize:
-skb->truesize it the size (in bytes) allocated for the data of the skb plus the size of sk_buff structure itself.
+> skb->truesize it the size (in bytes) allocated for the data of the skb plus the size of sk_buff structure itself.
+
+ * sk->sk_rcvbuf = 最大値
+ * sk->sk_rmem_alloc = sk_receive_queue の使用量
+ * skb->truesize = sizeof(sk_buff) + payload
+   * sk->sk_rmem_alloc に加算される
