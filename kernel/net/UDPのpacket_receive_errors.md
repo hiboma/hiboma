@@ -2,7 +2,7 @@
 
 ## まとめ
 
-```
+```console
 [root@*** ~]# netstat -su
 Udp:
     15312436 packets received
@@ -19,7 +19,7 @@ Udp:
 
 `netstat -su` で表示される `packet receive errors` の数値が激しく高い
 
-```
+```console
 [root@*** ~]# netstat -su
 Udp:
     15312436 packets received
@@ -34,7 +34,7 @@ Udp:
 
 `netstat -su` の strace を取ると `packet receive errors` は _/proc/net/snmp_ を読んでるのが分かる
 
-```
+```console
 [root@*** ~]# cat /proc/net/snmp
 Ip: Forwarding DefaultTTL InReceives InHdrErrors InAddrErrors ForwDatagrams InUnknownProtos InDiscards InDelivers OutRequests OutDiscards OutNoRoutes ReasmTimeout ReasmReqds ReasmOKs ReasmFails FragOKs FragFails FragCreates
 Ip: 2 64 2359553910 0 105 0 0 0 2359548907 1574820495 0 0 0 0 0 0 0 0 0
@@ -195,7 +195,7 @@ sk->sk_rmem_alloc の取りうる最大値。単位は bytes
 
 inet_crete -> sock_init_data で **sysctl_rmem_default** で初期化される
 
-```
+```c
 void sock_init_data(struct socket *sock, struct sock *sk)
 {
 
@@ -253,7 +253,7 @@ set_rcvbuf:
 
 net.core.rmem_max の数値を確かめる。 (UDP で検証するので net.ipv4.tcp_rmem は関係ない)
 
-```
+```console
 [vagrant@vagrant-centos65 ~]$ sudo sysctl -a | grep rmem
 net.core.rmem_max = 124928
 net.core.rmem_default = 124928
@@ -312,7 +312,7 @@ inet_crete で struct sock の初期化の際に sk_backlog_rcv メソッドが�
 
 sk->sk_backlog_rcv を呼び出すのは **sk_backlog_rcv**
 
-```
+```c
 static inline int sk_backlog_rcv(struct sock *sk, struct sk_buff *skb)
 {
 	return sk->sk_backlog_rcv(sk, skb);
@@ -382,7 +382,7 @@ discard_and_relse:
 EXPORT_SYMBOL(sk_receive_skb);
 ```
 
-----
+### その他リファレンス
 
  * http://vger.kernel.org/~davem/skb_sk.html
  * http://www.haifux.org/lectures/217/netLec5.pdf
