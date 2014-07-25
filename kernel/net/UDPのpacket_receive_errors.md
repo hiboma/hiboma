@@ -13,7 +13,7 @@ Udp:
 
  * UDP のバックログが溢れてパケットが DROP された際にカウントされる
  * rmem_alloc を上げるなどして対応可能
- * UDP のデーモンがバグってるとか、CPU使い切っているとかもあるので rmem_alloc 上げても改善しないケースもあるはず
+ * UDP のデーモンがバグってるとか、CPU使い切っているとかもあるので、 rmem_alloc でバッファサイズ上げても改善しないケースもある
 
 ## とある td-agent サーバー の例
 
@@ -165,8 +165,8 @@ EXPORT_SYMBOL(sock_queue_rcv_skb);
 
 ## sk->sk_rmem_alloc は何?
 
- * skb->truesize (sock_buffer + payload ) を加算している
- * socket buffer ( sk_receive_queue ) の使用量
+ * skb_set_owner_r で skb->truesize (sock_buffer + payload ) を加算している
+ * socket buffer ( sk_receive_queue ) の使用量に相当する
 
 ```
   *	@sk_rmem_alloc: receive queue bytes committed
@@ -182,6 +182,8 @@ static inline void skb_set_owner_r(struct sk_buff *skb, struct sock *sk)
 	sk_mem_charge(sk, skb->truesize);
 }
 ```
+
+netstat の Recv-Q だよー
 
 ## sk->sk_rcvbuf は何?
 
@@ -245,6 +247,49 @@ set_rcvbuf:
 		else
 			sk->sk_rcvbuf = val * 2;
 		break;
+```
+
+#### setsockopt を ruby で検証
+
+net.core.rmem_max の数値を確かめる。 (UDP で検証するので net.ipv4.tcp_rmem は関係ない)
+
+```
+[vagrant@vagrant-centos65 ~]$ sudo sysctl -a | grep rmem
+net.core.rmem_max = 124928
+net.core.rmem_default = 124928
+net.ipv4.tcp_rmem = 4096	87380	4005888
+net.ipv4.udp_rmem_min = 4096
+```
+
+irb で setsockopt, getsockopt を呼び出して REPL してみた結果
+
+```
+irb(main):001:0> require 'socket'
+irb(main):002:0> s = UDPSocket.open()
+=> #<UDPSocket:0x7f8b88d5f190>
+irb(main):003:0> s.getsockopt(Socket::SOL_SOCKET,Socket::SO_RCVBUF)
+=> "\000\350\001\000"
+# net.core.rmem_default の数値にセットされている
+irb(main):005:0> s.getsockopt(Socket::SOL_SOCKET,Socket::SO_RCVBUF).unpack("i")
+=> [124928]
+
+# 5000 をセットすると 2倍の値になった
+irb(main):007:0* s.setsockopt(Socket::SOL_SOCKET,Socket::SO_RCVBUF, 5000)
+=> 0
+irb(main):008:0> s.getsockopt(Socket::SOL_SOCKET,Socket::SO_RCVBUF).unpack("i")
+=> [10000]
+
+# net.core.rmem_max の数値をセットすると 2倍の値に
+irb(main):009:0> s.setsockopt(Socket::SOL_SOCKET,Socket::SO_RCVBUF, 124928)
+=> 0
+irb(main):010:0> s.getsockopt(Socket::SOL_SOCKET,Socket::SO_RCVBUF).unpack("i")
+=> [249856]
+
+# net.core.rmem_max より大きい値をセットしてもシカトされる
+irb(main):011:0> s.setsockopt(Socket::SOL_SOCKET,Socket::SO_RCVBUF, 200000)
+=> 0
+irb(main):012:0> s.getsockopt(Socket::SOL_SOCKET,Socket::SO_RCVBUF).unpack("i")
+=> [249856]
 ```
 
 ## sk->sk_backlog_rcv とは何か?
