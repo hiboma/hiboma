@@ -11,9 +11,9 @@ Udp:
     16445537 packets sent
 ```
 
- * UDP のバックログが溢れてパケットが DROP された際にカウントされる
- * rmem_alloc を上げるなどして対応可能
- * UDP のデーモンがバグってるとか、CPU使い切っているとかもあるので、 rmem_alloc でバッファサイズ上げても改善しないケースもある
+ * UDP の sk_receive_queue が溢れてパケットが DROP された際にカウントされる
+ * net.core.rmem_{default,max} を上げるなどして対応可能
+ * とはいえ UDP のデーモンがバグってるとかCPU使い切っているとかもあるので、 rmem_alloc でバッファサイズ上げても改善しないケースもある
 
 ## とある td-agent サーバー の例
 
