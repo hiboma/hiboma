@@ -185,7 +185,7 @@ static inline void skb_set_owner_r(struct sk_buff *skb, struct sock *sk)
 
 ## sk->sk_rcvbuf は何?
 
- * sk->sk_rmem_alloc の最大値。単位は bytes
+sk->sk_rmem_alloc の取りうる最大値。単位は bytes
 
 ```
   *	@sk_rcvbuf: size of receive buffer in bytes
