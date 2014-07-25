@@ -205,7 +205,47 @@ void sock_init_data(struct socket *sock, struct sock *sk)
 	sk->sk_state		=	TCP_CLOSE;
 ```
 
-saetsockopt(2) + SO_RCVBUF でも変更されうる。 sysctl_wmem_default は AF_INET なソケットに対してグローバルに影響することが読み取れる
+sysctl_wmem_default は AF_INET なソケットに対してグローバルに影響することが読み取れる
+
+sk->sk_rcvbuf は saetsockopt(2) + SO_RCVBUF でも変更されうる。
+
+ * sysctl_rmem_max 以上の値は渡せない
+ * SOCK_MIN_RCVBUF 以下の数値は SOCK_MIN_RCVBUF に丸められる
+ * setsockopt(2) に渡した数値を 2倍したものが sk->sk_rcvbuf にセットされる
+   * setsockopt(2) を呼ぶ側は sk_buff があることに気がつかないで、実データのサイズで値をセットしようとするので struct sk_buff を含めていい感じに扱うために 2倍
+
+```c
+	case SO_RCVBUF:
+		/* Don't error on this BSD doesn't and if you think
+		   about it this is right. Otherwise apps have to
+		   play 'guess the biggest size' games. RCVBUF/SNDBUF
+		   are treated in BSD as hints */
+
+		if (val > sysctl_rmem_max)
+			val = sysctl_rmem_max;
+set_rcvbuf:
+		sk->sk_userlocks |= SOCK_RCVBUF_LOCK;
+		/*
+		 * We double it on the way in to account for
+		 * "struct sk_buff" etc. overhead.   Applications
+		 * assume that the SO_RCVBUF setting they make will
+		 * allow that much actual data to be received on that
+		 * socket.
+		 *
+		 * Applications are unaware that "struct sk_buff" and
+		 * other overheads allocate from the receive buffer
+		 * during socket buffer allocation.
+		 *
+		 * And after considering the possible alternatives,
+		 * returning the value we actually used in getsockopt
+		 * is the most desirable behavior.
+		 */
+		if ((val * 2) < SOCK_MIN_RCVBUF)
+			sk->sk_rcvbuf = SOCK_MIN_RCVBUF;
+		else
+			sk->sk_rcvbuf = val * 2;
+		break;
+```
 
 ## sk->sk_backlog_rcv とは何か?
 
