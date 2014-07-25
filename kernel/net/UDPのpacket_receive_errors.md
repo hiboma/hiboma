@@ -163,6 +163,32 @@ EXPORT_SYMBOL(sock_queue_rcv_skb);
 
 ----
 
+## sk->sk_rmem_alloc は何?
+
+
+```
+  *	@sk_rmem_alloc: receive queue bytes committed
+```  
+
+```c
+static inline void skb_set_owner_r(struct sk_buff *skb, struct sock *sk)
+{
+	skb_orphan(skb);
+	skb->sk = sk;
+	skb->destructor = sock_rfree;
+	atomic_add(skb->truesize, &sk->sk_rmem_alloc);
+	sk_mem_charge(sk, skb->truesize);
+}
+```
+
+## sk->sk_rcvbuf
+
+```
+  *	@sk_rcvbuf: size of receive buffer in bytes
+```  
+
+----
+
 ## sk->sk_backlog_rcv とは何か?
 
 ところで **__udp_queue_rcv_skb** は UDPのバックログに突っ込むメソッドである
