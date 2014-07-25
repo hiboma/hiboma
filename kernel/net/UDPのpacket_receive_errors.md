@@ -278,3 +278,15 @@ discard_and_relse:
 }
 EXPORT_SYMBOL(sk_receive_skb);
 ```
+
+----
+
+quote from http://www.haifux.org/lectures/217/netLec5.pdf
+
+> When do RcvbufErrors occur ?
+> The total number of bytes queued in sk_receive_queue queue of a socket is sk->sk_rmem_alloc.
+
+> The total allowed memory of a socket is sk->sk_rcvbuf. It can be retrieved with getsockopt() using SO_RCVBUF.
+
+> Each time a packet is received, the sk- >sk_rmem_alloc is incremented by skb->truesize:
+skb->truesize it the size (in bytes) allocated for the data of the skb plus the size of sk_buff structure itself.
