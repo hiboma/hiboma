@@ -165,6 +165,8 @@ EXPORT_SYMBOL(sock_queue_rcv_skb);
 
 ## sk->sk_rmem_alloc は何?
 
+ * skb->truesize (sock_buffer + payload ) を加算している
+ * socket buffer ( sk_receive_queue ) の使用量
 
 ```
   *	@sk_rmem_alloc: receive queue bytes committed
@@ -181,13 +183,13 @@ static inline void skb_set_owner_r(struct sk_buff *skb, struct sock *sk)
 }
 ```
 
-## sk->sk_rcvbuf
+## sk->sk_rcvbuf は何?
+
+ * sk->sk_rmem_alloc の最大値。単位は bytes
 
 ```
   *	@sk_rcvbuf: size of receive buffer in bytes
 ```  
-
-----
 
 ## sk->sk_backlog_rcv とは何か?
 
@@ -284,16 +286,13 @@ EXPORT_SYMBOL(sk_receive_skb);
  * http://vger.kernel.org/~davem/skb_sk.html
  * http://www.haifux.org/lectures/217/netLec5.pdf
 
-
 > When do RcvbufErrors occur ?
 > The total number of bytes queued in sk_receive_queue queue of a socket is sk->sk_rmem_alloc.
-
 > The total allowed memory of a socket is sk->sk_rcvbuf. It can be retrieved with getsockopt() using SO_RCVBUF.
-
 > Each time a packet is received, the sk- >sk_rmem_alloc is incremented by skb->truesize:
 > skb->truesize it the size (in bytes) allocated for the data of the skb plus the size of sk_buff structure itself.
 
  * sk->sk_rcvbuf = 最大値
  * sk->sk_rmem_alloc = sk_receive_queue の使用量
  * skb->truesize = sizeof(sk_buff) + payload
-   * sk->sk_rmem_alloc に加算される
+   * パケットが届くと sk->sk_rmem_alloc に加算される
