@@ -1,9 +1,21 @@
 # netstat -su (UDP) の packet receive errors
 
- * UDP のバックログが溢れてパケットが DROP された際に出る
- * rmem_alloc を上げるなどして対応可能
+## まとめ
 
-## とある td-agent サーバー
+```
+[root@*** ~]# netstat -su
+Udp:
+    15312436 packets received
+    2139 packets to unknown port received.
+    275593336 packet receive errors  <<<< これ
+    16445537 packets sent
+```
+
+ * UDP のバックログが溢れてパケットが DROP された際にカウントされる
+ * rmem_alloc を上げるなどして対応可能
+ * UDP のデーモンがバグってるとか、CPU使い切っているとかもあるので rmem_alloc 上げても改善しないケースもあるはず
+
+## とある td-agent サーバー の例
 
 `netstat -su` で表示される `packet receive errors` の数値が激しく高い
 
@@ -12,13 +24,13 @@
 Udp:
     15312436 packets received
     2139 packets to unknown port received.
-    275593336 packet receive errors
+    275593336 packet receive errors <<<< これ
     16445537 packets sent
 ```
 
 だがしかし、この数値が正確に意味するが分からないのでソースを読んで調べます
 
-## packet receive errors
+## packet receive errors の数値はどこから取っている?
 
 `netstat -su` の strace を取ると `packet receive errors` は _/proc/net/snmp_ を読んでるのが分かる
 
