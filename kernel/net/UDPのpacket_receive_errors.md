@@ -382,15 +382,15 @@ discard_and_relse:
 EXPORT_SYMBOL(sk_receive_skb);
 ```
 
-### sk->sk_receive_queue
+### sk->sk_receive_queue は何のキュー?
 
-ユーザ空間から recv* 属で読み込まれるのを待っている sk_buff のキュー
+AF_INET + SOCK_DGRAM では、ユーザ空間から recv* 属で読み込まれるのを待っている sk_buff のキュー
 
  * {recv, recvfrom, recvmsg}
  * -> udp_recvmsg
  * -> __skb_recv_datagram
 
-で sk->sk_receive_queue から sk_buff を取り出す
+で sk->sk_receive_queue から sk_buff を取り出して、payload をユーザ空間にコピーする
 
 ```c
 /**
