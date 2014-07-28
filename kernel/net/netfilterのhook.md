@@ -197,7 +197,7 @@ ipt_local_in_hook(unsigned int hook,
 ipt_do_table が肝。つえー
 
  * NF_INET_LOCAL_IN の場合はテーブルが ipv4.iptable_filter = filter になる
- * ipt_entry (ルール) をイテレートして ip_packet_match でマッチするエントリを探す
+ * struct ipt_entry ( **ルール** ) をイテレートして ip_packet_match でマッチするエントリを探す
    * t->u.kernel.target->target でターゲットを評価
      * IPT_CONTINUE を返したら次のルール/ターゲットを探す
 
