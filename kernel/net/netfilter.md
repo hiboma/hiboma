@@ -1,8 +1,8 @@
 # netfilter
 
-## ルール
+## ルールの定義
 
-ipt_entry がルールの実体
+struct ipt_entry がルールの実体になる
 
 ```c
 /* This structure defines each of the firewall rules.  Consists of 3
@@ -28,6 +28,36 @@ struct ipt_entry
 
 	/* The matches (if any), then the target. */
 	unsigned char elems[0];
+};
+```
+
+struct ipt_ip で
+
+ * IPの送信元/発信元
+ * インタフェース
+ * サブネットマスク
+ * プロトコル番号
+ * その他フラグ
+
+などが表現される
+
+```c
+/* Yes, Virginia, you have to zero the padding. */
+struct ipt_ip {
+	/* Source and destination IP addr */
+	struct in_addr src, dst;
+	/* Mask for src and dest IP addr */
+	struct in_addr smsk, dmsk;
+	char iniface[IFNAMSIZ], outiface[IFNAMSIZ];
+	unsigned char iniface_mask[IFNAMSIZ], outiface_mask[IFNAMSIZ];
+
+	/* Protocol, 0 = ANY */
+	u_int16_t proto;
+
+	/* Flags word */
+	u_int8_t flags;
+	/* Inverse flags */
+	u_int8_t invflags;
 };
 ```
 

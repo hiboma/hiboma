@@ -217,6 +217,8 @@ ipt_do_table(struct sk_buff *skb,
 	unsigned int verdict = NF_DROP;
 	const char *indev, *outdev;
 	void *table_base;
+
+    /* ルール */
 	struct ipt_entry *e, *back;
 	struct xt_table_info *private;
 	struct xt_match_param mtpar;
@@ -251,6 +253,7 @@ ipt_do_table(struct sk_buff *skb,
 	back = get_entry(table_base, private->underflow[hook]);
 
 	do {
+        /* ターゲット */
 		struct ipt_entry_target *t;
 
 		IP_NF_ASSERT(e);
