@@ -1,5 +1,36 @@
 # netfilter
 
+## テーブルの登録
+
+```
+  --table	-t table	table to manipulate (default: `filter')
+```
+
+デフォルトの **filter** テーブルが登録されるのを見て行きます
+
+### テーブルは struct xt_table
+
+```c
+static const struct xt_table packet_filter = {
+	.name		= "filter",
+	.valid_hooks	= FILTER_VALID_HOOKS,
+	.me		= THIS_MODULE,
+	.af		= NFPROTO_IPV4,
+};
+```
+
+```c
+static int __net_init iptable_filter_net_init(struct net *net)
+{
+	/* Register table */
+	net->ipv4.iptable_filter =
+		ipt_register_table(net, &packet_filter, &initial_table.repl);
+	if (IS_ERR(net->ipv4.iptable_filter))
+		return PTR_ERR(net->ipv4.iptable_filter);
+	return 0;
+}
+```
+
 ## ターゲットの登録
 
 ```
