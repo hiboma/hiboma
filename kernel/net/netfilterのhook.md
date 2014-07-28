@@ -236,6 +236,8 @@ ipt_do_table(struct sk_buff *skb,
 	 * match it. */
 	mtpar.fragoff = ntohs(ip->frag_off) & IP_OFFSET;
 	mtpar.thoff   = ip_hdrlen(skb);
+
+    /* NF_DROP 返すかどうか */
 	mtpar.hotdrop = &hotdrop;
 	mtpar.in      = tgpar.in  = in;
 	mtpar.out     = tgpar.out = out;
@@ -306,15 +308,17 @@ ipt_do_table(struct sk_buff *skb,
 		tgpar.target   = t->u.kernel.target;
 		tgpar.targinfo = t->data;
 
-
+        /* ターゲットの評価と判定結果 */
 		verdict = t->u.kernel.target->target(skb, &tgpar);
 
 		/* Target might have changed stuff. */
 		ip = ip_hdr(skb);
+
+        /* 次のルールを探す */
 		if (verdict == IPT_CONTINUE)
 			e = ipt_next_entry(e);
 		else
-			/* Verdict */
+			/* Verdict 判定終わり */
 			break;
 	} while (!hotdrop);
 	xt_info_rdunlock_bh();
