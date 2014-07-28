@@ -55,6 +55,63 @@ static int __net_init iptable_filter_net_init(struct net *net)
 }
 ```
 
+ipt_register_table の中で xt_register_table を呼んで tables を追加する
+
+```c
+struct xt_table *xt_register_table(struct net *net,
+				   const struct xt_table *input_table,
+				   struct xt_table_info *bootstrap,
+				   struct xt_table_info *newinfo)
+{
+	int ret;
+	struct xt_table_info *private;
+	struct xt_table *t, *table;
+
+	/* Don't add one object to multiple lists. */
+	table = kmemdup(input_table, sizeof(struct xt_table), GFP_KERNEL);
+	if (!table) {
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	ret = mutex_lock_interruptible(&xt[table->af].mutex);
+	if (ret != 0)
+		goto out_free;
+
+	/* Don't autoload: we'd eat our tail... */
+	list_for_each_entry(t, &net->xt.tables[table->af], list) {
+		if (strcmp(t->name, table->name) == 0) {
+			ret = -EEXIST;
+			goto unlock;
+		}
+	}
+
+	/* Simplifies replace_table code. */
+	table->private = bootstrap;
+
+	if (!xt_replace_table(table, 0, newinfo, &ret))
+		goto unlock;
+
+	private = table->private;
+	duprintf("table->private->number = %u\n", private->number);
+
+	/* save number of initial entries */
+	private->initial_entries = private->number;
+
+	list_add(&table->list, &net->xt.tables[table->af]);
+	mutex_unlock(&xt[table->af].mutex);
+	return table;
+
+ unlock:
+	mutex_unlock(&xt[table->af].mutex);
+out_free:
+	kfree(table);
+out:
+	return ERR_PTR(ret);
+}
+EXPORT_SYMBOL_GPL(xt_register_table);
+```
+
 ## ターゲットの登録
 
 ```
