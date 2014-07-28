@@ -12,7 +12,7 @@
  * struct xt_target を追加する
  * xt_target は address family ごとにリスト構造を取っている
 
-```
+```c
 /* Registration hooks for targets. */
 int
 xt_register_target(struct xt_target *target)
