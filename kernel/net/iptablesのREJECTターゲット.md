@@ -1,4 +1,4 @@
-# iptables REJECT
+# iptables の REJECT ターゲット
 
 ## sample
 

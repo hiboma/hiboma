@@ -1,4 +1,4 @@
-# iptables の --cpu ルール
+R# iptables の --cpu マッチ
 
 linux-3.10.48/net/netfilter/xt_cpu.c が実装でよいんだろうか
 

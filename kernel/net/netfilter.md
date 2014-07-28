@@ -6,6 +6,12 @@
   --table	-t table	table to manipulate (default: `filter')
 ```
 
+```c
+$ sudo cat /proc/net/ip_tables_names 
+filter
+nat
+```
+
 ### テーブルの定義は struct xt_table
 
 ```c
@@ -119,6 +125,15 @@ EXPORT_SYMBOL_GPL(xt_register_table);
 				target for rule (may load target extension)
 ```
 
+```sh
+$ sudo cat /proc/net/ip_tables_targets 
+REJECT
+MASQUERADE
+DNAT
+SNAT
+ERROR
+```
+
 ### xt_register_target
 
  * struct xt_target を追加する
@@ -170,6 +185,18 @@ static int __init reject_tg_init(void)
 ```
   --match	-m match
 				extended match (may load extension)
+```
+
+```sh
+$ sudo cat /proc/net/ip_tables_matches 
+conntrack
+conntrack
+addrtype
+addrtype
+icmp
+udplite
+udp
+tcp
 ```
 
 #### xt_register_match
