@@ -40,8 +40,8 @@ struct xt_table
 
 ```c
 static const struct xt_table packet_filter = {
-	.name		= "filter",
-	.valid_hooks	= FILTER_VALID_HOOKS,
+	.name		= "filter", 
+	.valid_hooks	= FILTER_VALID_HOOKS, // INPUT, FORWARD, OUTPUT のこと
 	.me		= THIS_MODULE,
 	.af		= NFPROTO_IPV4,
 };
