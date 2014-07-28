@@ -23,6 +23,106 @@
 
 quote from http://www.linuxjournal.com/node/7184/print
 
+... 上記は iptables 古い定義で、 NF_INET_*** な prefix に変わっている
+
+```c
+enum nf_inet_hooks {
+	NF_INET_PRE_ROUTING,
+	NF_INET_LOCAL_IN,
+	NF_INET_FORWARD,
+	NF_INET_LOCAL_OUT,
+	NF_INET_POST_ROUTING,
+	NF_INET_NUMHOOKS
+};
+```
+
+#### NF_HOOK + NF_INET_PRE_ROUTING が挿入されている場所
+
+```c
+/*
+ * 	Main IP Receive routine.
+ */
+int ip_rcv(struct sk_buff *skb, struct net_device *dev, struct packet_type *pt, struct net_device *orig_dev)
+{
+	struct iphdr *iph;
+	u32 len;
+
+	/* When the interface is in promisc. mode, drop all the crap
+	 * that it receives, do not try to analyse it.
+	 */
+	if (skb->pkt_type == PACKET_OTHERHOST)
+		goto drop;
+
+
+	IP_UPD_PO_STATS_BH(dev_net(dev), IPSTATS_MIB_IN, skb->len);
+
+	if ((skb = skb_share_check(skb, GFP_ATOMIC)) == NULL) {
+		IP_INC_STATS_BH(dev_net(dev), IPSTATS_MIB_INDISCARDS);
+		goto out;
+	}
+
+	if (!pskb_may_pull(skb, sizeof(struct iphdr)))
+		goto inhdr_error;
+
+	iph = ip_hdr(skb);
+
+	/*
+	 *	RFC1122: 3.2.1.2 MUST silently discard any IP frame that fails the checksum.
+	 *
+	 *	Is the datagram acceptable?
+	 *
+	 *	1.	Length at least the size of an ip header
+	 *	2.	Version of 4
+	 *	3.	Checksums correctly. [Speed optimisation for later, skip loopback checksums]
+	 *	4.	Doesn't have a bogus length
+	 */
+
+	if (iph->ihl < 5 || iph->version != 4)
+		goto inhdr_error;
+
+	if (!pskb_may_pull(skb, iph->ihl*4))
+		goto inhdr_error;
+
+	iph = ip_hdr(skb);
+
+	if (unlikely(ip_fast_csum((u8 *)iph, iph->ihl)))
+		goto inhdr_error;
+
+	len = ntohs(iph->tot_len);
+	if (skb->len < len) {
+		IP_INC_STATS_BH(dev_net(dev), IPSTATS_MIB_INTRUNCATEDPKTS);
+		goto drop;
+	} else if (len < (iph->ihl*4))
+		goto inhdr_error;
+
+	/* Our transport medium may have padded the buffer out. Now we know it
+	 * is IP we can trim to the true length of the frame.
+	 * Note this now means skb->len holds ntohs(iph->tot_len).
+	 */
+	if (pskb_trim_rcsum(skb, len)) {
+		IP_INC_STATS_BH(dev_net(dev), IPSTATS_MIB_INDISCARDS);
+		goto drop;
+	}
+
+	/* Remove any debris in the socket control block */
+	memset(IPCB(skb), 0, sizeof(struct inet_skb_parm));
+
+	/* Must drop socket now because of tproxy. */
+	skb_orphan(skb);
+
+    /* ここだよー */
+	return NF_HOOK(PF_INET, NF_INET_PRE_ROUTING, skb, dev, NULL,
+		       ip_rcv_finish);
+
+inhdr_error:
+	IP_INC_STATS_BH(dev_net(dev), IPSTATS_MIB_INHDRERRORS);
+drop:
+	kfree_skb(skb);
+out:
+	return NET_RX_DROP;
+}
+```
+
 #### -A INPUT*** のフックが挿入されている箇所
 
 ```c
@@ -40,6 +140,7 @@ int ip_local_deliver(struct sk_buff *skb)
 			return 0;
 	}
 
+    /* ここだよー */
 	return NF_HOOK(PF_INET, NF_INET_LOCAL_IN, skb, skb->dev, NULL,
 		       ip_local_deliver_finish);
 }
