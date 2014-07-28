@@ -197,9 +197,7 @@ ipt_local_in_hook(unsigned int hook,
 ipt_do_table が肝。つえー
 
  * NF_INET_LOCAL_IN の場合はテーブルが ipv4.iptable_filter = filter になる
- * ipt_entry をイテレートして ip_packet_match でマッチするエントリを探す
-
-
+ * ipt_entry (ルール) をイテレートして ip_packet_match でマッチするエントリを探す
 
 ```c
 /* Returns one of the generic firewall policies, like NF_ACCEPT. */

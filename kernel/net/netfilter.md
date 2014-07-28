@@ -1,5 +1,36 @@
 # netfilter
 
+## ルール
+
+ipt_entry がルールの実体
+
+```c
+/* This structure defines each of the firewall rules.  Consists of 3
+   parts which are 1) general IP header stuff 2) match specific
+   stuff 3) the target to perform if the rule matches */
+struct ipt_entry
+{
+	struct ipt_ip ip;
+
+	/* Mark with fields that we care about. */
+	unsigned int nfcache;
+
+	/* Size of ipt_entry + matches */
+	u_int16_t target_offset;
+	/* Size of ipt_entry + matches + target */
+	u_int16_t next_offset;
+
+	/* Back pointer */
+	unsigned int comefrom;
+
+	/* Packet and byte counters. */
+	struct ipt_counters counters;
+
+	/* The matches (if any), then the target. */
+	unsigned char elems[0];
+};
+```
+
 ## フックの定義
 
 ```
