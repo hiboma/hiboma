@@ -1,5 +1,50 @@
 # netfilter
 
+## フックの定義
+
+```
+  [INPUT]--->[1]--->[ROUTE]--->[3]--->[4]--->[OUTPUT]
+                       |            ^
+                       |            |
+                       |         [ROUTE]
+                       v            |
+                      [2]          [5]
+                       |            ^
+                       |            |
+                       v            |
+                    [INPUT*]    [OUTPUT*]
+[1]  NF_IP_PRE_ROUTING
+[2]  NF_IP_LOCAL_IN
+[3]  NF_IP_FORWARD
+[4]  NF_IP_POST_ROUTING
+[5]  NF_IP_LOCAL_OUT
+[*]  Network Stack       
+```
+
+quote from http://www.linuxjournal.com/node/7184/print
+
+#### -A INPUT*** のフックが挿入されている箇所
+
+```c
+/*
+ * 	Deliver IP Packets to the higher protocol layers.
+ */
+int ip_local_deliver(struct sk_buff *skb)
+{
+	/*
+	 *	Reassemble IP fragments.
+	 */
+
+	if (ip_hdr(skb)->frag_off & htons(IP_MF | IP_OFFSET)) {
+		if (ip_defrag(skb, IP_DEFRAG_LOCAL_DELIVER))
+			return 0;
+	}
+
+	return NF_HOOK(PF_INET, NF_INET_LOCAL_IN, skb, skb->dev, NULL,
+		       ip_local_deliver_finish);
+}
+```
+
 ## テーブルの登録
 
 ```
@@ -181,6 +226,8 @@ static int __init reject_tg_init(void)
 ```
 
 ## match の登録
+
+拡張として扱われる match
 
 ```
   --match	-m match
