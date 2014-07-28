@@ -1,5 +1,7 @@
 # netfilter のフック
 
+## INPUT = NF_INET_LOCAL_IN の場合
+
 ```c
 /*
  * 	Deliver IP Packets to the higher protocol layers.
@@ -82,4 +84,53 @@ next_hook:
 	return ret;
 }
 EXPORT_SYMBOL(nf_hook_slow);
+```
+
+## nf_iterate
+
+ * nf_hook_ops をイテレートして hook() メソッドを呼び出す
+ * hook() が NF_ACCEPT, NF_DROP, ... を返す
+   * NF_REPEAT なら hook を繰り返し処理していく
+
+```c
+unsigned int nf_iterate(struct list_head *head,
+			struct sk_buff *skb,
+			unsigned int hook,
+			const struct net_device *indev,
+			const struct net_device *outdev,
+			struct list_head **i,
+			int (*okfn)(struct sk_buff *),
+			int hook_thresh)
+{
+	unsigned int verdict;
+
+	/*
+	 * The caller must not block between calls to this
+	 * function because of risk of continuing from deleted element.
+	 */
+	list_for_each_continue_rcu(*i, head) {
+		struct nf_hook_ops *elem = (struct nf_hook_ops *)*i;
+
+		if (hook_thresh > elem->priority)
+			continue;
+
+		/* Optimization: we don't need to hold module
+		   reference here, since function can't sleep. --RR */
+		verdict = elem->hook(hook, skb, indev, outdev, okfn);
+		if (verdict != NF_ACCEPT) {
+#ifdef CONFIG_NETFILTER_DEBUG
+			if (unlikely((verdict & NF_VERDICT_MASK)
+							> NF_MAX_VERDICT)) {
+				NFDEBUG("Evil return from %p(%u).\n",
+					elem->hook, hook);
+				continue;
+			}
+#endif
+			if (verdict != NF_REPEAT)
+				return verdict;
+			*i = (*i)->prev;
+		}
+	}
+	return NF_ACCEPT;
+}
 ```
