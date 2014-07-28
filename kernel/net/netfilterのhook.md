@@ -264,13 +264,6 @@ ipt_do_table(struct sk_buff *skb,
 		t = ipt_get_target(e);
 		IP_NF_ASSERT(t->u.kernel.target);
 
-#if defined(CONFIG_NETFILTER_XT_TARGET_TRACE) || \
-    defined(CONFIG_NETFILTER_XT_TARGET_TRACE_MODULE)
-		/* The packet is traced: log it */
-		if (unlikely(skb->nf_trace))
-			trace_packet(skb, hook, in, out,
-				     table->name, private, e);
-#endif
 		/* Standard target? */
 		if (!t->u.kernel.target->target) {
 			int v;
@@ -305,18 +298,8 @@ ipt_do_table(struct sk_buff *skb,
 		tgpar.targinfo = t->data;
 
 
-#ifdef CONFIG_NETFILTER_DEBUG
-		tb_comefrom = 0xeeeeeeec;
-#endif
 		verdict = t->u.kernel.target->target(skb, &tgpar);
-#ifdef CONFIG_NETFILTER_DEBUG
-		if (tb_comefrom != 0xeeeeeeec && verdict == IPT_CONTINUE) {
-			printk("Target %s reentered!\n",
-			       t->u.kernel.target->name);
-			verdict = NF_DROP;
-		}
-		tb_comefrom = 0x57acc001;
-#endif
+
 		/* Target might have changed stuff. */
 		ip = ip_hdr(skb);
 		if (verdict == IPT_CONTINUE)
@@ -327,14 +310,8 @@ ipt_do_table(struct sk_buff *skb,
 	} while (!hotdrop);
 	xt_info_rdunlock_bh();
 
-#ifdef DEBUG_ALLOW_ALL
-	return NF_ACCEPT;
-#else
 	if (hotdrop)
 		return NF_DROP;
 	else return verdict;
-#endif
-
-#undef tb_comefrom
 }
 ```
