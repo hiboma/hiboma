@@ -6,9 +6,31 @@
   --table	-t table	table to manipulate (default: `filter')
 ```
 
-デフォルトの **filter** テーブルが登録されるのを見て行きます
+### テーブルの定義は struct xt_table
 
-### テーブルは struct xt_table
+```c
+/* Furniture shopping... */
+struct xt_table
+{
+	struct list_head list;
+
+	/* What hooks you will enter on */
+	unsigned int valid_hooks;
+
+	/* Man behind the curtain... */
+	struct xt_table_info *private;
+
+	/* Set this to THIS_MODULE if you are a module, otherwise NULL */
+	struct module *me;
+
+	u_int8_t af;		/* address/protocol family */
+
+	/* A unique name... */
+	const char name[XT_TABLE_MAXNAMELEN];
+};
+```
+
+デフォルトの **filter** テーブルが登録されるのを見て行きます
 
 ```c
 static const struct xt_table packet_filter = {
@@ -18,6 +40,8 @@ static const struct xt_table packet_filter = {
 	.af		= NFPROTO_IPV4,
 };
 ```
+
+**filter** テーブルは packet_filter として ipt_register_table で登録される
 
 ```c
 static int __net_init iptable_filter_net_init(struct net *net)
