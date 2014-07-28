@@ -84,7 +84,7 @@ struct ipt_ip {
 
 quote from http://www.linuxjournal.com/node/7184/print
 
-... 上記は iptables 古い定義で、 NF_INET_*** な prefix に変わっている
+... 上記は iptables の古い定義で、 CentOS6.5 だと NF_INET_*** な prefix に変わっている
 
 ```c
 enum nf_inet_hooks {
@@ -386,6 +386,8 @@ static int __init reject_tg_init(void)
 	return xt_register_target(&reject_tg_reg);
 }
 ```
+
+IPv4 の場合、ターゲットは **ipt_do_table** でルールのマッチを評価した後に  の `verdict = t->u.kernel.target->target(skb, &tgpar);` で呼ばれる
 
 ## match の登録
 

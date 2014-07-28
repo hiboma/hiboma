@@ -311,6 +311,7 @@ ipt_do_table(struct sk_buff *skb,
 		tgpar.targinfo = t->data;
 
         /* ターゲットの評価と判定結果 */
+        /* 例として REJECT ターゲットの場合は reject_tg を呼ぶ */
 		verdict = t->u.kernel.target->target(skb, &tgpar);
 
 		/* Target might have changed stuff. */
