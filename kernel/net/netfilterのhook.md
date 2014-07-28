@@ -24,6 +24,14 @@ NF_HOOK から -> NF_HOOK_THRESH -> nf_hook_thresh -> nf_hook_slow を呼び出�
 
 ## nf_hook_slow
 
+nf_iterate でフックの処理を回す?
+
+ * NF_ACCEPT, NF_STOP
+ * NF_DROP
+   * パケットを DROP するので、 kfree_skb(skb) している
+ * NF_QUEUE
+   * `-j QUEUE` ターゲットでユーザ空間に転送するやつ。複雑なので後で。
+
 ```c
 /* Returns 1 if okfn() needs to be executed by the caller,
  * -EPERM for NF_DROP, 0 otherwise. */
@@ -44,13 +52,19 @@ int nf_hook_slow(u_int8_t pf, unsigned int hook, struct sk_buff *skb,
 next_hook:
 	verdict = nf_iterate(&nf_hooks[pf][hook], skb, hook, indev,
 			     outdev, &elem, okfn, hook_thresh);
+
+    /* NF_ACCEPT, NF_STOP */
 	if (verdict == NF_ACCEPT || verdict == NF_STOP) {
 		ret = 1;
+
+    /* NF_DROP 
 	} else if ((verdict & NF_VERDICT_MASK) == NF_DROP) {
 		kfree_skb(skb);
 		ret = NF_DROP_GETERR(verdict);
 		if (ret == 0)
 			ret = -EPERM;
+
+    /* NF_QUEUE */
 	} else if ((verdict & NF_VERDICT_MASK) == NF_QUEUE) {
 		ret = nf_queue(skb, elem, pf, hook, indev, outdev, okfn,
 			       verdict >> NF_VERDICT_QBITS);
