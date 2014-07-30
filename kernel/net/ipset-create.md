@@ -9,7 +9,14 @@ $ sudo ipset create blacklist hash:net
                           name      type
 ```
 
-ip_set (集合) を新たに追加するコマンド
+ip_set (集合) を新たに追加するコマンド。
+
+具体的な実装内容は、カーネルモジュール内で
+
+ * ip_set の初期化
+ * ip_set_type の初期化
+
+をする 
 
 ## ip_set の定義
 
@@ -60,11 +67,11 @@ static struct ip_set_type hash_net_type __read_mostly = {
 };
 ```
 
-## ip_set_create
+## ip_set_create で ip_set を初期化
 
 netlink ソケットで呼び出される
 
- * ip_set を kzalloc
+ * ip_set を kzalloc + GFP_KERNEL
  * ip_set_type を探す
  * ip_set_type の .create で、タイプ?に応じて初期化
 
