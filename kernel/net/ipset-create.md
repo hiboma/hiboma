@@ -9,7 +9,9 @@ $ sudo ipset create blacklist hash:net
                           name      type
 ```
 
-## ip_set
+ip_set (集合) を新たに追加するコマンド
+
+## ip_set の定義
 
 ```c
 /* A generic IP set */
@@ -31,7 +33,42 @@ struct ip_set {
 };
 ```
 
+ip_set_type によって細かい挙動を変える。 **hash:nset** の場合は下記の通りの定義
+
+```c
+static struct ip_set_type hash_net_type __read_mostly = {
+	.name		= "hash:net",
+	.protocol	= IPSET_PROTOCOL,
+	.features	= IPSET_TYPE_IP,
+	.dimension	= IPSET_DIM_ONE,
+	.family		= AF_UNSPEC,
+	.revision	= 0,
+	.create		= hash_net_create,
+	.create_policy	= {
+		[IPSET_ATTR_HASHSIZE]	= { .type = NLA_U32 },
+		[IPSET_ATTR_MAXELEM]	= { .type = NLA_U32 },
+		[IPSET_ATTR_PROBES]	= { .type = NLA_U8 },
+		[IPSET_ATTR_RESIZE]	= { .type = NLA_U8  },
+		[IPSET_ATTR_TIMEOUT]	= { .type = NLA_U32 },
+	},
+	.adt_policy	= {
+		[IPSET_ATTR_IP]		= { .type = NLA_NESTED },
+		[IPSET_ATTR_CIDR]	= { .type = NLA_U8 },
+		[IPSET_ATTR_TIMEOUT]	= { .type = NLA_U32 },
+	},
+	.me		= THIS_MODULE,
+};
+```
+
 ## ip_set_create
+
+netlink ソケットで呼び出される
+
+ * ip_set を kzalloc
+ * ip_set_type を探す
+ * ip_set_type の .create で、タイプ?に応じて初期化
+
+ip_set, ip_set_type の初期化が目的で、何かを制御するのは `ipset add` 等でなされる
 
 ```c
 static int
