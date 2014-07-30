@@ -65,4 +65,5 @@ hash_net4_kadt(struct ip_set *set, const struct sk_buff *skb,
 }
 ```
 
-hash:net の adtfn の実装が見つからんなー
+ * ip_set_type と ip_set_type_variant の関係がよう分からん 
+ * hash:net の adtfn の実装が見つからんなー
