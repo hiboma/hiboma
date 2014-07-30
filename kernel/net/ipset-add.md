@@ -36,3 +36,28 @@ ip_set_add(ip_set_id_t index, const struct sk_buff *skb,
 }
 EXPORT_SYMBOL_GPL(ip_set_add);
 ```
+
+## INET + hash:net の kadt
+
+```c
+static intq
+hash_net4_kadt(struct ip_set *set, const struct sk_buff *skb,
+	       enum ipset_adt adt, u8 pf, u8 dim, u8 flags)
+{
+	const struct ip_set_hash *h = set->data;
+	ipset_adtfn adtfn = set->variant->adt[adt];
+	struct hash_net4_elem data = {
+		.cidr = h->nets[0].cidr ? h->nets[0].cidr : HOST_MASK
+	};
+
+	if (data.cidr == 0)
+		return -EINVAL;
+	if (adt == IPSET_TEST)
+		data.cidr = HOST_MASK;
+
+	ip4addrptr(skb, flags & IPSET_DIM_ONE_SRC, &data.ip);
+	data.ip &= ip_set_netmask(data.cidr);
+
+	return adtfn(set, &data, h->timeout, flags);
+}
+```
