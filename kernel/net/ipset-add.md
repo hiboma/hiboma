@@ -65,3 +65,4 @@ hash_net4_kadt(struct ip_set *set, const struct sk_buff *skb,
 }
 ```
 
+hash:net の adtfn の実装が見つからんなー
