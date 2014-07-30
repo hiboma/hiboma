@@ -39,6 +39,9 @@ EXPORT_SYMBOL_GPL(ip_set_add);
 
 ## INET + hash:net の kadt
 
+ * **kadt = kernelspace add/del/test**
+ * **uadt = userspace add/del/test**
+
 ```c
 static intq
 hash_net4_kadt(struct ip_set *set, const struct sk_buff *skb,
@@ -61,3 +64,4 @@ hash_net4_kadt(struct ip_set *set, const struct sk_buff *skb,
 	return adtfn(set, &data, h->timeout, flags);
 }
 ```
+
