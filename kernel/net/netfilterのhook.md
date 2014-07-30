@@ -198,6 +198,7 @@ ipt_do_table が肝。つえー
 
  * NF_INET_LOCAL_IN の場合はテーブルが ipv4.iptable_filter = filter になる
  * struct ipt_entry ( **ルール** ) をイテレートして ip_packet_match でマッチするエントリを探す
+   * ルール数で O(n) ?
    * t->u.kernel.target->target でターゲットを評価
      * IPT_CONTINUE を返したら次のルール/ターゲットを探す
 
