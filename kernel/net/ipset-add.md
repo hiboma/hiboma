@@ -11,7 +11,7 @@ $ sudo ipset add blacklist 192.168.69.0/24
 
 ip_set_add の中で、エントリ?を足す ip_set を探す
 
- * ip_set を見つけたら ip_set_type の .kadt でエントリを追加するa
+ * ip_set を見つけたら ip_set_type_variant? の .kadt でエントリを追加するa
 
 ```c
 int
