@@ -298,3 +298,36 @@ VmallocChunk:   103396 kB
 		vmi.used >> 10,
 		vmi.largest_chunk >> 10
 ```
+
+## vmalloc の ページフォルト
+
+page_fault -> do_page_fault -> __do_page_fault の vmalloc_fault でハンドリングされる
+
+ * カーネル空間でのフォルト
+ * フォルトしたアドレスが VMALLOC_START 〜 VMALLOC_END の範囲かどうかを見る
+
+```c
+	/*
+	 * We fault-in kernel-space virtual memory on-demand. The
+	 * 'reference' page table is init_mm.pgd.
+	 *
+	 * NOTE! We MUST NOT take any locks for this case. We may
+	 * be in an interrupt or a critical region, and should
+	 * only copy the information from the master page table,
+	 * nothing more.
+	 *
+	 * This verifies that the fault happens in kernel space
+	 * (error_code & 4) == 0, and that the fault was not a
+	 * protection error (error_code & 9) == 0.
+	 */
+	if (unlikely(fault_in_kernel_space(address))) {
+		if (!(error_code & (PF_RSVD | PF_USER | PF_PROT))) {
+			if (vmalloc_fault(address) >= 0)
+				return;
+
+			if (kmemcheck_fault(regs, address, error_code))
+				return;
+		}
+
+		/* Can handle a stale RO->RW TLB: */
+```
