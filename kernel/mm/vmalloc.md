@@ -303,9 +303,6 @@ VmallocChunk:   103396 kB
 
 page_fault -> do_page_fault -> __do_page_fault の vmalloc_fault でハンドリングされる
 
- * カーネル空間でのフォルト
- * フォルトしたアドレスが VMALLOC_START 〜 VMALLOC_END の範囲かどうかを見る
-
 ```c
 	/*
 	 * We fault-in kernel-space virtual memory on-demand. The
@@ -330,4 +327,48 @@ page_fault -> do_page_fault -> __do_page_fault の vmalloc_fault でハンドリ
 		}
 
 		/* Can handle a stale RO->RW TLB: */
+```
+
+#### vmalloc_fault
+
+ * カーネル空間でのフォルト
+ * フォルトしたアドレスが VMALLOC_START 〜 VMALLOC_END の範囲かどうかを見る
+ * read_cr3 で CR3レジスタ = PGD の物理アドレスを取る
+
+```c
+/*
+ * 32-bit:
+ *
+ *   Handle a fault on the vmalloc or module mapping area
+ */
+static noinline int vmalloc_fault(unsigned long address)
+{
+	unsigned long pgd_paddr;
+	pmd_t *pmd_k;
+	pte_t *pte_k;
+
+	/* Make sure we are in vmalloc area: */
+	if (!(address >= VMALLOC_START && address < VMALLOC_END))
+		return -1;
+
+	/*
+	 * Synchronize this task's top level page-table
+	 * with the 'reference' page table.
+	 *
+	 * Do _not_ use "current" here. We might be inside
+	 * an interrupt in the middle of a task switch..
+	 */
+	pgd_paddr = read_cr3();
+
+    /* PGD -> PMD -> ... で辿っていく */
+	pmd_k = vmalloc_sync_one(__va(pgd_paddr), address);
+	if (!pmd_k)
+		return -1;
+
+	pte_k = pte_offset_kernel(pmd_k, address);
+	if (!pte_present(*pte_k))
+		return -1;
+
+	return 0;
+}
 ```
