@@ -72,7 +72,9 @@ UDP_MIB_RCVBUFERRORS を手がかりにソースを探っていきます
 
 UDP_MIB_RCVBUFERRORS は **__udp_queue_rcv_skb** で統計を取っている。
 
+ * sock_queue_rcv_skb がコケると UDP_MIB_INERRORS は常に ++ される
  * sock_queue_rcv_skb が **ENOMEM** を返したら UDP_MIB_RCVBUFERRORS 統計値が ++ される
+   * => rmem_alloc のサイズを増やして解決できるのは UDP_MIB_RCVBUFERRORS の時だけ
  * sock_queue_rcv_skb がどういう状態の際に ENOMEM を返すのか?
 
 ```c
