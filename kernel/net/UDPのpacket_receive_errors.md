@@ -492,7 +492,7 @@ EXPORT_SYMBOL(__skb_recv_datagram);
 > Each time a packet is received, the sk- >sk_rmem_alloc is incremented by skb->truesize:
 > skb->truesize it the size (in bytes) allocated for the data of the skb plus the size of sk_buff structure itself.
 
- * sk->sk_rcvbuf = 最大値
+ * sk->sk_rcvbuf は 最大値。 sysctl_rmem_default の値が使われる
  * sk->sk_rmem_alloc = sk_receive_queue の使用量
  * skb->truesize = sizeof(sk_buff) + payload
    * パケットが届くと sk->sk_rmem_alloc に加算される
