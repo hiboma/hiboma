@@ -209,6 +209,7 @@ ipt_unregister_target(struct ipt_target *target)
 }
 ```
 
+ipt_target のリストを消す
 
 ## ipt_state
 
@@ -229,7 +230,11 @@ ipt_unregister_match(struct ipt_match *match)
 }
 ```
 
+ipt_match を消す
+
 ## iptables_filter
+
+他とちょっと違う
 
 ```c
 static void __exit fini(void)
@@ -243,6 +248,8 @@ static void __exit fini(void)
 }
 ```
 
+nf_unregister_hook は nf_hook_ops のリストを消す
+
 ```c
 void nf_unregister_hook(struct nf_hook_ops *reg)
 {
@@ -253,6 +260,8 @@ void nf_unregister_hook(struct nf_hook_ops *reg)
 	synchronize_net();
 }
 ```
+
+ipt_unregister_table で ipt_entry イテレートして cleanup_entry を呼び出して回る
 
 ```c
 void ipt_unregister_table(struct ipt_table *table)
@@ -268,7 +277,7 @@ void ipt_unregister_table(struct ipt_table *table)
 }
 ```
 
-cleanup_entry は各ターゲットの destroy を呼び出す。どんな風に destroy するかはターゲット次第だなー
+cleanup_entry は IPT_MATCH_ITERATE で ipt_entry の destroy を呼び出す。どんな風に destroy するかは ipt_entry, ipt_entry_target 次第
 
 ```c
 static inline int
