@@ -8,6 +8,8 @@
 void *kmap(struct page *page)
 {
 	might_sleep();
+
+    /* HighMemory でない = lowmem = ストレートマッピング領域 */
 	if (!PageHighMem(page))
 		return page_address(page);
 	return kmap_high(page);
@@ -24,6 +26,9 @@ void kunmap(struct page *page)
 ```
 
 ## page が PageHighMem の場合
+
+ * HighMemory なページをページテーブルにマップする
+ * 仮想メモリを返す
 
 ```c
 /**
@@ -42,12 +47,12 @@ void *kmap_high(struct page *page)
 	 * For highmem pages, we can't trust "virtual" until
 	 * after we have the lock.
 	 */
-     /* スピンロック */
-	lock_kmap();
+	lock_kmap();      /* スピンロック */
 	vaddr = (unsigned long)page_address(page);
 	if (!vaddr)
         /* ページフレームに仮想アドレスの割り当て */
 		vaddr = map_new_virtual(page);
+    
 	pkmap_count[PKMAP_NR(vaddr)]++;
 	BUG_ON(pkmap_count[PKMAP_NR(vaddr)] < 2);
 	unlock_kmap();
@@ -81,6 +86,7 @@ start:
 		/*
 		 * Sleep for somebody else to unmap their entries
 		 */
+         /* 他から kunmap されるまで待つ */
 		{
 			DECLARE_WAITQUEUE(wait, current);
 
