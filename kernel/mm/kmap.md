@@ -12,6 +12,8 @@ void *kmap(struct page *page)
     /* HighMemory でない = lowmem = ストレートマッピング領域 */
 	if (!PageHighMem(page))
 		return page_address(page);
+
+    /* HighMemory なので map する */
 	return kmap_high(page);
 }
 
@@ -62,6 +64,8 @@ void *kmap_high(struct page *page)
 EXPORT_SYMBOL(kmap_high);
 ```
 
+ * set_pte_at
+
 ```c
 static inline unsigned long map_new_virtual(struct page *page)
 {
@@ -83,6 +87,8 @@ start:
 		if (--count)
 			continue;
 
+        // mapping する場所が空いて無い場合は TASK_UNINTERRUPTIBLE で待つ */
+
 		/*
 		 * Sleep for somebody else to unmap their entries
 		 */
@@ -98,6 +104,7 @@ start:
 			lock_kmap();
 
 			/* Somebody else might have mapped it while we slept */
+            /* sleep 中に他の誰かが map した場合もある */
 			if (page_address(page))
 				return (unsigned long)page_address(page);
 
@@ -108,6 +115,7 @@ start:
 	vaddr = PKMAP_ADDR(last_pkmap_nr);
 
     /* init_mm */
+    /* init_mm の PTE でマップする */
 	set_pte_at(&init_mm, vaddr,
 		   &(pkmap_page_table[last_pkmap_nr]), mk_pte(page, kmap_prot));
 
@@ -135,6 +143,7 @@ void *page_address(struct page *page)
 	void *ret;
 	struct page_address_slot *pas;
 
+    /* HighMemory でない場合 = lowmem = ストレートマッピングされているので仮想アドレスを返せる */
 	if (!PageHighMem(page))
 		return lowmem_page_address(page);
 
@@ -159,7 +168,7 @@ done:
 EXPORT_SYMBOL(page_address);
 ```
 
-__va でページフレームの仮想アドレスを返す
+lowmem_page_address は __va でページフレームの仮想アドレスを返す
 
 ```c
 static __always_inline void *lowmem_page_address(struct page *page)
