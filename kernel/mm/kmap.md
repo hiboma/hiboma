@@ -55,6 +55,60 @@ void *kmap_high(struct page *page)
 EXPORT_SYMBOL(kmap_high);
 ```
 
+```c
+static inline unsigned long map_new_virtual(struct page *page)
+{
+	unsigned long vaddr;
+	int count;
+
+start:
+	count = LAST_PKMAP;
+	/* Find an empty entry */
+	for (;;) {
+		last_pkmap_nr = (last_pkmap_nr + 1) & LAST_PKMAP_MASK;
+		if (!last_pkmap_nr) {
+			flush_all_zero_pkmaps();
+			count = LAST_PKMAP;
+		}
+		if (!pkmap_count[last_pkmap_nr])
+			break;	/* Found a usable entry */
+		if (--count)
+			continue;
+
+		/*
+		 * Sleep for somebody else to unmap their entries
+		 */
+		{
+			DECLARE_WAITQUEUE(wait, current);
+
+			__set_current_state(TASK_UNINTERRUPTIBLE);
+			add_wait_queue(&pkmap_map_wait, &wait);
+			unlock_kmap();
+			schedule();
+			remove_wait_queue(&pkmap_map_wait, &wait);
+			lock_kmap();
+
+			/* Somebody else might have mapped it while we slept */
+			if (page_address(page))
+				return (unsigned long)page_address(page);
+
+			/* Re-start */
+			goto start;
+		}
+	}
+	vaddr = PKMAP_ADDR(last_pkmap_nr);
+
+    /* init_mm */
+	set_pte_at(&init_mm, vaddr,
+		   &(pkmap_page_table[last_pkmap_nr]), mk_pte(page, kmap_prot));
+
+	pkmap_count[last_pkmap_nr] = 1;
+	set_page_address(page, (void *)vaddr);
+
+	return vaddr;
+}
+```
+
 ## !PageHighMem
 
 lowmem_page_address
