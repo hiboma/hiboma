@@ -42,9 +42,11 @@ void *kmap_high(struct page *page)
 	 * For highmem pages, we can't trust "virtual" until
 	 * after we have the lock.
 	 */
+     /* スピンロック */
 	lock_kmap();
 	vaddr = (unsigned long)page_address(page);
 	if (!vaddr)
+        /* ページフレームに仮想アドレスの割り当て */
 		vaddr = map_new_virtual(page);
 	pkmap_count[PKMAP_NR(vaddr)]++;
 	BUG_ON(pkmap_count[PKMAP_NR(vaddr)] < 2);
@@ -65,6 +67,7 @@ start:
 	count = LAST_PKMAP;
 	/* Find an empty entry */
 	for (;;) {
+        /* 最後にマップした位置? */
 		last_pkmap_nr = (last_pkmap_nr + 1) & LAST_PKMAP_MASK;
 		if (!last_pkmap_nr) {
 			flush_all_zero_pkmaps();
