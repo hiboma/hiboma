@@ -64,6 +64,7 @@ void *kmap_high(struct page *page)
 EXPORT_SYMBOL(kmap_high);
 ```
 
+ * page を init_mm にマップする
  * set_pte_at
 
 ```c
