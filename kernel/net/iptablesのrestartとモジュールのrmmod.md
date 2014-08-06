@@ -4,8 +4,9 @@
 
 ## IPTABLES_MODULES_UNLOAD
 
-/etc/init.d/iptables の挙動を左右する環境変数で、 stop の際に参照されている
-IPTABLES_MODULES_UNLOAD=yes の場合は モジュールを rmmod する (依存のモジュールも rmmod する)
+ * `/etc/init.d/iptables` の挙動を左右する環境変数
+ * stop の際に参照されている
+ * IPTABLES_MODULES_UNLOAD=yes の場合は モジュールを **rmmod** する (依存のモジュールも rmmod する)
 
 ```sh
 stop() {
@@ -65,7 +66,7 @@ flush_n_delete() {
 }
 ```
 
-flush_n_delete した後に ip_tables, ip_filters を rmmod する。 ここで依存するモジュールも rmmod される
+flush_n_delete した後に ip_tables, ip_filters を rmmod する。 この時、依存するモジュールも rmmod される
 
 ## rmmod されるモジュール群
 
@@ -88,7 +89,7 @@ ip_tables 22337 4 ipt_LOG,ipt_REJECT,ipt_state,iptable_filter, Live 0xf0933000
    * ipt_state
    * iptable_filter
 
-これらカーネルモジュールの unload 時の挙動を見て行く   
+カーネルモジュールの unload 時の挙動を見て行く   
 
 ## ip_conntrack の __exit
 
@@ -98,6 +99,8 @@ static void __exit fini(void)
 	ipt_unregister_match(&conntrack_match);
 }
 ```
+
+ipt_unregister_match の中身は下記の通り
 
 ```c
 void
@@ -127,7 +130,7 @@ static void __exit fini(void)
 }
 ```
 
-nf_sockopt_ops_wrapper を消して回っているが何????
+nf_sockopt_ops_wrapper を消して回っている。 nf_sockopt_ops_wrapper ってなんだっけ
 
 ```c
 void nf_unregister_sockopt(struct nf_sockopt_ops *reg)
@@ -152,7 +155,6 @@ void nf_unregister_sockopt(struct nf_sockopt_ops *reg)
 
 ## ipt_LOG
 
-
 ```c
 static void __exit fini(void)
 {
@@ -161,8 +163,8 @@ static void __exit fini(void)
 	ipt_unregister_target(&ipt_log_reg);
 }
 ```
-
-ログ用の関数ポインタを NULL で上書きしていってる
+ 
+nf_log_unregister では ログ用の関数ポインタを NULL で上書きしていってる
 
 ```c
 void nf_log_unregister(int pf, nf_logfn *logfn)
@@ -177,7 +179,7 @@ void nf_log_unregister(int pf, nf_logfn *logfn)
 }		
 ```
 
-ipt_target のリストを削除する
+ipt_unregister_target で ipt_target のリストを削除する
 
 ```c
 void
@@ -191,13 +193,14 @@ ipt_unregister_target(struct ipt_target *target)
 
 ## ipt_REJECT
 
-
 ```c
 static void __exit fini(void)
 {
 	ipt_unregister_target(&ipt_reject_reg);
 }
 ```
+
+ipt_unregister_target では ipt_target のリストを削除して回る
 
 ```c
 void
@@ -220,6 +223,8 @@ static void __exit fini(void)
 }
 ```
 
+ipt_unregister_match では ipt_match のリストを削除する
+
 ```c
 void
 ipt_unregister_match(struct ipt_match *match)
@@ -233,8 +238,6 @@ ipt_unregister_match(struct ipt_match *match)
 ipt_match を消す
 
 ## iptables_filter
-
-他とちょっと違う
 
 ```c
 static void __exit fini(void)
@@ -277,7 +280,9 @@ void ipt_unregister_table(struct ipt_table *table)
 }
 ```
 
-cleanup_entry は IPT_MATCH_ITERATE で ipt_entry の destroy を呼び出す。どんな風に destroy するかは ipt_entry, ipt_entry_target 次第
+#### コールバックの cleanup_entry
+
+IPT_MATCH_ITERATE で ipt_entry の destroy を呼び出している。どんな風に destroy するかは ipt_entry, ipt_entry_target 次第
 
 ```c
 static inline int
@@ -298,6 +303,10 @@ cleanup_entry(struct ipt_entry *e, unsigned int *i)
 	return 0;
 }
 ```
+
+#### コールバックの cleanup_match の実装
+
+ipt_entry_match の .destroy を呼び出して回る
 
 ```c
 static inline int
@@ -330,6 +339,10 @@ void ipt_free_table_info(struct ipt_table_info *info)
 	kfree(info);
 }
 ```
+
+----
+
+## destroy の実装
 
 ```
 ip_conntrack_core.c:	conntrack->ct_general.destroy = destroy_conntrack;
