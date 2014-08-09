@@ -92,8 +92,8 @@ hiwater_vm がどのようにセットされるのか?
 remove_vma_list の際に hiwater_vm が更新される。なんで remove_vma_list で update_hiwater_vm を呼ぶのか?
 
  * 仮想メモリのサイズが増え続けている間は、 VmPeak は total_vm の値を参照しておけばよい
- * 仮想メモリのサイズが減った場合は、 total_vm と hiwater_vm を比較して max な方を参照すればよい
-
+ * 仮想メモリのサイズが減った場合に、 total_vm と hiwater_vm を比較して max な方を保持すればよい
+ 
 ```c
 /*
  * Ok - we have the memory areas we should free on the vma list,
