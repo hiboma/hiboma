@@ -633,3 +633,24 @@ rt_sigaction(SIGUSR2, {SIG_IGN, [], SA_RESTORER, 0x7f6337fdb9a0}, NULL, 8) = 0
 wait4(3733, 0x7fffcc67023c, WNOHANG, NULL) = -1 ECHILD (No child processes)
 exit_group(0)                           = ?
 ```
+
+## ソース
+
+> gen mapped /tmp/backup1/aaa.txt of size 5
+
+```c
+	if (verbose > 3) {
+		rprintf(FINFO, "gen mapped %s of size %.0f\n",
+			fnamecmp, (double)sx.st.st_size);
+	}
+```
+
+> send_files mapped /tmp/src/aaa.txt of size 10
+
+```c
+		if (verbose > 2) {
+			rprintf(FINFO, "send_files mapped %s%s%s of size %.0f\n",
+				path,slash,fname, (double)st.st_size);
+		}
+
+```
