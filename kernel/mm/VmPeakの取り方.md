@@ -2,8 +2,6 @@
 
 fs/proc/task_mmu.c の task_mem で seq_printf している数値
 
-**hiwater_vm** の数値の取り方を見れば VmPeak の取箇が分かる
-
 ```c
 void task_mem(struct seq_file *m, struct mm_struct *mm)
 {
@@ -51,4 +49,12 @@ void task_mem(struct seq_file *m, struct mm_struct *mm)
 		mm->stack_vm << (PAGE_SHIFT-10), text, lib,
 		(PTRS_PER_PTE*sizeof(pte_t)*mm->nr_ptes) >> 10,
 		swap << (PAGE_SHIFT-10));
+```
+
+**hiwater_vm** の数値の取り方を見れば VmPeak の取箇が分かる
+
+```c
+	hiwater_vm = total_vm = mm->total_vm;
+	if (hiwater_vm < mm->hiwater_vm)
+		hiwater_vm = mm->hiwater_vm;
 ```
