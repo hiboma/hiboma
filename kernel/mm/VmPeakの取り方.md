@@ -58,3 +58,46 @@ void task_mem(struct seq_file *m, struct mm_struct *mm)
 	if (hiwater_vm < mm->hiwater_vm)
 		hiwater_vm = mm->hiwater_vm;
 ```
+
+## struct mm_struct hiwater_vm
+
+```c
+struct mm_struct {
+
+//...
+
+	unsigned long hiwater_rss;	/* High-watermark of RSS usage */
+	unsigned long hiwater_vm;	/* High-water virtual memory usage */
+
+```
+
+hiwater_vm をセットしているのは以下の箇所
+
+```c
+static unsigned long move_vma(struct vm_area_struct *vma,
+		unsigned long old_addr, unsigned long old_len,
+		unsigned long new_len, unsigned long new_addr)
+{
+
+//...
+
+	/*
+	 * If we failed to move page tables we still do total_vm increment
+	 * since do_munmap() will decrement it by old_len == new_len.
+	 *
+	 * Since total_vm is about to be raised artificially high for a
+	 * moment, we need to restore high watermark afterwards: if stats
+	 * are taken meanwhile, total_vm and hiwater_vm appear too high.
+	 * If this were a serious issue, we'd add a flag to do_munmap().
+	 */
+	hiwater_vm = mm->hiwater_vm;
+	mm->total_vm += new_len >> PAGE_SHIFT;
+	vm_stat_account(mm, vma->vm_flags, vma->vm_file, new_len>>PAGE_SHIFT);
+
+	if (do_munmap(mm, old_addr, old_len) < 0) {
+		/* OOM: unable to split vma, just get accounts right */
+		vm_unacct_memory(excess >> PAGE_SHIFT);
+		excess = 0;
+	}
+	mm->hiwater_vm = hiwater_vm;
+```
