@@ -120,7 +120,7 @@ void acct_arg_size(struct linux_binprm *bprm, unsigned long pages)
 }
 ```
 
- * mm/memory.c
+もう一カ所は mm/memory.c で使われている
 
 ```c
 static inline void
@@ -135,10 +135,18 @@ add_mm_rss(struct mm_struct *mm, int file_rss, int anon_rss, int swap_usage)
 }
 ```
 
+add_mm_rss を呼び出すコールスタックは書きの通りで、fork(2) = clone(2) のパスである
+
+ * do_fork
+ * copy_process
+ * copy_mm
+ * dup_mm
+ * dup_mmap
  * copy_page_range
  * -> copy_pud_range
  * -> copy_pmd_range
  * -> copy_pte_range
+ * -> add_mm_rss
 
 ```c
  int copy_pte_range(struct mm_struct *dst_mm, struct mm_struct *src_mm,
