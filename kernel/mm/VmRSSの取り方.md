@@ -1,5 +1,7 @@
 # VmRSS の数値
 
+VmPeak に比べてだいぶややこしい
+
 ```c
 struct mm_struct {
 
