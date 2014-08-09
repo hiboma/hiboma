@@ -1,6 +1,6 @@
 # /proc/pid/status の VmPeak の取り方
 
-fs/proc/task_mmu.c の task_mem で seq_printf している数値
+fs/proc/task_mmu.c の task_mem で seq_printf している数値が VmPeak の正体
 
 ```c
 void task_mem(struct seq_file *m, struct mm_struct *mm)
@@ -59,7 +59,7 @@ void task_mem(struct seq_file *m, struct mm_struct *mm)
 		hiwater_vm = mm->hiwater_vm;
 ```
 
-## struct mm_struct hiwater_vm
+## struct mm_struct hiwater_vm とは?
 
 ```c
 struct mm_struct {
@@ -71,7 +71,11 @@ struct mm_struct {
 
 ```
 
-hiwater_vm をセットするマクロ (ついでに hiwater_rss も )
+hiwater_vm がどのようにセットされるのか?
+
+## hiwater_vm をセットするマクロ
+
+(ついでに hiwater_rss も )
 
 ```c
 #define update_hiwater_rss(mm)	do {			\
