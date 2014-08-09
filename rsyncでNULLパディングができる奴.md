@@ -4,13 +4,14 @@
  * --append
  * --link-dest
 
-を併用すると意図しない破損が起こる 。もじゃもじゃの人が見つけた。rsync の仕様として正しいのかどうかを誰か教えて!!!
+を併用すると意図しない***破損***が起こる 。もじゃもじゃの人が見つけた。
+
+( rsync の仕様として正しい気もするので 破損と書くのは適切さを欠いているかもしれません )
 
 ## 再現手順
 
 ```sh
 # もじゃもじゃさんが再現した手順です
-
 rm -rfv /tmp/{src,backup1,backup2}
 mkdir /tmp/{src,backup1,backup2}
 
@@ -116,6 +117,8 @@ _exit_cleanup(code=0, file=main.c, line=1039): about to call exit(0)
 
 ## 理由
 
+デバッグログを読んだ感じでは以下の理屈なようです
+
 ```
   1234567890abcdefghij  # src/
 - 1234567890            # backup1/ < --link-dest のファイルと比較して --partial で差分 (abcdefghij) を取り出す
@@ -133,15 +136,12 @@ strace を取ってみると、 lseek することで NULL のパディングが
 [pid  3732] lseek(3, 10, SEEK_SET)      = 10
 [pid  3732] read(3, "abcdefghij", 10)   = 10
 [pid  3732] close(3)                    = 0
-
 [pid  3732] write(4, "6\0\0\7\3\4\210\0\1\0\0\0\274\2\0\0\2\0\0\0\n\0\0\0\n\0\0\0abcdefghij\0\0\0\0\251%WiB\351K.\365z\6a\1\264\210v", 58 <unfinished ...>
 [pid  3734] read(0, "\3\4\210\0\1\0\0\0\274\2\0\0\2\0\0\0\n\0\0\0\n\0\0\0abcdefghij\0\0\0\0\251%WiB\351K.\365z\6a\1\264\210v", 54) = 54
 [pid  3734] open("/tmp/backup1/aaa.txt", O_RDONLY) = 1
-[pid  3734] open("aaa.txt", O_WRONLY|O_CREAT, 0600) = 3
-
-# lskeek してから abcdefghij 
-[pid  3734] lseek(3, 10, SEEK_SET)      = 10 # <= これ
-[pid  3734] write(3, "abcdefghij", 10)  = 10
+[pid  3734] open("aaa.txt", O_WRONLY|O_CREAT, 0600) = 3 # /tmp/backup2/aaa.txt を open
+[pid  3734] lseek(3, 10, SEEK_SET)      = 10            # <= これで NULL になる
+[pid  3734] write(3, "abcdefghij", 10)  = 10            # <= lskeek してから abcdefghij 書き込み
 [pid  3734] ftruncate(3, 20)            = 0
 [pid  3734] close(1)                    = 0
 [pid  3734] close(3)                    = 0
