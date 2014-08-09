@@ -654,3 +654,61 @@ exit_group(0)                           = ?
 		}
 
 ```
+
+> recv mapped /tmp/backup1/aaa.txt of size 5
+
+```c
+	read_sum_head(f_in, &sum);
+
+	if (fd_r >= 0 && size_r > 0) {
+		int32 read_size = MAX(sum.blength * 2, 16*1024);
+		mapbuf = map_file(fd_r, size_r, read_size, sum.blength);
+		if (verbose > 2) {
+			rprintf(FINFO, "recv mapped %s of size %.0f\n",
+				fname_r, (double)size_r);
+		}
+```        
+
+> data recv 6 at 6
+
+```c
+		if (i > 0) {
+			if (verbose > 3) {
+				rprintf(FINFO,"data recv %d at %.0f\n",
+					i,(double)offset);
+			}
+```            
+
+offset 変数はどこで定義されている?
+
+```c
+	if (append_mode > 0) {
+		OFF_T j;
+		sum.flength = (OFF_T)sum.count * sum.blength;
+		if (sum.remainder)
+			sum.flength -= sum.blength - sum.remainder;
+		if (append_mode == 2) {
+			for (j = CHUNK_SIZE; j < sum.flength; j += CHUNK_SIZE) {
+				if (do_progress)
+					show_progress(offset, total_size);
+				sum_update(map_ptr(mapbuf, offset, CHUNK_SIZE),
+					   CHUNK_SIZE);
+				offset = j;
+			}
+			if (offset < sum.flength) {
+				int32 len = (int32)(sum.flength - offset);
+				if (do_progress)
+					show_progress(offset, total_size);
+				sum_update(map_ptr(mapbuf, offset, len), len);
+			}
+		}
+		offset = sum.flength;
+		if (fd != -1 && (j = do_lseek(fd, offset, SEEK_SET)) != offset) {
+			rsyserr(FERROR_XFER, errno, "lseek of %s returned %.0f, not %.0f",
+				full_fname(fname), (double)j, (double)offset);
+			exit_cleanup(RERR_FILEIO);
+		}
+	}
+```
+
+append_mode の場合に offset が発生する。offset は sum.flength (generate の st_size ) に相当する
