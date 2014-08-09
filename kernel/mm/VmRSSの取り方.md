@@ -83,3 +83,111 @@ static struct mm_struct * mm_init(struct mm_struct * mm, struct task_struct *p)
 	set_mm_counter(mm, anon_rss, 0);
 	set_mm_counter(mm, swap_usage, 0);
 ```
+
+## add_mm_counter
+
+使われいるのは2箇所だった
+
+### acct_arg_size
+
+ * fs/exec.c
+ * argv のページ数なのかな
+ 
+
+```c
+#ifdef CONFIG_MMU
+
+void acct_arg_size(struct linux_binprm *bprm, unsigned long pages)
+{
+	struct mm_struct *mm = current->mm;
+
+   /* この数値を */
+	long diff = (long)(pages - bprm->vma_pages);
+
+	if (!mm || !diff)
+		return;
+
+	bprm->vma_pages = pages;
+
+    /* 足す */
+#ifdef USE_SPLIT_PTLOCKS
+	add_mm_counter(mm, anon_rss, diff);
+#else
+	spin_lock(&mm->page_table_lock);
+	add_mm_counter(mm, anon_rss, diff);
+	spin_unlock(&mm->page_table_lock);
+#endif
+}
+```
+
+ * mm/memory.c
+
+```c
+static inline void
+add_mm_rss(struct mm_struct *mm, int file_rss, int anon_rss, int swap_usage)
+{
+	if (file_rss)
+		add_mm_counter(mm, file_rss, file_rss);
+	if (anon_rss)
+		add_mm_counter(mm, anon_rss, anon_rss);
+	if (swap_usage)
+		add_mm_counter(mm, swap_usage, swap_usage);
+}
+```
+
+ * copy_page_range
+ * -> copy_pud_range
+ * -> copy_pmd_range
+ * -> copy_pte_range
+
+```c
+ int copy_pte_range(struct mm_struct *dst_mm, struct mm_struct *src_mm,
+		   pmd_t *dst_pmd, pmd_t *src_pmd, struct vm_area_struct *vma,
+		   unsigned long addr, unsigned long end)
+{
+	pte_t *orig_src_pte, *orig_dst_pte;
+	pte_t *src_pte, *dst_pte;
+	spinlock_t *src_ptl, *dst_ptl;
+	int progress = 0;
+	int rss[3];
+	swp_entry_t entry = (swp_entry_t){0};
+
+again:
+	rss[2] = rss[1] = rss[0] = 0;
+	dst_pte = pte_alloc_map_lock(dst_mm, dst_pmd, addr, &dst_ptl);
+	if (!dst_pte)
+		return -ENOMEM;
+	src_pte = pte_offset_map_nested(src_pmd, addr);
+	src_ptl = pte_lockptr(src_mm, src_pmd);
+	spin_lock_nested(src_ptl, SINGLE_DEPTH_NESTING);
+	orig_src_pte = src_pte;
+	orig_dst_pte = dst_pte;
+	arch_enter_lazy_mmu_mode();
+
+	do {
+		/*
+		 * We are holding two locks at this point - either of them
+		 * could generate latencies in another task on another CPU.
+		 */
+		if (progress >= 32) {
+			progress = 0;
+			if (need_resched() ||
+			    spin_needbreak(src_ptl) || spin_needbreak(dst_ptl))
+				break;
+		}
+		if (pte_none(*src_pte)) {
+			progress++;
+			continue;
+		}
+		entry.val = copy_one_pte(dst_mm, src_mm, dst_pte, src_pte,
+							vma, addr, rss);
+		if (entry.val)
+			break;
+		progress += 8;
+	} while (dst_pte++, src_pte++, addr += PAGE_SIZE, addr != end);
+
+	arch_leave_lazy_mmu_mode();
+	spin_unlock(src_ptl);
+	pte_unmap_nested(orig_src_pte);
+	add_mm_rss(dst_mm, rss[0], rss[1], rss[2]);
+```
