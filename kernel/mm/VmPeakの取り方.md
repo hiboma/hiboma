@@ -71,33 +71,58 @@ struct mm_struct {
 
 ```
 
-hiwater_vm をセットしているのは以下の箇所
+hiwater_vm をセットするマクロ (ついでに hiwater_rss も )
 
 ```c
-static unsigned long move_vma(struct vm_area_struct *vma,
-		unsigned long old_addr, unsigned long old_len,
-		unsigned long new_len, unsigned long new_addr)
+#define update_hiwater_rss(mm)	do {			\
+	unsigned long _rss = get_mm_rss(mm);		\
+	if ((mm)->hiwater_rss < _rss)			\
+		(mm)->hiwater_rss = _rss;		\
+} while (0)
+#define update_hiwater_vm(mm)	do {			\
+	if ((mm)->hiwater_vm < (mm)->total_vm)		\
+		(mm)->hiwater_vm = (mm)->total_vm;	\
+} while (0)
+```
+
+remove_vma_list の際に hiwater_vm が更新される。なんで remove_vma_list で update_hiwater_vm を呼ぶのか?
+
+ * 仮想メモリのサイズが増え続けている間は、 VmPeak は total_vm の値を参照しておけばよい
+ * 仮想メモリのサイズが減った場合は、 total_vm と hiwater_vm を比較して max な方を参照すればよい
+
+```c
+/*
+ * Ok - we have the memory areas we should free on the vma list,
+ * so release them, and do the vma updates.
+ *
+ * Called with the mm semaphore held.
+ */
+static void remove_vma_list(struct mm_struct *mm, struct vm_area_struct *vma)
 {
+	unsigned int unmap_factor = sysctl_unmap_area_factor;
+	/* Update high watermark before we lower total_vm */
+	update_hiwater_vm(mm);
+	do {
+		long nrpages = vma_pages(vma);
 
-//...
+		mm->total_vm -= nrpages;
+		if (unlikely(unmap_factor))
+			mm->cached_hole_size += nrpages;
+		vm_stat_account(mm, vma->vm_flags, vma->vm_file, -nrpages);
+		vma = remove_vma(vma);
+	} while (vma);
+	validate_mm(mm);
+}
+```
 
-	/*
-	 * If we failed to move page tables we still do total_vm increment
-	 * since do_munmap() will decrement it by old_len == new_len.
-	 *
-	 * Since total_vm is about to be raised artificially high for a
-	 * moment, we need to restore high watermark afterwards: if stats
-	 * are taken meanwhile, total_vm and hiwater_vm appear too high.
-	 * If this were a serious issue, we'd add a flag to do_munmap().
-	 */
-	hiwater_vm = mm->hiwater_vm;
-	mm->total_vm += new_len >> PAGE_SHIFT;
-	vm_stat_account(mm, vma->vm_flags, vma->vm_file, new_len>>PAGE_SHIFT);
+```c
+static inline unsigned long get_mm_hiwater_vm(struct mm_struct *mm)
+{
+	return max(mm->hiwater_vm, mm->total_vm);
+}
 
-	if (do_munmap(mm, old_addr, old_len) < 0) {
-		/* OOM: unable to split vma, just get accounts right */
-		vm_unacct_memory(excess >> PAGE_SHIFT);
-		excess = 0;
-	}
-	mm->hiwater_vm = hiwater_vm;
+static inline unsigned long get_mm_hiwater_rss(struct mm_struct *mm)
+{
+	return max(mm->hiwater_rss, get_mm_rss(mm));
+}
 ```
