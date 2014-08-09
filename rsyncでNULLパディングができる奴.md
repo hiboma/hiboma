@@ -4,11 +4,13 @@
  * --append
  * --link-dest
 
-を併用すると意図しない破損が起こる 。もじゃもじゃの人が見つけた
+を併用すると意図しない破損が起こる 。もじゃもじゃの人が見つけた。rsync の仕様として正しいのかどうかを誰か教えて!!!
 
 ## 再現手順
 
 ```sh
+# もじゃもじゃさんが再現した手順です
+
 rm -rfv /tmp/{src,backup1,backup2}
 mkdir /tmp/{src,backup1,backup2}
 
@@ -145,7 +147,7 @@ strace を取ってみると、 lseek することで NULL のパディングが
 [pid  3734] close(3)                    = 0
 ```
 
-strace の全部ログ
+#### strace の全部ログ
 
 ```
 $ strace -s120 -f rsync -a --partial --append --link-dest /tmp/backup1/ /tmp/src/ /tmp/backup2/
