@@ -204,7 +204,7 @@ again:
 	add_mm_rss(dst_mm, rss[0], rss[1], rss[2]);
 ```
 
-脇道で copy_one_pte の中身も見ておこう
+脇道で copy_one_pte の中身も見ておこう。page の種類を判別して rss の量を計算している
 
 ```c
 static inline unsigned long
