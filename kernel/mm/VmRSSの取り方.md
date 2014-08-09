@@ -1,4 +1,4 @@
-# VmRSS
+# VmRSS の数値
 
 ```c
 struct mm_struct {
