@@ -1,6 +1,8 @@
 # backlog
 
  * accept queue
+   * accept(2) 待ちのキュー
+   * キューの実体は sk->sk_ack_backlog 
  * SYN queue
 
 二つの queue (backlog) が存在する 
@@ -12,6 +14,23 @@ http://veithen.blogspot.jp/2014/01/how-tcp-backlog-works-in-linux.html
 ```
 $ ruby -rsocket -e 's = TCPServer.open(10000); sleep 1 << 20'
 ```
+
+これに nc とかで繋ぎまくっている時の netstat -s の統計値
+
+```
+TcpExt:
+    84 resets received for embryonic SYN_RECV sockets # <= sysctl_tcp_abort_on_overflow=1 の場合に増える
+    69 TCP sockets finished time wait in fast timer
+    15 delayed acks sent
+    187 times the listen queue of a socket overflowed # <= 増える
+    187 SYNs to LISTEN sockets ignored                # <= 増える
+```
+
+refs http://dsas.blog.klab.org/archives/51977201.html
+
+## /proc/net/snmp の数値
+
+netstat -s の数値は下記の三つを出力している
 
 ```
 static const struct snmp_mib snmp4_net_list[] = {
@@ -25,18 +44,9 @@ static const struct snmp_mib snmp4_net_list[] = {
 	SNMP_MIB_ITEM("ListenDrops", LINUX_MIB_LISTENDROPS),
 ```
 
-netstat -s 
+## LINUX_MIB_LISTENDROPS, LINUX_MIB_LISTENOVERFLOWS
 
-```
-TcpExt:
-    84 resets received for embryonic SYN_RECV sockets
-    69 TCP sockets finished time wait in fast timer
-    15 delayed acks sent
-    187 times the listen queue of a socket overflowed
-    187 SYNs to LISTEN sockets ignored
-```
-
- * http://dsas.blog.klab.org/archives/51977201.html
+tcp_v4_syn_recv_sock で使われている。 tcp_v4_syn_recv_sock は inet_connection_sock_af_ops の .syn_recv_sock
 
 ```c
 const struct inet_connection_sock_af_ops ipv4_specific = {
@@ -46,6 +56,8 @@ const struct inet_connection_sock_af_ops ipv4_specific = {
 	.conn_request	   = tcp_v4_conn_request,
 	.syn_recv_sock	   = tcp_v4_syn_recv_sock,
 ```
+
+tcp_v4_syn_recv_sock の中身
 
 ```c
 /*
@@ -64,6 +76,12 @@ struct sock *tcp_v4_syn_recv_sock(struct sock *sk, struct sk_buff *skb,
 	struct ip_options *inet_opt;
 
 	/* accept キューが溢れているのでシカト */
+
+    //static inline int sk_acceptq_is_full(struct sock *sk)
+    //{
+    //	return sk->sk_ack_backlog > sk->sk_max_ack_backlog;
+    //}
+    //
 	if (sk_acceptq_is_full(sk))
 		goto exit_overflow;
 
