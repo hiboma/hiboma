@@ -1,18 +1,23 @@
-# backlog
+# AF_INET + SOCK_STREAM の backlog その2
+
+TCP の backlog は2種類ある。ややこしい
 
  * accept queue
    * accept(2) 待ちのキュー
+   * キューの実体は inet_csk(sk)->icsk_accept_queue ???
+   * inet_csk_reqsk_queue_len(sk) ?
+ * SYN queue
    * キューの実体は sk->sk_ack_backlog 
    * sk_acceptq_is_full sk->sk_max_ack_backlog と比較してキュー溢れを判定
- * SYN queue
 
 二つの queue (backlog) が存在する 
 
-http://veithen.blogspot.jp/2014/01/how-tcp-backlog-works-in-linux.html
+ * http://veithen.blogspot.jp/2014/01/how-tcp-backlog-works-in-linux.html
+ * http://tmtms.hatenablog.com/entry/2014/08/06/tcp-established
 
 ## 検証コード
 
-```
+```sh
 $ ruby -rsocket -e 's = TCPServer.open(10000); sleep 1 << 20'
 ```
 
@@ -33,11 +38,10 @@ refs http://dsas.blog.klab.org/archives/51977201.html
 
 netstat -s の数値は下記の三つを出力している
 
-```
+```c
 static const struct snmp_mib snmp4_net_list[] = {
 
 //…
-
 	SNMP_MIB_ITEM("EmbryonicRsts", LINUX_MIB_EMBRYONICRSTS),
 
 //…
