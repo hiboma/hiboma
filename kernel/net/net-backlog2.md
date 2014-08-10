@@ -2,7 +2,8 @@
 
  * accept queue
    * accept(2) 待ちのキュー
-   * キューの実体は sk->sk_ack_backlog 
+   * キューの実体は sk->sk_ack_backlog
+   * sk_acceptq_is_full で判定
  * SYN queue
 
 二つの queue (backlog) が存在する 
@@ -89,7 +90,7 @@ struct sock *tcp_v4_syn_recv_sock(struct sock *sk, struct sk_buff *skb,
 	if (!dst && (dst = inet_csk_route_req(sk, req)) == NULL)
 		goto exit;
 
-	/* GFP_ATOMIC コケた場合。(成功した場合は新しいソケットは SYN_RECVD な state で返される) */
+	/* kmem_cache_alloc + GFP_ATOMIC な割り当てコケた場合。(成功した場合は新しいソケットは SYN_RECVD な state で返される) */
 	newsk = tcp_create_openreq_child(sk, req, skb);
 	if (!newsk)
 		goto exit_nonewsk;
@@ -145,10 +146,18 @@ exit:
 }
 ```
 
-## syn_recv_sock の呼び出し元
+## LINUX_MIB_EMBRYONICRSTS 
 
+syn_recv_sock の呼び出し元で使われている。
 
 ```c
+struct sock *tcp_check_req(struct sock *sk, struct sk_buff *skb,
+			   struct request_sock *req,
+			   struct request_sock **prev)
+{
+
+//...
+
 	/* SYN_RECV のソケットを複製する */
 	child = inet_csk(sk)->icsk_af_ops->syn_recv_sock(sk, skb, req, NULL);
 	if (child == NULL)
@@ -161,6 +170,7 @@ exit:
 	return child;
 
 listen_overflow:
+    /* オーバフローした場合に、クライアントに RST パケットを送りかえすかどうか */
 	if (!sysctl_tcp_abort_on_overflow) {
 		inet_rsk(req)->acked = 1;
 		return NULL;
@@ -176,6 +186,8 @@ embryonic_reset:
 	return NULL;
 }
 ```
+
+### RST パケットが送られたかどうかを nc で strace する
 
 getsockopet + SOL_SOCKET + SO_ERROR で RSTパケットを受け取ったことを確認している
 
