@@ -2,8 +2,8 @@
 
  * accept queue
    * accept(2) 待ちのキュー
-   * キューの実体は sk->sk_ack_backlog
-   * sk_acceptq_is_full で判定
+   * キューの実体は sk->sk_ack_backlog 
+   * sk_acceptq_is_full sk->sk_max_ack_backlog と比較してキュー溢れを判定
  * SYN queue
 
 二つの queue (backlog) が存在する 
