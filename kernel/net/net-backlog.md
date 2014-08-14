@@ -671,7 +671,7 @@ enqueue:
 
 	spin_unlock(&queue->input_pkt_queue.lock);
 
-    /* drop されている */
+    /* drop されている。インタフェースで統計が加算される */
 	__get_cpu_var(netdev_rx_stat).dropped++;
 	local_irq_restore(flags);
 
