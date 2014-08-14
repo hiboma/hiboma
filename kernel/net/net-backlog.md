@@ -19,16 +19,16 @@
    * input_pkt_queue sk_buff のキュー。プロトコルに依存しない
    * drop されたパケットは ifconfig の droppbed で確認できるはず
  * net.core.somaxconn
-   * プロトコルに依存しない backlog の上限値。sk->sk_max_ack_backlog にセットされる
+   * プロトコルに依存しない backlog の上限値。
+   * sk->sk_max_ack_backlog にセットされる
    * sys_listen で切り詰められる
    * net.ipv4.tcp_max_syn_backlog より大きくあるべき?
    * 上限は 65535
      * http://blog.yuryu.jp/2014/01/somaxconn-is-16-bit.html
  * net.ipv4.tcp_max_syn_backlog
    * IPv4 + TCP の LISTEN ソケットの SYN_RECV キューの最大長を決める
-     * request_sock_queue の listen_opt ( struct listen_sock )
+     * request_sock_queue の listen_opt ( struct listen_sock ) の長さになる
    * reqsk_queue_alloc で somaxconn の値以下にセットされる
-   * TCP だよね
  * net.unix.max_dgram_qlen
    * unix_create1
 
