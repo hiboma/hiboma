@@ -1,13 +1,12 @@
 # AF_INET + SOCK_STREAM の backlog その2
 
-TCP の backlog は2種類ある。ややこしい
+TCP/IP の backlog は2種類ある。ややこしい
 
  * SYN queue
    * struct request_sock
  * accept queue
-   * accept(2) 待ちのキュー = ACK を返していない socket
+   * accept(2) 待ちの ESTABLISED なソケットのキュー
    * キューの実体は inet_csk(sk)->icsk_accept_queue
-   * inet_csk_reqsk_queue_len(sk) ?
    * sk->sk_ack_backlog でキューの数カウント
    * sk_acceptq_is_full ( sk->sk_max_ack_backlog ) と比較してキュー溢れを判定
 
