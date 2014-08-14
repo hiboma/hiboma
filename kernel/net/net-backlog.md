@@ -19,7 +19,7 @@
    * input_pkt_queue sk_buff のキュー。プロトコルに依存しない
    * drop されたパケットは ifconfig の droppbed で確認できるはず
  * net.core.somaxconn
-   * プロトコルに依存しない backlog の上限値。
+   * プロトコルに依存しない backlog の上限値としてセットされる。
    * sk->sk_max_ack_backlog にセットされる
      * ACK 待ちのキュー
    * sys_listen で切り詰められる
