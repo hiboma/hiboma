@@ -42,6 +42,10 @@ listen(2) する際に backlog の値が net.core.somaxconn と net.ipv4.tcp_max
 
  * unix_create1
 
+### net.ipv4.tcp_rmem, net.core.rmem_max
+
+ * コネくションの backlog ではなくて receive(2) のキューなので別種
+
 ## TCP で sk_ack_backlog の数をインクリメントするコードはどれ?
 
 ```c
