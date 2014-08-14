@@ -27,7 +27,7 @@
    * 上限は 65535
      * http://blog.yuryu.jp/2014/01/somaxconn-is-16-bit.html
  * net.ipv4.tcp_max_syn_backlog
-   * IPv4 + TCP の LISTEN ソケットの SYN_RECV キューの最大長を決める
+   * IPv4 + TCP の LISTEN ソケット一個あたりの SYN_RECV キューの最大長を決める
      * request_sock_queue の listen_opt ( struct listen_sock ) の長さになる
    * reqsk_queue_alloc で somaxconn の値以下にセットされる
  * net.unix.max_dgram_qlen
