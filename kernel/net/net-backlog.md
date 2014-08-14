@@ -21,6 +21,7 @@
  * net.core.somaxconn
    * プロトコルに依存しない backlog の上限値。
    * sk->sk_max_ack_backlog にセットされる
+     * ACK 待ちのキュー
    * sys_listen で切り詰められる
    * net.ipv4.tcp_max_syn_backlog より大きくあるべき?
    * 上限は 65535
@@ -34,19 +35,57 @@
 
 listen(2) する際に backlog の値が net.core.somaxconn と net.ipv4.tcp_max_syn_backlog とで切り詰められるので 両者の値を一緒に上げておかないと意味がない
 
-## TODO
-
- * TCP で sk_ack_backlog の数をインクリメントするコードはどれ?
-   * sk_acceptq_removed は inet_connection_sock.c で使われている
-   * 対応する sk_acceptq_added が見つからん
-   * 
+## TCP で sk_ack_backlog の数をインクリメントするコードはどれ?
 
 ```c
-static inline void sk_acceptq_removed(struct sock *sk)
+struct sock *tcp_check_req(struct sock *sk, struct sk_buff *skb,
+			   struct request_sock *req,
+			   struct request_sock **prev)
 {
-	sk->sk_ack_backlog--;
-}
 
+//…
+
+	/* SYN_RECV のソケットを複製する */
+	child = inet_csk(sk)->icsk_af_ops->syn_recv_sock(sk, skb, req, NULL);
+	if (child == NULL)
+		goto listen_overflow;
+
+	inet_csk_reqsk_queue_unlink(sk, req, prev);
+	inet_csk_reqsk_queue_removed(sk, req);
+
+	inet_csk_reqsk_queue_add(sk, req, child);
+	return child;
+```
+
+```c
+static inline void inet_csk_reqsk_queue_add(struct sock *sk,
+					    struct request_sock *req,
+					    struct sock *child)
+{
+	reqsk_queue_add(&inet_csk(sk)->icsk_accept_queue, req, sk, child);
+}
+```
+
+```c
+static inline void reqsk_queue_add(struct request_sock_queue *queue,
+				   struct request_sock *req,
+				   struct sock *parent,
+				   struct sock *child)
+{
+	req->sk = child;
+	sk_acceptq_added(parent);
+
+	if (queue->rskq_accept_head == NULL)
+		queue->rskq_accept_head = req;
+	else
+		queue->rskq_accept_tail->dl_next = req;
+
+	queue->rskq_accept_tail = req;
+	req->dl_next = NULL;
+}
+```
+
+```c
 static inline void sk_acceptq_added(struct sock *sk)
 {
 	sk->sk_ack_backlog++;
