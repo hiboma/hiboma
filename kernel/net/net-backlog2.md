@@ -8,7 +8,7 @@ TCP の backlog は2種類ある。ややこしい
    * inet_csk_reqsk_queue_len(sk) ?
  * SYN queue
    * キューの実体は sk->sk_ack_backlog 
-   * sk_acceptq_is_full sk->sk_max_ack_backlog と比較してキュー溢れを判定
+   * sk_acceptq_is_full ( sk->sk_max_ack_backlog ) と比較してキュー溢れを判定
 
 二つの queue (backlog) が存在する 
 
