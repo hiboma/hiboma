@@ -7,7 +7,11 @@ TCP/IP の backlog は2種類ある。ややこしい
  * accept queue
    * accept(2) 待ちの ESTABLISED なソケットのキュー
    * キューの実体は inet_csk(sk)->icsk_accept_queue
-   * sk->sk_ack_backlog でキューの数カウント
+     * inet_csk_reqsk_queue_add で追加
+     * inet_csk_reqsk_queue_unlink
+     * inet_csk_reqsk_queue_removed
+     * inet_csk_reqsk_queue_is_full でキュー溢れを確認
+   * sk->sk_ack_backlog でキュー数カウント
    * sk_acceptq_is_full ( sk->sk_max_ack_backlog ) と比較してキュー溢れを判定
 
 二つの queue (backlog) が存在する 
