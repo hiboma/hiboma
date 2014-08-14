@@ -14,26 +14,33 @@
 
 ## まとめ
 
- * net.core.netdev_max_backlog
-   * per_cpu の softnet_data .input_pkt_queue (sk_buff) のキュー長と比較
-   * input_pkt_queue sk_buff のキュー。プロトコルに依存しない
-   * drop されたパケットは ifconfig の droppbed で確認できるはず
- * net.core.somaxconn
-   * プロトコルに依存しない backlog の上限値としてセットされる。
-   * sk->sk_max_ack_backlog にセットされる
-     * ACK 待ちのキュー
+#### net.core.netdev_max_backlog
+
+ * per_cpu の softnet_data .input_pkt_queue (sk_buff) のキュー長と比較
+ * input_pkt_queue sk_buff のキュー。プロトコルに依存しない
+ * drop されたパケットは ifconfig の droppbed で確認できるはず
+
+#### net.core.somaxconn
+
+ * プロトコルに依存しない backlog の上限値としてセットされる。
    * sys_listen で切り詰められる
    * net.ipv4.tcp_max_syn_backlog より大きくあるべき?
    * 上限は 65535
-     * http://blog.yuryu.jp/2014/01/somaxconn-is-16-bit.html
- * net.ipv4.tcp_max_syn_backlog
-   * IPv4 + TCP の LISTEN ソケット一個あたりの SYN_RECV キューの最大長を決める
-   * request_sock_queue の .listen_opt ( struct request_sock の配列 ) の長さになる
-   * reqsk_queue_alloc で somaxconn の値以下にセットされる
- * net.unix.max_dgram_qlen
-   * unix_create1
+     * http://blog.yuryu.jp/2014/01/somaxconn-is-16-bit.html を読もう
+ * sk->sk_max_ack_backlog にセットされる
+   * TCP/IPの場合は ACK 待ちのキュー?
 
 listen(2) する際に backlog の値が net.core.somaxconn と net.ipv4.tcp_max_syn_backlog とで切り詰められるので 両者の値を一緒に上げておかないと意味がない
+
+#### net.ipv4.tcp_max_syn_backlog
+
+ * IPv4 + TCP の LISTEN ソケット一個あたりの SYN_RECV キューの最大長を決める
+ * request_sock_queue の .listen_opt ( struct request_sock の配列 ) の長さになる
+   * reqsk_queue_alloc で somaxconn の値以下にセットされる
+
+#### net.unix.max_dgram_qlen
+
+ * unix_create1
 
 ## TCP で sk_ack_backlog の数をインクリメントするコードはどれ?
 

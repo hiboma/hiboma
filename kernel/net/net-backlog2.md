@@ -2,6 +2,8 @@
 
 TCP の backlog は2種類ある。ややこしい
 
+ * SYN queue
+   * struct request_sock
  * accept queue
    * accept(2) 待ちのキュー = ACK を返していない socket
    * キューの実体は inet_csk(sk)->icsk_accept_queue
