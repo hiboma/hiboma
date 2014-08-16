@@ -95,7 +95,7 @@ queue_and_out:
 // この後も続くけど、えらい複雑なので略
 ```
 
-tcp_ofo_queue
+## tcp_ofo_queue
 
  * out_of_order_queue にキューイングされた sk_buff を sk->sk_receive_queue に移す
  * プロセスコンテキストでは out_of_order_queue から直で読み出すのでは無さそ
