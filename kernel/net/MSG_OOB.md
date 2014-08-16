@@ -39,6 +39,16 @@ int udp_sendmsg(struct kiocb *iocb, struct sock *sk, struct msghdr *msg,
 
 ## TCP
 
+sk->sk_receive_queue とは別に struct tcp_sock が out_of_order_queue キューを持っている
+
+```c 
+struct sk_buff_head	out_of_order_queue; /* Out of order segments go here */`
+```
+
+sk->sk_receive_queue より優先して読み込まれるキューなのかな?
+
+### out_of_order_queue に sk_buff を突っ込むコード
+
 ```c
 static void tcp_data_queue(struct sock *sk, struct sk_buff *skb)
 {
