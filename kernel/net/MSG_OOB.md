@@ -36,3 +36,38 @@ int udp_sendmsg(struct kiocb *iocb, struct sock *sk, struct msghdr *msg,
 	if (msg->msg_flags & MSG_OOB) /* Mirror BSD error message compatibility */
 		return -EOPNOTSUPP;
 ```
+
+## TCP
+
+```c
+static void tcp_data_queue(struct sock *sk, struct sk_buff *skb)
+{
+	struct tcphdr *th = tcp_hdr(skb);
+	struct tcp_sock *tp = tcp_sk(sk);
+	int eaten = -1;
+
+//...
+		if (eaten <= 0) {
+queue_and_out:
+			if (eaten < 0 &&
+			    tcp_try_rmem_schedule(sk, skb->truesize))
+				goto drop;
+
+			skb_set_owner_r(skb, sk);
+			__skb_queue_tail(&sk->sk_receive_queue, skb);
+		}
+
+//...
+        
+	if (!skb_peek(&tp->out_of_order_queue)) {
+		/* Initial out of order segment, build 1 SACK. */
+		if (tcp_is_sack(tp)) {
+			tp->rx_opt.num_sacks = 1;
+			tp->selective_acks[0].start_seq = TCP_SKB_CB(skb)->seq;
+			tp->selective_acks[0].end_seq =
+						TCP_SKB_CB(skb)->end_seq;
+		}
+		__skb_queue_head(&tp->out_of_order_queue, skb);
+
+// この後も続くけど、えらい複雑なので略
+```
