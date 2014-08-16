@@ -9,6 +9,13 @@ http://d.hatena.ne.jp/sternheller/20090314/1237037937 の解説がわかりや�
 
 ## UDP の場合
 
+__skb_recv_datagram の実装を見るとなんとなく理解できる
+
+ * skb_peek
+ * __skb_unlink
+
+の使い方が肝
+
 ```c
 /**
  *	__skb_recv_datagram - Receive a datagram skbuff
@@ -96,5 +103,22 @@ no_packet:
 EXPORT_SYMBOL(__skb_recv_datagram);
 ```
 
+MSG_PEEK で読み込んだデータは UDP_MIB_INDATAGRAMS (InDatagrams) の統計を加算しない
 
+```c
+int udp_recvmsg(struct kiocb *iocb, struct sock *sk, struct msghdr *msg,
+		size_t len, int noblock, int flags, int *addr_len)
+{
 
+//...
+try_again:
+	skb = __skb_recv_datagram(sk, flags | (noblock ? MSG_DONTWAIT : 0),
+				  &peeked, &err);
+	if (!skb)
+		goto out;
+
+//...
+	if (!peeked)
+		UDP_INC_STATS_USER(sock_net(sk),
+				UDP_MIB_INDATAGRAMS, is_udplite);
+```
