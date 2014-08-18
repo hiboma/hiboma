@@ -197,3 +197,117 @@ static netdev_tx_t loopback_xmit(struct sk_buff *skb,
 ```
 
 netif_rx の動作は http://wiki.bit-hive.com/linuxkernelmemo/pg/%C1%F7%BC%F5%BF%AE の図にお世話になると理解できる
+
+## loopback_get_stats
+
+パケット送受信の統計値を返すメソッド
+
+ * pcpu_lstats は loopback_dev_init で初期化されている
+ * loopback デバイスでもパケットドロップが起こる可能性がある
+
+```c
+static struct net_device_stats *loopback_get_stats(struct net_device *dev)
+{
+	const struct pcpu_lstats *pcpu_lstats;
+	struct net_device_stats *stats = &dev->stats;
+	unsigned long bytes = 0;
+	unsigned long packets = 0;
+	unsigned long drops = 0;
+	int i;
+
+	pcpu_lstats = dev->ml_priv;
+	for_each_possible_cpu(i) {
+		const struct pcpu_lstats *lb_stats;
+
+		lb_stats = per_cpu_ptr(pcpu_lstats, i);
+		bytes   += lb_stats->bytes;
+		packets += lb_stats->packets;
+        /* パケットドロップ */
+		drops   += lb_stats->drops;
+	}
+	stats->rx_packets = packets;
+	stats->tx_packets = packets;
+	stats->rx_dropped = drops;
+	stats->rx_errors  = drops;
+	stats->rx_bytes   = bytes;
+	stats->tx_bytes   = bytes;
+	return stats;
+}
+```
+
+> loopback デバイスでもパケットドロップが起こる可能性がある
+
+loopback_xmit で netif_rx にコケるとパケットドロップを起こす
+
+```c
+static netdev_tx_t loopback_xmit(struct sk_buff *skb,
+				 struct net_device *dev)
+{                 
+//...
+
+	if (likely(netif_rx(skb) == NET_RX_SUCCESS)) {
+		lb_stats->bytes += len;
+		lb_stats->packets++;
+	} else
+		lb_stats->drops++;
+
+	return NETDEV_TX_OK;
+```
+
+### netif_rx
+
+enqueue_to_backlog でコケたら loopback デバイスでもパケットドロップ、でいいんだろうか?
+
+ * input_pkt_queue へのキューイング 
+
+```c
+ * enqueue_to_backlog is called to queue an skb to a per CPU backlog
+ * queue (may be a remote CPU queue).
+ */
+static int enqueue_to_backlog(struct sk_buff *skb, int cpu,
+			      unsigned int *qtail)
+{
+	struct softnet_data *queue;
+	unsigned long flags;
+
+	queue = &per_cpu(softnet_data, cpu);
+
+	local_irq_save(flags);
+	__get_cpu_var(netdev_rx_stat).total++;
+
+	spin_lock(&queue->input_pkt_queue.lock);
+	if (queue->input_pkt_queue.qlen <= netdev_max_backlog) {
+		if (queue->input_pkt_queue.qlen) {
+enqueue:
+			__skb_queue_tail(&queue->input_pkt_queue, skb);
+			*qtail = queue->input_queue_head +
+				 queue->input_pkt_queue.qlen;
+
+			spin_unlock_irqrestore(&queue->input_pkt_queue.lock,
+			    flags);
+			return NET_RX_SUCCESS;
+		}
+
+		/* Schedule NAPI for backlog device */
+		if (napi_schedule_prep(&queue->backlog)) {
+			if (cpu != smp_processor_id()) {
+				struct rps_remote_softirq_cpus *rcpus =
+				    &__get_cpu_var(rps_remote_softirq_cpus);
+
+				cpu_set(cpu, rcpus->mask[rcpus->select]);
+				__raise_softirq_irqoff(NET_RX_SOFTIRQ);
+			} else
+				____napi_schedule(queue, &queue->backlog);
+		}
+		goto enqueue;
+	}
+
+	spin_unlock(&queue->input_pkt_queue.lock);
+
+	__get_cpu_var(netdev_rx_stat).dropped++;
+	local_irq_restore(flags);
+
+	kfree_skb(skb);
+	return NET_RX_DROP;
+}
+```
