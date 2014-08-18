@@ -1,6 +1,31 @@
 # loopback device
 
- * いわゆる **lo**
+ループバックデバイス
+
+```c
+lo        Link encap:Local Loopback  
+          inet addr:127.0.0.1  Mask:255.0.0.0
+          inet6 addr: ::1/128 Scope:Host
+          UP LOOPBACK RUNNING  MTU:16436  Metric:1
+          RX packets:0 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:0 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:0 
+          RX bytes:0 (0.0 b)  TX bytes:0 (0.0 b)
+
+$ ip link 
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 16436 qdisc noqueue state UNKNOWN 
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+
+$ ip addr
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 16436 qdisc noqueue state UNKNOWN 
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+    inet6 ::1/128 scope host 
+       valid_lft forever preferred_lft forever
+```
+
+ * 127.0.0.1
+ * **lo**
  * デバイスドライバであり、実装は drivers/net/loopback.c に書いてある
  
 UNIX domain socket との違いを追うためにソースを読む
@@ -38,7 +63,8 @@ loopback デバイスは struct net_device である。
 
 #### loopback_setup の初期化
 
- * MTU のサイズを決めたり
+ * MTU のサイズを決めたり (16436)
+   * なんのサイズ?
  * features にデバイスのサポートする/しない機能をセットしている
 
 ```c
@@ -48,6 +74,7 @@ loopback デバイスは struct net_device である。
  */
 static void loopback_setup(struct net_device *dev)
 {
+    /* MTU = 16436 */
 	dev->mtu		= (16 * 1024) + 20 + 20 + 12;
 	dev->hard_header_len	= ETH_HLEN;	/* 14	*/
 	dev->addr_len		= ETH_ALEN;	/* 6	*/
@@ -169,4 +196,4 @@ static netdev_tx_t loopback_xmit(struct sk_buff *skb,
 }
 ```
 
-netif_rx の動作は http://wiki.bit-hive.com/linuxkernelmemo/pg/%C1%F7%BC%F5%BF%AE の図にお世話になって理解できる
+netif_rx の動作は http://wiki.bit-hive.com/linuxkernelmemo/pg/%C1%F7%BC%F5%BF%AE の図にお世話になると理解できる
