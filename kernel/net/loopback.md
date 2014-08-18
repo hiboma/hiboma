@@ -11,17 +11,14 @@ UNIX domain socket との違いを追うためにソースを読む
  * http://www.rissi.co.jp/Latency_of_switches.html
  * http://images.slideplayer.us/7/1716402/slides/slide_4.jpg
  
-## ところで xmit is なに?
-
-**Transmit** の略。
-
 ## loopback device の実体は struct net_device
 
  * struct net_device を初期化
  * struct net に **register_netdev**
 
 でデバイスが登録される様子。 alloc_netdev (後述) に関数ポインタとして loopback_setup を渡すことで、初期化 + allocate できる API らしい。
-初期化は loopback_setup で行う
+
+#### loopback_setup の初期化
 
 ```c
 /*
@@ -51,13 +48,13 @@ static void loopback_setup(struct net_device *dev)
 }
 ```
 
-register_netdev をしているコード
+次に alloc_netdev と register_netdev をしているコード
 
  * alloc_netdev
+   * kmalloc + GFP_KERNEL
  * dev_net_set
+   * network namespace
  * register_netdev
-
-あたりが登録APIな様子
 
 ```c
 /* Setup and register the loopback device. */
@@ -89,7 +86,9 @@ out:
 }
 ```
 
-パケットの送信は net_device_ops の **.ndo_start_xmit** を使う。
+## パケットの送信は
+
+net_device_ops の **.ndo_start_xmit** を使う。
 
 ```c
 static const struct net_device_ops loopback_ops = {
@@ -99,14 +98,21 @@ static const struct net_device_ops loopback_ops = {
 };
 ```
 
+## ところで xmit is なに?
+
+**Transmit** の略。
+
+## loopback_xmit の実装
+
 loopback_xmit は下記の通り
 
  * IP層? から落ちてきた sk_buff を netif_rx に渡している
    * ふつーのデバイスドライバなら、デバイスのメモリに sk_buff の中身を渡して「送信」
    する実装をする箇所
-   * netif_rx で input_pkt_queue ? に積まれるので、loopback で受信している動作になる
+   * loopback_xmit では netif_rx で input_pkt_queue ? に積みなおしするので、あたかも loopback で受信しているような動作になる
      * http://wiki.bit-hive.com/linuxkernelmemo/pg/%C1%F7%BC%F5%BF%AE の図にお世話になって理解できる
-   * これが loopback なゆえん
+
+これが loopback なゆえん
 
 ```c
 /*
