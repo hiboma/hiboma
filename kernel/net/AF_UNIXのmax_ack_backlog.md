@@ -35,7 +35,56 @@ static int unix_listen(struct socket *sock, int backlog)
 	err = 0;
 ```
 
-unix_recvq_full で backlog を超えたかどうかを判定している
+サーバは unix_accept で accept(2) する
+
+ * skb_recv_datagram で connect(2) してきたクライアントの sk_buff を取る
+   * sk->sk_receive_queue から sk_buff 取ってる
+
+```c
+static int unix_accept(struct socket *sock, struct socket *newsock, int flags)
+{
+	struct sock *sk = sock->sk;
+	struct sock *tsk;
+	struct sk_buff *skb;
+	int err;
+
+	err = -EOPNOTSUPP;
+	if (sock->type != SOCK_STREAM && sock->type != SOCK_SEQPACKET)
+		goto out;
+
+	err = -EINVAL;
+	if (sk->sk_state != TCP_LISTEN)
+		goto out;
+
+	/* If socket state is TCP_LISTEN it cannot change (for now...),
+	 * so that no locks are necessary.
+	 */
+
+	skb = skb_recv_datagram(sk, 0, flags&O_NONBLOCK, &err);
+	if (!skb) {
+		/* This means receive shutdown. */
+		if (err == 0)
+			err = -EINVAL;
+		goto out;
+	}
+
+	tsk = skb->sk;
+	skb_free_datagram(sk, skb);
+	wake_up_interruptible(&unix_sk(sk)->peer_wait);
+
+	/* attach accepted sock to socket */
+	unix_state_lock(tsk);
+	newsock->state = SS_CONNECTED;
+	sock_graft(tsk, newsock);
+	unix_state_unlock(tsk);
+	return 0;
+
+out:
+	return err;
+}
+```
+
+AF_UNIX + SOCK_STREAM では unix_recvq_full で backlog を超えたかどうかを判定する
 
 ```c
 static inline int unix_recvq_full(struct sock const *sk)
@@ -47,7 +96,8 @@ static inline int unix_recvq_full(struct sock const *sk)
 クライアントは unix_stream_connect で connect(2) する
 
  * unix_recvq_full の場合は EAGAIN もしくはブロックする
- * connect(2) が sk_receive_queue にキューイングされているのがヤヤコしいな
+ * connect(2) が sk_receive_queue にキューイングされている。
+   * sk_receive_queue UDPと扱いがい違うのでややこしい
 
 ```c
 static int unix_stream_connect(struct socket *sock, struct sockaddr *uaddr,
@@ -80,3 +130,14 @@ static int unix_stream_connect(struct socket *sock, struct sockaddr *uaddr,
 		sock_put(other);
 		goto restart;
 	}
+
+//...    
+	/* take ten and and send info to listening sock */
+	spin_lock(&other->sk_receive_queue.lock);
+	__skb_queue_tail(&other->sk_receive_queue, skb);
+	spin_unlock(&other->sk_receive_queue.lock);
+	unix_state_unlock(other);
+	other->sk_data_ready(other, 0);
+	sock_put(other);
+	return 0;
+```    
