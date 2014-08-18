@@ -38,6 +38,9 @@ loopback デバイスは struct net_device である。
 
 #### loopback_setup の初期化
 
+ * MTU のサイズを決めたり
+ * features にデバイスのサポートする/しない機能をセットしている
+
 ```c
 /*
  * The loopback device is special. There is only one instance
@@ -50,15 +53,16 @@ static void loopback_setup(struct net_device *dev)
 	dev->addr_len		= ETH_ALEN;	/* 6	*/
 	dev->tx_queue_len	= 0;
 	dev->type		= ARPHRD_LOOPBACK;	/* 0x0001*/
+    /* これ大事そう */
 	dev->flags		= IFF_LOOPBACK;
 	dev->priv_flags	       &= ~IFF_XMIT_DST_RELEASE;
-	dev->features 		= NETIF_F_SG | NETIF_F_FRAGLIST
-		| NETIF_F_TSO
-		| NETIF_F_NO_CSUM
-		| NETIF_F_HIGHDMA
-		| NETIF_F_LLTX
-		| NETIF_F_NETNS_LOCAL
-		| NETIF_F_VLAN_CHALLENGED;
+	dev->features 		= NETIF_F_SG | NETIF_F_FRAGLIST /* Scatter/gather IO. ??? */
+		| NETIF_F_TSO              /*  ??? */
+		| NETIF_F_NO_CSUM          /* パケットのチェックサムを計算しない */
+		| NETIF_F_HIGHDMA          /* highmemory で DMA できる ? */
+		| NETIF_F_LLTX             /* LockLess TX - deprecated. Please */
+		| NETIF_F_NETNS_LOCAL      /* Does not change network namespaces */
+		| NETIF_F_VLAN_CHALLENGED; /* Device cannot handle VLAN packets */
 	dev->ethtool_ops	= &loopback_ethtool_ops;
 	dev->header_ops		= &eth_header_ops;
 	dev->netdev_ops		= &loopback_ops;
@@ -104,7 +108,9 @@ out:
 }
 ```
 
-## パケットの送信は
+loopback_net_init は冒頭の net_dev_init で呼び出される
+
+## パケットの送信
 
 net_device_ops の **.ndo_start_xmit** を使う。
 
@@ -116,7 +122,9 @@ static const struct net_device_ops loopback_ops = {
 };
 ```
 
-## ところで xmit is なに?
+ http://3daysblog.blogspot.jp/2012/02/ifconfig.html によると、↑の三つのメソッドが必須ぽい
+
+#### ところで xmit is なに?
 
 **Transmit** の略。
 
@@ -124,11 +132,10 @@ static const struct net_device_ops loopback_ops = {
 
 loopback_xmit は下記の通り
 
- * IP層? から落ちてきた sk_buff を netif_rx に渡している
-   * ふつーのデバイスドライバなら、デバイスのメモリに sk_buff の中身を渡して「送信」
+ * IP層? から落ちてきた sk_buff を直接 netif_rx に渡している
+   * ふつーのデバイスドライバなら物理デバイスに sk_buff の中身を渡して「送信」
    する実装をする箇所
-   * loopback_xmit では netif_rx で input_pkt_queue ? に積みなおしするので、あたかも loopback で受信しているような動作になる
-     * http://wiki.bit-hive.com/linuxkernelmemo/pg/%C1%F7%BC%F5%BF%AE の図にお世話になって理解できる
+   * ところが loopback_xmit では netif_rx を使って per_cpu の input_pkt_queue ? に積みなおしするので、自分で送信した sk_buff を loopback で受信しているような動作になる
 
 これが loopback なゆえん
 
@@ -162,3 +169,4 @@ static netdev_tx_t loopback_xmit(struct sk_buff *skb,
 }
 ```
 
+netif_rx の動作は http://wiki.bit-hive.com/linuxkernelmemo/pg/%C1%F7%BC%F5%BF%AE の図にお世話になって理解できる
