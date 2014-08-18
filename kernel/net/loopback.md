@@ -11,12 +11,30 @@ UNIX domain socket との違いを追うためにソースを読む
  * http://www.rissi.co.jp/Latency_of_switches.html
  * http://images.slideplayer.us/7/1716402/slides/slide_4.jpg
  
-## loopback device の実体は struct net_device
+## loopback デバイス の実体は struct net_device
+
+loopback デバイスは struct net_device である。
 
  * struct net_device を初期化
  * struct net に **register_netdev**
 
 でデバイスが登録される様子。 alloc_netdev (後述) に関数ポインタとして loopback_setup を渡すことで、初期化 + allocate できる API らしい。
+
+**lo** デバイスは起動時(?)の net_dev_init で初期化される
+
+```c
+	/* The loopback device is special if any other network devices
+	 * is present in a network namespace the loopback device must
+	 * be present. Since we now dynamically allocate and free the
+	 * loopback device ensure this invariant is maintained by
+	 * keeping the loopback device as the first device on the
+	 * list of network devices.  Ensuring the loopback devices
+	 * is the first device that appears and the last network device
+	 * that disappears.
+	 */
+	if (register_pernet_device(&loopback_net_ops))
+		goto out;
+```
 
 #### loopback_setup の初期化
 
