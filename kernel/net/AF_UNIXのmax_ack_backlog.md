@@ -3,6 +3,7 @@
 ## SOCK_STREAM の場合
 
  * sk->sk_receive_queue が accept(2)/connect(2) と sendmsg(2)/recvmsg(2) の二つの用途のキューとして扱われている
+ * AF_INET と全然違う仕組みなので注意 ( AF_INET は icksk_accept_queue, syn_tables )
 
 #### listen(2) 
 
@@ -46,7 +47,6 @@ static int unix_listen(struct socket *sock, int backlog)
  * skb_recv_datagram で connect(2) してきたクライアントの sk_buff を取る
    * connect(2) の sk_buff を datagram 扱いする
    * sk->sk_receive_queue から sk_buff 取ってる
-     * AF_INET と全然違う仕組みなので注意 ( AF_INET は icksk_accept_queue, syn_tables )
 
 ```c
 static int unix_accept(struct socket *sock, struct socket *newsock, int flags)
@@ -158,8 +158,8 @@ static int unix_stream_connect(struct socket *sock, struct sockaddr *uaddr,
 struct kiocb を sk_buff に載せて相手に送り出す
 
  * kiocb -> sock_iocb -> sk_buff
- * memcpy_fromiovec
- * skb_queue_tail(&other->sk_receive_queue, skb);
+ * memcpy_fromiovec でコピー
+ * skb_queue_tail(&other->sk_receive_queue, skb) で相手のキューに繋ぐ
 
 ```c
 // sendmsg -----> other (peer) にメッセージ送信
