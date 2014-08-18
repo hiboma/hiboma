@@ -44,6 +44,7 @@ static int unix_listen(struct socket *sock, int backlog)
 サーバは unix_accept で accept(2) する
 
  * skb_recv_datagram で connect(2) してきたクライアントの sk_buff を取る
+   * connect(2) の sk_buff を datagram 扱いする
    * sk->sk_receive_queue から sk_buff 取ってる
 
 ```c
