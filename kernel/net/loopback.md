@@ -10,6 +10,10 @@ UNIX domain socket との違いを追うためにソースを読む
  * http://3daysblog.blogspot.jp/2012/02/ifconfig.html
  * http://www.rissi.co.jp/Latency_of_switches.html
  * http://images.slideplayer.us/7/1716402/slides/slide_4.jpg
+ 
+## xmit is なに?
+
+**Transmit** の略
 
 ## loopback device の実体は struct net_device
 
