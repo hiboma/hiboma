@@ -97,6 +97,7 @@ loopback_xmit は下記の通り
    * ふつーのデバイスドライバなら、デバイスのメモリに sk_buff の中身を渡して「送信」
    する実装をする箇所
    * netif_rx で input_pkt_queue ? に積まれるので、loopback で受信している動作になる
+     * http://wiki.bit-hive.com/linuxkernelmemo/pg/%C1%F7%BC%F5%BF%AE の図にお世話になって理解できる
    * これが loopback なゆえん
 
 ```c
