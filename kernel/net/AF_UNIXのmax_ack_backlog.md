@@ -153,6 +153,14 @@ static int unix_stream_connect(struct socket *sock, struct sockaddr *uaddr,
 	return 0;
 ```
 
+#### sendmsg(2)
+
+struct kiocb を sk_buff に載せて相手に送り出す
+
+ * kiocb -> sock_iocb -> sk_buff
+ * memcpy_fromiovec
+ * skb_queue_tail(&other->sk_receive_queue, skb);
+
 ```c
 // sendmsg -----> other (peer) にメッセージ送信
 static int unix_stream_sendmsg(struct kiocb *kiocb, struct socket *sock,
@@ -213,6 +221,7 @@ static int unix_stream_sendmsg(struct kiocb *kiocb, struct socket *sock,
 		 *	Grab a buffer
 		 */
 
+        /* alloc_pages にコケて ENOBUFS を返しうる */
 		skb = sock_alloc_send_skb(sk, size, msg->msg_flags&MSG_DONTWAIT,
 					  &err);
 
