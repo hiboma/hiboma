@@ -2,6 +2,10 @@
 
 ## SOCK_STREAM の場合
 
+ * sk->sk_receive_queue が accept(2)/connect(2) と sendmsg(2)/recvmsg(2) の二つの用途のキューとして扱われている
+
+#### listen(2) 
+
 サーバが listen(2) する際に backlog sk->sk_max_ack_backlog をセットする
 
 ```c
@@ -34,6 +38,8 @@ static int unix_listen(struct socket *sock, int backlog)
 	init_peercred(sk);
 	err = 0;
 ```
+
+#### accept(2)
 
 サーバは unix_accept で accept(2) する
 
@@ -70,6 +76,7 @@ static int unix_accept(struct socket *sock, struct socket *newsock, int flags)
 
 	tsk = skb->sk;
 	skb_free_datagram(sk, skb);
+    /* クライアントを起床、データを何か送ってもらう */
 	wake_up_interruptible(&unix_sk(sk)->peer_wait);
 
 	/* attach accepted sock to socket */
@@ -83,6 +90,8 @@ out:
 	return err;
 }
 ```
+
+#### connect(2)
 
 AF_UNIX + SOCK_STREAM では unix_recvq_full で backlog を超えたかどうかを判定する
 
