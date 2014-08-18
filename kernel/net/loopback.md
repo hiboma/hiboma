@@ -11,13 +11,17 @@ UNIX domain socket との違いを追うためにソースを読む
  * http://www.rissi.co.jp/Latency_of_switches.html
  * http://images.slideplayer.us/7/1716402/slides/slide_4.jpg
  
-## xmit is なに?
+## ところで xmit is なに?
 
-**Transmit** の略
+**Transmit** の略。
 
 ## loopback device の実体は struct net_device
 
-struct net_device を初期化して struct net に register_netdev するとデバイスが登録される様子
+ * struct net_device を初期化
+ * struct net に **register_netdev**
+
+でデバイスが登録される様子。 alloc_netdev (後述) に関数ポインタとして loopback_setup を渡すことで、初期化 + allocate できる API らしい。
+初期化は loopback_setup で行う
 
 ```c
 /*
