@@ -46,6 +46,7 @@ static int unix_listen(struct socket *sock, int backlog)
  * skb_recv_datagram で connect(2) してきたクライアントの sk_buff を取る
    * connect(2) の sk_buff を datagram 扱いする
    * sk->sk_receive_queue から sk_buff 取ってる
+     * AF_INET と全然違う仕組みなので注意 ( AF_INET は icksk_accept_queue, syn_tables )
 
 ```c
 static int unix_accept(struct socket *sock, struct socket *newsock, int flags)
