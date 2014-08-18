@@ -2,6 +2,14 @@
 
  * いわゆる **lo**
  * デバイスドライバであり、実装は drivers/net/loopback.c に書いてある
+ 
+UNIX domain socket との違いを追うためにソースを読む
+
+## see also
+
+ * http://3daysblog.blogspot.jp/2012/02/ifconfig.html
+ * http://www.rissi.co.jp/Latency_of_switches.html
+ * http://images.slideplayer.us/7/1716402/slides/slide_4.jpg
 
 ## loopback device の実体は struct net_device
 
@@ -73,5 +81,50 @@ out:
 }
 ```
 
-パケットの送信は
+パケットの送信は net_device_ops の **.ndo_start_xmit** を使う。
+
+```c
+static const struct net_device_ops loopback_ops = {
+	.ndo_init      = loopback_dev_init,
+	.ndo_start_xmit= loopback_xmit,
+	.ndo_get_stats = loopback_get_stats,
+};
+```
+
+loopback_xmit は下記の通り
+
+ * IP層? から落ちてきた sk_buff を netif_rx に渡している
+   * ふつーのデバイスドライバなら、デバイスのメモリに sk_buff の中身を渡して「送信」
+   する実装をする箇所
+   * これが loopback なゆえん
+
+```c
+/*
+ * The higher levels take care of making this non-reentrant (it's
+ * called with bh's disabled).
+ */
+static netdev_tx_t loopback_xmit(struct sk_buff *skb,
+				 struct net_device *dev)
+{
+	struct pcpu_lstats *pcpu_lstats, *lb_stats;
+	int len;
+
+	skb_orphan(skb);
+
+	skb->protocol = eth_type_trans(skb, dev);
+
+	/* it's OK to use per_cpu_ptr() because BHs are off */
+	pcpu_lstats = dev->ml_priv;
+	lb_stats = per_cpu_ptr(pcpu_lstats, smp_processor_id());
+
+	len = skb->len;
+	if (likely(netif_rx(skb) == NET_RX_SUCCESS)) {
+		lb_stats->bytes += len;
+		lb_stats->packets++;
+	} else
+		lb_stats->drops++;
+
+	return NETDEV_TX_OK;
+}
+```
 
