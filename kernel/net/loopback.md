@@ -254,11 +254,12 @@ static netdev_tx_t loopback_xmit(struct sk_buff *skb,
 	return NETDEV_TX_OK;
 ```
 
-### netif_rx
+### netif_rx でドロップ
 
-enqueue_to_backlog でコケたら loopback デバイスでもパケットドロップ、でいいんだろうか?
+netif_rx -> enqueue_to_backlog でコケたら loopback デバイスでもパケットドロップ、でいいんだろうか?
 
- * input_pkt_queue へのキューイング 
+ * input_pkt_queue のキュー長さが netdev_max_backlog ( **net.core.netdev_max_backlog** ) を超えたらドロップされる (= キューイングされない)
+ * デバイスに依らないキューなので、他のデバイスが猛烈にパケットを受信していたりしたらありえる?
 
 ```c
  * enqueue_to_backlog is called to queue an skb to a per CPU backlog
@@ -276,6 +277,8 @@ static int enqueue_to_backlog(struct sk_buff *skb, int cpu,
 	__get_cpu_var(netdev_rx_stat).total++;
 
 	spin_lock(&queue->input_pkt_queue.lock);
+
+    /* ここで比較 */
 	if (queue->input_pkt_queue.qlen <= netdev_max_backlog) {
 		if (queue->input_pkt_queue.qlen) {
 enqueue:
@@ -304,6 +307,7 @@ enqueue:
 
 	spin_unlock(&queue->input_pkt_queue.lock);
 
+   /* ドロップよ〜ん */
 	__get_cpu_var(netdev_rx_stat).dropped++;
 	local_irq_restore(flags);
 
