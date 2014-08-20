@@ -42,6 +42,17 @@ Change: 2014-08-20 22:28:30.859172981 +0900 # 更新される
 int chown(const char *pathname, uid_t owner, gid_t group);
 ```
 
+owner, group の値は指定すると、 chown_common で strct iattr のフラグを立てるのに使われている
+
+ * ATTR_CTIME
+   * st_ctime を更新するフラグ
+ * ATTR_UID
+   * uid を更新するフラグ
+   * -1 の場合は無効
+ * ATTR_GID
+   * gid を更新するフラグ
+   * -1 の場合は無効
+
 ```c
 static int chown_common(struct dentry * dentry, uid_t user, gid_t group)
 {
@@ -50,10 +61,14 @@ static int chown_common(struct dentry * dentry, uid_t user, gid_t group)
 	struct iattr newattrs;
 
 	newattrs.ia_valid =  ATTR_CTIME;
+
+    /* -1 でなければ ATTR_UID を立てる */
 	if (user != (uid_t) -1) {
 		newattrs.ia_valid |= ATTR_UID;
 		newattrs.ia_uid = user;
 	}
+
+    /* -1 でなければ ATTR_GID を立てる */    
 	if (group != (gid_t) -1) {
 		newattrs.ia_valid |= ATTR_GID;
 		newattrs.ia_gid = group;
@@ -68,3 +83,40 @@ static int chown_common(struct dentry * dentry, uid_t user, gid_t group)
 	return error;
 }
 ```
+
+struct iattr の中身は ↓ な感じ。
+
+ * Inode Attributes
+ * notify_change で使われる
+
+inode で変更したい属性を iattr にセットして、 notifier_change にぶん投げて使うみたい
+
+```c
+/*
+ * This is the Inode Attributes structure, used for notify_change().  It
+ * uses the above definitions as flags, to know which values have changed.
+ * Also, in this manner, a Filesystem can look at only the values it cares
+ * about.  Basically, these are the attributes that the VFS layer can
+ * request to change from the FS layer.
+ *
+ * Derek Atkins <warlord@MIT.EDU> 94-10-20
+ */
+struct iattr {
+	unsigned int	ia_valid;
+	umode_t		ia_mode;
+	uid_t		ia_uid;
+	gid_t		ia_gid;
+	loff_t		ia_size;
+	struct timespec	ia_atime;
+	struct timespec	ia_mtime;
+	struct timespec	ia_ctime;
+
+	/*
+	 * Not an attribute, but an auxilary info for filesystems wanting to
+	 * implement an ftruncate() like method.  NOTE: filesystem should
+	 * check for (ia_valid & ATTR_FILE), and not for (ia_file != NULL).
+	 */
+	struct file	*ia_file;
+};
+```
+
