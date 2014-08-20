@@ -120,3 +120,40 @@ struct iattr {
 };
 ```
 
+## ATTR_UID と ATTR_GID のバリデーション
+
+inode_change_ok で ATTR_UID, ATTR_GID を変更出来るかどうかの権限確認が行われる
+
+```c
+/**
+ * inode_change_ok - check if attribute changes to an inode are allowed
+ * @inode:	inode to check
+ * @attr:	attributes to change
+ *
+ * Check if we are allowed to change the attributes contained in @attr
+ * in the given inode.  This includes the normal unix access permission
+ * checks, as well as checks for rlimits and others.
+ *
+ * Should be called as the first thing in ->setattr implementations,
+ * possibly after taking additional locks.
+ */
+int inode_change_ok(const struct inode *inode, struct iattr *attr)
+{
+	unsigned int ia_valid = attr->ia_valid;
+
+//...    
+
+	/* Make sure a caller can chown. */
+	if ((ia_valid & ATTR_UID) &&
+	    (current_fsuid() != inode->i_uid ||
+	     attr->ia_uid != inode->i_uid) && !capable(CAP_CHOWN))
+		return -EPERM;
+
+	/* Make sure caller can chgrp. */
+	if ((ia_valid & ATTR_GID) &&
+	    (current_fsuid() != inode->i_uid ||
+	    (!in_group_p(attr->ia_gid) && attr->ia_gid != inode->i_gid)) &&
+	    !capable(CAP_CHOWN))
+```
+
+ATTR_UID, ATTR_GID が無い場合は ここをすり抜けちゃうね
