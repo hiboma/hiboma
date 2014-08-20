@@ -154,6 +154,8 @@ int inode_change_ok(const struct inode *inode, struct iattr *attr)
 	    (current_fsuid() != inode->i_uid ||
 	    (!in_group_p(attr->ia_gid) && attr->ia_gid != inode->i_gid)) &&
 	    !capable(CAP_CHOWN))
+		return -EPERM;        
 ```
 
-ATTR_UID, ATTR_GID が無い場合は ここをすり抜けちゃうね
+ATTR_UID, ATTR_GID が無い場合は ここをすり抜けちゃうね!
+加えて ATTR_CTIME は inode_change_ok でバリデーションされていない
