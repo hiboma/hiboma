@@ -53,6 +53,7 @@ owner, group の値は指定すると、 chown_common で strct iattr のフラ�
    * gid を更新するフラグ
    * -1 の場合は無効
 
+ATTR_* が立っている場合、属性は後述する inode_change_ok で権限のバリデーションが行われる   
 ```c
 static int chown_common(struct dentry * dentry, uid_t user, gid_t group)
 {
@@ -84,12 +85,7 @@ static int chown_common(struct dentry * dentry, uid_t user, gid_t group)
 }
 ```
 
-struct iattr の中身は ↓ な感じ。
-
- * Inode Attributes
- * notify_change で使われる
-
-inode で変更したい属性を iattr にセットして、 notifier_change にぶん投げて使うみたい
+脇道で struct iattr の中身は ↓ な感じ。
 
 ```c
 /*
@@ -119,6 +115,11 @@ struct iattr {
 	struct file	*ia_file;
 };
 ```
+
+ * Inode Attributes
+ * notify_change で使われる
+
+inode で変更したい属性を iattr にセットして、 notifier_change にぶん投げて使うみたい
 
 ## ATTR_UID と ATTR_GID のバリデーション
 
@@ -157,5 +158,5 @@ int inode_change_ok(const struct inode *inode, struct iattr *attr)
 		return -EPERM;        
 ```
 
-ATTR_UID, ATTR_GID が無い場合は ここをすり抜けちゃうね!
+ATTR_UID, ATTR_GID が立って無い場合は ここをすり抜けちゃうね!
 加えて ATTR_CTIME は inode_change_ok でバリデーションされていない
