@@ -2,7 +2,7 @@
 
 ----
 
-# x86 32bit/64bit  での uidの上限値はいくつ? 型は? 
+# Linux 32bit/64bit  での uidの上限値はいくつ? 型は? 
 
 ## 結論 
 
@@ -14,8 +14,8 @@ x86の32bit/64bitのlibcでは uid_t は unsigned int として扱われる。�
     - CentOS5.2/64bit では正常に出力された 
 
 ということで実践的には uid_t は signed int として見ておけば よいんではないかということでFA? ( そんなにアカウント作らないyo!)
-[[BR]]
-(ただし上記のstatの例のようにライブラリが型を正しく扱ってない作りになってた場合はどうなるか分からない)
+
+(ただし上記のstatの例のように、他のライブラリが型を正しく扱ってない場合はどうなるか分からない)
 
 ## 以下は調査過程でのメモ 
 
@@ -88,7 +88,7 @@ Access: (0644/-rw-r--r--)  Uid: (2147483647/ hiboma2)   Gid: (    0/    root)
 ```sh
 sudo chown 4294967295 /tmp/hoge
 stat /tmp/hoge                 
-Access: (0644/-rw-r--r--)  Uid: (4294967294/nfsnobody)   Gid: (  513/paperboy)
+Access: (0644/-rw-r--r--)  Uid: (4294967294/nfsnobody)   Gid: (  513/foo)
 ```
 
 ## 課題
