@@ -160,3 +160,51 @@ int inode_change_ok(const struct inode *inode, struct iattr *attr)
 
 ATTR_UID, ATTR_GID が立って無い場合は ここをすり抜けちゃうね!
 加えて ATTR_CTIME は inode_change_ok でバリデーションされていない
+
+## ctime を変える
+
+debugfs を使うのだ
+
+```
+[vagrant@log001 ~]$ sudo debugfs -R 'stat /' /dev/mapper/VolGroup-lv_root
+debugfs 1.41.12 (17-May-2010)
+Inode: 2   Type: directory    Mode:  0555   Flags: 0x0
+Generation: 0    Version: 0x00000000:00000020
+User:     0   Group:     0   Size: 4096
+File ACL: 0    Directory ACL: 0
+Links: 23   Blockcount: 8
+Fragment:  Address: 0    Number: 0    Size: 0
+ ctime: 0x4b3ccabc:3d9af1cc -- Fri Jan  1 01:01:00 2010
+ atime: 0x53f47274:044fee1c -- Wed Aug 20 19:03:32 2014
+ mtime: 0x53f42342:3321db68 -- Wed Aug 20 13:25:38 2014
+crtime: 0x529d6b6c:00000000 -- Tue Dec  3 14:26:04 2013
+Size of extra inode fields: 28
+Extended attributes stored in inode body: 
+  selinux = "system_u:object_r:root_t:s0\000" (28)
+BLOCKS:
+(0):9249
+TOTAL: 1
+
+$ perl -e 'chown(-1,-1, "/")'
+
+$ sudo debugfs -R 'stat /' /dev/mapper/VolGroup-lv_root
+debugfs 1.41.12 (17-May-2010)
+Inode: 2   Type: directory    Mode:  0555   Flags: 0x0
+Generation: 0    Version: 0x00000000:00000020
+User:     0   Group:     0   Size: 4096
+File ACL: 0    Directory ACL: 0
+Links: 23   Blockcount: 8
+Fragment:  Address: 0    Number: 0    Size: 0
+ ctime: 0x53f4abb9:29024728 -- Wed Aug 20 23:07:53 2014
+ atime: 0x53f47274:044fee1c -- Wed Aug 20 19:03:32 2014
+ mtime: 0x53f42342:3321db68 -- Wed Aug 20 13:25:38 2014
+crtime: 0x529d6b6c:00000000 -- Tue Dec  3 14:26:04 2013
+Size of extra inode fields: 28
+Extended attributes stored in inode body: 
+  selinux = "system_u:object_r:root_t:s0\000" (28)
+BLOCKS:
+(0):9249
+TOTAL: 1
+```
+
+元ネタ http://unix.stackexchange.com/questions/36021/how-can-i-change-change-date-of-file
