@@ -293,6 +293,8 @@ pipe_read(struct kiocb *iocb, const struct iovec *_iov,
 	struct iovec *iov = (struct iovec *)_iov;
 	size_t total_len;
 
+    /* ユーザ空間で用意しているバッファサイズ */
+    /* 循環バッファにどんだけデータがあっても、 total_len 以上は読み込めない */
 	total_len = iov_length(iov, nr_segs);
 	/* Null read succeeds. */
 	if (unlikely(total_len == 0))
@@ -304,9 +306,11 @@ pipe_read(struct kiocb *iocb, const struct iovec *_iov,
 	mutex_lock(&inode->i_mutex);
 	pipe = inode->i_pipe;
 	for (;;) {
+
+        /* 読み取る必要のあるバッファ数 */
 		int bufs = pipe->nrbufs;
 		if (bufs) {
-            /* カレントで扱っているバッファのポジション */
+            /* writer が書き込んでるバッファ */
 			int curbuf = pipe->curbuf;
 			struct pipe_buffer *buf = pipe->bufs + curbuf;
 			const struct pipe_buf_operations *ops = buf->ops;
@@ -324,6 +328,7 @@ pipe_read(struct kiocb *iocb, const struct iovec *_iov,
 				break;
 			}
 
+            /* fault したら atomic でない??? */
 			atomic = !iov_fault_in_pages_write(iov, chars);
 redo:
             /* バッファ(struct page) を kmap する */
@@ -344,12 +349,17 @@ redo:
 					ret = error;
 				break;
 			}
+
+            /* 読み取ったバイト数の計算 */
 			ret += chars;
 			buf->offset += chars;
 			buf->len -= chars;
+
+            /* バッファの内容を読み切ったので、キレイにする */
 			if (!buf->len) {
 				buf->ops = NULL;
 				ops->release(pipe, buf);
+                /* 次のバッファを指す。 PIPE_BUFFERS を超えたら循環 */
 				curbuf = (curbuf + 1) & (PIPE_BUFFERS-1);
 				pipe->curbuf = curbuf;
 				pipe->nrbufs = --bufs;
