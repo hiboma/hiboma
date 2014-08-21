@@ -32,7 +32,7 @@ SYSCALL_DEFINE4(mknodat, int, dfd, const char __user *, filename, int, mode,
 	}
 ```
 
-vfs_mknod
+S_IFIFO な場合 vfs_mknod でファイルを作る
 
 ```c
 int vfs_mknod(struct inode *dir, struct dentry *dentry, int mode, dev_t dev)
@@ -65,9 +65,9 @@ int vfs_mknod(struct inode *dir, struct dentry *dentry, int mode, dev_t dev)
 }
 ```
 
-S_IFIFO なファイルをどう作るかはファイルシステムにお任せになる
+S_IFIFO なファイルをどう作るかはファイルシステムにお任せになる。ファイルシステム固有の inode 割り当て、dentry の割り当て等々
 
-## file_operations
+## FIFO の file_operations
 
 ```c
 /*
