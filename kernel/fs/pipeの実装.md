@@ -3,6 +3,9 @@
  * pipe は疑似ファイルシステム( pipefs) として実装されている
  * VFS の仕組みを利用する
  * バッファは struct page を利用して circular buffer で扱っている
+ * プロセス間で大量のデータをやり取りする場合 reader/writer のサイズが大きい方が有利
+   * 要 struct page. HIGMEM でも割り当てできる
+ * socket インタフェースと違って只のバイトストリームなので、バウンダリは無い
 
 ## USAGE
 
