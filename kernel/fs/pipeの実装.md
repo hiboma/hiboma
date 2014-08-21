@@ -460,7 +460,7 @@ pipe_write(struct kiocb *iocb, const struct iovec *_iov,
         /* バッファ(page) 内の書き込みオフセット */
 		int offset = buf->offset + buf->len;
 
-        /* 書き込むデータがバッファ1ページに収まる場合 */
+        /* 書き込むデータが lastbuf に収まる場合は lastbuf にマージして書き込みする */
 		if (ops->can_merge && offset + chars <= PAGE_SIZE) {
 			int error, atomic = 1;
 			void *addr;
@@ -497,6 +497,7 @@ redo1:
 		}
 	}
 
+    /* 新しいバッファを使って書き込む場合 */
 	for (;;) {
 		int bufs;
 
@@ -509,7 +510,10 @@ redo1:
 		}
 
 		bufs = pipe->nrbufs;
+
+        /* 最大バッファ数と比較 */
 		if (bufs < PIPE_BUFFERS) {
+            /* 新しい位置のバッファ */
 			int newbuf = (pipe->curbuf + bufs) & (PIPE_BUFFERS-1);
 			struct pipe_buffer *buf = pipe->bufs + newbuf;
 			struct page *page = pipe->tmp_page;
