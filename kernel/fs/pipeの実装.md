@@ -1,8 +1,8 @@
 # pipe(2)
 
- * pipe は疑似ファイルシステムとして実装されている
+ * pipe は疑似ファイルシステム( pipefs) として実装されている
  * VFS の仕組みを利用する
- * バッファは struct page 
+ * バッファは struct page を利用して circular buffer で扱っている
 
 ## USAGE
 
@@ -18,7 +18,9 @@ int pipe(int pipefd[2]);
 int pipe2(int pipefd[2], int flags);
 ```
 
-## fs/pipe.c
+## pipe(2)
+
+fs/pipe.c
 
 ```c
 /*
@@ -46,10 +48,6 @@ SYSCALL_DEFINE1(pipe, int __user *, fildes)
 	return sys_pipe2(fildes, 0);
 }
 ```
-
-## pipe の実装
-
-pipe のプロセス間通信は **pipefs** (疑似ファイルシステム) をベースとして実装されている
 
 ## pipefs の定義と登録
 
@@ -102,9 +100,41 @@ static int __init init_pipe_fs(void)
    * read_pipefifo_fops
 
 [reader] <= create_read_pipe
-```
+``
 
-## パイプの writer 
+## writer と reader の初期化
+
+do_pipe_flags で writer と reader の struct file を割り当てる
+
+```c
+int do_pipe_flags(int *fd, int flags)
+{
+	struct file *fw, *fr;
+	int error;
+	int fdw, fdr;
+
+	if (flags & ~(O_CLOEXEC | O_NONBLOCK))
+		return -EINVAL;
+
+	fw = create_write_pipe(flags);
+	if (IS_ERR(fw))
+		return PTR_ERR(fw);
+	fr = create_read_pipe(fw, flags);
+	error = PTR_ERR(fr);
+	if (IS_ERR(fr))
+		goto err_write_pipe;
+````
+
+## writer 側の struct file の割り当て
+
+create_write_pipe で割り当てる。VFS で動くように
+
+ * struct inode
+ * struct file
+ * struct path
+ * struct dentry
+
+ を割り当てて初期化する。いずれもオンメモリのオブジェクトなので揮発性である
 
 ```c
 struct file *create_write_pipe(int flags)
@@ -159,8 +189,9 @@ struct file *create_write_pipe(int flags)
 }
 ```
 
-## パイプの reader
+## reader の struct file の割り当て
 
+writer が用意した struct path を共有して struct file を割り当てている
 
 ```c
 struct file *create_read_pipe(struct file *wrf, int flags)
@@ -177,6 +208,8 @@ struct file *create_read_pipe(struct file *wrf, int flags)
 	return f;
 }
 ```
+
+struct path が pipe_inode_info を保持しているので、reader/writer で pipe_inode_info を共有することになる
 
 ## バッファの仕組み
 
