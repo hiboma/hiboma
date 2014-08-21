@@ -250,7 +250,7 @@ struct path が pipe_inode_info を保持しているので、reader/writer で 
 
 # バッファの仕組み
 
-write/read するデータは循環バッファでやり取りされる
+writer => reader ( producer / consumer ?) で渡すデータは循環バッファを介する
 
 ## バッファとなるオブジェクト
 
@@ -322,7 +322,7 @@ struct pipe_inode_info {
 };
 ```
 
-# read, write インタフェース
+# read(2), write(2) インタフェース
 
 ## 循環バッファの読み取り実装
 
