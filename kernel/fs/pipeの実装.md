@@ -607,6 +607,19 @@ write(1, "11111111111111111111111111111111"..., 4096) = -1 EPIPE (Broken pipe)
 +++ killed by SIGPIPE +++
 ```
 
+ブロックしているときの writer のコールスタックは下記の通り。 pipe_wait で待ち。
+
+```
+$ cat /proc/22543/stack
+[<ffffffff8117862b>] pipe_wait+0x5b/0x80
+[<ffffffff81178b70>] pipe_write+0x2e0/0x6b0
+[<ffffffff8116e752>] do_sync_write+0xe2/0x120
+[<ffffffff8116ed13>] vfs_write+0xf3/0x1f0
+[<ffffffff8116ef11>] sys_write+0x51/0x90
+[<ffffffff81527a7d>] system_call_fastpath+0x18/0x1d
+[<ffffffffffffffff>] 0xffffffffffffffff
+```
+
 ## その他
 
 
