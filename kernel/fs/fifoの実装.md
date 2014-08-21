@@ -1,7 +1,9 @@
 # fifo の実装
 
- * pipe と一緒 (= pipefs)
- * open してファイルデスクリプタを確保するまでの違いが「名前付きパイプ」と「パイプ」の差異になる
+fifo (名前付き) パイプの正体
+
+ * pipe と一緒で VFS として実装されている。 というか pipefs なので一緒の実装
+ * ファイルデスクリプタを確保するまでの違いが「名前付きパイプ」と「パイプ」の差異になる
 
 ## fifo
 
@@ -69,6 +71,8 @@ S_IFIFO なファイルをどう作るかはファイルシステムにお任せ
 
 ## FIFO の file_operations
 
+FIFO なファイルを open(2) した時にセットされる file_operations は .open に def_fifo_fops だけセットしている
+
 ```c
 /*
  * Dummy default file-operations: the only thing this does
@@ -80,9 +84,16 @@ const struct file_operations def_fifo_fops = {
 };
 ```
 
-## fifo_open
+**Dummy default file-operations** とあり、何故そうなのかは fifo_open を読むと理解できる
 
-fifo のファイルを open(2) すると fifo_open が呼ばれる。struct file の file_operations が read_pipefifo_fops or write_pipefifo_fops に置き換えられる
+## fifo_open の実装
+
+fifo のファイルを open(2) すると fifo_open が呼ばれる。
+
+ * 途中で struct file の file_operations が read_pipefifo_fops or write_pipefifo_fops に置き換えられる
+ * read_pipefifo_fops, write_pipefifo_fops 共に pipefs の実装
+
+ということから pipe(2) と同じ実装を使い回しているのが 分かる
 
 ```c
 static int fifo_open(struct inode *inode, struct file *filp)
@@ -91,6 +102,8 @@ static int fifo_open(struct inode *inode, struct file *filp)
 	int ret;
 
 	mutex_lock(&inode->i_mutex);
+
+    /* pipe を探す */
 	pipe = inode->i_pipe;
 	if (!pipe) {
 		ret = -ENOMEM;

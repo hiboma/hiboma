@@ -1,7 +1,8 @@
 # pipe(2)
 
  * pipe は疑似ファイルシステムとして実装されている
- *バッファは struct page 
+ * VFS の仕組みを利用する
+ * バッファは struct page 
 
 ## USAGE
 
