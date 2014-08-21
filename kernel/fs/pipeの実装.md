@@ -448,10 +448,15 @@ pipe_write(struct kiocb *iocb, const struct iovec *_iov,
 	if (pipe->nrbufs && chars != 0) {
 
         /*
+         * 空いているバッファを探す。
+         * & PIPE_BUFFERS-1 によって位置が循環する
+         */
 		int lastbuf = (pipe->curbuf + pipe->nrbufs - 1) &
 							(PIPE_BUFFERS-1);
 		struct pipe_buffer *buf = pipe->bufs + lastbuf;
 		const struct pipe_buf_operations *ops = buf->ops;
+
+        /* バッファ(page) 内の書き込みオフセット */
 		int offset = buf->offset + buf->len;
 
         /* 1ページに収まる場合? */
