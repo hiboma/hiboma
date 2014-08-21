@@ -468,12 +468,14 @@ redo1:
 	for (;;) {
 		int bufs;
 
+        /* reader がいなくなってたら EPIPE で死ぬ */
 		if (!pipe->readers) {
 			send_sig(SIGPIPE, current, 0);
 			if (!ret)
 				ret = -EPIPE;
 			break;
 		}
+
 		bufs = pipe->nrbufs;
 		if (bufs < PIPE_BUFFERS) {
 			int newbuf = (pipe->curbuf + bufs) & (PIPE_BUFFERS-1);
@@ -508,6 +510,8 @@ redo2:
 			else
 				src = kmap(page);
 
+            /* ユーザ空間の iov から バッファへコピー */
+            /* error は EFAULT ? */
 			error = pipe_iov_copy_from_user(src, iov, chars,
 							atomic);
 			if (atomic)
@@ -542,6 +546,8 @@ redo2:
 			continue;
 
         /* bufs > PIPE_BUFFERS の場合は、 reader がバッファを消費してくれるまで待つ必要があるのかな? */
+
+        /* ノンブロッキングなら EAGAIN 返す */
 		if (filp->f_flags & O_NONBLOCK) {
 			if (!ret)
 				ret = -EAGAIN;
