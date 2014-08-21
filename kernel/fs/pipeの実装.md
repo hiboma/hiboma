@@ -61,7 +61,16 @@ SYSCALL_DEFINE1(pipe, int __user *, fildes)
 
 # pipe とファイルシステム
 
+話がいきなり飛躍するけど、pipe(2) は pipefs というファイルシステムとして実装されているのです
+
+```
+[vagrant@vagrant-centos65 ~]$ grep pipefs /proc/filesystems 
+nodev	pipefs
+```
+
 ## pipefs の定義と登録
+
+ファイルシステムをどう作るかは [ファイルシステムの実装](https://github.com/hiboma/hiboma/tree/master/%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E3%82%B7%E3%82%B9%E3%83%86%E3%83%A0%E3%81%AE%E5%AE%9F%E8%A3%85) 等でがんばって勉強する ...
 
 ```c
 static struct file_system_type pipe_fs_type = {
@@ -85,16 +94,16 @@ static int __init init_pipe_fs(void)
 }
 ```
 
-ファイルシステムとして実装されているので、通常のファイルシステムと同様に
+ファイルシステムとして実装されているとは、つまり通常のファイルシステムと同様に
 
  * struct dentry
  * struct path
  * struct inode
  * ...
 
-を動的にアロケートして扱う必要がある。
+をカーネル内部で動的にアロケートして扱う必要がある。
 
-また struct file は reader, writer と分けてそれぞれに割り当てる必要がある ( つまり reader 用のファイルデスクリプタ、writer 用のファイルデスクリプタである)
+また pipe を実装するにあたって、struct file は reader, writer と分けてそれぞれに割り当てる必要がある ( つまり reader 用のファイルデスクリプタ、writer 用のファイルデスクリプタである)
 
 関係を図示するとこんなん?
 
@@ -102,7 +111,7 @@ static int __init init_pipe_fs(void)
 
 ## writer と reader の初期化
 
-do_pipe_flags で writer と reader の struct file を割り当てる
+sys_pipe から呼ばれる do_pipe_flags で writer と reader の struct file を割り当てる
 
 ```c
 int do_pipe_flags(int *fd, int flags)
@@ -151,7 +160,7 @@ int do_pipe_flags(int *fd, int flags)
 }
 ````
 
-writer, reader それぞれの struct file (ファイルデスクリプタ) を作ったら、システムコール呼び出し元にファイルデスクリプタ番号の配列を返す
+writer, reader それぞれの struct file (ファイルデスクリプタ) を作ったら、システムコール呼び出し元にファイルデスクリプタ番号の配列を copy_to_user して返す 
 
 ## writer 側の struct file の割り当て
 
@@ -162,7 +171,7 @@ create_write_pipe で割り当てる。VFS で動くように
  * struct path
  * struct dentry
 
- を割り当てて初期化する。いずれもオンメモリのオブジェクトなので揮発性である
+を割り当てて「ファイル」として扱えるように初期化する。いずれもオンメモリのオブジェクトなので揮発性である
 
 ```c
 struct file *create_write_pipe(int flags)
@@ -219,7 +228,7 @@ struct file *create_write_pipe(int flags)
 
 ## reader の struct file の割り当て
 
-writer が用意した struct path を共有して struct file を割り当てている
+writer が用意した struct path を**共有**するように struct file を割り当てている
 
 ```c
 struct file *create_read_pipe(struct file *wrf, int flags)
@@ -240,6 +249,8 @@ struct file *create_read_pipe(struct file *wrf, int flags)
 struct path が pipe_inode_info を保持しているので、reader/writer で pipe_inode_info を共有することになる
 
 # バッファの仕組み
+
+write/read するデータは循環バッファでやり取りされる
 
 ## バッファとなるオブジェクト
 
