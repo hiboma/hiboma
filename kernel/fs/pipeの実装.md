@@ -1,5 +1,11 @@
 # pipe(2)
 
+![2014-08-21 23 21 11](https://cloud.githubusercontent.com/assets/172456/3997335/98e8749e-293e-11e4-85b8-63a2246b55d8.png)
+
+pipe ってこんなイメージと思うんですが、実装がどうなってるかを追っていきます
+
+## まとめ
+
  * pipe は疑似ファイルシステム( pipefs) として実装されている
  * VFS の仕組みを利用する
  * バッファは struct page を利用して circular buffer で扱っている
