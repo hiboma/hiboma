@@ -183,6 +183,7 @@ struct file *create_read_pipe(struct file *wrf, int flags)
 
 プロセス間でデータをやり取りする際のバッファには pipe_buffer を使う
 
+ * リングバッファ???
  * struct page にデータを入れておく
  * page のデータを読み書きする pipe_buf_operations があるぽい (後述)
 
@@ -257,6 +258,8 @@ static const struct pipe_buf_operations anon_pipe_buf_ops = {
 ```
 
 ## pipe_buffer の読み取り
+
+read(2) -> aio_read で pipe_read を呼び出す
 
 ```c
 static ssize_t
@@ -428,6 +431,7 @@ pipe_write(struct kiocb *iocb, const struct iovec *_iov,
 		const struct pipe_buf_operations *ops = buf->ops;
 		int offset = buf->offset + buf->len;
 
+        /* 1ページに収まる場合? */
 		if (ops->can_merge && offset + chars <= PAGE_SIZE) {
 			int error, atomic = 1;
 			void *addr;
@@ -537,6 +541,8 @@ redo2:
 		}
 		if (bufs < PIPE_BUFFERS)
 			continue;
+
+        /* bufs > PIPE_BUFFERS の場合は、 reader がバッファを消費してくれるまで待つ必要があるのかな? */
 		if (filp->f_flags & O_NONBLOCK) {
 			if (!ret)
 				ret = -EAGAIN;
@@ -552,6 +558,7 @@ redo2:
 			kill_fasync(&pipe->fasync_readers, SIGIO, POLL_IN);
 			do_wakeup = 0;
 		}
+        /* reader 側を TASK_INTERRUPTIBLE で待つ */
 		pipe->waiting_writers++;
 		pipe_wait(pipe);
 		pipe->waiting_writers--;
