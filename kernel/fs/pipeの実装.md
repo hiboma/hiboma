@@ -734,6 +734,25 @@ $ cat /proc/22543/stack
 [<ffffffffffffffff>] 0xffffffffffffffff
 ```
 
+#### reader がブロックしている様子を見る
+
+```
+$ perl -e 'sleep 100' | perl -e 'print <>'
+```
+
+read で待っている側のコールスタックを見ると pipe_wait でブロックしている
+
+```
+[vagrant@vagrant-centos65 ~]$ cat /proc/10394/stack 
+[<ffffffff811939cb>] pipe_wait+0x5b/0x80
+[<ffffffff81194476>] pipe_read+0x3e6/0x4e0
+[<ffffffff81188dba>] do_sync_read+0xfa/0x140
+[<ffffffff811896a5>] vfs_read+0xb5/0x1a0
+[<ffffffff811897e1>] sys_read+0x51/0x90
+[<ffffffff8100b072>] system_call_fastpath+0x16/0x1b
+[<ffffffffffffffff>] 0xffffffffffffffff
+```
+
 ## その他
 
 ```c
