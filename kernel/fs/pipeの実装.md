@@ -84,26 +84,9 @@ static int __init init_pipe_fs(void)
 
 を動的にアロケートして扱う必要がある。また reader, writer と分けておく必要がある
 
-関係を図示すると
+関係を図示するとこんなん?
 
-```
-
-[writer] <= create_write_pipe
-
-  struct file
-   * write_pipefifo_fops
-
-  struct path
-   * dentry 
-     * pipefs_dentry_operations
-     *  get_pipe_inode 
-       * struct pipe_inode_info *pipe;
-
-  struct file
-   * read_pipefifo_fops
-
-[reader] <= create_read_pipe
-``
+![2014-08-21 22 12 57](https://cloud.githubusercontent.com/assets/172456/3996367/04dd0d68-2935-11e4-840c-c0a928a5671b.png)
 
 ## writer と reader の初期化
 
