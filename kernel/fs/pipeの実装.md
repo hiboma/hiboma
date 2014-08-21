@@ -99,7 +99,6 @@ static int __init init_pipe_fs(void)
 
   struct file
    * read_pipefifo_fops
-   * get_pipe_inode
 
 [reader] <= create_read_pipe
 ```
