@@ -182,7 +182,8 @@ struct file *create_read_pipe(struct file *wrf, int flags)
 
 プロセス間でデータをやり取りする際のバッファには pipe_buffer を使う
 
- * リングバッファ???
+ * ~~リングバッファ???~~ circular buffer
+   * http://lwn.net/Articles/118750/
  * struct page にデータを入れておく
  * page のデータを読み書きする pipe_buf_operations があるぽい (後述)
 
