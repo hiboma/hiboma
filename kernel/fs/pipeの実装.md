@@ -337,8 +337,11 @@ redo:
 			if (!total_len)
 				break;	/* common path: read succeeded */
 		}
+        /* もういっぺん繰り返し */
 		if (bufs)	/* More to do? */
 			continue;
+
+        /* バッファを読み切った + writer プロセスがいないので終わり */
 		if (!pipe->writers)
 			break;
 		if (!pipe->waiting_writers) {
@@ -359,6 +362,8 @@ redo:
 				ret = -ERESTARTSYS;
 			break;
 		}
+
+        /* writer を起床させる? */
 		if (do_wakeup) {
 			wake_up_interruptible_sync(&pipe->wait);
  			kill_fasync(&pipe->fasync_writers, SIGIO, POLL_OUT);
@@ -379,6 +384,8 @@ redo:
 ```
 
 ## pipe_buffer の書きこみ
+
+write(2) -> aio_write で pipe_write を呼び出す
 
 ```c
 static ssize_t
@@ -405,6 +412,7 @@ pipe_write(struct kiocb *iocb, const struct iovec *_iov,
 	mutex_lock(&inode->i_mutex);
 	pipe = inode->i_pipe;
 
+    /* reader 側がいないので、write が EPIPE を返す */
 	if (!pipe->readers) {
 		send_sig(SIGPIPE, current, 0);
 		ret = -EPIPE;
@@ -430,9 +438,12 @@ pipe_write(struct kiocb *iocb, const struct iovec *_iov,
 
 			iov_fault_in_pages_read(iov, chars);
 redo1:
+            /* kmap */
 			addr = ops->map(pipe, buf, atomic);
+            /* ユーザ空間のiov の中身をバッファにコピー */
 			error = pipe_iov_copy_from_user(offset + addr, iov,
 							chars, atomic);
+            /* kmap 解除 */
 			ops->unmap(pipe, buf, addr);
 			ret = error;
 			do_wakeup = 1;
@@ -468,6 +479,7 @@ redo1:
 			char *src;
 			int error, atomic = 1;
 
+            /* ??? */
 			if (!page) {
 				page = alloc_page(GFP_HIGHUSER);
 				if (unlikely(!page)) {
