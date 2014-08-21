@@ -215,7 +215,7 @@ struct path が pipe_inode_info を保持しているので、reader/writer で 
 
 プロセス間でデータをやり取りする際のバッファには pipe_buffer を使う
 
- * ~~リングバッファ???~~ circular buffer
+ * pipe_buffer を複数束ねて circular buffer として扱う
    * http://lwn.net/Articles/118750/
  * struct page にデータを入れておく
  * page のデータを読み書きする pipe_buf_operations があるぽい (後述)
@@ -239,7 +239,10 @@ struct pipe_buffer {
 };
 ```
 
-pipe_buffer は struct pipe_inode_info に配列(16個)で保持されている。  inode->i_pipe で参照される
+pipe_buffer は struct pipe_inode_info に配列(16個)で保持されている。
+
+ * inode->i_pipe から参照される
+ * nrbufs, curbuf をうまいこと使って、 pipe_buffer を circular buffer にする
 
 ```c
 /**
@@ -273,26 +276,9 @@ struct pipe_inode_info {
 	struct pipe_buffer bufs[PIPE_BUFFERS];
 };
 
-
-## pipe_buf_operations
-
-カーネル内部で struct page を kmap して page を扱えるようにする便利 ops ?
-
-```c
-static const struct pipe_buf_operations anon_pipe_buf_ops = {
-	.can_merge = 1,
-	.map = generic_pipe_buf_map,
-	.unmap = generic_pipe_buf_unmap,
-	.confirm = generic_pipe_buf_confirm,
-	.release = anon_pipe_buf_release,
-	.steal = generic_pipe_buf_steal,
-	.get = generic_pipe_buf_get,
-};
-```
-
 ## pipe_buffer の読み取り
 
-read(2) -> aio_read で pipe_read を呼び出す
+reader は read(2) -> vfs_read -> aio_read で pipe_read を呼び出す
 
 ```c
 static ssize_t
@@ -421,7 +407,7 @@ redo:
 
 ## pipe_buffer の書きこみ
 
-write(2) -> aio_write で pipe_write を呼び出す
+write(2) -> vfs_write -> aio_write で pipe_write を呼び出す
 
 ```c
 static ssize_t
@@ -457,7 +443,11 @@ pipe_write(struct kiocb *iocb, const struct iovec *_iov,
 
 	/* We try to merge small writes */
 	chars = total_len & (PAGE_SIZE-1); /* size of the last buffer */
+
+    /* nrbufs > 0 ... read されてないバッファが残っている */
 	if (pipe->nrbufs && chars != 0) {
+
+        /*
 		int lastbuf = (pipe->curbuf + pipe->nrbufs - 1) &
 							(PIPE_BUFFERS-1);
 		struct pipe_buffer *buf = pipe->bufs + lastbuf;
@@ -617,7 +607,7 @@ out:
 
 ## 検証コード
 
-#### バッファが溢れた際にブロックする様子を strace 
+#### バッファが溢れた際に writer がブロックする様子を strace する
 
 ```
 $ strace perl -e 'print 1 while 1' | perl -e 'sleep 1'
@@ -626,6 +616,7 @@ $ strace perl -e 'print 1 while 1' | perl -e 'sleep 1'
 上記のワンライナーを走らせると、writer が丁度 `PAGE_SIZE (= 4096) * PIPE_BUFFERS (= 16)` でブロックする
 
 ```
+# 本筋と関係無いけど、4096バイト = PAGE_SIZE でバッファリングされている
 write(1, "11111111111111111111111111111111"..., 4096) = 4096 # 1
 write(1, "11111111111111111111111111111111"..., 4096) = 4096 # 2
 write(1, "11111111111111111111111111111111"..., 4096) = 4096 # 3
@@ -647,7 +638,7 @@ write(1, "11111111111111111111111111111111"..., 4096) = -1 EPIPE (Broken pipe)
 +++ killed by SIGPIPE +++
 ```
 
-ブロックしているときの writer のコールスタックは下記の通り。 pipe_wait で待ち。
+ブロックしているときの writer のコールスタックは下記の通り。 pipe_wait で待ち
 
 ```
 $ cat /proc/22543/stack
@@ -715,3 +706,20 @@ const struct file_operations rdwr_pipefifo_fops = {
 	.fasync		= pipe_rdwr_fasync,
 };
 ```
+
+## pipe_buf_operations とは?
+
+カーネル内部で struct page を kmap して page を扱えるようにする便利 ops ?
+
+```c
+static const struct pipe_buf_operations anon_pipe_buf_ops = {
+	.can_merge = 1,
+	.map = generic_pipe_buf_map,
+	.unmap = generic_pipe_buf_unmap,
+	.confirm = generic_pipe_buf_confirm,
+	.release = anon_pipe_buf_release,
+	.steal = generic_pipe_buf_steal,
+	.get = generic_pipe_buf_get,
+};
+```
+
