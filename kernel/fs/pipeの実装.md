@@ -442,6 +442,7 @@ pipe_write(struct kiocb *iocb, const struct iovec *_iov,
 	}
 
 	/* We try to merge small writes */
+    /* ページ内で必要なバイト数 */
 	chars = total_len & (PAGE_SIZE-1); /* size of the last buffer */
 
     /* nrbufs > 0 ... read されてないバッファが残っている */
@@ -459,7 +460,7 @@ pipe_write(struct kiocb *iocb, const struct iovec *_iov,
         /* バッファ(page) 内の書き込みオフセット */
 		int offset = buf->offset + buf->len;
 
-        /* 1ページに収まる場合? */
+        /* 書き込むデータが 1ページに収まる場合 */
 		if (ops->can_merge && offset + chars <= PAGE_SIZE) {
 			int error, atomic = 1;
 			void *addr;
@@ -468,6 +469,8 @@ pipe_write(struct kiocb *iocb, const struct iovec *_iov,
 			if (error)
 				goto out;
 
+            // Pre-fault in the user memory, so we can use atomic copies.
+            // とのことらしい
 			iov_fault_in_pages_read(iov, chars);
 redo1:
             /* kmap */
