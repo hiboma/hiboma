@@ -1,7 +1,7 @@
 # pipe(2)
 
  * pipe は疑似ファイルシステムとして実装されている
- * バッファは struct page 
+ *バッファは struct page 
 
 ## USAGE
 
@@ -242,7 +242,7 @@ struct pipe_inode_info {
 
 ## pipe_buf_operations
 
-カーネル内部で struct page を隠蔽してバッファとして page を扱えるようにする便利 ops ?
+カーネル内部で struct page を kmap して page を扱えるようにする便利 ops ?
 
 ```c
 static const struct pipe_buf_operations anon_pipe_buf_ops = {
@@ -255,6 +255,8 @@ static const struct pipe_buf_operations anon_pipe_buf_ops = {
 	.get = generic_pipe_buf_get,
 };
 ```
+
+## pipe_buffer の読み書き
 
 ## その他
 
