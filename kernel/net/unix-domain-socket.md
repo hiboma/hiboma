@@ -3,6 +3,8 @@
  * ハードウェア割り込みが無い
  * SOFTIRQ も無い
  * BSD層と proto_ops の実装だけ追えば理解できるので易しめ ...
+ * pipe との違い
+   * 只のデータストリームを流すだけの pipe に対して SOCK_STREAM, SOCK_DGRAM で扱える
 
 ## TODO
 
