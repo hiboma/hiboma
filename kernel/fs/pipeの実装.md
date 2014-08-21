@@ -7,7 +7,7 @@
    * 要 struct page. HIGMEM でも割り当てできる
  * socket インタフェースと違って只のバイトストリームなので、バウンダリは無い
 
-## USAGE
+## SYSCALL USAGE
 
 ```c
 #include <unistd.h>
@@ -21,9 +21,9 @@ int pipe(int pipefd[2]);
 int pipe2(int pipefd[2], int flags);
 ```
 
-## pipe(2)
+## pipe(2) のエントリポイント
 
-fs/pipe.c
+fs/pipe.c に書かれている
 
 ```c
 /*
@@ -51,6 +51,8 @@ SYSCALL_DEFINE1(pipe, int __user *, fildes)
 	return sys_pipe2(fildes, 0);
 }
 ```
+
+# pipe とファイルシステム
 
 ## pipefs の定義と登録
 
@@ -81,8 +83,11 @@ static int __init init_pipe_fs(void)
  * struct dentry
  * struct path
  * struct inode
+ * ...
 
-を動的にアロケートして扱う必要がある。また reader, writer と分けておく必要がある
+を動的にアロケートして扱う必要がある。
+
+また struct file は reader, writer と分けてそれぞれに割り当てる必要がある ( つまり reader 用のファイルデスクリプタ、writer 用のファイルデスクリプタである)
 
 関係を図示するとこんなん?
 
@@ -109,7 +114,37 @@ int do_pipe_flags(int *fd, int flags)
 	error = PTR_ERR(fr);
 	if (IS_ERR(fr))
 		goto err_write_pipe;
+
+	error = get_unused_fd_flags(flags);
+	if (error < 0)
+		goto err_read_pipe;
+	fdr = error;
+
+	error = get_unused_fd_flags(flags);
+	if (error < 0)
+		goto err_fdr;
+	fdw = error;
+
+	audit_fd_pair(fdr, fdw);
+	fd_install(fdr, fr);
+	fd_install(fdw, fw);
+	fd[0] = fdr;
+	fd[1] = fdw;
+
+	return 0;
+
+ err_fdr:
+	put_unused_fd(fdr);
+ err_read_pipe:
+	path_put(&fr->f_path);
+	put_filp(fr);
+ err_write_pipe:
+	free_write_pipe(fw);
+	return error;
+}
 ````
+
+writer, reader それぞれの struct file (ファイルデスクリプタ) を作ったら、呼び出し元に返している
 
 ## writer 側の struct file の割り当て
 
@@ -227,8 +262,12 @@ struct pipe_buffer {
 
 pipe_buffer は struct pipe_inode_info に配列(16個)で保持されている。
 
+## struct pipe_inode_info
+
+pipe_buffer とあわせて「パイプ」の肝となるオブジェクト
+
  * inode->i_pipe から参照される
- * nrbufs, curbuf をうまいこと使って、 pipe_buffer を circular buffer にする
+ * nrbufs, curbuf のインデックスをうまいこと使って、 pipe_buffer を circular buffer として扱う
 
 ```c
 /**
@@ -261,6 +300,9 @@ struct pipe_inode_info {
 	struct inode *inode;
 	struct pipe_buffer bufs[PIPE_BUFFERS];
 };
+```
+
+# read, write インタフェース
 
 ## pipe_buffer の読み取り
 
