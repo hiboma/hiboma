@@ -1,7 +1,9 @@
 # fifo の実装
 
- * pipe と一緒
+ * pipe と一緒 (= pipefs)
  * open してファイルデスクリプタを確保するまでの違いが「名前付きパイプ」と「パイプ」の差異になる
+
+## file_operations
 
 ```c
 /*
@@ -14,9 +16,9 @@ const struct file_operations def_fifo_fops = {
 };
 ```
 
+## fifo_open
+
 fifo のファイルを open(2) すると fifo_open が呼ばれる。struct file の file_operations が read_pipefifo_fops or write_pipefifo_fops に置き換えられる
-
-
 
 ```c
 static int fifo_open(struct inode *inode, struct file *filp)
