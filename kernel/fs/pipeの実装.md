@@ -5,6 +5,7 @@
  * バッファは struct page を利用して circular buffer で扱っている
  * プロセス間で大量のデータをやり取りする場合 reader/writer のサイズが大きい方が有利
    * 要 struct page. HIGMEM でも割り当てできる
+ * pipefs は FIFO にも流用されている
  * socket インタフェースと違って只のバイトストリームなので、バウンダリは無い
 
 ## SYSCALL USAGE
@@ -144,7 +145,7 @@ int do_pipe_flags(int *fd, int flags)
 }
 ````
 
-writer, reader それぞれの struct file (ファイルデスクリプタ) を作ったら、呼び出し元に返している
+writer, reader それぞれの struct file (ファイルデスクリプタ) を作ったら、システムコール呼び出し元にファイルデスクリプタ番号の配列を返す
 
 ## writer 側の struct file の割り当て
 
@@ -232,7 +233,9 @@ struct file *create_read_pipe(struct file *wrf, int flags)
 
 struct path が pipe_inode_info を保持しているので、reader/writer で pipe_inode_info を共有することになる
 
-## バッファの仕組み
+# バッファの仕組み
+
+## バッファとなるオブジェクト
 
 プロセス間でデータをやり取りする際のバッファには pipe_buffer を使う
 
@@ -262,7 +265,7 @@ struct pipe_buffer {
 
 pipe_buffer は struct pipe_inode_info に配列(16個)で保持されている。
 
-## struct pipe_inode_info
+## 循環バッファと struct pipe_inode_info
 
 pipe_buffer とあわせて「パイプ」の肝となるオブジェクト
 
@@ -304,7 +307,7 @@ struct pipe_inode_info {
 
 # read, write インタフェース
 
-## pipe_buffer の読み取り
+## 循環バッファの読み取り実装
 
 reader は read(2) -> vfs_read -> aio_read で pipe_read を呼び出す
 
@@ -448,7 +451,7 @@ redo:
 }
 ```
 
-## pipe_buffer の書きこみ
+## 循環バッファへの書きこみ実装
 
 write(2) -> vfs_write -> aio_write で pipe_write を呼び出す
 
@@ -716,14 +719,12 @@ $ cat /proc/22543/stack
 
 ## その他
 
-
 ```c
 static const struct dentry_operations pipefs_dentry_operations = {
 	.d_delete	= pipefs_delete_dentry,
 	.d_dname	= pipefs_dname,
 };
 ```
-
 
 ```c
 /*
