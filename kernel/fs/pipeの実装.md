@@ -460,7 +460,7 @@ pipe_write(struct kiocb *iocb, const struct iovec *_iov,
         /* バッファ(page) 内の書き込みオフセット */
 		int offset = buf->offset + buf->len;
 
-        /* 書き込むデータが 1ページに収まる場合 */
+        /* 書き込むデータがバッファ1ページに収まる場合 */
 		if (ops->can_merge && offset + chars <= PAGE_SIZE) {
 			int error, atomic = 1;
 			void *addr;
