@@ -295,6 +295,7 @@ pipe_read(struct kiocb *iocb, const struct iovec *_iov,
 
     /* ユーザ空間で用意しているバッファサイズ */
     /* 循環バッファにどんだけデータがあっても、 total_len 以上は読み込めない */
+    /* バッファサイズが小さいと reader と writer とで context switch が多発する? */
 	total_len = iov_length(iov, nr_segs);
 	/* Null read succeeds. */
 	if (unlikely(total_len == 0))
@@ -366,6 +367,8 @@ redo:
 				do_wakeup = 1;
 			}
 			total_len -= chars;
+
+            /* total_len = ユーザ空間のバッファを使い切ったので、 pipe を read するのを止める */
 			if (!total_len)
 				break;	/* common path: read succeeded */
 		}
@@ -376,6 +379,8 @@ redo:
         /* バッファを読み切った + writer プロセスがいないので終わり */
 		if (!pipe->writers)
 			break;
+
+        /* writer がいなくなった? */
 		if (!pipe->waiting_writers) {
 			/* syscall merging: Usually we must not sleep
 			 * if O_NONBLOCK is set, or if we got some data.
