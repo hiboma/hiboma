@@ -546,8 +546,8 @@ redo2:
 			else
 				src = kmap(page);
 
-            /* ユーザ空間の iov から バッファへコピー */
-            /* error は EFAULT ? */
+            /* ユーザ空間の iov から 循環バッファへコピー */
+            /* error は EFAULT を返しうる? */
 			error = pipe_iov_copy_from_user(src, iov, chars,
 							atomic);
 			if (atomic)
@@ -578,10 +578,12 @@ redo2:
 			if (!total_len)
 				break;
 		}
+
+        /* 空きバッファがあるので継続 */
 		if (bufs < PIPE_BUFFERS)
 			continue;
 
-        /* bufs > PIPE_BUFFERS の場合は、 reader がバッファを消費してくれるまで待つ必要があるのかな? */
+        /* bufs > PIPE_BUFFERS の場合は、 reader がバッファを消費してくれるまで待つ必要がある */
 
         /* ノンブロッキングなら EAGAIN 返す */
 		if (filp->f_flags & O_NONBLOCK) {
@@ -594,11 +596,14 @@ redo2:
 				ret = -ERESTARTSYS;
 			break;
 		}
+
+        /* reader を起床させる */
 		if (do_wakeup) {
 			wake_up_interruptible_sync(&pipe->wait);
 			kill_fasync(&pipe->fasync_readers, SIGIO, POLL_IN);
 			do_wakeup = 0;
 		}
+
         /* reader 側を TASK_INTERRUPTIBLE で待つ */
 		pipe->waiting_writers++;
 		pipe_wait(pipe);
@@ -610,6 +615,9 @@ out:
 		wake_up_interruptible_sync(&pipe->wait);
 		kill_fasync(&pipe->fasync_readers, SIGIO, POLL_IN);
 	}
+
+    /* inode の mtime, ctime を更新。疑似ファイルシステムでも必要なのか */
+    /* fstat で確認できる? */
 	if (ret > 0)
 		file_update_time(filp);
 	sb_end_write(inode->i_sb);
