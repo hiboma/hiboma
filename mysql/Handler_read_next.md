@@ -13,13 +13,11 @@ Handler_read_next の数値の意味を追いかけます
 
 ## Handler_read_next の定義
 
-```
-The number of requests to read the next row in key order. This value is incremented if you are querying an index column with a range constraint or if you are doing an index scan.
-```
+> The number of requests to read the next row in key order. This value is incremented if you are querying an index column with a range constraint or if you are doing an index scan.
 
 http://dev.mysql.com/doc/refman/5.6/en/server-status-variables.html#statvar_Handler_read_next
 
- * インデックスで次の行を読み取ろうとした回数
+ * キーの並び順に次の行を読み取ろうとした回数
    * 行があるかどうか分からないので「読み取った回数」ではない...よね?
  * カラムで range 制約のクエリ??? インデックスキャン したらインクリメントされる
    * 範囲検索 のことでいいのかな
@@ -42,7 +40,7 @@ http://dev.mysql.com/doc/refman/5.6/en/server-status-variables.html#statvar_Hand
 
 ## ha_read_next_count が使われている箇所
 
-```cc
+```c
 sql/sql_class.h:  ulonglong ha_read_next_count;
 storage/federated/ha_federated.cc:  ha_statistic_increment(&SSV::ha_read_next_count);
 storage/heap/ha_heap.cc:  ha_statistic_increment(&SSV::ha_read_next_count);
@@ -66,7 +64,7 @@ storage/myisammrg/ha_myisammrg.cc:  ha_statistic_increment(&SSV::ha_read_next_co
 
 #### ha_innobase::index_next, ha_innobase::index_next_same
 
-```cc
+```c
 /***********************************************************************//**
 Reads the next row from a cursor, which must have previously been
 positioned using index_read.
@@ -102,7 +100,7 @@ ha_innobase::index_next_same(
 
 ROW_SEL_NEXT は探索の方向が ASC であることを差している様子
 
-```cc
+```c
 /** Search direction for the MySQL interface */
 enum row_sel_direction {
 	ROW_SEL_NEXT = 1,	/*!< ascending direction */
@@ -190,7 +188,7 @@ handler 層を読むのは一旦終わり。InnoDB の実装に戻ります
  * 現在のカーソルから次/前の行を読む
  * index_read ??? でポジションが決まっている?
 
-```cc
+```c
 /***********************************************************************//**
 Reads the next or previous row from a cursor, which must have previously been
 positioned using index_read.
@@ -265,4 +263,4 @@ ha_innobase::general_fetch(
 }
 ```
 
-row_search_for_mysql が強過ぎる
+row_search_for_mysql が強過ぎるので略
