@@ -28,7 +28,7 @@ http://dev.mysql.com/doc/refman/5.6/en/server-status-variables.html#statvar_Hand
 
 ## sql/mysqld.cc
 
-```
+```c
   {"Handler_read_first",       (char*) offsetof(STATUS_VAR, ha_read_first_count), SHOW_LONGLONG_STATUS},
   {"Handler_read_key",         (char*) offsetof(STATUS_VAR, ha_read_key_count), SHOW_LONGLONG_STATUS},
   {"Handler_read_last",        (char*) offsetof(STATUS_VAR, ha_read_last_count), SHOW_LONGLONG_STATUS},
