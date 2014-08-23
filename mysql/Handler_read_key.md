@@ -155,16 +155,20 @@ ha_innobase::index_read(
 
 	index = prebuilt->index;
 
+    /* インデックスが物故割れ系なら HA_ERR_KEY_NOT_FOUND 返す */
 	if (UNIV_UNLIKELY(index == NULL) || dict_index_is_corrupted(index)) {
 		prebuilt->index_usable = FALSE;
 		DBUG_RETURN(HA_ERR_CRASHED);
 	}
+
+    /* インデックスが使えない => 物故割れている/定義が変わったエラー返す */
 	if (UNIV_UNLIKELY(!prebuilt->index_usable)) {
 		DBUG_RETURN(dict_index_is_corrupted(index)
 			    ? HA_ERR_INDEX_CORRUPT
 			    : HA_ERR_TABLE_DEF_CHANGED);
 	}
 
+    /* ??? キーが無い??? */
 	if (index->type & DICT_FTS) {
 		DBUG_RETURN(HA_ERR_KEY_NOT_FOUND);
 	}
@@ -199,10 +203,17 @@ ha_innobase::index_read(
 
 	match_mode = 0;
 
+    /*
+     * HA_READ_KEY_EXACT
+     *  - インデックスのキーが prefix (一部だけのやつ) でない
+     *  - キーに完全一致するカラム値を見つけるモード
+     *  - http://forums.mysql.com/read.php?94,98312,98312 
+     */
 	if (find_flag == HA_READ_KEY_EXACT) {
 
 		match_mode = ROW_SEL_EXACT;
 
+    /* col_name(length) でキーを prefix でマッチさせる場合 ... かなー */
 	} else if (find_flag == HA_READ_PREFIX
 		   || find_flag == HA_READ_PREFIX_LAST) {
 
