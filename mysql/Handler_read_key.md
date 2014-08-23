@@ -1,5 +1,7 @@
 # Handler_read_key
 
+ * インデックスを使って行を読み出した回数
+
 ## sql/mysqld.cc
 
 ```c
