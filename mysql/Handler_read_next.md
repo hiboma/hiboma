@@ -117,6 +117,9 @@ enum row_sel_direction {
 ## handler::ha_index_next
 
  * `Reads the next row via index` とある
+ * 返り値で HA_ERR_END_OF_FILE が返ってきた場合は行が無い
+   * 行が無くても ha_read_next_count はインクリメントされる
+   * その他エラーの場合でもインクリメントされている
 
 ```c
 /**
@@ -144,12 +147,14 @@ int handler::ha_index_next(uchar * buf)
 }
 ```
 
-ha_index_next_same の `Reads the next same row via index` 意味がよく分からなかったが、UNIQUEであるかどうかに依るようだ
+## handler::ha_index_next_same
+
+`Reads the next same row via index` の意味がよく分からなかったが、UNIQUEであるかどうかに依るようだ。下の二つを読むとスッキリ理解できる!!!
 
  * http://bizstation.hatenablog.com/entry/2014/01/29/121949
  * http://bizstation.hatenablog.com/entry/2014/02/17/121151
 
-上記の二つを読むとスッキリ理解できる!!!
+UNIQUE制約が無いインデックスの場合はクエリにマッチする行数を事前に知ることができないので、後続の行を読んで確かめる必要がある
 
 ```c
 /**
@@ -177,6 +182,8 @@ int handler::ha_index_next_same(uchar *buf, const uchar *key, uint keylen)
   return result;
 }
 ```
+
+handler 層を読むのは一旦終わり。InnoDB の実装に戻ります
 
 ## ha_innobase::general_fetch
 
