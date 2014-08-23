@@ -19,19 +19,18 @@ The number of requests to read the next row in key order. This value is incremen
 
 http://dev.mysql.com/doc/refman/5.6/en/server-status-variables.html#statvar_Handler_read_next
 
-## ソースを読んでみます
+ * インデックスで次の行を読み取ろうとした回数
+   * 行があるかどうか分からないので「読み取った回数」ではない...よね?
+ * カラムで range 制約のクエリ??? インデックスキャン したらインクリメントされる
+   * 範囲検索 のことでいいのかな
+
+# ソースを読んでみます
 
  * 5.6.20
 
 ## sql/mysqld.cc
 
 ```
-  {"Handler_commit",           (char*) offsetof(STATUS_VAR, ha_commit_count), SHOW_LONGLONG_STATUS},
-  {"Handler_delete",           (char*) offsetof(STATUS_VAR, ha_delete_count), SHOW_LONGLONG_STATUS},
-  {"Handler_discover",         (char*) offsetof(STATUS_VAR, ha_discover_count), SHOW_LONGLONG_STATUS},
-  {"Handler_external_lock",    (char*) offsetof(STATUS_VAR, ha_external_lock_count), SHOW_LONGLONG_STATUS},
-  {"Handler_mrr_init",         (char*) offsetof(STATUS_VAR, ha_multi_range_read_init_count),  SHOW_LONGLONG_STATUS},
-  {"Handler_prepare",          (char*) offsetof(STATUS_VAR, ha_prepare_count),  SHOW_LONGLONG_STATUS},
   {"Handler_read_first",       (char*) offsetof(STATUS_VAR, ha_read_first_count), SHOW_LONGLONG_STATUS},
   {"Handler_read_key",         (char*) offsetof(STATUS_VAR, ha_read_key_count), SHOW_LONGLONG_STATUS},
   {"Handler_read_last",        (char*) offsetof(STATUS_VAR, ha_read_last_count), SHOW_LONGLONG_STATUS},
@@ -39,14 +38,9 @@ http://dev.mysql.com/doc/refman/5.6/en/server-status-variables.html#statvar_Hand
   {"Handler_read_prev",        (char*) offsetof(STATUS_VAR, ha_read_prev_count), SHOW_LONGLONG_STATUS},
   {"Handler_read_rnd",         (char*) offsetof(STATUS_VAR, ha_read_rnd_count), SHOW_LONGLONG_STATUS},
   {"Handler_read_rnd_next",    (char*) offsetof(STATUS_VAR, ha_read_rnd_next_count), SHOW_LONGLONG_STATUS},
-  {"Handler_rollback",         (char*) offsetof(STATUS_VAR, ha_rollback_count), SHOW_LONGLONG_STATUS},
-  {"Handler_savepoint",        (char*) offsetof(STATUS_VAR, ha_savepoint_count), SHOW_LONGLONG_STATUS},
-  {"Handler_savepoint_rollback",(char*) offsetof(STATUS_VAR, ha_savepoint_rollback_count), SHOW_LONGLONG_STATUS},
-  {"Handler_update",           (char*) offsetof(STATUS_VAR, ha_update_count), SHOW_LONGLONG_STATUS},
-  {"Handler_write",            (char*) offsetof(STATUS_VAR, ha_write_count), SHOW_LONGLONG_STATUS},
 ```
 
-## ha_read_next_count
+## ha_read_next_count が使われている箇所
 
 ```cc
 sql/sql_class.h:  ulonglong ha_read_next_count;
@@ -61,14 +55,16 @@ storage/myisammrg/ha_myisammrg.cc:  ha_statistic_increment(&SSV::ha_read_next_co
 storage/myisammrg/ha_myisammrg.cc:  ha_statistic_increment(&SSV::ha_read_next_count);
 ```
 
-ストレージエンジンごとに用意されている
+ストレージエンジンごとに呼び出されている。 InnoDB の実装だけ追いかけます
 
 ## storage/innobase/handler/ha_innodb.cc
 
  * ha_innobase::index_next
  * ha_innobase::index_next_same 
 
-で統計値をインクリメントしている 
+で統計値をインクリメントしている
+
+#### ha_innobase::index_next, ha_innobase::index_next_same
 
 ```cc
 /***********************************************************************//**
@@ -114,9 +110,11 @@ enum row_sel_direction {
 };
 ```
 
-## ハンドラー層
+# handler 層に上る
 
-ストレージエンジンは一旦脇においておいて、呼び出し元(ハンドラー層) を見てみる
+ストレージエンジンに潜るのは一旦脇においておいて、呼び出し元 (handler層) の実装を見てみます
+
+## handler::ha_index_next
 
  * `Reads the next row via index` とある
 
