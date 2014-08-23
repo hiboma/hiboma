@@ -64,6 +64,7 @@ int handler::ha_index_read(uchar *buf, const uchar *key, uint key_len,
 ## InnoDB で ha_read_key_count を扱っているコード
 
  * **ha_innobase::index_read** だけ
+   * row_search_for_mysql を呼び出す
  * 序文のコメントが何やら有用そう
 
 ```c
@@ -213,7 +214,7 @@ ha_innobase::index_read(
 
 		match_mode = ROW_SEL_EXACT;
 
-    /* col_name(length) でキーを prefix でマッチさせる場合 ... かなー */
+    /* col_name(length) でキーを prefix だけにしてやつでマッチさせる場合 ... かなー */
 	} else if (find_flag == HA_READ_PREFIX
 		   || find_flag == HA_READ_PREFIX_LAST) {
 
@@ -226,6 +227,7 @@ ha_innobase::index_read(
 
 		innobase_srv_conc_enter_innodb(prebuilt->trx);
 
+        /* ここで行を探しまくる */
 		ret = row_search_for_mysql((byte*) buf, mode, prebuilt,
 					   match_mode, 0);
 
