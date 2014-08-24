@@ -2,6 +2,7 @@
 
 > The number of requests to read a row based on a fixed position. This value is high if you are doing a lot of queries that require sorting of the result. You probably have a lot of queries that require MySQL to scan entire tables or you have joins that do not use keys properly.
 
+## ha_innobase::rnd_pos
 
 ```c
 /**********************************************************************//**
@@ -36,4 +37,35 @@ ha_innobase::rnd_pos(
 
 	DBUG_RETURN(error);
 }
+```
+
+## ha_rnd_pos
+
+```c
+/**
+  Read row via random scan from position.
+
+  @param[out] buf  Buffer to read the row into
+  @param      pos  Position from position() call
+
+  @return Operation status
+    @retval 0     Success
+    @retval != 0  Error (error code returned)
+*/
+
+int handler::ha_rnd_pos(uchar *buf, uchar *pos)
+{
+  int result;
+  DBUG_ENTER("handler::ha_rnd_pos");
+  DBUG_ASSERT(table_share->tmp_table != NO_TMP_TABLE ||
+              m_lock_type != F_UNLCK);
+  /* TODO: Find out how to solve ha_rnd_pos when finding duplicate update. */
+  /* DBUG_ASSERT(inited == RND); */
+
+  MYSQL_TABLE_IO_WAIT(m_psi, PSI_TABLE_FETCH_ROW, MAX_KEY, 0,
+    { result= rnd_pos(buf, pos); })
+  DBUG_RETURN(result);
+}
+```
+
 ```
