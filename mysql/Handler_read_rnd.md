@@ -24,6 +24,7 @@ ha_innobase::rnd_pos(
 
 	ha_statistic_increment(&SSV::ha_read_rnd_count);
 
+    /* ただの assert です */
 	ut_a(prebuilt->trx == thd_to_trx(ha_thd()));
 
 	/* Note that we assume the length of the row reference is fixed
