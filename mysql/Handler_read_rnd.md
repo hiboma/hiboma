@@ -2,6 +2,8 @@
 
 > The number of requests to read a row based on a fixed position. This value is high if you are doing a lot of queries that require sorting of the result. You probably have a lot of queries that require MySQL to scan entire tables or you have joins that do not use keys properly.
 
+storage/example/ha_example.cc 読むとテーブルスキャンする際に rnd_*** が呼び出されるってあるな
+
 ## ha_innobase::rnd_pos
 
 ```c
