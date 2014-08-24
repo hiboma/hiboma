@@ -4,11 +4,9 @@
 
 ## definition
 
-```
-The number of requests to read a row based on a key. If this value is high, it is a good indication that your tables are properly indexed for your queries.
-
-http://dev.mysql.com/doc/refman/5.6/en/server-status-variables.html#statvar_Handler_read_next
-```
+> The number of requests to read a row based on a key. If this value is high, it is a good indication that your tables are properly indexed for your queries.
+>
+> http://dev.mysql.com/doc/refman/5.6/en/server-status-variables.html#statvar_Handler_read_next
 
 ## sql/mysqld.cc
 
