@@ -1,4 +1,6 @@
-# SHOW STATUS LIKE 'handler_read% の Handler_read_* のイメージをまとめる
+#  Handler_read_* のイメージをまとめる
+
+`SHOW STATUS LIKE 'handler_read%` で取れる統計値が何を意味する数値なのかまとめます
 
  * 説明の簡略化のために InnoDB の primary key (クラスタインデックス) だけで図にしています
    * セカンダリインデックスも考えると大変そうなので
@@ -60,7 +62,7 @@ SELECT * FROM foo WHERE id = 3
 +-----------------------+-------+
 ```
 
-** SELECT id FROM foo WHERE id in (?,?,?) **
+**SELECT id FROM foo WHERE id in (?,?,?)**
 
 ![2014-08-25 17 55 03](https://cloud.githubusercontent.com/assets/172456/4027870/ce3701ac-2c35-11e4-9326-c1e6d64903f3.png)
 
@@ -124,18 +126,17 @@ SELECT * FROM foo WHERE id in (2,4,6,8)
 +-----------------------+-------+
 ```
 
- * おっと予想に反した動作になってしまった
- * `SELECT *` でかつ `in` に指定したレコード数が、テーブル全体のレコード数の半数に達しているのでオプティマイザがテーブルスキャンを選択したか?
+`SELECT *` でかつ `in` に指定したレコード数が、テーブル全体のレコード数の半数に達しているのでオプティマイザがテーブルスキャンを選択したか?
 
 ## Handler_read_next
+
+赤矢印とオレンジ矢印が ***Handler_read_next*** としてカウントされます
+
+![2014-08-25 17 39 17](https://cloud.githubusercontent.com/assets/172456/4027751/d903b06e-2c33-11e4-84a5-6fe515564ef6.png)
 
  1. Handler_read_key で対象のレコードを見つける
  2. インデックスで昇順に次のレコードを探そうとするとカウントされます
    * range 検索では次のレコードをみて range に収まるかどうかの判定が必要なので オレンジ矢印も含まれます
- 
-赤矢印とオレンジ矢印が ***Handler_read_next*** としてカウントされます
-
-![2014-08-25 17 39 17](https://cloud.githubusercontent.com/assets/172456/4027751/d903b06e-2c33-11e4-84a5-6fe515564ef6.png)
 
 #### サンプルクエリ
 
@@ -175,6 +176,8 @@ SELECT * FROM foo WHERE 2 < id and id < 7;
 
 ![2014-08-25 17 41 00](https://cloud.githubusercontent.com/assets/172456/4027750/d9013dac-2c33-11e4-8ad0-9eaa60984ba6.png)
 
+#### サンプルクエリ
+
 ```sql
 SELECT * FROM foo ORDER BY id ASC
 ```
@@ -207,7 +210,9 @@ SELECT * FROM foo ORDER BY id ASC
 
 ![2014-08-25 17 42 34](https://cloud.githubusercontent.com/assets/172456/4027752/d914d13c-2c33-11e4-949d-807f3d485744.png)
 
-```sh
+#### サンプルクエリ
+
+```sql
 SELECT * FROM foo ORDER BY id DESC
 ```
 
