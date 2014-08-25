@@ -8,15 +8,15 @@ MySQL の `SHOW STATUS LIKE 'handler_read%` で取れる統計値が何を意味
  * Handler_read_next
  * Handler_read_prev
 
-についてのモデル図とサンプルクエリを載せています。
+についてのモデル図とサンプルクエリを載せています
 
-### 前置き
+#### 前置き
 
  * 説明の簡略化のために InnoDB の primary key (クラスタインデックス) を元に図にしています
    * セカンダリインデックスも考えると大変そうなので ...
  * 図は kazeburo さんのグレートスライド http://www.slideshare.net/kazeburo/isucon-summerclass2014action2final をまねて書いています
 
-### SEE ALSO
+#### SEE ALSO
 
 Handler_read_* の説明は http://dev.mysql.com/doc/refman/5.6/en/server-status-variables.html#statvar_Handler_read_first らへんを読むとよいでしょう
 
@@ -138,6 +138,8 @@ SELECT * FROM foo WHERE id in (2,4,6,8)
 
 `SELECT *` でかつ `in` に指定したレコード数が、テーブル全体のレコード数の半数に達しているので、オプティマイザがフルテーブルスキャンの方がよいと選択したか?
 
+( ***Handler_read_rnd_next*** の説明は別に書きます )
+
 ----
 
 # レンジスキャン
@@ -154,7 +156,7 @@ SELECT * FROM foo WHERE id in (2,4,6,8)
    * **Handler_read_key** でカウントされます    
      * B+木インデックスでは隣のリーフへのポインタが用意されている (赤矢印)
      * このポインタを辿ることで **次のレコード** を探すことができる
- 3 range 検索では次のレコードをみて range に収まるかどうかの判定が必要 (オレンジ矢印)
+ 3. range 検索では次のレコードをみて range に収まるかどうかの判定が必要 (オレンジ矢印)
    * **Handler_read_key** でカウントされます
 
 #### サンプルクエリ
@@ -200,7 +202,7 @@ SELECT * FROM foo WHERE 2 < id and id < 7;
  * 最小のキーを見つける
    * **Handler_read_first** と **Handler_read_key** がカウントされる
  * インデックスを総なめする (赤矢印、オレンジ矢印)
-   * Handler_read_next がカウントされる
+   * ***Handler_read_next*** がカウントされる
 
 #### サンプルクエリ
 
