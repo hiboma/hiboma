@@ -40,16 +40,68 @@ SELECT * FROM foo WHERE id = 3
 +----+-------------+-------+-------+---------------+---------+---------+-------+------+-------+
 ```
 
-#### WHERE in (?) を使った場合
+#### SELECT id FROM foo WHERE id in (2,4,6,8);
 
 ![2014-08-25 16 53 57](https://cloud.githubusercontent.com/assets/172456/4027552/ac6a6334-2c30-11e4-804e-1f027be9d0a1.png)
+
+`in` にマッチする行をそれぞれ ***Handler_read_key*** で取りにいきます
+
+```
+ +----+-------------+-------+-------+---------------+---------+---------+------+------+--------------------------+
+| id | select_type | table | type  | possible_keys | key     | key_len | ref  | rows | Extra                    |
++----+-------------+-------+-------+---------------+---------+---------+------+------+--------------------------+
+|  1 | SIMPLE      | foo   | index | PRIMARY       | PRIMARY | 4       | NULL |    8 | Using where; Using index |
++----+-------------+-------+-------+---------------+---------+---------+------+------+--------------------------+
+```
+
+```
+ +-----------------------+-------+
+| Variable_name         | Value |
++-----------------------+-------+
+| Handler_read_first    | 1     |
+| Handler_read_key      | 1     |
+| Handler_read_last     | 0     |
+| Handler_read_next     | 8     |
+| Handler_read_prev     | 0     |
+| Handler_read_rnd      | 0     |
+| Handler_read_rnd_next | 0     |
++-----------------------+-------+
+```
+
+#### SELECT * FROM foo WHERE id in (2,4,6,8)
+
+`SELECT *` にすると、 `in` を使っていても結果が異なる
+
 
 ```sql
 SELECT * FROM foo WHERE id in (2,4,6,8)
 ```
 
+```
++----+-------------+-------+-------+---------------+---------+---------+------+------+--------------------------+
+| id | select_type | table | type  | possible_keys | key     | key_len | ref  | rows | Extra                    |
++----+-------------+-------+-------+---------------+---------+---------+------+------+--------------------------+
+|  1 | SIMPLE      | foo   | index | PRIMARY       | PRIMARY | 4       | NULL |    8 | Using where; Using index |
++----+-------------+-------+-------+---------------+---------+---------+------+------+--------------------------+
+```
+
+```
++-----------------------+-------+
+| Variable_name         | Value |
++-----------------------+-------+
+| Handler_read_first    | 1     |
+| Handler_read_key      | 1     |
+| Handler_read_last     | 0     |
+| Handler_read_next     | 0     |
+| Handler_read_prev     | 0     |
+| Handler_read_rnd      | 0     |
+| Handler_read_rnd_next | 9     |
++-----------------------+-------+
+```
+
  * おっと予想に反した動作になってしまった
- * `in` に指定したレコード数が、テーブル全体のレコード数の半数に達しているのでオプティマイザがテーブルスキャンを選択したか?
+ * `SELECT *` でかつ `in` に指定したレコード数が、テーブル全体のレコード数の半数に達しているのでオプティマイザがテーブルスキャンを選択したか?
+
 
 ## Handler_read_next
 
@@ -65,6 +117,28 @@ SELECT * FROM foo WHERE id in (2,4,6,8)
 SELECT * FROM foo WHERE 2 < id and id < 7;
 ```
 
+```
++----+-------------+-------+-------+---------------+---------+---------+------+------+-------------+
+| id | select_type | table | type  | possible_keys | key     | key_len | ref  | rows | Extra       |
++----+-------------+-------+-------+---------------+---------+---------+------+------+-------------+
+|  1 | SIMPLE      | foo   | range | PRIMARY       | PRIMARY | 4       | NULL |    3 | Using where |
++----+-------------+-------+-------+---------------+---------+---------+------+------+-------------+
+```
+
+```
++-----------------------+-------+
+| Variable_name         | Value |
++-----------------------+-------+
+| Handler_read_first    | 0     |
+| Handler_read_key      | 1     |
+| Handler_read_last     | 0     |
+| Handler_read_next     | 4     |
+| Handler_read_prev     | 0     |
+| Handler_read_rnd      | 0     |
+| Handler_read_rnd_next | 0     |
++-----------------------+-------+
+```
+
 (降順方向だと ***Handler_read_prev*** になります)
 
 ## Handler_read_first + Handler_read_key + Handler_read_next
@@ -75,6 +149,14 @@ SELECT * FROM foo WHERE 2 < id and id < 7;
 
 ```sql
 SELECT * FROM foo ORDER BY id ASC
+```
+
+```
++----+-------------+-------+-------+---------------+---------+---------+------+------+-------+
+| id | select_type | table | type  | possible_keys | key     | key_len | ref  | rows | Extra |
++----+-------------+-------+-------+---------------+---------+---------+------+------+-------+
+|  1 | SIMPLE      | foo   | index | NULL          | PRIMARY | 4       | NULL |    8 | NULL  |
++----+-------------+-------+-------+---------------+---------+---------+------+------+-------+
 ```
 
 ```
