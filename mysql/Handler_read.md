@@ -16,17 +16,12 @@ MySQL の `SHOW STATUS LIKE 'handler_read%` で取れる統計値が何を意味
 
  * 簡略化のために InnoDB の primary key (クラスタインデックス) だけ元に図にしています
    * セカンダリインデックスも考えると大変そうなので ...
- * 図は kazeburo さんのグレートスライド http://www.slideshare.net/kazeburo/isucon-summerclass2014action2final をまねて書いています
+ * モデル図は kazeburo さんのグレートスライド http://www.slideshare.net/kazeburo/isucon-summerclass2014action2final をまねて書いています
+ * モデル図はソースとマニュアル等を「おそらくこうだろう」という推測で書いています。そのため正確さを欠いている点がある場合は了承ください
 
 #### SEE ALSO
 
-Handler_read_* の説明は http://dev.mysql.com/doc/refman/5.6/en/server-status-variables.html#statvar_Handler_read_first らへんを読むとよいでしょう
-
-## InnoDB の primary キー
-
-InnoDB の primary キー (B+木インデックス) は下記のようにモデル化されることを念頭に読み進めてください
-
-(セカンダリインデクックスの場合は? kazeburo さんの資料を眺めて勉強してください ...!)
+Handler_read_* の説明は [MySQL :: MySQL 5.6 Reference Manual :: 5.1.6 Server Status Variables](http://dev.mysql.com/doc/refman/5.6/en/server-status-variables.html#statvar_Handler_read_first) らへんを読むとよいでしょう。ただし、これ読んでも具体的な挙動が分からないってのが本音です ...
 
 ## Handler_read_first
 
@@ -174,6 +169,7 @@ SELECT * FROM foo WHERE id in (2,4,6,8)
 # 3,4,5,6 を返す
 SELECT * FROM foo WHERE 2 < id and id < 7;
 
+# BETWEEN 使っても同じ
 SELECT * FROM foo WHERE id BETWEEN 3 AND 6
 ```
 
