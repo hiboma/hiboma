@@ -147,23 +147,23 @@ SELECT * FROM foo WHERE id in (2,4,6,8)
 
 ----
 
-# レンジスキャン
-
 ## Handler_read_next
 
 赤矢印とオレンジ矢印が ***Handler_read_next*** としてカウントされる動きです
 
 ![2014-08-25 17 39 17](https://cloud.githubusercontent.com/assets/172456/4027751/d903b06e-2c33-11e4-84a5-6fe515564ef6.png)
 
+上記は **レンジスキャン** になっているモデルとなります
+
  1. インデックスで対象のレコードを見つける
    * **Handler_read_key** でカウントされます
  2. インデックスで昇順に次のレコードを探す (赤矢印)
-   * **Handler_read_key** でカウントされます    
+   * **Handler_read_next** でカウントされます    
      * B+木インデックスでは隣のリーフへのポインタが用意されている (赤矢印)
      * このポインタを辿ることで **次のレコード** を探すことができる
  3. range 検索では隣のリーフ(レコード)も range に収まるかどうかの判定が必要 (オレンジ矢印)
-   * **Handler_read_key** でカウントされます
-   * 隣のリーフが存在しない/マッチケースでも Handler_read_next はカウントされるのに注意
+   * **Handler_read_next** でカウントされます
+   * 隣のリーフが存在しない/マッチケースでも **Handler_read_next** がカウントされるのに注意。つまり Haandler_read_next は fetch するレコード数と一致しない
 
 #### サンプルクエリ
 
@@ -175,7 +175,7 @@ SELECT * FROM foo WHERE 2 < id and id < 7;
 SELECT * FROM foo WHERE id BETWEEN 3 AND 6
 ```
 
-レンジ検索になっています
+EXPLAIN では `type = rane` になっています
 
 ```
 +----+-------------+-------+-------+---------------+---------+---------+------+------+-------------+
@@ -203,11 +203,11 @@ SELECT * FROM foo WHERE id BETWEEN 3 AND 6
 
 ----
 
-# 昇順のフルインデックススキャン
-
 ### Handler_read_first + Handler_read_key + Handler_read_next
 
 ![2014-08-25 17 41 00](https://cloud.githubusercontent.com/assets/172456/4027750/d9013dac-2c33-11e4-8ad0-9eaa60984ba6.png)
+
+昇順のフルインデックススキャンのモデルとなります
 
  1. `id` が最小のキーを見つける
   * **Handler_read_first** と **Handler_read_key** がカウントされる
@@ -276,15 +276,15 @@ SELECT id FROM foo ORDER BY id ASC
   * セカンダリインデックスの場合は **Covering Index** となっていい感じのはず
     * primary キーの場合はどうなんだっけ? 
 
-# 降順のフルインデックススキャン
+## 降順のフルインデックススキャン
 
 InnoDB の primary キーの場合は `フルインデックススキャン = フルテーブルスキャン` に等しいはず
 
 ### Handler_read_last + Handler_read_key + Handler_read_prev 
 
-降順のフルインデックススキャン
-
 ![2014-08-25 17 42 34](https://cloud.githubusercontent.com/assets/172456/4027752/d914d13c-2c33-11e4-949d-807f3d485744.png)
+
+降順のフルインデックススキャンのモデルとなります
 
  1. `id` が最大のキーを見つける
    * **Handler_read_last** ** と **Handler_read_key** がカウントされる
@@ -351,11 +351,9 @@ kazeburo さんのエントリにもある通り LIMIT  + OFFSET 検索は効率
 
 ----
 
-# フルテーブルスキャン
-
 ## Handler_read_rnd_next
 
-インデックスを貼っていないカラムを指定した場合フルテーブルスキャンになる (*1)
+インデックスを貼っていないカラムを指定した場合フルテーブルスキャンになります (*1)
 
 この際に Handler_read_rnd_next がカウントされる様子。InnoDB の場合は primary キーがクラスタインデックスなので、インデックスフルスキャンとフルテーブルスキャンは同一視していいんだっけ?
 
