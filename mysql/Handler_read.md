@@ -275,6 +275,14 @@ SELECT * FROM foo ORDER BY id DESC
 
 # フルテーブルスキャン
 
+## Handler_read_rnd_next
+
+インデックスを貼っていないカラムを指定した場合フルテーブルスキャンになる (*1)
+
+Handler_read_rnd_next がカウントされる様子
+
+*1 LIMIT で件数絞ったりすると例外が出る
+
 #### サンプルクエリ
 
 ```sql
@@ -296,13 +304,13 @@ SELECT * FROM foo
 +-----------------------+-------+
 | Variable_name         | Value |
 +-----------------------+-------+
-| Handler_read_first    | 0     |
-| Handler_read_key      | 0     |
+| Handler_read_first    | 1     |
+| Handler_read_key      | 1     |
 | Handler_read_last     | 0     |
 | Handler_read_next     | 0     |
 | Handler_read_prev     | 0     |
 | Handler_read_rnd      | 0     |
-| Handler_read_rnd_next | 0     |
+| Handler_read_rnd_next | 9     |
 +-----------------------+-------+
 ```
 
@@ -318,6 +326,7 @@ SELECT * FROM foo
 +----+-------------+-------+------+---------------+------+---------+------+------+---------------------------------+
 ```
 
+今までの結果と比較すると効率悪いのが Handler_read_rnd, Handler_read_rnd_next の数値から分かる
 
 ```
 +-----------------------+-------+
