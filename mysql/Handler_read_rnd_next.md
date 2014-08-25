@@ -43,7 +43,7 @@ ha_innobase::rnd_next(
 合わせて　general_fetch のインタフェースを確認しておく
 
  * direction が ROW_SEL_NEXT なので、昇順に探すはず
- * match_mode = 0 なので、
+ * match_mode = 0 な場合( !ROW_SEL_NEXT, !ROW_SEL_EXACT_PREFIX) はテーブル総なめにすることを意味する?
 
 ```c
 /***********************************************************************//**

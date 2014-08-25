@@ -4,7 +4,13 @@
 
 storage/example/ha_example.cc 読むとテーブルスキャンする際に rnd_*** が呼び出されるってあるな
 
-## ha_innobase::rnd_pos
+## InnoDB の場合
+
+### ha_innobase::rnd_pos
+
+ * テーブルスキャンする際は ha_innobase::rnd_next を使っておくぽい
+ * `ORDER BY RAND()` とかすると ha_innobase::rnd_pos にポジションを渡してレコードを読み取る
+   * その際も index_read を使うので MyISAM のテーブルスキャンとは違うことが分かる
 
 ```c
 /**********************************************************************//**
