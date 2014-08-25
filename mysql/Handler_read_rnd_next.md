@@ -1,11 +1,42 @@
 # Handler_read_rnd_next
 
-## 
+ * handler::ha_rnd_init
+ * handler::ha_rnd_next
+ * handler::ha_rnd_end
 
+を見ていって数値の意味を探ります
 
 ## handler 層
 
- * 次の行をランダムスキャンする、とある
+handler::ha_rnd_init によって inited が RND か INDEX かが決定される。
+
+```c 
+ /**
+  Initialize table for random read or scan.
+
+  @param scan  if true: Initialize for random scans through rnd_next()
+               if false: Initialize for random reads through rnd_pos()
+
+  @return Operation status
+    @retval 0     Success
+    @retval != 0  Error (error code returned)
+*/
+
+int handler::ha_rnd_init(bool scan)
+{
+  DBUG_EXECUTE_IF("ha_rnd_init_fail", return HA_ERR_TABLE_DEF_CHANGED;);
+  int result;
+  DBUG_ENTER("ha_rnd_init");
+  DBUG_ASSERT(table_share->tmp_table != NO_TMP_TABLE ||
+              m_lock_type != F_UNLCK);
+  DBUG_ASSERT(inited == NONE || (inited == RND && scan));
+  inited= (result= rnd_init(scan)) ? NONE : RND;
+  end_range= NULL;
+  DBUG_RETURN(result);
+}
+```
+
+ha_rnd_nextには次の行をランダムスキャンする、とあるがストレージエンジンによって特性が変わるので これだけじゃ分からない
 
 ```c
 /**
@@ -32,8 +63,30 @@ int handler::ha_rnd_next(uchar *buf)
 }
 ```
 
-## InnoDB の場合
+```c
+/**
+  End use of random access.
 
+  @return Operation status
+    @retval 0     Success
+    @retval != 0  Error (error code returned)
+*/
+
+int handler::ha_rnd_end()
+{
+  DBUG_ENTER("ha_rnd_end");
+  /* SQL HANDLER function can call this without having it locked. */
+  DBUG_ASSERT(table->open_by_handler ||
+              table_share->tmp_table != NO_TMP_TABLE ||
+              m_lock_type != F_UNLCK);
+  DBUG_ASSERT(inited == RND);
+  inited= NONE;
+  end_range= NULL;
+  DBUG_RETURN(rnd_end());
+}
+```
+
+## InnoDB の場合
 
  * テーブルスキャンが開始されていない場合は index_first でインデックスを使って最初の行を探す
  * テーブルスキャン開始済みであれば `general_fetch(buf, ROW_SEL_NEXT, 0);` で次の行を取る
