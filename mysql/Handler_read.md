@@ -7,18 +7,26 @@ MySQL の `SHOW STATUS LIKE 'handler_read%` で取れる統計値が何を意味
  * Handler_read_key 
  * Handler_read_next
  * Handler_read_prev
+ * Handler_read_rnd
+ * Handler_read_rnd_next
 
 についてのモデル図とサンプルクエリを載せています
 
 #### 前置き
 
- * 説明の簡略化のために InnoDB の primary key (クラスタインデックス) を元に図にしています
+ * 簡略化のために InnoDB の primary key (クラスタインデックス) だけ元に図にしています
    * セカンダリインデックスも考えると大変そうなので ...
  * 図は kazeburo さんのグレートスライド http://www.slideshare.net/kazeburo/isucon-summerclass2014action2final をまねて書いています
 
 #### SEE ALSO
 
 Handler_read_* の説明は http://dev.mysql.com/doc/refman/5.6/en/server-status-variables.html#statvar_Handler_read_first らへんを読むとよいでしょう
+
+## InnoDB の primary キー
+
+InnoDB の primary キー (B+木インデックス) は下記のようにモデル化されることを念頭に読み進めてください
+
+(セカンダリインデクックスの場合は? kazeburo さんの資料を眺めて勉強してください ...!)
 
 ## Handler_read_first
 
@@ -347,6 +355,35 @@ SELECT * FROM foo
 | Handler_read_prev     | 0     |
 | Handler_read_rnd      | 0     |
 | Handler_read_rnd_next | 9     |
++-----------------------+-------+
+```
+
+####  LIMIT で件数絞る場合
+
+
+```
+SELECT * FROM foo WHERE name = 'aaa' LIMIT 1
+```
+
+```
++----+-------------+-------+------+---------------+------+---------+------+------+-------------+
+| id | select_type | table | type | possible_keys | key  | key_len | ref  | rows | Extra       |
++----+-------------+-------+------+---------------+------+---------+------+------+-------------+
+|  1 | SIMPLE      | foo   | ALL  | NULL          | NULL | NULL    | NULL |    8 | Using where |
++----+-------------+-------+------+---------------+------+---------+------+------+-------------+
+```
+
+```
++-----------------------+-------+
+| Variable_name         | Value |
++-----------------------+-------+
+| Handler_read_first    | 1     |
+| Handler_read_key      | 1     |
+| Handler_read_last     | 0     |
+| Handler_read_next     | 0     |
+| Handler_read_prev     | 0     |
+| Handler_read_rnd      | 0     |
+| Handler_read_rnd_next | 1     |
 +-----------------------+-------+
 ```
 
