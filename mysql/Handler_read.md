@@ -1,4 +1,4 @@
-# Handler_read_* の挙動をまとめる
+# Handler_read_* のイメージをまとめる
 
  * 説明の簡略化のために InnoDB の primary key (クラスタインデックス) だけで図にしています
  * セカンダリインデックスも考えると大変そうだ
@@ -25,11 +25,12 @@
 ## Handler_read_next
 
  1. Handler_read_key で対象のレコードを見つける
- 2. インデックス順に次のレコードを探そうとする
+ 2. インデックスで昇順に次のレコードを探そうとする
+  * 赤矢印部分が ***Handler_read_next*** としてカウントされます
  
 ![2014-08-25 16 14 29](https://cloud.githubusercontent.com/assets/172456/4027139/d4b7e6a2-2c28-11e4-9a2b-6be5f3674df3.png)
 
-(逆方向だと ***Handler_read_prev*** になります)
+(降順方向だと ***Handler_read_prev*** になります)
 
 ## Handler_read_first + Handler_read_next
 
