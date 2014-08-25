@@ -2,7 +2,10 @@
 
 ## InnoDB の場合
 
- * index_first でインデックスを使って最初の行を探す
+ * テーブルスキャンが開始されていない場合は index_first でインデックスを使って最初の行を探す
+ * テーブルスキャン開始済みであれば `general_fetch(buf, ROW_SEL_NEXT, 0);` で次の行を取る
+   * ha_innobase::index_next でも `general_fetch(buf, ROW_SEL_NEXT, 0)` 使っている
+   * 「InnoDB primary キーのインデックススキャン == テーブルスキャン」だよね?
 
 ```c
 /*****************************************************************//**
@@ -35,6 +38,26 @@ ha_innobase::rnd_next(
 
 	DBUG_RETURN(error);
 }
+```
+
+合わせて　general_fetch のインタフェースを確認しておく
+
+ * direction が ROW_SEL_NEXT なので、昇順に探すはず
+ * match_mode = 0 なので、
+
+```c
+/***********************************************************************//**
+Reads the next or previous row from a cursor, which must have previously been
+positioned using index_read.
+@return	0, HA_ERR_END_OF_FILE, or error number */
+UNIV_INTERN
+int
+ha_innobase::general_fetch(
+/*=======================*/
+	uchar*	buf,		/*!< in/out: buffer for next row in MySQL format */
+	uint	direction,	/*!< in: ROW_SEL_NEXT or ROW_SEL_PREV */
+	uint	match_mode)	/*!< in: 0, ROW_SEL_EXACT, or
+				ROW_SEL_EXACT_PREFIX */
 ```
 
 ## MyISAM の場合
