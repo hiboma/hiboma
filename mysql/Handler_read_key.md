@@ -1,7 +1,7 @@
 # Handler_read_key
 
  * インデックスを使って行を読み出した回数
- * 
+ * Handler_read_next との違いが大事
 
 ## definition
 

@@ -278,7 +278,7 @@ SELECT id FROM foo ORDER BY id ASC
 
 # 降順のフルインデックススキャン
 
-InnoDB の primary キーの場合は `フルインデックススキャン = フルテーブルスキャン` だっけ?
+InnoDB の primary キーの場合は `フルインデックススキャン = フルテーブルスキャン` に等しいはず
 
 ### Handler_read_last + Handler_read_key + Handler_read_prev 
 
@@ -357,9 +357,9 @@ kazeburo さんのエントリにもある通り LIMIT  + OFFSET 検索は効率
 
 インデックスを貼っていないカラムを指定した場合フルテーブルスキャンになる (*1)
 
-Handler_read_rnd_next がカウントされる様子
+この際に Handler_read_rnd_next がカウントされる様子。InnoDB の場合は primary キーがクラスタインデックスなので、インデックスフルスキャンとフルテーブルスキャンは同一視していいんだっけ?
 
-1) LIMIT で件数絞ったりする場合は例外アリ
+ * 1) LIMIT で件数絞ったりする場合は例外アリ
 
 #### サンプルクエリ
 
