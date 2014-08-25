@@ -22,6 +22,12 @@
 
 ![2014-08-25 16 11 27](https://cloud.githubusercontent.com/assets/172456/4027138/d4b38436-2c28-11e4-8547-05e975bfe499.png)
 
+#### サンプルクエリ
+
+```sql
+SELECT * FROM foo WHERE 2 < id and id < 7;
+```
+
 ## Handler_read_next
 
  1. Handler_read_key で対象のレコードを見つける
