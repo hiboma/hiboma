@@ -100,7 +100,7 @@ SELECT * FROM foo WHERE id in (2,4,6);
 
 #### SELECT * FROM foo WHERE id in (?,?,?) にするとどうなるか?
 
-`SELECT *` にすると、 `in` を使っていても結果が異なります
+`SELECT *` にすると、 `in` を使っていても結果が異なります。フルテーブルスキャンになってしまいました
 
 ```sql
 SELECT * FROM foo WHERE id in (2,4,6,8)
@@ -141,7 +141,8 @@ SELECT * FROM foo WHERE id in (2,4,6,8)
  1. 対象のレコードを見つける
    * Handler_read_key でカウントされます
  2. インデックスで昇順に次のレコードを探す (赤矢印)
-   * **Handler_read_key** でカウントされます 
+   * **Handler_read_key** でカウントされます
+   * B+木インデックスでは隣のリーフへのポインタが用意されているので、このポインタを辿ることで **次のレコード** を探すことができる
  3 range 検索では次のレコードをみて range に収まるかどうかの判定が必要 (オレンジ矢印)
    * **Handler_read_key** でカウントされます
 
@@ -179,11 +180,9 @@ SELECT * FROM foo WHERE 2 < id and id < 7;
 
 ----
 
-# フルインデックススキャン
+# 昇順のフルインデックススキャン
 
-## Handler_read_first + Handler_read_key + Handler_read_next
-
-昇順のフルインデックススキャン
+### Handler_read_first + Handler_read_key + Handler_read_next
 
 ![2014-08-25 17 41 00](https://cloud.githubusercontent.com/assets/172456/4027750/d9013dac-2c33-11e4-8ad0-9eaa60984ba6.png)
 
@@ -220,7 +219,9 @@ SELECT * FROM foo ORDER BY id ASC
 +-----------------------+-------+
 ```
 
-## Handler_read_last + Handler_read_key + Handler_read_prev
+# 降順のフルインデックススキャン
+
+### Handler_read_last + Handler_read_key + Handler_read_prev 
 
 降順のフルインデックススキャン
 
