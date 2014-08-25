@@ -60,28 +60,34 @@ SELECT * FROM foo WHERE id = 3
 +-----------------------+-------+
 ```
 
-#### SELECT id FROM foo WHERE id in (2,4,6,8);
+** SELECT id FROM foo WHERE id in (?,?,?) **
 
-![2014-08-25 16 53 57](https://cloud.githubusercontent.com/assets/172456/4027552/ac6a6334-2c30-11e4-804e-1f027be9d0a1.png)
+![2014-08-25 17 55 03](https://cloud.githubusercontent.com/assets/172456/4027870/ce3701ac-2c35-11e4-9326-c1e6d64903f3.png)
 
 `in` にマッチする行を取りにいって、 ***Handler_read_key*** でカウントされます
 
-```
- +----+-------------+-------+-------+---------------+---------+---------+------+------+--------------------------+
-| id | select_type | table | type  | possible_keys | key     | key_len | ref  | rows | Extra                    |
-+----+-------------+-------+-------+---------------+---------+---------+------+------+--------------------------+
-|  1 | SIMPLE      | foo   | index | PRIMARY       | PRIMARY | 4       | NULL |    8 | Using where; Using index |
-+----+-------------+-------+-------+---------------+---------+---------+------+------+--------------------------+
+#### サンプルクエリ
+
+```sql
+SELECT * FROM foo WHERE id in (2,4,6);
 ```
 
 ```
- +-----------------------+-------+
++----+-------------+-------+-------+---------------+---------+---------+------+------+-------------+
+| id | select_type | table | type  | possible_keys | key     | key_len | ref  | rows | Extra       |
++----+-------------+-------+-------+---------------+---------+---------+------+------+-------------+
+|  1 | SIMPLE      | foo   | range | PRIMARY       | PRIMARY | 4       | NULL |    3 | Using where |
++----+-------------+-------+-------+---------------+---------+---------+------+------+-------------+
+```
+
+```
++-----------------------+-------+
 | Variable_name         | Value |
 +-----------------------+-------+
-| Handler_read_first    | 1     |
-| Handler_read_key      | 1     |
+| Handler_read_first    | 0     |
+| Handler_read_key      | 3     |
 | Handler_read_last     | 0     |
-| Handler_read_next     | 8     |
+| Handler_read_next     | 0     |
 | Handler_read_prev     | 0     |
 | Handler_read_rnd      | 0     |
 | Handler_read_rnd_next | 0     |
