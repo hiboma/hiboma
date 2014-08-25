@@ -316,6 +316,36 @@ SELECT * FROM foo ORDER BY id DESC
 +-----------------------+-------+
 ```
 
+## LIMIT + OFFSET
+
+```
+SELECT id FROM foo LIMIT 3 OFFSET 5
+```
+
+kazeburo さんのエントリにもある通り LIMIT  + OFFSET 検索は効率が良くないのは ***Handler_read_rnd_next*** の数値から読み取れる
+
+```
++----+-------------+-------+-------+---------------+---------+---------+------+------+-------------+
+| id | select_type | table | type  | possible_keys | key     | key_len | ref  | rows | Extra       |
++----+-------------+-------+-------+---------------+---------+---------+------+------+-------------+
+|  1 | SIMPLE      | foo   | index | NULL          | PRIMARY | 4       | NULL |    8 | Using index |
++----+-------------+-------+-------+---------------+---------+---------+------+------+-------------+
+```
+
+```
++-----------------------+-------+
+| Variable_name         | Value |
++-----------------------+-------+
+| Handler_read_first    | 1     |
+| Handler_read_key      | 1     |
+| Handler_read_last     | 0     |
+| Handler_read_next     | 7     |
+| Handler_read_prev     | 0     |
+| Handler_read_rnd      | 0     |
+| Handler_read_rnd_next | 0     |
++-----------------------+-------+
+```
+
 ----
 
 # フルテーブルスキャン
@@ -360,7 +390,6 @@ SELECT * FROM foo
 
 ####  LIMIT で件数絞る場合
 
-
 ```
 SELECT * FROM foo WHERE name = 'aaa' LIMIT 1
 ```
@@ -386,6 +415,11 @@ SELECT * FROM foo WHERE name = 'aaa' LIMIT 1
 | Handler_read_rnd_next | 1     |
 +-----------------------+-------+
 ```
+
+ * LIMIT で件数を絞っていると、指定された件数を見つけた段階で探索は終了する
+ * LIMIT 分にマッチする行が無ければフルテーブルスキャンになる
+
+いずれにせよ効率は良くない 
 
 ----
 
