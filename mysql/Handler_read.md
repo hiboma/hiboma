@@ -2,6 +2,14 @@
 
 MySQL の `SHOW STATUS LIKE 'handler_read%` で取れる統計値が何を意味する数値なのかまとめます
 
+ * Handler_read_first
+ * Handler_read_last
+ * Handler_read_key 
+ * Handler_read_next
+ * Handler_read_prev
+
+についてのモデル図とサンプルクエリを載せています。
+
 ### 前置き
 
  * 説明の簡略化のために InnoDB の primary key (クラスタインデックス) を元に図にしています
