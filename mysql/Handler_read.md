@@ -73,8 +73,22 @@ SELECT * FROM foo WHERE 2 < id and id < 7;
 
 ![2014-08-25 16 19 02](https://cloud.githubusercontent.com/assets/172456/4027137/d4aef010-2c28-11e4-8888-c26245c2faa2.png)
 
-```
+```sql
 SELECT * FROM foo ORDER BY id ASC
+```
+
+```
++-----------------------+-------+
+| Variable_name         | Value |
++-----------------------+-------+
+| Handler_read_first    | 1     |
+| Handler_read_key      | 1     |
+| Handler_read_last     | 0     |
+| Handler_read_next     | 8     |
+| Handler_read_prev     | 0     |
+| Handler_read_rnd      | 0     |
+| Handler_read_rnd_next | 0     |
++-----------------------+-------+
 ```
 
 ## Handler_read_last + Handler_read_key + Handler_read_prev
@@ -83,6 +97,29 @@ SELECT * FROM foo ORDER BY id ASC
 
 ![2014-08-25 16 21 25](https://cloud.githubusercontent.com/assets/172456/4027140/d4ba0220-2c28-11e4-8eaf-aa359d5a611b.png)
 
-```
+```sh
 SELECT * FROM foo ORDER BY id DESC
 ```
+
+```
++----+-------------+-------+-------+---------------+---------+---------+------+------+-------+
+| id | select_type | table | type  | possible_keys | key     | key_len | ref  | rows | Extra |
++----+-------------+-------+-------+---------------+---------+---------+------+------+-------+
+|  1 | SIMPLE      | foo   | index | NULL          | PRIMARY | 4       | NULL |    8 | NULL  |
++----+-------------+-------+-------+---------------+---------+---------+------+------+-------+
+```
+
+```
++-----------------------+-------+
+| Variable_name         | Value |
++-----------------------+-------+
+| Handler_read_first    | 0     |
+| Handler_read_key      | 1     |
+| Handler_read_last     | 1     |
+| Handler_read_next     | 0     |
+| Handler_read_prev     | 8     |
+| Handler_read_rnd      | 0     |
+| Handler_read_rnd_next | 0     |
++-----------------------+-------+
+```
+
