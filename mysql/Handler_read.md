@@ -156,8 +156,9 @@ SELECT * FROM foo WHERE id in (2,4,6,8)
    * **Handler_read_key** でカウントされます    
      * B+木インデックスでは隣のリーフへのポインタが用意されている (赤矢印)
      * このポインタを辿ることで **次のレコード** を探すことができる
- 3. range 検索では次のレコードをみて range に収まるかどうかの判定が必要 (オレンジ矢印)
+ 3. range 検索では隣のリーフ(レコード)も range に収まるかどうかの判定が必要 (オレンジ矢印)
    * **Handler_read_key** でカウントされます
+   * 隣のリーフが存在しない/マッチケースでも Handler_read_next はカウントされるのに注意
 
 #### サンプルクエリ
 
@@ -182,7 +183,7 @@ SELECT * FROM foo WHERE 2 < id and id < 7;
 | Handler_read_first    | 0     |
 | Handler_read_key      | 1     |
 | Handler_read_last     | 0     |
-| Handler_read_next     | 4     |
+| Handler_read_next     | 4     | # <= 読み取れる行より +1 多い
 | Handler_read_prev     | 0     |
 | Handler_read_rnd      | 0     |
 | Handler_read_rnd_next | 0     |
@@ -199,10 +200,10 @@ SELECT * FROM foo WHERE 2 < id and id < 7;
 
 ![2014-08-25 17 41 00](https://cloud.githubusercontent.com/assets/172456/4027750/d9013dac-2c33-11e4-8ad0-9eaa60984ba6.png)
 
- * 1. 最小のキーを見つける
-   * **Handler_read_first** と **Handler_read_key** がカウントされる
- * 2. 範囲指定されていないので、インデックスを総なめする (赤矢印、オレンジ矢印)
-   * ***Handler_read_next*** がカウントされる
+ 1. `id` が最小のキーを見つける
+  * **Handler_read_first** と **Handler_read_key** がカウントされる
+ 2. 範囲指定されていないのでインデックスを総なめする (赤矢印、オレンジ矢印)
+   * ***Handler_read_next*** がカウントされる   
 
 #### サンプルクエリ
 
@@ -225,7 +226,7 @@ SELECT * FROM foo ORDER BY id ASC
 | Handler_read_first    | 1     |
 | Handler_read_key      | 1     |
 | Handler_read_last     | 0     |
-| Handler_read_next     | 8     |
+| Handler_read_next     | 8     | # <= 読み取れる行より +1 多い
 | Handler_read_prev     | 0     |
 | Handler_read_rnd      | 0     |
 | Handler_read_rnd_next | 0     |
@@ -274,9 +275,9 @@ SELECT id FROM foo ORDER BY id ASC
 
 ![2014-08-25 17 42 34](https://cloud.githubusercontent.com/assets/172456/4027752/d914d13c-2c33-11e4-949d-807f3d485744.png)
 
- * 最大のキーを見つける
+ 1. `id` が最大のキーを見つける
    * **Handler_read_last** ** と **Handler_read_key** がカウントされる
- * インデックスを総なめする (赤矢印、オレンジ矢印)
+ 2. インデックスを総なめする (赤矢印、オレンジ矢印)
    * Handler_read_next がカウントされる
 
 #### サンプルクエリ
@@ -307,6 +308,8 @@ SELECT * FROM foo ORDER BY id DESC
 +-----------------------+-------+
 ```
 
+----
+
 # フルテーブルスキャン
 
 ## Handler_read_rnd_next
@@ -326,7 +329,6 @@ SELECT * FROM foo
 ***Handler_read_rnd_next*** しまくりなクエリ。 `ORDER BY id [ASC|DESC]` にするとインデックススキャンになる
 
 ```
-
 +----+-------------+-------+------+---------------+------+---------+------+------+-------+
 | id | select_type | table | type | possible_keys | key  | key_len | ref  | rows | Extra |
 +----+-------------+-------+------+---------------+------+---------+------+------+-------+
@@ -348,7 +350,11 @@ SELECT * FROM foo
 +-----------------------+-------+
 ```
 
+----
+
 # ORDER BY RAND()
+
+## Handler_read_rnd, Handler_read_next
 
 #### サンプルクエリ
 
