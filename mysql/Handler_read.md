@@ -10,7 +10,7 @@
 
 ![2014-08-25 16 08 57](https://cloud.githubusercontent.com/assets/172456/4027141/d4d22210-2c28-11e4-8431-79539a60b5cf.png)
 
-昇順で (フル)インデックススキャン する際に Handler_read_next と一緒に使われるはず
+昇順で (フル)インデックススキャン する際に ***Handler_read_next*** と一緒に使われる
 
 ## Handler_read_last
 
@@ -18,7 +18,7 @@
 
 ![2014-08-25 16 10 03](https://cloud.githubusercontent.com/assets/172456/4027136/d4aac26a-2c28-11e4-8e16-105838f6440e.png)
 
-降順で (フル)インデックススキャン する際に Handler_read_next と一緒に使われるはず
+降順で (フル)インデックススキャン する際に ***Handler_read_prev*** と一緒に使われるはず
 
 ## Handler_read_key
 
@@ -32,13 +32,21 @@
 SELECT * FROM foo WHERE id = 3
 ```
 
+### WHERE in (?,?,?) の場合
+
+![2014-08-25 16 53 57](https://cloud.githubusercontent.com/assets/172456/4027552/ac6a6334-2c30-11e4-804e-1f027be9d0a1.png)
+
+```sql
+SELECT * FROM foo WHERE id in (2,4,6,8)
+```
+
 ## Handler_read_next
 
  1. Handler_read_key で対象のレコードを見つける
  2. インデックスで昇順に次のレコードを探そうとする
   * 赤矢印部分が ***Handler_read_next*** としてカウントされます
- 
-![2014-08-25 16 14 29](https://cloud.githubusercontent.com/assets/172456/4027139/d4b7e6a2-2c28-11e4-9a2b-6be5f3674df3.png)
+
+![2014-08-25 17 04 34](https://cloud.githubusercontent.com/assets/172456/4027542/71396b48-2c30-11e4-9d76-96a678c695a3.png)
 
 #### サンプルクエリ
 
@@ -48,7 +56,7 @@ SELECT * FROM foo WHERE 2 < id and id < 7;
 
 (降順方向だと ***Handler_read_prev*** になります)
 
-## Handler_read_first + Handler_read_next
+## Handler_read_first + Handler_read_key + Handler_read_next
 
 昇順のフルインデックススキャン
 
@@ -58,7 +66,7 @@ SELECT * FROM foo WHERE 2 < id and id < 7;
 SELECT * FROM foo ORDER BY id ASC
 ```
 
-## Handler_read_last + Handler_read_prev
+## Handler_read_last + Handler_read_key + Handler_read_prev
 
 降順のフルインデックススキャン
 
