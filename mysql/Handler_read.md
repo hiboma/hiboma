@@ -199,9 +199,9 @@ SELECT * FROM foo WHERE 2 < id and id < 7;
 
 ![2014-08-25 17 41 00](https://cloud.githubusercontent.com/assets/172456/4027750/d9013dac-2c33-11e4-8ad0-9eaa60984ba6.png)
 
- * 最小のキーを見つける
+ * 1. 最小のキーを見つける
    * **Handler_read_first** と **Handler_read_key** がカウントされる
- * インデックスを総なめする (赤矢印、オレンジ矢印)
+ * 2. 範囲指定されていないので、インデックスを総なめする (赤矢印、オレンジ矢印)
    * ***Handler_read_next*** がカウントされる
 
 #### サンプルクエリ
@@ -231,6 +231,40 @@ SELECT * FROM foo ORDER BY id ASC
 | Handler_read_rnd_next | 0     |
 +-----------------------+-------+
 ```
+
+#### サンプルクエリ
+
+`SELECT id` にしてみるとどうなるか?
+
+```sql
+SELECT id FROM foo ORDER BY id ASC
+```
+
+```
++----+-------------+-------+-------+---------------+---------+---------+------+------+-------------+
+| id | select_type | table | type  | possible_keys | key     | key_len | ref  | rows | Extra       |
++----+-------------+-------+-------+---------------+---------+---------+------+------+-------------+
+|  1 | SIMPLE      | foo   | index | NULL          | PRIMARY | 4       | NULL |    8 | Using index |
++----+-------------+-------+-------+---------------+---------+---------+------+------+-------------+
+```
+
+```
++-----------------------+-------+
+| Variable_name         | Value |
++-----------------------+-------+
+| Handler_read_first    | 1     |
+| Handler_read_key      | 1     |
+| Handler_read_last     | 0     |
+| Handler_read_next     | 8     |
+| Handler_read_prev     | 0     |
+| Handler_read_rnd      | 0     |
+| Handler_read_rnd_next | 0     |
++-----------------------+-------+
+```
+
+  * Handler_read_next の数値は一緒だけど **Using index** が出る。
+  * セカンダリインデックスの場合は **Covering Index** となっていい感じのはず
+    * primary キーの場合はどうなんだっけ? 
 
 # 降順のフルインデックススキャン
 
@@ -281,7 +315,7 @@ SELECT * FROM foo ORDER BY id DESC
 
 Handler_read_rnd_next がカウントされる様子
 
-*1 LIMIT で件数絞ったりすると例外が出る
+1) LIMIT で件数絞ったりする場合は例外アリ
 
 #### サンプルクエリ
 
@@ -318,6 +352,10 @@ SELECT * FROM foo
 
 #### サンプルクエリ
 
+```sql
+SELECT * FROM foo ORDER BY rand()
+```
+
 ```
 +----+-------------+-------+------+---------------+------+---------+------+------+---------------------------------+
 | id | select_type | table | type | possible_keys | key  | key_len | ref  | rows | Extra                           |
@@ -326,7 +364,7 @@ SELECT * FROM foo
 +----+-------------+-------+------+---------------+------+---------+------+------+---------------------------------+
 ```
 
-今までの結果と比較すると効率悪いのが Handler_read_rnd, Handler_read_rnd_next の数値から分かる
+今までの結果と比較すると圧倒的に効率悪いのが **Handler_read_rnd**, **Handler_read_rnd_next** の数値から分かる
 
 ```
 +-----------------------+-------+
