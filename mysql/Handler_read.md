@@ -1,14 +1,16 @@
 #  Handler_read_* のイメージをまとめる
 
+### 前置き
+
 `SHOW STATUS LIKE 'handler_read%` で取れる統計値が何を意味する数値なのかまとめます
 
- * 説明の簡略化のために InnoDB の primary key (クラスタインデックス) だけで図にしています
-   * セカンダリインデックスも考えると大変そうなので
+ * 説明の簡略化のために InnoDB の primary key (クラスタインデックス) を元に図にしています
+   * セカンダリインデックスも考えると大変そうなので ...
  * 図は kazeburo さんの http://www.slideshare.net/kazeburo/isucon-summerclass2014action2final をまねて書いています
 
 ### SEE ALSO
 
- * http://dev.mysql.com/doc/refman/5.6/en/server-status-variables.html#statvar_Handler_read_first
+Handler_read_* の説明は http://dev.mysql.com/doc/refman/5.6/en/server-status-variables.html#statvar_Handler_read_first らへんを読むとよいでしょう
 
 ## Handler_read_first
 
@@ -128,6 +130,8 @@ SELECT * FROM foo WHERE id in (2,4,6,8)
 
 `SELECT *` でかつ `in` に指定したレコード数が、テーブル全体のレコード数の半数に達しているので、オプティマイザがフルテーブルスキャンの方がよいと選択したか?
 
+# レンジスキャン
+
 ## Handler_read_next
 
 赤矢印とオレンジ矢印が ***Handler_read_next*** としてカウントされます
@@ -173,11 +177,20 @@ SELECT * FROM foo WHERE 2 < id and id < 7;
 
 (降順方向だと ***Handler_read_prev*** になります)
 
+----
+
+# フルインデックススキャン
+
 ## Handler_read_first + Handler_read_key + Handler_read_next
 
 昇順のフルインデックススキャン
 
 ![2014-08-25 17 41 00](https://cloud.githubusercontent.com/assets/172456/4027750/d9013dac-2c33-11e4-8ad0-9eaa60984ba6.png)
+
+ * 最小のキーを見つける
+   * **Handler_read_first** と **Handler_read_key** がカウントされる
+ * インデックスを総なめする (赤矢印、オレンジ矢印)
+   * Handler_read_next がカウントされる
 
 #### サンプルクエリ
 
@@ -212,6 +225,11 @@ SELECT * FROM foo ORDER BY id ASC
 降順のフルインデックススキャン
 
 ![2014-08-25 17 42 34](https://cloud.githubusercontent.com/assets/172456/4027752/d914d13c-2c33-11e4-949d-807f3d485744.png)
+
+ * 最大のキーを見つける
+   * **Handler_read_last** ** と **Handler_read_key** がカウントされる
+ * インデックスを総なめする (赤矢印、オレンジ矢印)
+   * Handler_read_next がカウントされる
 
 #### サンプルクエリ
 
