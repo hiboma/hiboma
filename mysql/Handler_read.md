@@ -75,7 +75,7 @@ SELECT * FROM foo WHERE id = 3
 +-----------------------+-------+
 ```
 
-**SELECT id FROM foo WHERE id in (?,?,?)** にするとどうなるか?
+#### SELECT id FROM foo WHERE id in (?,?,?) にするとどうなるか?
 
 ![2014-08-25 17 55 03](https://cloud.githubusercontent.com/assets/172456/4027870/ce3701ac-2c35-11e4-9326-c1e6d64903f3.png)
 
@@ -112,6 +112,8 @@ SELECT * FROM foo WHERE id in (2,4,6);
 #### SELECT * FROM foo WHERE id in (?,?,?) にするとどうなるか?
 
 `SELECT *` にすると、 `in` を使っていても結果が異なります。フルテーブルスキャンになってしまいました
+
+#### サンプルクエリ
 
 ```sql
 SELECT * FROM foo WHERE id in (2,4,6,8)
