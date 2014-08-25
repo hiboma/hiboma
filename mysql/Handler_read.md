@@ -2,6 +2,7 @@
 
  * 説明の簡略化のために InnoDB の primary key (クラスタインデックス) だけで図にしています
  * セカンダリインデックスも考えると大変そうだ
+ * 図は kazeburo さんの http://www.slideshare.net/kazeburo/isucon-summerclass2014action2final をまねて書いています
 
 ## Handler_read_first
 
@@ -16,6 +17,8 @@
 ![2014-08-25 16 10 03](https://cloud.githubusercontent.com/assets/172456/4027136/d4aac26a-2c28-11e4-8e16-105838f6440e.png)
 
 ## Handler_read_key
+
+インデックスを使って対象のレコードを見つける
 
 ![2014-08-25 16 11 27](https://cloud.githubusercontent.com/assets/172456/4027138/d4b38436-2c28-11e4-8547-05e975bfe499.png)
 
