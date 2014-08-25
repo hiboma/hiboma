@@ -1,12 +1,12 @@
 #  Handler_read_* のイメージをまとめる
 
-### 前置き
+MySQL の `SHOW STATUS LIKE 'handler_read%` で取れる統計値が何を意味する数値なのかまとめます
 
-`SHOW STATUS LIKE 'handler_read%` で取れる統計値が何を意味する数値なのかまとめます
+### 前置き
 
  * 説明の簡略化のために InnoDB の primary key (クラスタインデックス) を元に図にしています
    * セカンダリインデックスも考えると大変そうなので ...
- * 図は kazeburo さんの http://www.slideshare.net/kazeburo/isucon-summerclass2014action2final をまねて書いています
+ * 図は kazeburo さんのグレートスライド http://www.slideshare.net/kazeburo/isucon-summerclass2014action2final をまねて書いています
 
 ### SEE ALSO
 
@@ -18,7 +18,7 @@ Handler_read_* の説明は http://dev.mysql.com/doc/refman/5.6/en/server-status
 
 ![2014-08-25 16 08 57](https://cloud.githubusercontent.com/assets/172456/4027141/d4d22210-2c28-11e4-8431-79539a60b5cf.png)
 
-昇順で (フル)インデックススキャン する際に ***Handler_read_next*** と一緒に使われるます
+昇順で (フル)インデックススキャン する際に ***Handler_read_next*** と一緒に使われます
 
 ## Handler_read_last
 
@@ -138,11 +138,12 @@ SELECT * FROM foo WHERE id in (2,4,6,8)
 
 ![2014-08-25 17 39 17](https://cloud.githubusercontent.com/assets/172456/4027751/d903b06e-2c33-11e4-84a5-6fe515564ef6.png)
 
- 1. 対象のレコードを見つける
-   * Handler_read_key でカウントされます
- 2. インデックスで昇順に次のレコードを探す (赤矢印)
+ 1. インデックスで対象のレコードを見つける
    * **Handler_read_key** でカウントされます
-   * B+木インデックスでは隣のリーフへのポインタが用意されているので、このポインタを辿ることで **次のレコード** を探すことができる
+ 2. インデックスで昇順に次のレコードを探す (赤矢印)
+   * **Handler_read_key** でカウントされます    
+     * B+木インデックスでは隣のリーフへのポインタが用意されている (赤矢印)
+     * このポインタを辿ることで **次のレコード** を探すことができる
  3 range 検索では次のレコードをみて range に収まるかどうかの判定が必要 (オレンジ矢印)
    * **Handler_read_key** でカウントされます
 
