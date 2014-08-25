@@ -1,6 +1,39 @@
 # Handler_read_rnd_next
 
+## 
+
+
+## handler 層
+
+ * 次の行をランダムスキャンする、とある
+
+```c
+/**
+  Read next row via random scan.
+
+  @param buf  Buffer to read the row into
+
+  @return Operation status
+    @retval 0     Success
+    @retval != 0  Error (error code returned)
+*/
+
+int handler::ha_rnd_next(uchar *buf)
+{
+  int result;
+  DBUG_ENTER("handler::ha_rnd_next");
+  DBUG_ASSERT(table_share->tmp_table != NO_TMP_TABLE ||
+              m_lock_type != F_UNLCK);
+  DBUG_ASSERT(inited == RND);
+
+  MYSQL_TABLE_IO_WAIT(m_psi, PSI_TABLE_FETCH_ROW, MAX_KEY, 0,
+    { result= rnd_next(buf); })
+  DBUG_RETURN(result);
+}
+```
+
 ## InnoDB の場合
+
 
  * テーブルスキャンが開始されていない場合は index_first でインデックスを使って最初の行を探す
  * テーブルスキャン開始済みであれば `general_fetch(buf, ROW_SEL_NEXT, 0);` で次の行を取る
@@ -58,6 +91,45 @@ ha_innobase::general_fetch(
 	uint	direction,	/*!< in: ROW_SEL_NEXT or ROW_SEL_PREV */
 	uint	match_mode)	/*!< in: 0, ROW_SEL_EXACT, or
 				ROW_SEL_EXACT_PREFIX */
+```
+
+ha_innobase::rnd_init も見てみる
+
+ * クラスタインデックスを使うように change_active_index する
+ * start_of_scan = 1 を立てる
+
+```c
+/****************************************************************//**
+Initialize a table scan.
+@return	0 or error number */
+UNIV_INTERN
+int
+ha_innobase::rnd_init(
+/*==================*/
+	bool	scan)	/*!< in: TRUE if table/index scan FALSE otherwise */
+{
+	int	err;
+
+	/* Store the active index value so that we can restore the original
+	value after a scan */
+
+	if (prebuilt->clust_index_was_generated) {
+		err = change_active_index(MAX_KEY);
+	} else {
+		err = change_active_index(primary_key);
+	}
+
+	/* Don't use semi-consistent read in random row reads (by position).
+	This means we must disable semi_consistent_read if scan is false */
+
+	if (!scan) {
+		try_semi_consistent_read(0);
+	}
+
+	start_of_scan = 1;
+
+	return(err);
+}
 ```
 
 ## MyISAM の場合
