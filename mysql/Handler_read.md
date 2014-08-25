@@ -130,6 +130,8 @@ SELECT * FROM foo WHERE id in (2,4,6,8)
 
 `SELECT *` でかつ `in` に指定したレコード数が、テーブル全体のレコード数の半数に達しているので、オプティマイザがフルテーブルスキャンの方がよいと選択したか?
 
+----
+
 # レンジスキャン
 
 ## Handler_read_next
@@ -177,7 +179,7 @@ SELECT * FROM foo WHERE 2 < id and id < 7;
 +-----------------------+-------+
 ```
 
-(降順方向だと ***Handler_read_prev*** になります)
+`ORDER BY id DESC` にすると ***Handler_read_prev*** がカウントされます
 
 ----
 
