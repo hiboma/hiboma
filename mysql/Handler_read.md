@@ -1,4 +1,4 @@
-#  Handler_read_* のイメージをまとめる
+#  Handler_read_* を理解する
 
 MySQL の `SHOW STATUS LIKE 'handler_read%` で取れる統計値が何を意味する数値なのかまとめます
 
@@ -154,7 +154,7 @@ SELECT * FROM foo WHERE id in (2,4,6,8)
 
 ## Handler_read_next
 
-赤矢印とオレンジ矢印が ***Handler_read_next*** としてカウントされます
+赤矢印とオレンジ矢印が ***Handler_read_next*** としてカウントされる動きです
 
 ![2014-08-25 17 39 17](https://cloud.githubusercontent.com/assets/172456/4027751/d903b06e-2c33-11e4-84a5-6fe515564ef6.png)
 
@@ -171,7 +171,10 @@ SELECT * FROM foo WHERE id in (2,4,6,8)
 #### サンプルクエリ
 
 ```sql
+# 3,4,5,6 を返す
 SELECT * FROM foo WHERE 2 < id and id < 7;
+
+SELECT * FROM foo WHERE id BETWEEN 3 AND 6
 ```
 
 レンジ検索になっています
@@ -198,7 +201,7 @@ SELECT * FROM foo WHERE 2 < id and id < 7;
 +-----------------------+-------+
 ```
 
-`ORDER BY id DESC` にすると ***Handler_read_prev*** がカウントされます
+なお `ORDER BY id DESC` にすると ***Handler_read_prev*** がカウントされます (降順にインデックスを辿るため)
 
 ----
 
@@ -277,6 +280,8 @@ SELECT id FROM foo ORDER BY id ASC
 
 # 降順のフルインデックススキャン
 
+InnoDB の primary キーの場合は `フルインデックススキャン = フルテーブルスキャン` だっけ?
+
 ### Handler_read_last + Handler_read_key + Handler_read_prev 
 
 降順のフルインデックススキャン
@@ -286,7 +291,7 @@ SELECT id FROM foo ORDER BY id ASC
  1. `id` が最大のキーを見つける
    * **Handler_read_last** ** と **Handler_read_key** がカウントされる
  2. インデックスを総なめする (赤矢印、オレンジ矢印)
-   * Handler_read_next がカウントされる
+   * **Handler_read_next** がカウントされる
 
 #### サンプルクエリ
 
@@ -322,7 +327,7 @@ SELECT * FROM foo ORDER BY id DESC
 SELECT id FROM foo LIMIT 3 OFFSET 5
 ```
 
-kazeburo さんのエントリにもある通り LIMIT  + OFFSET 検索は効率が良くないのは ***Handler_read_rnd_next*** の数値から読み取れる
+kazeburo さんのエントリにもある通り LIMIT  + OFFSET 検索は効率が良くないことが ***Handler_read_rnd_next*** の数値から読み取れる
 
 ```
 +----+-------------+-------+-------+---------------+---------+---------+------+------+-------------+
