@@ -273,3 +273,62 @@ SELECT * FROM foo ORDER BY id DESC
 +-----------------------+-------+
 ```
 
+# フルテーブルスキャン
+
+#### サンプルクエリ
+
+```sql
+SELECT * FROM foo
+```
+
+***Handler_read_rnd_next*** しまくりなクエリ。 `ORDER BY id [ASC|DESC]` にするとインデックススキャンになる
+
+```
+
++----+-------------+-------+------+---------------+------+---------+------+------+-------+
+| id | select_type | table | type | possible_keys | key  | key_len | ref  | rows | Extra |
++----+-------------+-------+------+---------------+------+---------+------+------+-------+
+|  1 | SIMPLE      | foo   | ALL  | NULL          | NULL | NULL    | NULL |    8 | NULL  |
++----+-------------+-------+------+---------------+------+---------+------+------+-------+
+```
+
+```
++-----------------------+-------+
+| Variable_name         | Value |
++-----------------------+-------+
+| Handler_read_first    | 0     |
+| Handler_read_key      | 0     |
+| Handler_read_last     | 0     |
+| Handler_read_next     | 0     |
+| Handler_read_prev     | 0     |
+| Handler_read_rnd      | 0     |
+| Handler_read_rnd_next | 0     |
++-----------------------+-------+
+```
+
+# ORDER BY RAND()
+
+#### サンプルクエリ
+
+```
++----+-------------+-------+------+---------------+------+---------+------+------+---------------------------------+
+| id | select_type | table | type | possible_keys | key  | key_len | ref  | rows | Extra                           |
++----+-------------+-------+------+---------------+------+---------+------+------+---------------------------------+
+|  1 | SIMPLE      | foo   | ALL  | NULL          | NULL | NULL    | NULL |    8 | Using temporary; Using filesort |
++----+-------------+-------+------+---------------+------+---------+------+------+---------------------------------+
+```
+
+
+```
++-----------------------+-------+
+| Variable_name         | Value |
++-----------------------+-------+
+| Handler_read_first    | 1     |
+| Handler_read_key      | 1     |
+| Handler_read_last     | 0     |
+| Handler_read_next     | 0     |
+| Handler_read_prev     | 0     |
+| Handler_read_rnd      | 8     |
+| Handler_read_rnd_next | 18    |
++-----------------------+-------+
+```
