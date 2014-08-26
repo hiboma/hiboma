@@ -145,6 +145,8 @@ SELECT id FROM bar WHERE user_id in (1,3);
 
 ![2014-08-26 17 32 32](https://cloud.githubusercontent.com/assets/172456/4042029/c76505f8-2cfe-11e4-89a9-ac31e16d604d.png)
 
+`SELECT` するカラムを `id` (もしくは user_id) にすると Covering Index になる
+
 ```
 +----+-------------+-------+-------+---------------+---------+---------+------+------+--------------------------+
 | id | select_type | table | type  | possible_keys | key     | key_len | ref  | rows | Extra                    |
@@ -169,7 +171,7 @@ SELECT id FROM bar WHERE user_id in (1,3);
 
 ----
 
-```
+```sql
 create table bar ( id int primary key auto_increment, title varchar(255), user_id int, key(user_id));
 insert into bar (title, user_id) values ("aaa", 1);
 insert into bar (title, user_id) values ("aaaaaa", 1);
