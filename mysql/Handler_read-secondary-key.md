@@ -4,7 +4,7 @@
 
 ## テーブルのスキーマとデータセット
 
-```
+```sql
 mysql> show create table bar \G;
 *************************** 1. row ***************************
        Table: bar
@@ -13,12 +13,16 @@ Create Table: CREATE TABLE `bar` (
   `title` varchar(255) DEFAULT NULL,
   `user_id` int(11) DEFAULT NULL,
   PRIMARY KEY (`id`),
-  KEY `user_id` (`user_id`)
+  KEY `user_id` (`user_id`)  
 ) ENGINE=InnoDB AUTO_INCREMENT=27 DEFAULT CHARSET=latin1
 1 row in set (0.00 sec)
 ```
 
-```
+ * `id` が primary キー
+ * `user_id` がセカンダリキー (非 UNIQUE)
+   * 図では **key** と書いています。読み替えてください ...
+
+```sql
 mysql> select * from bar;                                                                                                                                                            +----+--------+---------+
 | id | title  | user_id |
 +----+--------+---------+
@@ -34,7 +38,7 @@ mysql> select * from bar;                                                       
 8 rows in set (0.00 sec)
 ```
 
-#### サンプルクエリ
+## サンプルクエリ
 
 ```sql
 SELECT * FROM bar WHERE user_id = 3;
@@ -67,9 +71,7 @@ UNIQUE制約の無いセカンダリインデックスなので `WHERE user_id =
 +-----------------------+-------+
 ```
 
-### Covering Index 版
-
-#### サンプルクエリ
+## Covering Index 版
 
 ```sql
 SELECT id FROM bar WHERE user_id = 2;
@@ -101,7 +103,7 @@ SELECT id FROM bar WHERE user_id = 2;
 +-----------------------+-------+
 ```
 
-#### サンプルクエリ
+## サンプルクエリ
 
 ```sql
 SELECT * FROM bar WHERE user_id in (2,3);
@@ -131,9 +133,7 @@ SELECT * FROM bar WHERE user_id in (2,3);
 +-----------------------+-------+
 ```
 
-### Covering Index 版
-
-#### サンプルクエリ
+#### Covering Index 版
 
 ```sql
 SELECT user_id FROM bar WHERE user_id in (1,3);
@@ -163,6 +163,9 @@ SELECT user_id FROM bar WHERE user_id in (1,3);
 +-----------------------+-------+
 ```
 
+----
+
+```
 create table bar ( id int primary key auto_increment, title varchar(255), user_id int, key(user_id));
 insert into bar (title, user_id) values ("aaa", 1);
 insert into bar (title, user_id) values ("aaaaaa", 1);
@@ -172,4 +175,4 @@ insert into bar (title, user_id) values ("ccc", 3);
 insert into bar (title, user_id) values ("cccccc", 3);
 insert into bar (title, user_id) values ("ddd", 4);
 insert into bar (title, user_id) values ("dddddd", 4); 
-
+```
