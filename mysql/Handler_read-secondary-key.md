@@ -2,7 +2,7 @@
 
 非UNIQUE なセカンダリキーの場合を整理します
 
-## テーブルのスキーマ
+## テーブルのスキーマとデータセット
 
 ```
 mysql> show create table bar \G;
@@ -16,6 +16,22 @@ Create Table: CREATE TABLE `bar` (
   KEY `user_id` (`user_id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=27 DEFAULT CHARSET=latin1
 1 row in set (0.00 sec)
+```
+
+```
+mysql> select * from bar;                                                                                                                                                            +----+--------+---------+
+| id | title  | user_id |
++----+--------+---------+
+|  1 | aaa    |       1 |
+|  2 | aaaaaa |       1 |
+|  3 | bbb    |       2 |
+|  4 | bbbbbb |       2 |
+|  5 | ccc    |       3 |
+|  6 | cccccc |       3 |
+|  7 | ddd    |       4 |
+|  8 | dddddd |       4 |
++----+--------+---------+
+8 rows in set (0.00 sec)
 ```
 
 #### サンプルクエリ
@@ -147,4 +163,13 @@ SELECT user_id FROM bar WHERE user_id in (1,3);
 +-----------------------+-------+
 ```
 
+create table bar ( id int primary key auto_increment, title varchar(255), user_id int, key(user_id));
+insert into bar (title, user_id) values ("aaa", 1);
+insert into bar (title, user_id) values ("aaaaaa", 1);
+insert into bar (title, user_id) values ("bbb", 2);
+insert into bar (title, user_id) values ("bbbbbb", 2);
+insert into bar (title, user_id) values ("ccc", 3);
+insert into bar (title, user_id) values ("cccccc", 3);
+insert into bar (title, user_id) values ("ddd", 4);
+insert into bar (title, user_id) values ("dddddd", 4); 
 
