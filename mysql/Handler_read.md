@@ -412,11 +412,9 @@ SELECT * FROM foo WHERE name = 'aaa' LIMIT 1
 
 いずれにせよ効率は良くない 
 
-----
-
-# ORDER BY RAND()
-
 ## Handler_read_rnd, Handler_read_next
+
+`ORDER BY RAND()` を使うと出ます
 
 #### サンプルクエリ
 
