@@ -145,8 +145,6 @@ SELECT * FROM foo WHERE id in (2,4,6,8)
 
 ( ***Handler_read_rnd_next*** の説明は別に書きます )
 
-----
-
 ## Handler_read_next
 
 赤矢印とオレンジ矢印が ***Handler_read_next*** としてカウントされる動きです
@@ -175,7 +173,7 @@ SELECT * FROM foo WHERE 2 < id and id < 7;
 SELECT * FROM foo WHERE id BETWEEN 3 AND 6
 ```
 
-EXPLAIN では `type = rane` になっています
+EXPLAIN は `type = range` になっています
 
 ```
 +----+-------------+-------+-------+---------------+---------+---------+------+------+-------------+
@@ -201,14 +199,12 @@ EXPLAIN では `type = rane` になっています
 
 なお `ORDER BY id DESC` にすると ***Handler_read_prev*** がカウントされます (降順にインデックスを辿るため)
 
-----
-
 ### Handler_read_first + Handler_read_key + Handler_read_next
 
 ![2014-08-25 17 41 00](https://cloud.githubusercontent.com/assets/172456/4027750/d9013dac-2c33-11e4-8ad0-9eaa60984ba6.png)
 
-昇順のフルインデックススキャンのモデルとなります
-
+昇順のフルインデックススキャンのモデルとなります。InnoDB の primary キーの場合は `フルインデックススキャン = フルテーブルスキャン` に等しいはず (TODO)
+                                                         
  1. `id` が最小のキーを見つける
   * **Handler_read_first** と **Handler_read_key** がカウントされる
  2. 範囲指定されていないのでインデックスを総なめする (赤矢印、オレンジ矢印)
@@ -276,15 +272,11 @@ SELECT id FROM foo ORDER BY id ASC
   * セカンダリインデックスの場合は **Covering Index** となっていい感じのはず
     * primary キーの場合はどうなんだっけ? 
 
-## 降順のフルインデックススキャン
-
-InnoDB の primary キーの場合は `フルインデックススキャン = フルテーブルスキャン` に等しいはず
-
 ### Handler_read_last + Handler_read_key + Handler_read_prev 
 
 ![2014-08-25 17 42 34](https://cloud.githubusercontent.com/assets/172456/4027752/d914d13c-2c33-11e4-949d-807f3d485744.png)
 
-降順のフルインデックススキャンのモデルとなります
+降順のフルインデックススキャンのモデルとなります。InnoDB の primary キーの場合は `フルインデックススキャン = フルテーブルスキャン` に等しいはず
 
  1. `id` が最大のキーを見つける
    * **Handler_read_last** ** と **Handler_read_key** がカウントされる
@@ -325,7 +317,7 @@ SELECT * FROM foo ORDER BY id DESC
 SELECT id FROM foo LIMIT 3 OFFSET 5
 ```
 
-kazeburo さんのエントリにもある通り LIMIT  + OFFSET 検索は効率が良くないことが ***Handler_read_rnd_next*** の数値から読み取れる
+kazeburo さんのエントリにもある通り LIMIT  + OFFSET 検索は効率が良くないことが ***Handler_read_next*** の数値から読み取れる
 
 ```
 +----+-------------+-------+-------+---------------+---------+---------+------+------+-------------+
@@ -348,8 +340,6 @@ kazeburo さんのエントリにもある通り LIMIT  + OFFSET 検索は効率
 | Handler_read_rnd_next | 0     |
 +-----------------------+-------+
 ```
-
-----
 
 ## Handler_read_rnd_next
 
