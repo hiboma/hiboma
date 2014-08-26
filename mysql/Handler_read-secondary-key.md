@@ -46,8 +46,10 @@ SELECT * FROM bar WHERE user_id = 3;
 
 ![covering](https://cloud.githubusercontent.com/assets/172456/4042027/c74ed422-2cfe-11e4-8b86-ac8bae3819e7.png)
 
-UNIQUE制約の無いセカンダリインデックスなので `WHERE user_id = 1` とした場合にインデックスを走査してマッチするレコードを探す必要がある (UNIQUEでない => 走査しないと件数が分からない)。 `type = ref` がそれを示しています
+UNIQUE制約の無いセカンダリインデックス
 
+ * **Handler_read_key** で `WHERE user_id = 1` にマッチするレコードを探す
+ * UNIQUEインデックスでない => 走査しないと実際の件数が分からないので **Handler_read_key_next** で隣のレコードを見る
 
 ```
 +----+-------------+-------+------+---------------+---------+---------+-------+------+-------+
@@ -79,7 +81,7 @@ SELECT id FROM bar WHERE user_id = 2;
 
 ![2014-08-26 16 57 16](https://cloud.githubusercontent.com/assets/172456/4042028/c761a336-2cfe-11e4-9126-3785e8c8b00e.png)
 
-`SELECT` するカラムを `id` (もしくは user_id) にすると Covering Index になる。 primary キーの走査が無くなる
+`SELECT` するカラムを `id` (もしくは user_id) にすると Covering Index になる。 primary キーの走査が無くなる (Extra に `Using index` が表示される)
 
 ```
 +----+-------------+-------+------+---------------+---------+---------+-------+------+-------------+
@@ -119,6 +121,8 @@ SELECT * FROM bar WHERE user_id in (2,3);
 +----+-------------+-------+-------+---------------+---------+---------+------+------+-----------------------+
 ```
 
+`Using index condition` が出ているので、図とは違う動きかもなー。うーん
+
 ```
 +-----------------------+-------+
 | Variable_name         | Value |
@@ -136,7 +140,7 @@ SELECT * FROM bar WHERE user_id in (2,3);
 #### Covering Index 版
 
 ```sql
-SELECT user_id FROM bar WHERE user_id in (1,3);
+SELECT id FROM bar WHERE user_id in (1,3);
 ```
 
 ![2014-08-26 17 32 32](https://cloud.githubusercontent.com/assets/172456/4042029/c76505f8-2cfe-11e4-89a9-ac31e16d604d.png)
