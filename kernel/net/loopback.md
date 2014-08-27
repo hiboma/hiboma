@@ -318,6 +318,11 @@ enqueue:
 
 ## ルーティング
 
+ip_route_output_slow
+
+ * RTN_LOCAL
+ * RTCF_LOCAL
+
 ```c
 static int ip_route_output_slow(struct net *net, struct rtable **rp,
 				const struct flowi *oldflp)
@@ -373,6 +378,67 @@ make_route:
 out:	return err;
 }
 ```
+
+ip_mkroute_output に渡ってごそごそする
+
+```c
+static int ip_mkroute_output(struct rtable **rp,
+			     struct fib_result *res,
+			     const struct flowi *fl,
+			     const struct flowi *oldflp,
+			     struct net_device *dev_out,
+			     unsigned flags)
+{
+	struct rtable *rth = NULL;
+	int err = __mkroute_output(&rth, res, fl, oldflp, dev_out, flags);
+```
+
+`struct rtable` を新しく作るのかなー
+
+ * RTCF_LOCAL が立っていれば ip_local_deliver が選択される
+
+```c
+static int __mkroute_output(struct rtable **result,
+			    struct fib_result *res,
+			    const struct flowi *fl,
+			    const struct flowi *oldflp,
+			    struct net_device *dev_out,
+			    unsigned flags)
+{
+
+//...
+	if (dev_out->flags & IFF_LOOPBACK)
+		flags |= RTCF_LOCAL;
+
+//...
+	rth->fl.fl4_dst	= oldflp->fl4_dst;
+	rth->fl.fl4_tos	= tos;
+	rth->fl.fl4_src	= oldflp->fl4_src;
+	rth->fl.oif	= oldflp->oif;
+	rth->fl.mark    = oldflp->mark;
+	rth->rt_dst	= fl->fl4_dst;
+	rth->rt_src	= fl->fl4_src;
+	rth->rt_iif	= oldflp->oif ? : dev_out->ifindex;
+	/* get references to the devices that are to be hold by the routing
+	   cache entry */
+	rth->u.dst.dev	= dev_out;
+	dev_hold(dev_out);
+	rth->idev	= in_dev_get(dev_out);
+	rth->rt_gateway = fl->fl4_dst;
+	rth->rt_spec_dst= fl->fl4_src;
+
+	rth->u.dst.output=ip_output;
+	rth->u.dst.obsolete = -1;
+	rth->rt_genid = rt_genid(dev_net(dev_out));
+
+	RT_CACHE_STAT_INC(out_slow_tot);
+
+    /* ip_local_deliver になっている! */
+	if (flags & RTCF_LOCAL) {
+		rth->u.dst.input = ip_local_deliver;
+		rth->rt_spec_dst = fl->fl4_dst;
+    
+
 
 `rth->u.dst.dev	= net->loopback_dev;` のコードが 127.0.0.1 へルーティングしているコードに見える ... 宛先のデバイスを loopback にしているだけなのかな。分からん
 
