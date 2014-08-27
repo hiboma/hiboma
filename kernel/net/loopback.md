@@ -1,6 +1,6 @@
 # loopback device
 
-ループバックデバイス
+ループバックデバイスの実装を調べてみる
 
 ```c
 lo        Link encap:Local Loopback  
@@ -30,7 +30,7 @@ $ ip addr
  
 UNIX domain socket との違いを追うためにソースを読む
 
-## see also
+#### see also
 
  * http://3daysblog.blogspot.jp/2012/02/ifconfig.html
  * http://www.rissi.co.jp/Latency_of_switches.html
