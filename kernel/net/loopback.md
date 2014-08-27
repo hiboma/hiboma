@@ -318,6 +318,45 @@ enqueue:
 
 ## ルーティング
 
+```c
+static int ip_route_output_slow(struct net *net, struct rtable **rp,
+				const struct flowi *oldflp)
+{
+	u32 tos	= RT_FL_TOS(oldflp);
+	struct flowi fl = { .nl_u = { .ip4_u =
+				      { .daddr = oldflp->fl4_dst,
+					.saddr = oldflp->fl4_src,
+					.tos = tos & IPTOS_RT_MASK,
+					.scope = ((tos & RTO_ONLINK) ?
+						  RT_SCOPE_LINK :
+						  RT_SCOPE_UNIVERSE),
+				      } },
+			    .mark = oldflp->mark,
+			    .iif = net->loopback_dev->ifindex,
+			    .oif = oldflp->oif };
+	struct fib_result res;
+	unsigned flags = 0;
+	struct net_device *dev_out = NULL;
+	int free_res = 0;
+	int err;
+
+//...
+
+	if (!fl.fl4_dst) {
+		fl.fl4_dst = fl.fl4_src;
+		if (!fl.fl4_dst)
+			fl.fl4_dst = fl.fl4_src = htonl(INADDR_LOOPBACK);
+		if (dev_out)
+			dev_put(dev_out);
+		dev_out = net->loopback_dev;
+		dev_hold(dev_out);
+		fl.oif = net->loopback_dev->ifindex;
+		res.type = RTN_LOCAL;
+		flags |= RTCF_LOCAL;
+		goto make_route;
+	}
+```
+
 `rth->u.dst.dev	= net->loopback_dev;` のコードが 127.0.0.1 へルーティングしているコードに見える ... 宛先のデバイスを loopback にしているだけなのかな。分からん
 
 ```c
