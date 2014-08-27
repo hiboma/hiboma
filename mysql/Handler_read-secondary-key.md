@@ -10,24 +10,24 @@ CREATE TABLE `bar` (
   `title`   varchar(255) DEFAULT NULL,
   `sid`     int(11)      DEFAULT NULL,
   PRIMARY KEY (`id`),
-  KEY `user_id` (`sid`)  
+  KEY  `sid` (`sid`)
 ) ENGINE=InnoDB
 ```
 
 `sid` をセカンダリキー (非 UNIQUE) としています
 
 ```sql
-+----+--------+---------+
-| id | title  | user_id |
-+----+--------+---------+
-|  1 | aaa    |       1 |
-|  2 | aaaaaa |       1 |
-|  3 | bbb    |       2 |
-|  4 | bbbbbb |       2 |
-|  5 | ccc    |       3 |
-|  6 | cccccc |       3 |
-|  7 | ddd    |       4 |
-|  8 | dddddd |       4 |
++----+--------+------+
+| id | title  | sid  |
++----+--------+------+
+|  1 | aaa    |    1 |
+|  2 | aaaaaa |    1 |
+|  3 | bbb    |    2 |
+|  4 | bbbbbb |    2 |
+|  5 | ccc    |    3 |
+|  6 | cccccc |    3 |
+|  7 | ddd    |    4 |
+|  8 | dddddd |    4 |
 +----+--------+---------+
 8 rows in set (0.00 sec)
 ```
@@ -40,7 +40,7 @@ SELECT * FROM bar WHERE sid = 2;
 
 ![where 2](https://cloud.githubusercontent.com/assets/172456/4056768/538de002-2dbf-11e4-95e9-8051bdd30691.png)
 
- * **Handler_read_key** で `WHERE user_id = 3` にマッチするレコードを探す
+ * **Handler_read_key** で `WHERE sid = 3` にマッチするレコードを探す
  * UNIQUEインデックスでないため、マッチするレコードの件数はインデックスを走査しないと分からないので **Handler_read_key_next** で隣のレコードを見る
 
 ```
@@ -104,7 +104,7 @@ Covering Index なので primary キーの走査が無くなる
 ## サンプルクエリ
 
 ```sql
-SELECT * FROM bar WHERE user_id in (2,3);
+SELECT * FROM bar WHERE sid in (2,3);
 ```
 
 ![where in 1 3](https://cloud.githubusercontent.com/assets/172456/4056771/53a83182-2dbf-11e4-85bb-9850f70ce4f9.png)
