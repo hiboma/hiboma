@@ -38,7 +38,7 @@ CREATE TABLE `bar` (
 SELECT * FROM bar WHERE sid = 2;
 ```
 
-![covering](https://cloud.githubusercontent.com/assets/172456/4042027/c74ed422-2cfe-11e4-8b86-ac8bae3819e7.png)
+![where 2](https://cloud.githubusercontent.com/assets/172456/4056768/538de002-2dbf-11e4-95e9-8051bdd30691.png)
 
  * **Handler_read_key** で `WHERE user_id = 3` にマッチするレコードを探す
  * UNIQUEインデックスでないため、マッチするレコードの件数はインデックスを走査しないと分からないので **Handler_read_key_next** で隣のレコードを見る
@@ -71,7 +71,7 @@ SELECT * FROM bar WHERE sid = 2;
 SELECT id FROM bar WHERE sid = 2;
 ```
 
-![2014-08-26 16 57 16](https://cloud.githubusercontent.com/assets/172456/4042028/c761a336-2cfe-11e4-9126-3785e8c8b00e.png)
+![where 2 covering index](https://cloud.githubusercontent.com/assets/172456/4056770/539ff904-2dbf-11e4-8d6b-d1861050b180.png)
 
  * `SELECT` するカラムを `id` (もしくは sid) にすると Covering Index になる
  * Extra に `Using index` が表示される
@@ -107,7 +107,7 @@ Covering Index なので primary キーの走査が無くなる
 SELECT * FROM bar WHERE user_id in (2,3);
 ```
 
-![2014-08-26 17 44 32](https://cloud.githubusercontent.com/assets/172456/4042030/c766f444-2cfe-11e4-96fd-03df121bf50c.png)
+![where in 1 3](https://cloud.githubusercontent.com/assets/172456/4056771/53a83182-2dbf-11e4-85bb-9850f70ce4f9.png)
 
 ```
 +----+-------------+-------+-------+---------------+------+---------+------+------+-----------------------+
@@ -139,7 +139,7 @@ SELECT * FROM bar WHERE user_id in (2,3);
 SELECT id FROM bar WHERE sid in (1,3);
 ```
 
-![2014-08-26 17 32 32](https://cloud.githubusercontent.com/assets/172456/4042029/c76505f8-2cfe-11e4-89a9-ac31e16d604d.png)
+![where in 1 3 covering index](https://cloud.githubusercontent.com/assets/172456/4056769/5399c08e-2dbf-11e4-8810-967bcffe6266.png)
 
  * `SELECT` するカラムを `id` (もしくは sid) にすると Covering Index になる
    * Extra に `Using index` が表示される
