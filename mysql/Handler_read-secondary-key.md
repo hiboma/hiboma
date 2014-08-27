@@ -141,9 +141,9 @@ SELECT id FROM bar WHERE sid in (1,3);
 
 ![where in 1 3 covering index](https://cloud.githubusercontent.com/assets/172456/4056769/5399c08e-2dbf-11e4-8810-967bcffe6266.png)
 
- * `SELECT` するカラムを `id` (もしくは sid) にすると Covering Index になる
-   * Extra に `Using index` が表示される
-   * primary キーの走査が無くなる
+ * `SELECT` するカラムを `id` (もしくは `sid` ) にするとセカンダリインデックスだけで対象行のカラムを取れるので **Covering Index** になる
+ * Extra に `Using index` が表示される
+ * primary キーの走査が無くなる
  * Handler_read_key, Handler_read_next の数値は変わらない
 
 ```
