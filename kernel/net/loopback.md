@@ -361,6 +361,17 @@ static int ip_route_output_slow(struct net *net, struct rtable **rp,
 		flags |= RTCF_LOCAL;
 		goto make_route;
 	}
+
+make_route:
+	err = ip_mkroute_output(rp, &res, &fl, oldflp, dev_out, flags);
+
+
+	if (free_res)
+		fib_res_put(&res);
+	if (dev_out)
+		dev_put(dev_out);
+out:	return err;
+}
 ```
 
 `rth->u.dst.dev	= net->loopback_dev;` のコードが 127.0.0.1 へルーティングしているコードに見える ... 宛先のデバイスを loopback にしているだけなのかな。分からん
