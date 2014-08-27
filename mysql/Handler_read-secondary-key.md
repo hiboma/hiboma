@@ -135,7 +135,7 @@ SELECT * FROM bar WHERE user_id in (2,3);
 #### Covering Index 版
 
 ```sql
-SELECT id FROM bar WHERE user_id in (1,3);
+SELECT id FROM bar WHERE sid in (1,3);
 ```
 
 ![2014-08-26 17 32 32](https://cloud.githubusercontent.com/assets/172456/4042029/c76505f8-2cfe-11e4-89a9-ac31e16d604d.png)
@@ -170,13 +170,13 @@ SELECT id FROM bar WHERE user_id in (1,3);
 ----
 
 ```sql
-create table bar ( id int primary key auto_increment, title varchar(255), user_id int, key(user_id));
-insert into bar (title, user_id) values ("aaa", 1);
-insert into bar (title, user_id) values ("aaaaaa", 1);
-insert into bar (title, user_id) values ("bbb", 2);
-insert into bar (title, user_id) values ("bbbbbb", 2);
-insert into bar (title, user_id) values ("ccc", 3);
-insert into bar (title, user_id) values ("cccccc", 3);
-insert into bar (title, user_id) values ("ddd", 4);
-insert into bar (title, user_id) values ("dddddd", 4); 
+create table bar ( id int primary key auto_increment, title varchar(255), sid int, key(sid));
+insert into bar (title, sid) values ("aaa", 1);
+insert into bar (title, sid) values ("aaaaaa", 1);
+insert into bar (title, sid) values ("bbb", 2);
+insert into bar (title, sid) values ("bbbbbb", 2);
+insert into bar (title, sid) values ("ccc", 3);
+insert into bar (title, sid) values ("cccccc", 3);
+insert into bar (title, sid) values ("ddd", 4);
+insert into bar (title, sid) values ("dddddd", 4); 
 ```
