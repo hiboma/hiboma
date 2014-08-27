@@ -342,16 +342,22 @@ static int ip_route_output_slow(struct net *net, struct rtable **rp,
 
 //...
 
+    /* ??? */
 	if (!fl.fl4_dst) {
 		fl.fl4_dst = fl.fl4_src;
 		if (!fl.fl4_dst)
 			fl.fl4_dst = fl.fl4_src = htonl(INADDR_LOOPBACK);
 		if (dev_out)
 			dev_put(dev_out);
+        /* loopback デバイスを dev_out にしている */
 		dev_out = net->loopback_dev;
 		dev_hold(dev_out);
 		fl.oif = net->loopback_dev->ifindex;
+
+        /* 	RTN_LOCAL,		/* Accept locally		*/
 		res.type = RTN_LOCAL;
+
+        /* フラグたてる */
 		flags |= RTCF_LOCAL;
 		goto make_route;
 	}
