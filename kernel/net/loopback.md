@@ -1,6 +1,6 @@
 # loopback device
 
-ループバックデバイスの実装を調べてみる
+ループバックデバイス
 
 ```c
 lo        Link encap:Local Loopback  
@@ -28,9 +28,9 @@ $ ip addr
  * **lo**
  * デバイスドライバであり、実装は drivers/net/loopback.c に書いてある
  
-UNIX domain socket との違いを追うためにソースを読む
+IPv4 + 127.0.0.1 と UNIX domain socket との違いを追うためにソースを読む
 
-#### see also
+## see also
 
  * http://3daysblog.blogspot.jp/2012/02/ifconfig.html
  * http://www.rissi.co.jp/Latency_of_switches.html
@@ -242,7 +242,7 @@ loopback_xmit で netif_rx にコケるとパケットドロップを起こす
 ```c
 static netdev_tx_t loopback_xmit(struct sk_buff *skb,
 				 struct net_device *dev)
-{                 
+{
 //...
 
 	if (likely(netif_rx(skb) == NET_RX_SUCCESS)) {
@@ -314,4 +314,66 @@ enqueue:
 	kfree_skb(skb);
 	return NET_RX_DROP;
 }
+```
+
+## ルーティング
+
+`rth->u.dst.dev	= net->loopback_dev;` のコードが 127.0.0.1 へルーティングしているコードに見える
+
+```c
+static int ip_route_input_slow(struct sk_buff *skb, __be32 daddr, __be32 saddr,
+			       u8 tos, struct net_device *dev)
+{
+
+//...
+
+local_input:
+     /* struct dst_ops の割り当て */
+	rth = dst_alloc(&ipv4_dst_ops);
+	if (!rth)
+		goto e_nobufs;
+
+	rth->u.dst.output= ip_rt_bug;
+	rth->u.dst.obsolete = -1;
+	rth->rt_genid = rt_genid(net);
+
+	atomic_set(&rth->u.dst.__refcnt, 1);
+	rth->u.dst.flags= DST_HOST;
+	if (IN_DEV_CONF_GET(in_dev, NOPOLICY))
+		rth->u.dst.flags |= DST_NOPOLICY;
+	rth->fl.fl4_dst	= daddr;
+	rth->rt_dst	= daddr;
+	rth->fl.fl4_tos	= tos;
+	rth->fl.mark    = skb->mark;
+	rth->fl.fl4_src	= saddr;
+	rth->rt_src	= saddr;
+#ifdef CONFIG_NET_CLS_ROUTE
+	rth->u.dst.tclassid = itag;
+#endif
+	rth->rt_iif	=
+	rth->fl.iif	= dev->ifindex;
+	rth->u.dst.dev	= net->loopback_dev;
+	dev_hold(rth->u.dst.dev);
+	rth->idev	= in_dev_get(rth->u.dst.dev);
+	rth->rt_gateway	= daddr;
+	rth->rt_spec_dst= spec_dst;
+	rth->u.dst.input= ip_local_deliver;
+	rth->rt_flags 	= flags|RTCF_LOCAL;
+	if (res.type == RTN_UNREACHABLE) {
+		rth->u.dst.input= ip_error;
+		rth->u.dst.error= -err;
+		rth->rt_flags 	&= ~RTCF_LOCAL;
+	}
+	rth->rt_type	= res.type;
+	hash = rt_hash(daddr, saddr, fl.iif, rt_genid(net));
+	err = rt_intern_hash(hash, rth, NULL, skb);
+	goto done;
+
+no_route:
+	RT_CACHE_STAT_INC(in_no_route);
+	spec_dst = inet_select_addr(dev, 0, RT_SCOPE_UNIVERSE);
+	res.type = RTN_UNREACHABLE;
+	if (err == -ESRCH)
+		err = -ENETUNREACH;
+	goto local_input;
 ```
