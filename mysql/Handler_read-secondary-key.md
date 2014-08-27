@@ -38,7 +38,8 @@ CREATE TABLE `bar` (
 SELECT * FROM bar WHERE sid = 2;
 ```
 
-![where 2](https://cloud.githubusercontent.com/assets/172456/4056768/538de002-2dbf-11e4-95e9-8051bdd30691.png)
+![where 2 new](https://cloud.githubusercontent.com/assets/172456/4058098/d7b53c98-2dd0-11e4-9d00-9c73e1b6378c.png)
+
 
  * **Handler_read_key** で `WHERE sid = 3` にマッチするレコードを探す
  * UNIQUEインデックスでないため、マッチするレコードの件数はインデックスを走査しないと分からないので **Handler_read_key_next** で隣のレコードを見る
