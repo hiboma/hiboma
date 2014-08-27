@@ -149,7 +149,17 @@ static const struct net_device_ops loopback_ops = {
 };
 ```
 
- http://3daysblog.blogspot.jp/2012/02/ifconfig.html によると、↑の三つのメソッドが必須ぽい
+http://3daysblog.blogspot.jp/2012/02/ifconfig.html によると、↑の三つのメソッドが必須ぽい
+
+```
+sendmsg
+__sys_sendmsg
+sock_sendmsg
+__sock_sendmsg_nosec
+# sock->ops->sendmsg
+dgram_sendmsg
+dev_queue_xmit
+```
 
 #### ところで xmit is なに?
 
