@@ -318,7 +318,7 @@ enqueue:
 
 ## ルーティング
 
-`rth->u.dst.dev	= net->loopback_dev;` のコードが 127.0.0.1 へルーティングしているコードに見える
+`rth->u.dst.dev	= net->loopback_dev;` のコードが 127.0.0.1 へルーティングしているコードに見える ... 宛先のデバイスを loopback にしているだけなのかな。分からん
 
 ```c
 static int ip_route_input_slow(struct sk_buff *skb, __be32 daddr, __be32 saddr,
