@@ -354,6 +354,7 @@ local_input:
 	rth->fl.iif	= dev->ifindex;
 	rth->u.dst.dev	= net->loopback_dev;
 	dev_hold(rth->u.dst.dev);
+    /* 参照カウントをインクリメント */
 	rth->idev	= in_dev_get(rth->u.dst.dev);
 	rth->rt_gateway	= daddr;
 	rth->rt_spec_dst= spec_dst;
@@ -370,6 +371,7 @@ local_input:
 	goto done;
 
 no_route:
+    /* 統計値をカウント */
 	RT_CACHE_STAT_INC(in_no_route);
 	spec_dst = inet_select_addr(dev, 0, RT_SCOPE_UNIVERSE);
 	res.type = RTN_UNREACHABLE;
