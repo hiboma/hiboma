@@ -163,8 +163,9 @@ dgram_sendmsg
 dev_queue_xmit
 # struct netdev_queue
 __dev_xmit_skb ?
-dev_hard_start_xmit ?
-ops->ndo_start_xmit => loopback_xmit
+  sch_direct_xmit ?
+    dev_hard_start_xmit ?
+    ops->ndo_start_xmit => loopback_xmit の呼び出し
 ```
 
 #### ところで xmit is なに?
