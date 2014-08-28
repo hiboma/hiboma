@@ -151,6 +151,8 @@ static const struct net_device_ops loopback_ops = {
 
 http://3daysblog.blogspot.jp/2012/02/ifconfig.html によると、↑の三つのメソッドが必須ぽい
 
+SOCK_DGRAM で sendmsg(2) を呼び出した場合に loopback_xmit を呼び出すまでの流れは下記の通り
+
 ```
 sendmsg
 __sys_sendmsg
@@ -159,6 +161,10 @@ __sock_sendmsg_nosec
 # sock->ops->sendmsg
 dgram_sendmsg
 dev_queue_xmit
+# struct netdev_queue
+__dev_xmit_skb ?
+dev_hard_start_xmit ?
+ops->ndo_start_xmit => loopback_xmit
 ```
 
 #### ところで xmit is なに?
