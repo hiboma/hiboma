@@ -159,7 +159,8 @@ __sys_sendmsg
 sock_sendmsg
 __sock_sendmsg_nosec
 # sock->ops->sendmsg
-dgram_sendmsg
+udp_sendmsg
+  struct net_device を選択する
 dev_queue_xmit
 # struct netdev_queue
 __dev_xmit_skb ?
