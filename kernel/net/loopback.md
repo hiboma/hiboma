@@ -161,6 +161,11 @@ __sock_sendmsg_nosec
 # sock->ops->sendmsg
 udp_sendmsg
   struct net_device を選択する
+ip_route_output_slow
+  __xfrm_lookup ?
+
+???
+
 dev_queue_xmit
 # struct netdev_queue
 __dev_xmit_skb ?
