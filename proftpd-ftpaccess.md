@@ -161,3 +161,20 @@ static unsigned int key_hash(const void *key, size_t keysz) {
 #24 0x0805a873 in inetd_main () at main.c:2474
 #25 0x0805b71d in main (argc=1, argv=0xbff42ac4, envp=0xbff42acc) at main.c:3167
 ```
+
+## set_transferrate
+
+```c
+static void merge_down(xaset_t *s, int dynamic) {
+  config_rec *c, *dst, *newconf;
+  int argc;
+  void **argv, **sargv;
+
+  if (!s ||
+      !s->xas_list)
+    return;
+```
+
+```
+  c->flags |= CF_MERGEDOWN_MULTI;
+```
