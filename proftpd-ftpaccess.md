@@ -173,6 +173,57 @@ static void merge_down(xaset_t *s, int dynamic) {
   if (!s ||
       !s->xas_list)
     return;
+
+  for (c = (config_rec *) s->xas_list; c; c = c->next) {
+    if ((c->flags & CF_MERGEDOWN) ||
+        (c->flags & CF_MERG.adEDOWN_MULTI))
+      for (dst = (config_rec *) s->xas_list; dst; dst = dst->next) {
+        if (dst->config_type == CONF_ANON ||
+           dst->config_type == CONF_DIR) {
+
+          /* If an option of the same name/type is found in the
+           * next level down, it overrides, so we don't merge.
+           */
+          if ((c->flags & CF_MERGEDOWN) &&
+              find_config(dst->subset, c->config_type, c->name, FALSE))
+            continue;
+
+          if (dynamic) {
+            /* If we are doing a dynamic merge (i.e. .ftpaccess files) then
+             * we do not need to re-merge the static configs that are already
+             * there.  Otherwise we are creating copies needlessly of any
+             * config_rec marked with the CF_MERGEDOWN_MULTI flag, which
+             * adds to the memory usage/processing time.
+             *
+             * If neither the src or the dst config have the CF_DYNAMIC
+             * flag, it's a static config, and we can skip this merge and move
+             * on.  Otherwise, we can merge it.
+             */
+            if (!(c->flags & CF_DYNAMIC) && !(dst->flags & CF_DYNAMIC)) {
+              continue;
+            }
+          }
+
+          if (!dst->subset)
+            dst->subset = xaset_create(dst->pool, NULL);
+
+          newconf = add_config_set(&dst->subset, c->name);
+          newconf->config_type = c->config_type;
+          newconf->flags = c->flags | (dynamic ? CF_DYNAMIC : 0);
+          newconf->argc = c->argc;
+          newconf->argv = pcalloc(newconf->pool, (c->argc+1) * sizeof(void *));
+          argv = newconf->argv;
+          sargv = c->argv;
+          argc = newconf->argc;
+
+          while (argc--) {
+            *argv++ = *sargv++;
+          }
+
+          *argv++ = NULL;
+        }
+      }
+  }
 ```
 
 ```
