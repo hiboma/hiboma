@@ -59,3 +59,35 @@
  */
 void build_dyn_config(pool *p, const char *_path, struct stat *stp,
 ```
+
+## ltrace でプロファイルを取った結果
+
+```c
+# sudo ltrace -c -p $( pgrep proftpd | tail -1 )
+% time     seconds  usecs/call     calls      function
+------ ----------- ----------- --------- --------------------
+ 82.82   27.418897          48    561804 __errno_location
+ 10.15    3.361056          42     78186 memset
+  3.43    1.134936          17     66728 strcmp
+  2.66    0.881332          17     51836 strlen
+  0.87    0.287005          17     16379 malloc
+  0.02    0.005752          20       274 memcpy
+  0.01    0.003311          47        70 time
+  0.01    0.003022          43        70 write
+  0.00    0.001643          17        94 snprintf
+  0.00    0.001428          68        21 strrchr
+  0.00    0.001344          19        70 vsnprintf
+  0.00    0.001342          17        76 localtime
+  0.00    0.001235          17        70 strftime
+  0.00    0.000882          40        22 __xstat64
+  0.00    0.000823          15        52 strchr
+  0.00    0.000638          15        42 strncmp
+  0.00    0.000436          36        12 __lxstat64
+  0.00    0.000425          35        12 read
+  0.00    0.000225          37         6 close
+  0.00    0.000220          36         6 open64
+  0.00    0.000214          35         6 __fxstat64
+  0.00    0.000088          14         6 __ctype_b_loc
+------ ----------- ----------- --------- --------------------
+100.00   33.106254                775842 total
+```
