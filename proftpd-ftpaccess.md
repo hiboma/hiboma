@@ -91,3 +91,73 @@ void build_dyn_config(pool *p, const char *_path, struct stat *stp,
 ------ ----------- ----------- --------- --------------------
 100.00   33.106254                775842 total
 ```
+
+## __errno_location のおそいとこ
+
+```c
+void pr_signals_handle(void) {
+  table_handling_signal(TRUE);
+
+  if (errno == EINTR &&
+      PR_TUNABLE_EINTR_RETRY_INTERVAL > 0) {
+    struct timeval tv;
+    unsigned long interval_usecs = PR_TUNABLE_EINTR_RETRY_INTERVAL * 1000000;
+```
+
+key_hash の中で呼び出されているのが遅い
+ 
+```c
+/* Use Perl's hashing algorithm by default. */
+static unsigned int key_hash(const void *key, size_t keysz) {
+  unsigned int i = 0;
+  size_t sz = !keysz ? strlen((const char *) key) : keysz;
+
+  while (sz--) {
+    const char *k = key;
+    unsigned int c = *k;
+    k++;
+
+    if (!handling_signal) {
+      /* Always handle signals in potentially long-running while loops. */
+      pr_signals_handle();
+    }
+
+    i = (i * 33) + c;
+  }
+
+  return i; 
+}
+```
+
+## memset
+
+```
+(gdb) 
+#0  0x00ad84c0 in memset () from /lib/tls/libc.so.6
+#1  0x0805d1b2 in pcalloc (p=0x9b517cc, sz=24) at pool.c:552
+#2  0x0805eded in tab_entry_alloc (tab=0x9b517f4) at table.c:195
+#3  0x0805f09d in pr_table_kadd (tab=0x9b517f4, key_data=0x9fa4a2c, key_datasz=13, value_data=0x9fa426c, value_datasz=4) at table.c:320
+#4  0x0805fa6d in pr_table_add (tab=0x9b517f4, key_data=0x9fa4a2c "TransferRate", value_data=0x9fa426c, value_datasz=4) at table.c:692
+#5  0x08066e4d in pr_config_set_id (name=0x9fa4a2c "TransferRate") at dirtree.c:3446
+#6  0x080615cd in add_config_set (set=0x9b84824, name=0x9b85de4 "TransferRate") at dirtree.c:627
+#7  0x08064f1c in merge_down (s=0x9b8242c, dynamic=0) at dirtree.c:2412
+#8  0x0806552b in fixup_dirs (s=0x9b51a04, flags=16) at dirtree.c:2596
+#9  0x08063598 in build_dyn_config (p=0x9dbd5d4, _path=0xbff3a2d0 "/web/24", stp=0xbff3a0f0, recurse=1 '\001') at dirtree.c:1804
+#10 0x0806382c in dir_check_full (pp=0x9b7652c, cmd=0x9b75f24, group=0x9b75fd4 "DIRS", path=0xbff3a2d0 "/web/24", hidden=0xbff3d444) at dirtree.c:1902
+#11 0x08064072 in dir_check (pp=0x9b7652c, cmd=0x9b75f24, group=0x9b75fd4 "DIRS", path=0xbff3a2d0 "/web/24", hidden=0xbff3d444) at dirtree.c:2039
+#12 0x080bb5bf in ls_perms (p=0x9b7652c, cmd=0x9b75f24, path=0x9b7f7d8 "24", hidden=0xbff3d444) at mod_ls.c:231
+#13 0x080bbd65 in listfile (cmd=0x9b75f24, p=0x9b7652c, name=0x9b7f7d8 "24") at mod_ls.c:449
+#14 0x080bd529 in listdir (cmd=0x9b75f24, workp=0x9b7652c, name=0x9b8b75c "web") at mod_ls.c:1075
+#15 0x080be9aa in dolist (cmd=0x9b75f24, opt=0x9b75f7c "web", clearflags=1) at mod_ls.c:1752
+#16 0x080bf767 in genericlist (cmd=0x9b75f24) at mod_ls.c:2135
+#17 0x080c01a9 in ls_list (cmd=0x9b75f24) at mod_ls.c:2297
+#18 0x0807cbbe in pr_module_call (m=0x8113140, func=0x80c015b <ls_list>, cmd=0x9b75f24) at modules.c:502
+#19 0x08056b7c in _dispatch (cmd=0x9b75f24, cmd_type=2, validate=1, match=0x9b75f74 "LIST") at main.c:458
+#20 0x08057385 in pr_cmd_dispatch_phase (cmd=0x9b75f24, phase=0, flags=3) at main.c:719
+#21 0x080576ab in pr_cmd_dispatch (cmd=0x9b75f24) at main.c:792
+---Type <return> to continue, or q <return> to quit---
+#22 0x08057bcf in cmd_loop (server=0x9b51a04, c=0x9b8e41c) at main.c:935
+#23 0x08058ba6 in fork_server (fd=0, l=0x9b8bf7c, nofork=1 '\001') at main.c:1457
+#24 0x0805a873 in inetd_main () at main.c:2474
+#25 0x0805b71d in main (argc=1, argv=0xbff42ac4, envp=0xbff42acc) at main.c:3167
+```
