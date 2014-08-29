@@ -25,6 +25,8 @@
 
 ## build_dyn_config
 
+`Manage .ftpaccess dynamic directory sections ` とのこと
+
 ```c
 /* Manage .ftpaccess dynamic directory sections
  *
