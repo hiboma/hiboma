@@ -520,6 +520,7 @@ static struct fib_rules_ops fib4_rules_ops_template = {
 
 ## dst_output
 
-## dst_output .output => ip_local_deliver ?
+## dst_output .output => ip_output ?
 
-## ip_local_deliver_finish
+## ip_finish_output
+
