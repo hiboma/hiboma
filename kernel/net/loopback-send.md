@@ -283,6 +283,9 @@ int udp_sendmsg(struct kiocb *iocb, struct sock *sk, struct msghdr *msg,
 		 */
 		connected = 1;
 	}
+
+    // うーん???
+    // NULL である可能性は?
 	ipc.addr = inet->saddr;
 
 	ipc.oif = sk->sk_bound_dev_if;
@@ -312,6 +315,7 @@ int udp_sendmsg(struct kiocb *iocb, struct sock *sk, struct msghdr *msg,
 		rcu_read_unlock();
 	}
 
+    // ソースアドレス
 	saddr = ipc.addr;
 
     // 送信先アドレス
@@ -475,6 +479,8 @@ EXPORT_SYMBOL(udp_sendmsg);
 ## __ip_route_output_key
 
 ## ip_route_output_slow
+
+RTN_LOCAL なら loopback インタフェースを dev_out ( fl.oif )に選択する
 
 ## fib_lookup
 
