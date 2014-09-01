@@ -465,3 +465,17 @@ do_confirm:
 }
 EXPORT_SYMBOL(udp_sendmsg);
 ```
+
+## udp_send_skb
+
+## ip_send_skb
+
+## ip_local_out
+
+## __ip_local_out
+
+## dst_output
+
+## dst_output .output => ip_local_deliver ?
+
+## ip_local_deliver_finish
