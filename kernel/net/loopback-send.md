@@ -213,6 +213,7 @@ int udp_sendmsg(struct kiocb *iocb, struct sock *sk, struct msghdr *msg,
 	struct sk_buff *skb;
 	struct ip_options_data opt_copy;
 
+    /* メッセージサイズがデカ杉ナリよ */
 	if (len > 0xFFFF)
 		return -EMSGSIZE;
 
@@ -220,6 +221,7 @@ int udp_sendmsg(struct kiocb *iocb, struct sock *sk, struct msghdr *msg,
 	 *	Check the flags.
 	 */
 
+    /* UDP では帯域外データをサポートしない */
 	if (msg->msg_flags & MSG_OOB) /* Mirror BSD error message compatibility */
 		return -EOPNOTSUPP;
 
@@ -248,7 +250,10 @@ int udp_sendmsg(struct kiocb *iocb, struct sock *sk, struct msghdr *msg,
 	/*
 	 *	Get and verify the address.
 	 */
+     // AF_INET な場合 msg_name には struct sock_addr_in が入っている */
 	if (msg->msg_name) {
+
+        // アドレスのバリデーション
 		struct sockaddr_in * usin = (struct sockaddr_in *)msg->msg_name;
 		if (msg->msg_namelen < sizeof(*usin))
 			return -EINVAL;
@@ -257,8 +262,12 @@ int udp_sendmsg(struct kiocb *iocb, struct sock *sk, struct msghdr *msg,
 				return -EAFNOSUPPORT;
 		}
 
+        // 送信先ターゲットの IP
 		daddr = usin->sin_addr.s_addr;
+        // 送信先ターゲットの ポート
 		dport = usin->sin_port;
+        // 0 番は不正ナリよ
+        // dport の上限みてないよね???
 		if (dport == 0)
 			return -EINVAL;
 	} else {
