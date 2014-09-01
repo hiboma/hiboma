@@ -271,6 +271,9 @@ int udp_sendmsg(struct kiocb *iocb, struct sock *sk, struct msghdr *msg,
 		if (dport == 0)
 			return -EINVAL;
 	} else {
+
+        // connect して TCP_ESTABLISHED 済みでない場合に struct address を省略して
+        // sendmsg を呼び出すことができるぽい
 		if (sk->sk_state != TCP_ESTABLISHED)
 			return -EDESTADDRREQ;
 		daddr = inet->daddr;
@@ -286,6 +289,8 @@ int udp_sendmsg(struct kiocb *iocb, struct sock *sk, struct msghdr *msg,
 	err = sock_tx_timestamp(msg, sk, &ipc.shtx);
 	if (err)
 		return err;
+
+    // 制御情報がうんたら
 	if (msg->msg_controllen) {
 		err = ip_cmsg_send(sock_net(sk), msg, &ipc);
 		if (err)
@@ -310,12 +315,15 @@ int udp_sendmsg(struct kiocb *iocb, struct sock *sk, struct msghdr *msg,
 	saddr = ipc.addr;
 	ipc.addr = faddr = daddr;
 
+    // ???
 	if (ipc.opt && ipc.opt->srr) {
 		if (!daddr)
 			return -EINVAL;
 		faddr = ipc.opt->faddr;
 		connected = 0;
 	}
+
+    // ???
 	tos = RT_TOS(inet->tos);
 	if (sock_flag(sk, SOCK_LOCALROUTE) ||
 	    (msg->msg_flags & MSG_DONTROUTE) ||
@@ -324,6 +332,7 @@ int udp_sendmsg(struct kiocb *iocb, struct sock *sk, struct msghdr *msg,
 		connected = 0;
 	}
 
+    // マルチキャスト
 	if (ipv4_is_multicast(daddr)) {
 		if (!ipc.oif)
 			ipc.oif = inet->mc_index;
@@ -335,6 +344,7 @@ int udp_sendmsg(struct kiocb *iocb, struct sock *sk, struct msghdr *msg,
 	if (connected)
 		rt = (struct rtable *)sk_dst_check(sk, 0);
 
+    // ルーティングテーブルが無かったらルーティング先を決める
 	if (rt == NULL) {
 		struct flowi fl = { .oif = ipc.oif,
 				    .mark = sk->sk_mark,
@@ -350,6 +360,7 @@ int udp_sendmsg(struct kiocb *iocb, struct sock *sk, struct msghdr *msg,
 		struct net *net = sock_net(sk);
 
 		security_sk_classify_flow(sk, &fl);
+        // ここでルーティングテーブル決める
 		err = ip_route_output_flow(net, &rt, &fl, sk, 1);
 		if (err) {
 			if (err == -ENETUNREACH)
