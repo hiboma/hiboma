@@ -466,13 +466,43 @@ do_confirm:
 EXPORT_SYMBOL(udp_sendmsg);
 ```
 
+----
+
+# IPルーティング
+
 ## ip_route_output_flow
 
 ## __ip_route_output_key
 
 ## ip_route_output_slow
 
+## fib_lookup
+
+## fib_rules_lookup
+
+
+```c
+static struct fib_rules_ops fib4_rules_ops_template = {
+	.family		= AF_INET,
+	.rule_size	= sizeof(struct fib4_rule),
+	.addr_size	= sizeof(u32),
+	.action		= fib4_rule_action,
+	.match		= fib4_rule_match,
+	.configure	= fib4_rule_configure,
+	.compare	= fib4_rule_compare,
+	.fill		= fib4_rule_fill,
+	.default_pref	= fib_default_rule_pref,
+	.nlmsg_payload	= fib4_rule_nlmsg_payload,
+	.flush_cache	= fib4_rule_flush_cache,
+	.nlgroup	= RTNLGRP_IPV4_RULE,
+	.policy		= fib4_rule_policy,
+	.owner		= THIS_MODULE,
+};
+```
+
 ----
+
+# IPルーティング決定後
 
 ## udp_send_skb
 
