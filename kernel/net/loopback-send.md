@@ -313,6 +313,8 @@ int udp_sendmsg(struct kiocb *iocb, struct sock *sk, struct msghdr *msg,
 	}
 
 	saddr = ipc.addr;
+
+    // 送信先アドレス
 	ipc.addr = faddr = daddr;
 
     // ???
@@ -360,7 +362,7 @@ int udp_sendmsg(struct kiocb *iocb, struct sock *sk, struct msghdr *msg,
 		struct net *net = sock_net(sk);
 
 		security_sk_classify_flow(sk, &fl);
-        // ここでルーティングテーブル決める
+        // ここでルーティングテーブルが決定される
 		err = ip_route_output_flow(net, &rt, &fl, sk, 1);
 		if (err) {
 			if (err == -ENETUNREACH)
@@ -380,8 +382,12 @@ int udp_sendmsg(struct kiocb *iocb, struct sock *sk, struct msghdr *msg,
 		goto do_confirm;
 back_from_confirm:
 
+    // ip_route_output_flow で決まった ソースアドレス
 	saddr = rt->rt_src;
+
+    // ??? 
 	if (!ipc.addr)
+        // ルーティングテーブルから送信先アドレスを決める
 		daddr = ipc.addr = rt->rt_dst;
 
 	/* Lockless fast path for the non-corking case. */
@@ -390,11 +396,14 @@ back_from_confirm:
 				  sizeof(struct udphdr), &ipc, &rt,
 				  msg->msg_flags);
 		err = PTR_ERR(skb);
+
+        // ここで UDPパケット (skb) を飛ばす
 		if (skb && !IS_ERR(skb))
 			err = udp_send_skb(skb, daddr, dport);
 		goto out;
 	}
 
+    // ここからはペンヂングするケースの場合
 	lock_sock(sk);
 	if (unlikely(up->pending)) {
 		/* The socket is already corked while preparing it. */
@@ -408,6 +417,7 @@ back_from_confirm:
 	/*
 	 *	Now cork the socket to pend data.
 	 */
+    // cork する条件が分からん。ペンディングしておく
 	inet->cork.fl.fl4_dst = daddr;
 	inet->cork.fl.fl_ip_dport = dport;
 	inet->cork.fl.fl4_src = saddr;
