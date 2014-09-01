@@ -73,7 +73,7 @@ flush_n_delete した後に ip_tables, ip_filters を rmmod する。 この時�
 依存して rmmod されるモジュールは /proc/modules で確認できる
 
 ```
-[vagrant@users001 ~]$ cat /proc/modules  | grep ip_
+$ cat /proc/modules  | grep ip_
 ip_conntrack_ftp 76529 0 - Live 0xf0a64000
 ip_conntrack 45829 2 ip_conntrack_ftp,ipt_state, Live 0xf0973000
 ip_tables 22337 4 ipt_LOG,ipt_REJECT,ipt_state,iptable_filter, Live 0xf0933000
