@@ -60,7 +60,8 @@ for i in $( seq 1 100000 ); do ls -hal /tmp/$i; done;
 ## dentry_operations のロック
 
  * dcache_lock
-   * スピンロック dentry_hashtable のロックかな?
+   * ~~スピンロック dentry_hashtable のロックかな?~~
+   * dentry ツリー全体を保護するロック
  * d_lock
    * スピンロック dentry単体のロック
 

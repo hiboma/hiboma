@@ -6,6 +6,8 @@ storage/example/ha_example.cc 読むとテーブルスキャンする際に rnd_
 
 ## InnoDB の場合
 
+pos は primary キーになる
+
 ### ha_innobase::rnd_pos
 
  * テーブルスキャンする際は ha_innobase::rnd_next を使っておくぽい
