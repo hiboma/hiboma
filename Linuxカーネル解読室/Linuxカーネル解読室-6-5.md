@@ -2,6 +2,8 @@
 
 ## 6.5.1 ディレクトリエントリキャッシュ
 
+dエントリ is struct dentry
+
 #### struct dentry
 
 ```c
@@ -43,7 +45,7 @@ struct dentry {
  * d_free
  * d_move
 
-が取り上げられている。 https://github.com/hiboma/hiboma/blob/master/kernel/dentry_cache.md を読んで思い出す
+が取り上げられている。https://github.com/hiboma/hiboma/blob/master/kernel/dentry_cache.md を読んで思い出す
 
 #### dentry キャッシュの保護
 
@@ -60,21 +62,26 @@ d_delete:       no              yes             no       no
 d_release:      no              no              no       yes
 d_iput:         no              no              no       yes
  */
+
+// d_move, d_free がナイね
 ```
 
- * パス名検索による dentry 参照を保護
-   * RCU
+dentryの操作に使う排他の仕組みで、スコープが広そうな順番に列挙すると以下の感じ
+
  * dentry ツリー操作同士の保護 is ?
    * スピンロック
    * dentry ツリー全体を保護する dcache_lock で保護
    * include/dcache.h で `extern spinlock_t dcache_lock;` として宣言されたグローバル変数
- * dentry エントリ単体の保護
-   * スピンロック
-   * `spinlock_t d_lock`
  * ファイルの rename を保護
    * シーケンスカウンタロック
    * `extern seqlock_t rename_lock;`
-
+ * パス名検索による dentry 参照を保護
+   * RCU
+ * dentry エントリ単体の保護
+   * スピンロック
+   * `spinlock_t d_lock`
+ * dentry の d_count
+   * atomic_inc, atomic_dec
 
 ## 6.5.1.1 シーケンスカウンタロックによる保護
 
