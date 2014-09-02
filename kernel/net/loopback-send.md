@@ -520,12 +520,14 @@ int __ip_route_output_key(struct net *net, struct rtable **rp,
             // ???
 			dst_use(&rth->u.dst, jiffies);
             // キャッシュヒットの統計
+            // /proc/net/stat/rt_cache で参照できる
 			RT_CACHE_STAT_INC(out_hit);
 			rcu_read_unlock_bh();
 			*rp = rth;
 			return 0;
 		}
         // キャッシュ探索した回数の統計
+        // /proc/net/stat/rt_cache で参照できる
 		RT_CACHE_STAT_INC(out_hlist_search);
 	}
 	rcu_read_unlock_bh();
