@@ -1173,6 +1173,7 @@ static inline int ip_finish_output2(struct sk_buff *skb)
 	if (dst->hh)
 		return neigh_hh_output(dst->hh, skb);
 	else if (dst->neighbour)
+        /* arp の解決かな ? */
 		return dst->neighbour->output(skb);
 
 	if (net_ratelimit())
@@ -1182,7 +1183,37 @@ static inline int ip_finish_output2(struct sk_buff *skb)
 }
 ```
 
-neighbour から dev_queue_xmit を繋げるパスが分からないー
+neighbour から dev_queue_xmit を繋げるパスが分からないー ???
+
+```c
+static const struct neigh_ops arp_generic_ops = {
+	.family =		AF_INET,
+	.solicit =		arp_solicit,
+	.error_report =		arp_error_report,
+	.output =		neigh_resolve_output,
+	.connected_output =	neigh_connected_output,
+	.hh_output =		dev_queue_xmit,
+	.queue_xmit =		dev_queue_xmit,
+};
+
+static const struct neigh_ops arp_hh_ops = {
+	.family =		AF_INET,
+	.solicit =		arp_solicit,
+	.error_report =		arp_error_report,
+	.output =		neigh_resolve_output,
+	.connected_output =	neigh_resolve_output,
+	.hh_output =		dev_queue_xmit,
+	.queue_xmit =		dev_queue_xmit,
+};
+
+static const struct neigh_ops arp_direct_ops = {
+	.family =		AF_INET,
+	.output =		dev_queue_xmit,
+	.connected_output =	dev_queue_xmit,
+	.hh_output =		dev_queue_xmit,
+	.queue_xmit =		dev_queue_xmit,
+};
+```
 
 ## dev_queue_xmit
 
