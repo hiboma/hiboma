@@ -2,6 +2,14 @@
 
 loopback アドレスに UDP で sendto(2) して loopback デバイスに到達するまでのパスを確認する
 
+```
+send || sendto
+sock_sendmsg
+__sock_sendmsg
+__sock_sendmsg_nosec
+# udp_proto
+```
+
 ## sample code
 
 ruby で 127.0.0.1 に UDPパケットを 飛ばす
