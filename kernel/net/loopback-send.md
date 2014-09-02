@@ -499,9 +499,13 @@ int __ip_route_output_key(struct net *net, struct rtable **rp,
 	if (!rt_caching(net))
 		goto slow_output;
 
+    // 宛先アドレス、ソースアドレス、インタフェース、??? でハッシュ値取る
 	hash = rt_hash(flp->fl4_dst, flp->fl4_src, flp->oif, rt_genid(net));
 
 	rcu_read_lock_bh();
+
+    // rt_hash_table = rtable のキャッシュ
+    // RCU で保護しながら探索
 	for (rth = rcu_dereference(rt_hash_table[hash].chain); rth;
 		rth = rcu_dereference(rth->u.dst.rt_next)) {
 		if (rth->fl.fl4_dst == flp->fl4_dst &&
@@ -513,12 +517,15 @@ int __ip_route_output_key(struct net *net, struct rtable **rp,
 			    (IPTOS_RT_MASK | RTO_ONLINK)) &&
 		    net_eq(dev_net(rth->u.dst.dev), net) &&
 		    !rt_is_expired(rth)) {
+            // ???
 			dst_use(&rth->u.dst, jiffies);
+            // キャッシュヒットの統計
 			RT_CACHE_STAT_INC(out_hit);
 			rcu_read_unlock_bh();
 			*rp = rth;
 			return 0;
 		}
+        // キャッシュ探索した回数の統計
 		RT_CACHE_STAT_INC(out_hlist_search);
 	}
 	rcu_read_unlock_bh();
