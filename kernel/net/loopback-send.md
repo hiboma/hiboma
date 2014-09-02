@@ -753,7 +753,8 @@ out:	return err;
 }
 ```
 
-探索結果が RTN_LOCAL なら loopback インタフェースを dev_out ( fl.oif )に選択する
+ * 探索結果が RTN_LOCAL なら loopback インタフェースを dev_out ( fl.oif )に選択する
+ * ip_mkroute_output で rtable をキャッシュする
 
 ## fib_lookup
 
@@ -877,6 +878,8 @@ errout:
 	return err;
 }
 ```
+
+## fib_semantic_match
 
 ----
 
