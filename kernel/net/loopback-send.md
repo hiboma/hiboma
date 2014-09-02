@@ -1181,3 +1181,266 @@ static inline int ip_finish_output2(struct sk_buff *skb)
 	return -EINVAL;
 }
 ```
+
+neighbour から dev_queue_xmit を繋げるパスが分からないー
+
+## dev_queue_xmit
+
+```c
+/**
+ *	dev_queue_xmit - transmit a buffer
+ *	@skb: buffer to transmit
+ *
+ *	Queue a buffer for transmission to a network device. The caller must
+ *	have set the device and priority and built the buffer before calling
+ *	this function. The function can be called from an interrupt.
+ *
+ *	A negative errno code is returned on a failure. A success does not
+ *	guarantee the frame will be transmitted as it may be dropped due
+ *	to congestion or traffic shaping.
+ *
+ * -----------------------------------------------------------------------------------
+ *      I notice this method can also return errors from the queue disciplines,
+ *      including NET_XMIT_DROP, which is a positive value.  So, errors can also
+ *      be positive.
+ *
+ *      Regardless of the return value, the skb is consumed, so it is currently
+ *      difficult to retry a send to this method.  (You can bump the ref count
+ *      before sending to hold a reference for retry if you are careful.)
+ *
+ *      When calling this method, interrupts MUST be enabled.  This is because
+ *      the BH enable code must have IRQs enabled so that it will not deadlock.
+ *          --BLG
+ */
+int dev_queue_xmit(struct sk_buff *skb)
+{
+	struct net_device *dev = skb->dev;
+	struct netdev_queue *txq;
+	struct Qdisc *q;
+	int rc = -ENOMEM;
+
+	/* Disable soft irqs for various locks below. Also
+	 * stops preemption for RCU.
+	 */
+	rcu_read_lock_bh();
+
+	skb_update_prio(skb);
+
+	txq = netdev_pick_tx(dev, skb);
+	q = rcu_dereference(txq->qdisc);
+
+#ifdef CONFIG_NET_CLS_ACT
+	skb->tc_verd = SET_TC_AT(skb->tc_verd, AT_EGRESS);
+#endif
+	trace_net_dev_queue(skb);
+	if (q->enqueue) {
+		rc = __dev_xmit_skb(skb, q, dev, txq);
+		goto out;
+	}
+
+	/* The device has no queue. Common case for software devices:
+	   loopback, all the sorts of tunnels...
+
+	   Really, it is unlikely that netif_tx_lock protection is necessary
+	   here.  (f.e. loopback and IP tunnels are clean ignoring statistics
+	   counters.)
+	   However, it is possible, that they rely on protection
+	   made by us here.
+
+	   Check this and shot the lock. It is not prone from deadlocks.
+	   Either shot noqueue qdisc, it is even simpler 8)
+	 */
+	if (dev->flags & IFF_UP) {
+		int cpu = smp_processor_id(); /* ok because BHs are off */
+
+		if (txq->xmit_lock_owner != cpu) {
+
+			HARD_TX_LOCK(dev, txq, cpu);
+
+			if (!netif_tx_queue_stopped(txq)) {
+				rc = NET_XMIT_SUCCESS;
+				if (!dev_hard_start_xmit(skb, dev, txq)) {
+					HARD_TX_UNLOCK(dev, txq);
+					goto out;
+				}
+			}
+			HARD_TX_UNLOCK(dev, txq);
+			if (net_ratelimit())
+				printk(KERN_CRIT "Virtual device %s asks to "
+				       "queue packet!\n", dev->name);
+		} else {
+			/* Recursion is detected! It is possible,
+			 * unfortunately */
+			if (net_ratelimit())
+				printk(KERN_CRIT "Dead loop on virtual device "
+				       "%s, fix it urgently!\n", dev->name);
+		}
+	}
+
+	rc = -ENETDOWN;
+	rcu_read_unlock_bh();
+
+	kfree_skb(skb);
+	return rc;
+out:
+	rcu_read_unlock_bh();
+	return rc;
+}
+EXPORT_SYMBOL(dev_queue_xmit);
+```
+
+## dev_hard_start_xmit
+
+```c
+int dev_hard_start_xmit(struct sk_buff *skb, struct net_device *dev,
+			struct netdev_queue *txq)
+{
+	const struct net_device_ops *ops = dev->netdev_ops;
+	int rc;
+	unsigned int skb_len;
+
+	/* sk_buff が単体の場合 */
+	if (likely(!skb->next)) {
+		int features;
+
+		features = netif_skb_features(skb);
+
+		if (vlan_tx_tag_present(skb) &&
+		    !(features & NETIF_F_HW_VLAN_TX)) {
+			skb = __vlan_put_tag(skb, vlan_tx_tag_get(skb));
+			if (unlikely(!skb))
+				goto out;
+
+			skb->vlan_tci = 0;
+		}
+
+		/* If encapsulation offload request, verify we are testing
+		 * hardware encapsulation features instead of standard
+		 * features for the netdev
+		 */
+		if (skb->encapsulation)
+			features &= NETIF_F_SG;
+
+		if (netif_needs_gso(skb, features)) {
+			if (unlikely(dev_gso_segment(skb, features)))
+				goto out_kfree_skb;
+			if (skb->next)
+				goto gso;
+		} else {
+			if (skb_needs_linearize(skb, features) &&
+			    __skb_linearize(skb))
+				goto out_kfree_skb;
+
+			/* If packet is not checksummed and device does not
+			 * support checksumming for this protocol, complete
+			 * checksumming here.
+			 */
+			if (skb->ip_summed == CHECKSUM_PARTIAL) {
+				if (!skb->encapsulation)
+					skb_set_transport_header(skb,
+						skb_checksum_start_offset(skb));
+
+				if (!(features & NETIF_F_ALL_CSUM) &&
+				     skb_checksum_help(skb))
+					goto out_kfree_skb;
+			}
+		}
+
+		/*
+		 * If device doesnt need skb->dst, release it right now while
+		 * its hot in this cpu cache
+		 */
+		if (dev->priv_flags & IFF_XMIT_DST_RELEASE)
+			skb_dst_drop(skb);
+
+		if (!list_empty(&ptype_all))
+			dev_queue_xmit_nit(skb, dev);
+
+		skb_len = skb->len;
+		/* デバイスドライバの呼び出し */
+		rc = ops->ndo_start_xmit(skb, dev);
+		trace_net_dev_xmit(skb, rc, dev, skb_len);
+		if (rc == NETDEV_TX_OK)
+			txq_trans_update(txq);
+		/*
+		 * TODO: if skb_orphan() was called by
+		 * dev->hard_start_xmit() (for example, the unmodified
+		 * igb driver does that; bnx2 doesn't), then
+		 * skb_tx_software_timestamp() will be unable to send
+		 * back the time stamp.
+		 *
+		 * How can this be prevented? Always create another
+		 * reference to the socket before calling
+		 * dev->hard_start_xmit()? Prevent that skb_orphan()
+		 * does anything in dev->hard_start_xmit() by clearing
+		 * the skb destructor before the call and restoring it
+		 * afterwards, then doing the skb_orphan() ourselves?
+		 */
+		return rc;
+	}
+
+gso:
+	do {
+		struct sk_buff *nskb = skb->next;
+
+		skb->next = nskb->next;
+		nskb->next = NULL;
+
+		if (!list_empty(&ptype_all))
+			dev_queue_xmit_nit(nskb, dev);
+
+		skb_len = nskb->len;
+		rc = ops->ndo_start_xmit(nskb, dev);
+		trace_net_dev_xmit(nskb, rc, dev, skb_len);
+		if (unlikely(rc != NETDEV_TX_OK)) {
+			nskb->next = skb->next;
+			skb->next = nskb;
+			return rc;
+		}
+		txq_trans_update(txq);
+		if (unlikely(netif_tx_queue_stopped(txq) && skb->next))
+			return NETDEV_TX_BUSY;
+	} while (skb->next);
+
+	skb->destructor = DEV_GSO_CB(skb)->destructor;
+
+out_kfree_skb:
+	kfree_skb(skb);
+out:
+	return NETDEV_TX_OK;
+}
+```
+
+## .ndo_start_xmit
+
+ここでようやく loopback デバイスに辿り着く
+
+```c
+/*
+ * The higher levels take care of making this non-reentrant (it's
+ * called with bh's disabled).
+ */
+static netdev_tx_t loopback_xmit(struct sk_buff *skb,
+				 struct net_device *dev)
+{
+	struct pcpu_lstats *pcpu_lstats, *lb_stats;
+	int len;
+
+	skb_orphan(skb);
+
+	skb->protocol = eth_type_trans(skb, dev);
+
+	/* it's OK to use per_cpu_ptr() because BHs are off */
+	pcpu_lstats = dev->ml_priv;
+	lb_stats = per_cpu_ptr(pcpu_lstats, smp_processor_id());
+
+	len = skb->len;
+	if (likely(netif_rx(skb) == NET_RX_SUCCESS)) {
+		lb_stats->bytes += len;
+		lb_stats->packets++;
+	} else
+		lb_stats->drops++;
+
+	return NETDEV_TX_OK;
+}
+```
