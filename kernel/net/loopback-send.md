@@ -808,6 +808,33 @@ static int __mkroute_output(struct rtable **result,
 
 //...
 
+	atomic_set(&rth->u.dst.__refcnt, 1);
+	rth->u.dst.flags= DST_HOST;
+	if (IN_DEV_CONF_GET(in_dev, NOXFRM))
+		rth->u.dst.flags |= DST_NOXFRM;
+	if (IN_DEV_CONF_GET(in_dev, NOPOLICY))
+		rth->u.dst.flags |= DST_NOPOLICY;
+
+	rth->fl.fl4_dst	= oldflp->fl4_dst;
+	rth->fl.fl4_tos	= tos;
+	rth->fl.fl4_src	= oldflp->fl4_src;
+	rth->fl.oif	= oldflp->oif;
+	rth->fl.mark    = oldflp->mark;
+	rth->rt_dst	= fl->fl4_dst;
+	rth->rt_src	= fl->fl4_src;
+	rth->rt_iif	= oldflp->oif ? : dev_out->ifindex;
+	/* get references to the devices that are to be hold by the routing
+	   cache entry */
+	rth->u.dst.dev	= dev_out;
+	dev_hold(dev_out);
+	rth->idev	= in_dev_get(dev_out);
+	rth->rt_gateway = fl->fl4_dst;
+	rth->rt_spec_dst= fl->fl4_src;
+
+	rth->u.dst.output=ip_output;
+	rth->u.dst.obsolete = -1;
+	rth->rt_genid = rt_genid(dev_net(dev_out));
+
 	if (flags & RTCF_LOCAL) {
 		rth->u.dst.input = ip_local_deliver;
 		rth->rt_spec_dst = fl->fl4_dst;
@@ -1073,5 +1100,39 @@ static inline int dst_output(struct sk_buff *skb)
 
 ## dst_output .output => ip_output ?
 
+```c
+int ip_output(struct sk_buff *skb)
+{
+	struct net_device *dev = skb_dst(skb)->dev;
+
+    /* IP パケット送信の統計 */
+	IP_UPD_PO_STATS(dev_net(dev), IPSTATS_MIB_OUT, skb->len);
+
+    /* loopback デバイスのはず */
+	skb->dev = dev;
+	skb->protocol = htons(ETH_P_IP);
+
+	return NF_HOOK_COND(PF_INET, NF_INET_POST_ROUTING, skb, NULL, dev,
+			    ip_finish_output,
+			    !(IPCB(skb)->flags & IPSKB_REROUTED));
+}
+```
+
 ## ip_finish_output
 
+```c
+static int ip_finish_output(struct sk_buff *skb)
+{
+#if defined(CONFIG_NETFILTER) && defined(CONFIG_XFRM)
+	/* Policy lookup after SNAT yielded a new policy */
+	if (skb_dst(skb)->xfrm != NULL) {
+		IPCB(skb)->flags |= IPSKB_REROUTED;
+		return dst_output(skb);
+	}
+#endif
+	if (skb->len > ip_skb_dst_mtu(skb) && !skb_is_gso(skb))
+		return ip_fragment(skb, ip_finish_output2);
+	else
+		return ip_finish_output2(skb);
+}
+```
