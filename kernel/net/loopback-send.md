@@ -351,6 +351,14 @@ int udp_sendmsg(struct kiocb *iocb, struct sock *sk, struct msghdr *msg,
 		rt = (struct rtable *)sk_dst_check(sk, 0);
 
     // ルーティングテーブルが無かったらルーティング先を決める
+    //
+    // struct flowi はマクロでアクセサが定義されているので、読む際に注意
+    //
+    //     #define fl4_dst		nl_u.ip4_u.daddr
+    //     #define fl4_src		nl_u.ip4_u.saddr
+    //     #define fl4_tos		nl_u.ip4_u.tos
+    //     #define fl4_scope	nl_u.ip4_u.scope
+    //
 	if (rt == NULL) {
 		struct flowi fl = { .oif = ipc.oif,
 				    .mark = sk->sk_mark,
@@ -477,6 +485,48 @@ EXPORT_SYMBOL(udp_sendmsg);
 ## ip_route_output_flow
 
 ## __ip_route_output_key
+
+ * `rt_caching(net)` で ルーティングテーブルのキャッシュを参照するかどうかを決定
+ * キャッシュを見ない場合は ip_route_output_slow
+
+```c
+int __ip_route_output_key(struct net *net, struct rtable **rp,
+			  const struct flowi *flp)
+{
+	unsigned hash;
+	struct rtable *rth;
+
+	if (!rt_caching(net))
+		goto slow_output;
+
+	hash = rt_hash(flp->fl4_dst, flp->fl4_src, flp->oif, rt_genid(net));
+
+	rcu_read_lock_bh();
+	for (rth = rcu_dereference(rt_hash_table[hash].chain); rth;
+		rth = rcu_dereference(rth->u.dst.rt_next)) {
+		if (rth->fl.fl4_dst == flp->fl4_dst &&
+		    rth->fl.fl4_src == flp->fl4_src &&
+		    rth->fl.iif == 0 &&
+		    rth->fl.oif == flp->oif &&
+		    rth->fl.mark == flp->mark &&
+		    !((rth->fl.fl4_tos ^ flp->fl4_tos) &
+			    (IPTOS_RT_MASK | RTO_ONLINK)) &&
+		    net_eq(dev_net(rth->u.dst.dev), net) &&
+		    !rt_is_expired(rth)) {
+			dst_use(&rth->u.dst, jiffies);
+			RT_CACHE_STAT_INC(out_hit);
+			rcu_read_unlock_bh();
+			*rp = rth;
+			return 0;
+		}
+		RT_CACHE_STAT_INC(out_hlist_search);
+	}
+	rcu_read_unlock_bh();
+
+slow_output:
+	return ip_route_output_slow(net, rp, flp);
+}
+``` 
 
 ## ip_route_output_slow
 
