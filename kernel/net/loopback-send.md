@@ -669,6 +669,8 @@ static int ip_route_output_slow(struct net *net, struct rtable **rp,
 		fl.oif = net->loopback_dev->ifindex;
 		res.type = RTN_LOCAL;
 		flags |= RTCF_LOCAL;
+
+        // ルーティングテーブル作る
 		goto make_route;
 	}
 
@@ -755,6 +757,62 @@ out:	return err;
 
  * 探索結果が RTN_LOCAL なら loopback インタフェースを dev_out ( fl.oif )に選択する
  * ip_mkroute_output で rtable をキャッシュする
+
+## ip_mkroute_output
+
+```c
+static int ip_mkroute_output(struct rtable **rp,
+			     struct fib_result *res,
+			     const struct flowi *fl,
+			     const struct flowi *oldflp,
+			     struct net_device *dev_out,
+			     unsigned flags)
+{
+	struct rtable *rth = NULL;
+	int err = __mkroute_output(&rth, res, fl, oldflp, dev_out, flags);
+	unsigned hash;
+	if (err == 0) {
+		hash = rt_hash(oldflp->fl4_dst, oldflp->fl4_src, oldflp->oif,
+			       rt_genid(dev_net(dev_out)));
+		err = rt_intern_hash(hash, rth, rp, NULL);
+	}
+
+	return err;
+}
+```
+
+### __mkroute_output
+
+```c
+static int __mkroute_output(struct rtable **result,
+			    struct fib_result *res,
+			    const struct flowi *fl,
+			    const struct flowi *oldflp,
+			    struct net_device *dev_out,
+			    unsigned flags)
+{
+	struct rtable *rth;
+	struct in_device *in_dev;
+	u32 tos = RT_FL_TOS(oldflp);
+	int err = 0;
+
+	if (fl->fl4_dst == htonl(0xFFFFFFFF))
+		res->type = RTN_BROADCAST;
+	else if (ipv4_is_multicast(fl->fl4_dst))
+		res->type = RTN_MULTICAST;
+	else if (ipv4_is_lbcast(fl->fl4_dst) || ipv4_is_zeronet(fl->fl4_dst))
+		return -EINVAL;
+
+	if (dev_out->flags & IFF_LOOPBACK)
+		flags |= RTCF_LOCAL;
+
+//...
+
+	if (flags & RTCF_LOCAL) {
+		rth->u.dst.input = ip_local_deliver;
+		rth->rt_spec_dst = fl->fl4_dst;
+	}
+```
 
 ## fib_lookup
 
