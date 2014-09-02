@@ -1007,11 +1007,69 @@ send:
 
 ## ip_send_skb
 
+```c
+int ip_send_skb(struct sk_buff *skb)
+{
+	struct net *net = sock_net(skb->sk);
+	int err;
+
+	err = ip_local_out(skb);
+	if (err) {
+		if (err > 0)
+			err = net_xmit_errno(err);
+		if (err)
+            /* IPパケットの送信でコケた回数 */
+			IP_INC_STATS(net, IPSTATS_MIB_OUTDISCARDS);
+	}
+
+	return err;
+}
+```
+
 ## ip_local_out
+
+```c
+int ip_local_out(struct sk_buff *skb)
+{
+	int err;
+
+	err = __ip_local_out(skb);
+	if (likely(err == 1))
+		err = dst_output(skb);
+
+	return err;
+}
+EXPORT_SYMBOL_GPL(ip_local_out);
+```
 
 ## __ip_local_out
 
+ * nf_hook の NF_INET_LOCAL_OUT をかます
+
+```c
+int __ip_local_out(struct sk_buff *skb)
+{
+	struct iphdr *iph = ip_hdr(skb);
+
+	iph->tot_len = htons(skb->len);
+
+    /* IP ヘッダのチェックサム計算 */
+	ip_send_check(iph);
+	return nf_hook(PF_INET, NF_INET_LOCAL_OUT, skb, NULL, skb_dst(skb)->dev,
+		       dst_output);
+}
+```
+
 ## dst_output
+
+```c
+/* Output packet to network from transport.  */
+static inline int dst_output(struct sk_buff *skb)
+{
+	// struct dst_entry * の .output 
+	return skb_dst(skb)->output(skb);
+}
+```
 
 ## dst_output .output => ip_output ?
 
