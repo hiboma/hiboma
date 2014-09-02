@@ -1186,6 +1186,35 @@ static inline int ip_finish_output2(struct sk_buff *skb)
 neighbour から dev_queue_xmit を繋げるパスが分からないー ???
 
 ```c
+static int arp_constructor(struct neighbour *neigh)
+{
+	__be32 addr = *(__be32*)neigh->primary_key;
+	struct net_device *dev = neigh->dev;
+	struct in_device *in_dev;
+	struct neigh_parms *parms;
+
+	rcu_read_lock();
+	in_dev = __in_dev_get_rcu(dev);
+	if (in_dev == NULL) {
+		rcu_read_unlock();
+		return -EINVAL;
+	}
+
+	neigh->type = inet_addr_type(dev_net(dev), addr);
+
+	parms = in_dev->arp_parms;
+	__neigh_parms_put(neigh->parms);
+	neigh->parms = neigh_parms_clone(parms);
+	rcu_read_unlock();
+
+
+	if (!dev->header_ops) {
+		neigh->nud_state = NUD_NOARP;
+		neigh->ops = &arp_direct_ops;
+		neigh->output = neigh->ops->queue_xmit;
+```
+
+```c
 static const struct neigh_ops arp_generic_ops = {
 	.family =		AF_INET,
 	.solicit =		arp_solicit,
