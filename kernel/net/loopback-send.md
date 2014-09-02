@@ -3,11 +3,40 @@
 loopback アドレスに UDP で sendto(2) して loopback デバイスに到達するまでのパスを確認する
 
 ```
+# BSDソケットインタフェース
 send || sendto
 sock_sendmsg
 __sock_sendmsg
 __sock_sendmsg_nosec
-# udp_proto
+# UDP 層 = struct udp_proto
+udp_sendmsg
+  # IPルーティング
+  ip_route_output_flow
+  __ip_route_output_key
+  ip_route_output_slow
+    fib_lookup
+    fib_rules_lookup
+    ...
+  ip_mkroute_output
+    __mkroute_output
+udp_send_skb
+# IP 層
+ip_send_skb
+ip_local_out
+__ip_local_out
+dst_output
+ip_output
+ip_finish_output
+ip_finish_output2
+  # ARP
+  ???
+  ???
+dev_queue_xmit
+dev_hard_start_xmit
+net_device_ops ndo_start_xmit
+# loopback デバイス
+loopback_xmit
+netif_rx
 ```
 
 ## sample code
