@@ -541,12 +541,74 @@ slow_output:
 
 rtable を探索する
 
-RTN_LOCAL なら loopback インタフェースを dev_out ( fl.oif )に選択する
+探索結果が RTN_LOCAL なら loopback インタフェースを dev_out ( fl.oif )に選択する
 
 ## fib_lookup
 
+```c
+int fib_lookup(struct net *net, struct flowi *flp, struct fib_result *res)
+{
+	struct fib_lookup_arg arg = {
+		.result = res,
+	};
+	int err;
+
+	err = fib_rules_lookup(net->ipv4.rules_ops, flp, 0, &arg);
+	res->r = arg.rule;
+
+	return err;
+}
+```
+
 ## fib_rules_lookup
 
+```c
+int fib_rules_lookup(struct fib_rules_ops *ops, struct flowi *fl,
+		     int flags, struct fib_lookup_arg *arg)
+{
+	struct fib_rule *rule;
+	int err;
+
+	rcu_read_lock();
+
+    /* マッチする fib_rule を探す ??? */
+	list_for_each_entry_rcu(rule, &ops->rules_list, list) {
+jumped:
+		if (!fib_rule_match(rule, ops, fl, flags))
+			continue;
+
+		if (rule->action == FR_ACT_GOTO) {
+			struct fib_rule *target;
+
+			target = rcu_dereference(rule->ctarget);
+			if (target == NULL) {
+				continue;
+			} else {
+				rule = target;
+				goto jumped;
+			}
+		} else if (rule->action == FR_ACT_NOP)
+			continue;
+		else
+            /* fib_rule に応じた action を呼び出す */
+			err = ops->action(rule, fl, flags, arg);
+
+		if (err != -EAGAIN) {
+			fib_rule_get(rule);
+			arg->rule = rule;
+			goto out;
+		}
+	}
+
+	err = -ESRCH;
+out:
+	rcu_read_unlock();
+
+	return err;
+}
+```
+
+#### fib_rules_lookup で使われるメソッド群
 
 ```c
 static struct fib_rules_ops fib4_rules_ops_template = {
