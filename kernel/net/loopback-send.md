@@ -1,6 +1,10 @@
 # loopback + sendto(2)
 
-## ruby で UDP 飛ばす
+loopback アドレスに UDP で sendto(2) して loopback デバイスに到達するまでのパスを確認する
+
+## sample code
+
+ruby で 127.0.0.1 に UDPパケットを 飛ばす
 
 AF_INET で loopback address にパケットを飛ばします
 
