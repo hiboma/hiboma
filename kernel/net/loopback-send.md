@@ -499,12 +499,12 @@ int __ip_route_output_key(struct net *net, struct rtable **rp,
 	if (!rt_caching(net))
 		goto slow_output;
 
-    // 宛先アドレス、ソースアドレス、インタフェース、??? でハッシュ値取る
+    // 宛先アドレス、ソースアドレス、インタフェースのインデックス値、 ??? でハッシュ値取る
 	hash = rt_hash(flp->fl4_dst, flp->fl4_src, flp->oif, rt_genid(net));
 
 	rcu_read_lock_bh();
 
-    // rt_hash_table = rtable のキャッシュ
+    // rt_hash_table = rtable のキャッシュ = ルーティングのキャッシュ
     // RCU で保護しながら探索
 	for (rth = rcu_dereference(rt_hash_table[hash].chain); rth;
 		rth = rcu_dereference(rth->u.dst.rt_next)) {
@@ -538,6 +538,8 @@ slow_output:
 ``` 
 
 ## ip_route_output_slow
+
+rtable を探索する
 
 RTN_LOCAL なら loopback インタフェースを dev_out ( fl.oif )に選択する
 
