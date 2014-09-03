@@ -170,3 +170,75 @@ static int sock_alloc_file(struct socket *sock, struct file **f, int flags)
 	return fd;
 }
 ```
+
+## write, read 等が socket でも使えるのは何故か?
+
+file_operations に socket_file_ops が使われている
+
+ * sock_aio_read, sock_aio_write ... が read(2)/write(2) のインタフェースをソケットインタフェースに合わせてアダプタする
+   * sock_aio_write -> do_sock_write -> __sock_sendmsg
+   * sock_aio_read  -> do_sock_read  -> __sock_recvmsg
+
+```c
+static const struct file_operations socket_file_ops = {
+	.owner =	THIS_MODULE,
+	.llseek =	no_llseek,
+	.aio_read =	sock_aio_read,
+	.aio_write =	sock_aio_write,
+	.poll =		sock_poll,
+	.unlocked_ioctl = sock_ioctl,
+#ifdef CONFIG_COMPAT
+	.compat_ioctl = compat_sock_ioctl,
+#endif
+	.mmap =		sock_mmap,
+	.open =		sock_no_open,	/* special open code to disallow open via /proc */
+	.release =	sock_close,
+	.fasync =	sock_fasync,
+	.sendpage =	sock_sendpage,
+	.splice_write = generic_splice_sendpage,
+	.splice_read =	sock_splice_read,
+};
+```
+
+```c
+static ssize_t sock_aio_write(struct kiocb *iocb, const struct iovec *iov,
+			  unsigned long nr_segs, loff_t pos)
+{
+	struct sock_iocb siocb, *x;
+
+	if (pos != 0)
+		return -ESPIPE;
+
+	x = alloc_sock_iocb(iocb, &siocb);
+	if (!x)
+		return -ENOMEM;
+
+	return do_sock_write(&x->async_msg, iocb, iocb->ki_filp, iov, nr_segs);
+}
+```
+
+```c
+static ssize_t do_sock_write(struct msghdr *msg, struct kiocb *iocb,
+			struct file *file, const struct iovec *iov,
+			unsigned long nr_segs)
+{
+	struct socket *sock = file->private_data;
+	size_t size = 0;
+	int i;
+
+	for (i = 0; i < nr_segs; i++)
+		size += iov[i].iov_len;
+
+	msg->msg_name = NULL;
+	msg->msg_namelen = 0;
+	msg->msg_control = NULL;
+	msg->msg_controllen = 0;
+	msg->msg_iov = (struct iovec *)iov;
+	msg->msg_iovlen = nr_segs;
+	msg->msg_flags = (file->f_flags & O_NONBLOCK) ? MSG_DONTWAIT : 0;
+	if (sock->type == SOCK_SEQPACKET)
+		msg->msg_flags |= MSG_EOR;
+
+	return __sock_sendmsg(iocb, sock, msg, size);
+}
+```
