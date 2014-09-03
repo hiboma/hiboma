@@ -24,6 +24,54 @@ static int sockfs_get_sb(struct file_system_type *fs_type,
 }
 ```
 
+sockfs_ops は下記の通り
+
+```c
+static const struct super_operations sockfs_ops = {
+	.alloc_inode =	sock_alloc_inode,
+	.destroy_inode =sock_destroy_inode,
+	.statfs =	simple_statfs,
+};
+```
+
+## sock_alloc_inode, sock_destroy_inode
+
+kmem_cache で sock_alloc をキャッシュして扱う
+
+```c
+struct socket_alloc {
+	struct socket socket;
+	struct inode vfs_inode;
+};
+```
+
+```c
+static struct inode *sock_alloc_inode(struct super_block *sb)
+{
+	struct socket_alloc *ei;
+
+	ei = kmem_cache_alloc(sock_inode_cachep, GFP_KERNEL);
+	if (!ei)
+		return NULL;
+	init_waitqueue_head(&ei->socket.wait);
+
+	ei->socket.fasync_list = NULL;
+	ei->socket.state = SS_UNCONNECTED;
+	ei->socket.flags = 0;
+	ei->socket.ops = NULL;
+	ei->socket.sk = NULL;
+	ei->socket.file = NULL;
+
+	return &ei->vfs_inode;
+}
+
+static void sock_destroy_inode(struct inode *inode)
+{
+	kmem_cache_free(sock_inode_cachep,
+			container_of(inode, struct socket_alloc, vfs_inode));
+}
+```
+
 ## struct socket <=> struct file の変換
 
 sock_from_file で成される
@@ -39,5 +87,86 @@ static struct socket *sock_from_file(struct file *file, int *err)
 
 	*err = -ENOTSOCK;
 	return NULL;
+}
+```
+
+## struct socket と struct file の結びつけ
+
+```c
+int sock_map_fd(struct socket *sock, int flags)
+{
+	struct file *newfile;
+	int fd = sock_alloc_file(sock, &newfile, flags);
+
+	if (likely(fd >= 0))
+		fd_install(fd, newfile);
+
+	return fd;
+}
+```
+
+```c
+/*
+ *	Obtains the first available file descriptor and sets it up for use.
+ *
+ *	These functions create file structures and maps them to fd space
+ *	of the current process. On success it returns file descriptor
+ *	and file struct implicitly stored in sock->file.
+ *	Note that another thread may close file descriptor before we return
+ *	from this function. We use the fact that now we do not refer
+ *	to socket after mapping. If one day we will need it, this
+ *	function will increment ref. count on file by 1.
+ *
+ *	In any case returned fd MAY BE not valid!
+ *	This race condition is unavoidable
+ *	with shared fd spaces, we cannot solve it inside kernel,
+ *	but we take care of internal coherence yet.
+ */
+
+static int sock_alloc_file(struct socket *sock, struct file **f, int flags)
+{
+	struct qstr name = { .name = "" };
+	struct path path;
+	struct file *file;
+	int fd;
+
+	fd = get_unused_fd_flags(flags);
+	if (unlikely(fd < 0))
+		return fd;
+
+	path.dentry = d_alloc_pseudo(sock_mnt->mnt_sb, &name);
+	if (unlikely(!path.dentry)) {
+		put_unused_fd(fd);
+		return -ENOMEM;
+	}
+	path.mnt = mntget(sock_mnt);
+
+	path.dentry->d_op = &sockfs_dentry_operations;
+	/*
+	 * We dont want to push this dentry into global dentry hash table.
+	 * We pretend dentry is already hashed, by unsetting DCACHE_UNHASHED
+	 * This permits a working /proc/$pid/fd/XXX on sockets
+	 */
+	path.dentry->d_flags &= ~DCACHE_UNHASHED;
+	d_instantiate(path.dentry, SOCK_INODE(sock));
+	SOCK_INODE(sock)->i_fop = &socket_file_ops;
+
+	file = alloc_file(&path, FMODE_READ | FMODE_WRITE,
+		  &socket_file_ops);
+	if (unlikely(!file)) {
+		/* drop dentry, keep inode */
+		atomic_inc(&path.dentry->d_inode->i_count);
+		path_put(&path);
+		put_unused_fd(fd);
+		return -ENFILE;
+	}
+
+	sock->file = file;
+	file->f_flags = O_RDWR | (flags & O_NONBLOCK);
+	file->f_pos = 0;
+	file->private_data = sock;
+
+	*f = file;
+	return fd;
 }
 ```
