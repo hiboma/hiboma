@@ -1,5 +1,7 @@
 # sockfs
 
+ファイルインタフェースとソケットインタフェースを繋ぐ sockfs を読む
+
 ## sockfs ファイルシステムの登録
 
 ```c
@@ -134,6 +136,7 @@ static int sock_alloc_file(struct socket *sock, struct file **f, int flags)
 	if (unlikely(fd < 0))
 		return fd;
 
+    // 「パス」を提供する必要のないファイルシステムでは pseudo suffix な関数群を呼んだらよいのか?
 	path.dentry = d_alloc_pseudo(sock_mnt->mnt_sb, &name);
 	if (unlikely(!path.dentry)) {
 		put_unused_fd(fd);
@@ -141,6 +144,7 @@ static int sock_alloc_file(struct socket *sock, struct file **f, int flags)
 	}
 	path.mnt = mntget(sock_mnt);
 
+    // 疑似dentry 用のメソッド
 	path.dentry->d_op = &sockfs_dentry_operations;
 	/*
 	 * We dont want to push this dentry into global dentry hash table.
@@ -148,9 +152,14 @@ static int sock_alloc_file(struct socket *sock, struct file **f, int flags)
 	 * This permits a working /proc/$pid/fd/XXX on sockets
 	 */
 	path.dentry->d_flags &= ~DCACHE_UNHASHED;
+
+    // socket -> socket_alloc を経由してから vfs_inode を取り出す
 	d_instantiate(path.dentry, SOCK_INODE(sock));
+
+    // 「ファイル」インタフェースのメソッドを file_operations に当てておく
 	SOCK_INODE(sock)->i_fop = &socket_file_ops;
 
+    // struct file の割り当て。 R/W なパーミッションになっている
 	file = alloc_file(&path, FMODE_READ | FMODE_WRITE,
 		  &socket_file_ops);
 	if (unlikely(!file)) {
@@ -171,7 +180,7 @@ static int sock_alloc_file(struct socket *sock, struct file **f, int flags)
 }
 ```
 
-## write, read 等が socket でも使えるのは何故か?
+# write, read 等が socket でも使えるのは何故か?
 
 file_operations に socket_file_ops が使われている
 
