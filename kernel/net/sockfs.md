@@ -200,15 +200,19 @@ static const struct file_operations socket_file_ops = {
 };
 ```
 
+## sock_aio_write -> do_sock_write -> __sock_sendmsg
+
 ```c
 static ssize_t sock_aio_write(struct kiocb *iocb, const struct iovec *iov,
 			  unsigned long nr_segs, loff_t pos)
 {
 	struct sock_iocb siocb, *x;
 
+    /* ソケットなので position 指定できない */
 	if (pos != 0)
 		return -ESPIPE;
 
+    /* ソケットで非同期処理するためのなんとか */
 	x = alloc_sock_iocb(iocb, &siocb);
 	if (!x)
 		return -ENOMEM;
@@ -216,6 +220,8 @@ static ssize_t sock_aio_write(struct kiocb *iocb, const struct iovec *iov,
 	return do_sock_write(&x->async_msg, iocb, iocb->ki_filp, iov, nr_segs);
 }
 ```
+
+sturct iovec を struct msghdr に載せ変えて __sock_sendmsg を呼び出す
 
 ```c
 static ssize_t do_sock_write(struct msghdr *msg, struct kiocb *iocb,
@@ -242,3 +248,5 @@ static ssize_t do_sock_write(struct msghdr *msg, struct kiocb *iocb,
 	return __sock_sendmsg(iocb, sock, msg, size);
 }
 ```
+
+以降は sendto(2) や sendmsg(2) と同じ呼び出しパスになる
