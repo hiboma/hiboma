@@ -1305,6 +1305,7 @@ static int arp_constructor(struct neighbour *neigh)
         /* ループバックデバイスはこれ */
 		} else if (dev->flags&(IFF_NOARP|IFF_LOOPBACK)) {
 			neigh->nud_state = NUD_NOARP;
+            /* dev_addr はどこでセットされている??? */
 			memcpy(neigh->ha, dev->dev_addr, dev->addr_len);
 		} else if (neigh->type == RTN_BROADCAST || dev->flags&IFF_POINTOPOINT) {
 			neigh->nud_state = NUD_NOARP;
@@ -1324,6 +1325,8 @@ static int arp_constructor(struct neighbour *neigh)
 	return 0;
 }
 ```
+
+loopback デバイスの場合は下記は呼び出さないのかな
 
 ```c
 static const struct neigh_ops arp_generic_ops = {
