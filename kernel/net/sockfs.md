@@ -26,7 +26,7 @@ static int sockfs_get_sb(struct file_system_type *fs_type,
 }
 ```
 
-ファイルシステムとして「パス」を提供しなくていい場合は、 pseudo を使うっぽい感
+ファイルシステムとして「パス」を提供しなくていい = マウントできない場合は、 pseudo を使うっぽい感。 pipefs も get_sb_pseudo 使っている
 
 sockfs_ops は下記の通り
 
@@ -184,7 +184,7 @@ static int sock_alloc_file(struct socket *sock, struct file **f, int flags)
 	if (unlikely(fd < 0))
 		return fd;
 
-    // 「パス」を提供する必要のないファイルシステムでは pseudo suffix な関数群を呼んだらよいのか?
+    // mount できない = 「パス」を提供する必要のないファイルシステムでは pseudo suffix な関数群を呼んだらよいのか?
 	path.dentry = d_alloc_pseudo(sock_mnt->mnt_sb, &name);
 	if (unlikely(!path.dentry)) {
 		put_unused_fd(fd);
