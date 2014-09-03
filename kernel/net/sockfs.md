@@ -14,7 +14,10 @@ satic struct file_system_type sock_fs_type = {
 
 ## スーパーブロックの初期化
 
-get_sb_pseudo で疑似スーパーブロックとして返す ( get_sb_nodev と何が違うんだっけ? )
+**get_sb_pseudo** で疑似ファイルシステムのスーパーブロックを初期化して返す
+
+ * Q. get_sb_nodev と何が違うんだっけ?
+ * A. MS_NOUSER がたっているので、ユーザ空間から mount できない
 
 ```c
 static int sockfs_get_sb(struct file_system_type *fs_type,
@@ -119,10 +122,12 @@ SYSCALL_DEFINE3(socket, int, family, int, type, int, protocol)
 	if (SOCK_NONBLOCK != O_NONBLOCK && (flags & SOCK_NONBLOCK))
 		flags = (flags & ~SOCK_NONBLOCK) | O_NONBLOCK;
 
+    /* socket の初期化。プロトコル依存 */
 	retval = sock_create(family, type, protocol, &sock);
 	if (retval < 0)
 		goto out;
 
+    /* ファイルデスクリプタと socket を結びつける */
 	retval = sock_map_fd(sock, flags & (O_CLOEXEC | O_NONBLOCK));
 	if (retval < 0)
 		goto out_release;
