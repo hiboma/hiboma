@@ -156,10 +156,11 @@ static int sock_alloc_file(struct socket *sock, struct file **f, int flags)
     // socket -> socket_alloc を経由してから vfs_inode を取り出す
 	d_instantiate(path.dentry, SOCK_INODE(sock));
 
-    // 「ファイル」インタフェースのメソッドを file_operations に当てておく
+    // 「ファイル」インタフェースのメソッドを inode_operations に当てておく
 	SOCK_INODE(sock)->i_fop = &socket_file_ops;
 
     // struct file の割り当て。 R/W なパーミッションになっている
+    // file_operations も割り当てる
 	file = alloc_file(&path, FMODE_READ | FMODE_WRITE,
 		  &socket_file_ops);
 	if (unlikely(!file)) {
@@ -172,7 +173,11 @@ static int sock_alloc_file(struct socket *sock, struct file **f, int flags)
 
 	sock->file = file;
 	file->f_flags = O_RDWR | (flags & O_NONBLOCK);
+
+    // ソケットなのでポジションは 0 のまんま
 	file->f_pos = 0;
+
+    // struct file <=> struct socket が交換できる
 	file->private_data = sock;
 
 	*f = file;
