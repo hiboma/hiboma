@@ -2,7 +2,7 @@
 
 loopback アドレスに UDP で sendto(2) して loopback デバイスに到達するまでのパスを確認する
 
-```
+```sh
 # BSDソケットインタフェース
 send || sendto
 sock_sendmsg
