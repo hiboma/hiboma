@@ -44,9 +44,7 @@ netif_rx
 
 ## sample code
 
-ruby で 127.0.0.1 に UDPパケットを 飛ばす
-
-AF_INET で loopback address にパケットを飛ばします
+ruby で UDP (AF_INET + SOCK_DGRAM ) で loopback address にパケットを飛ばします
 
 ```sh
 ruby -rsocket -e 'p UDPSocket.new.send("aaaaa", 0, "127.0.0.1", 9999)';
@@ -58,6 +56,8 @@ send(2) を呼び出すのかと strace とってみたら sendto(2) だった!
 socket(PF_INET, SOCK_DGRAM, IPPROTO_IP) = 3
 sendto(3, "aaaaa", 5, 0, {sa_family=AF_INET, sin_port=htons(9999), sin_addr=inet_addr("127.0.0.1")}, 16) = 5
 ```
+
+ということで send(2)/sendto(2) をエントリポイントにコードを置います
 
 ## send(2)
 
