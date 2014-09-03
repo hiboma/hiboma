@@ -26,6 +26,8 @@ static int sockfs_get_sb(struct file_system_type *fs_type,
 }
 ```
 
+ファイルシステムとして「パス」を提供しなくていい場合は、 pseudo を使うっぽい感
+
 sockfs_ops は下記の通り
 
 ```c
@@ -92,7 +94,50 @@ static struct socket *sock_from_file(struct file *file, int *err)
 }
 ```
 
-## struct socket と struct file の結びつけ
+# sockfs の struct file
+
+ソケットインタフェースとファイルインタフェースを結びつけていく部分。 socket -> sock_map_fd -> sock_alloc_file を見て行くとよい
+
+```c
+SYSCALL_DEFINE3(socket, int, family, int, type, int, protocol)
+{
+	int retval;
+	struct socket *sock;
+	int flags;
+
+	/* Check the SOCK_* constants for consistency.  */
+	BUILD_BUG_ON(SOCK_CLOEXEC != O_CLOEXEC);
+	BUILD_BUG_ON((SOCK_MAX | SOCK_TYPE_MASK) != SOCK_TYPE_MASK);
+	BUILD_BUG_ON(SOCK_CLOEXEC & SOCK_TYPE_MASK);
+	BUILD_BUG_ON(SOCK_NONBLOCK & SOCK_TYPE_MASK);
+
+	flags = type & ~SOCK_TYPE_MASK;
+	if (flags & ~(SOCK_CLOEXEC | SOCK_NONBLOCK))
+		return -EINVAL;
+	type &= SOCK_TYPE_MASK;
+
+	if (SOCK_NONBLOCK != O_NONBLOCK && (flags & SOCK_NONBLOCK))
+		flags = (flags & ~SOCK_NONBLOCK) | O_NONBLOCK;
+
+	retval = sock_create(family, type, protocol, &sock);
+	if (retval < 0)
+		goto out;
+
+	retval = sock_map_fd(sock, flags & (O_CLOEXEC | O_NONBLOCK));
+	if (retval < 0)
+		goto out_release;
+
+out:
+	/* It may be already another descriptor 8) Not kernel problem. */
+	return retval;
+
+out_release:
+	sock_release(sock);
+	return retval;
+}
+```
+
+sock_map_fd で ファイルデスクリプタと socket をポインタで繋ぐ
 
 ```c
 int sock_map_fd(struct socket *sock, int flags)
@@ -100,12 +145,15 @@ int sock_map_fd(struct socket *sock, int flags)
 	struct file *newfile;
 	int fd = sock_alloc_file(sock, &newfile, flags);
 
+    // ファイルデスクリプタと struct sock がマップされた
 	if (likely(fd >= 0))
 		fd_install(fd, newfile);
 
 	return fd;
 }
 ```
+
+sock_alloc_file が最大の肝
 
 ```c
 /*
@@ -183,6 +231,37 @@ static int sock_alloc_file(struct socket *sock, struct file **f, int flags)
 	*f = file;
 	return fd;
 }
+```
+
+# sockfs の dentry_operations
+
+```
+static int sockfs_delete_dentry(struct dentry *dentry)
+{
+	/*
+	 * At creation time, we pretended this dentry was hashed
+	 * (by clearing DCACHE_UNHASHED bit in d_flags)
+	 * At delete time, we restore the truth : not hashed.
+	 * (so that dput() can proceed correctly)
+	 */
+	dentry->d_flags |= DCACHE_UNHASHED;
+	return 0;
+}
+
+/*
+ * sockfs_dname() is called from d_path().
+ */
+static char *sockfs_dname(struct dentry *dentry, char *buffer, int buflen)
+{
+    // /proc/<pid>/fd で見える文字列
+	return dynamic_dname(dentry, buffer, buflen, "socket:[%lu]",
+				dentry->d_inode->i_ino);
+}
+
+static const struct dentry_operations sockfs_dentry_operations = {
+	.d_delete = sockfs_delete_dentry,
+	.d_dname  = sockfs_dname,
+};
 ```
 
 # write, read が socket のファイルデスクリプタにも使えるのは何故か?
