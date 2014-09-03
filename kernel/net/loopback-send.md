@@ -8,6 +8,7 @@ send || sendto
 sock_sendmsg
 __sock_sendmsg
 __sock_sendmsg_nosec
+
 # UDP 層 = struct udp_proto
 udp_sendmsg
   # IPルーティング
@@ -20,6 +21,7 @@ udp_sendmsg
   ip_mkroute_output
     __mkroute_output
 udp_send_skb
+
 # IP 層
 ip_send_skb
 ip_local_out
@@ -34,6 +36,7 @@ ip_finish_output2
 dev_queue_xmit
 dev_hard_start_xmit
 net_device_ops ndo_start_xmit
+
 # loopback デバイス
 loopback_xmit
 netif_rx
@@ -1248,11 +1251,78 @@ static int arp_constructor(struct neighbour *neigh)
 	neigh->parms = neigh_parms_clone(parms);
 	rcu_read_unlock();
 
-
+    /* net_device の header_ops */
 	if (!dev->header_ops) {
 		neigh->nud_state = NUD_NOARP;
 		neigh->ops = &arp_direct_ops;
 		neigh->output = neigh->ops->queue_xmit;
+
+		/* Good devices (checked by reading texts, but only Ethernet is
+		   tested)
+
+		   ARPHRD_ETHER: (ethernet, apfddi)
+		   ARPHRD_FDDI: (fddi)
+		   ARPHRD_IEEE802: (tr)
+		   ARPHRD_METRICOM: (strip)
+		   ARPHRD_ARCNET:
+		   etc. etc. etc.
+
+		   ARPHRD_IPDDP will also work, if author repairs it.
+		   I did not it, because this driver does not work even
+		   in old paradigm.
+		 */
+
+#if 1
+		/* So... these "amateur" devices are hopeless.
+		   The only thing, that I can say now:
+		   It is very sad that we need to keep ugly obsolete
+		   code to make them happy.
+
+		   They should be moved to more reasonable state, now
+		   they use rebuild_header INSTEAD OF hard_start_xmit!!!
+		   Besides that, they are sort of out of date
+		   (a lot of redundant clones/copies, useless in 2.1),
+		   I wonder why people believe that they work.
+		 */
+		switch (dev->type) {
+		default:
+			break;
+		case ARPHRD_ROSE:
+#if defined(CONFIG_AX25) || defined(CONFIG_AX25_MODULE)
+		case ARPHRD_AX25:
+#if defined(CONFIG_NETROM) || defined(CONFIG_NETROM_MODULE)
+		case ARPHRD_NETROM:
+#endif
+			neigh->ops = &arp_broken_ops;
+			neigh->output = neigh->ops->output;
+			return 0;
+#endif
+		;}
+#endif
+		if (neigh->type == RTN_MULTICAST) {
+			neigh->nud_state = NUD_NOARP;
+			arp_mc_map(addr, neigh->ha, dev, 1);
+        /* ループバックデバイスはこれ */
+		} else if (dev->flags&(IFF_NOARP|IFF_LOOPBACK)) {
+			neigh->nud_state = NUD_NOARP;
+			memcpy(neigh->ha, dev->dev_addr, dev->addr_len);
+		} else if (neigh->type == RTN_BROADCAST || dev->flags&IFF_POINTOPOINT) {
+			neigh->nud_state = NUD_NOARP;
+			memcpy(neigh->ha, dev->broadcast, dev->addr_len);
+		}
+
+		if (dev->header_ops->cache)
+			neigh->ops = &arp_hh_ops;
+		else
+			neigh->ops = &arp_generic_ops;
+
+		if (neigh->nud_state&NUD_VALID)
+			neigh->output = neigh->ops->connected_output;
+		else
+			neigh->output = neigh->ops->output;
+	}
+	return 0;
+}
 ```
 
 ```c
