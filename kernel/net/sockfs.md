@@ -185,7 +185,7 @@ static int sock_alloc_file(struct socket *sock, struct file **f, int flags)
 }
 ```
 
-# write, read 等が socket でも使えるのは何故か?
+# write, read が socket のファイルデスクリプタにも使えるのは何故か?
 
 file_operations に socket_file_ops が使われている
 
