@@ -201,15 +201,73 @@ static inline int __sock_sendmsg_nosec(struct kiocb *iocb, struct socket *sock,
 }
 ```
 
-ここまでが BSDソケット層? これ以降はプロトコルによって実装がことなる
+----
+
+# struct proto_ops inet_dgram_ops
 
 ## inet_sendmsg
 
+```c
+int inet_sendmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *msg,
+		 size_t size)
+{
+	struct sock *sk = sock->sk;
+
+	inet_rps_record_flow(sk);
+
+	/* We may need to bind the socket. */
+	if (!inet_sk(sk)->num && inet_autobind(sk))
+		return -EAGAIN;
+
+	return sk->sk_prot->sendmsg(iocb, sk, msg, size);
+}
+EXPORT_SYMBOL(inet_sendmsg);
+```
+
 ## inet_autobind
+
+```c
+/*
+ *	The routines beyond this point handle the behaviour of an AF_INET
+ *	socket object. Mostly it punts to the subprotocols of IP to do
+ *	the work.
+ */
+
+/*
+ *	Automatically bind an unbound socket.
+ */
+
+static int inet_autobind(struct sock *sk)
+{
+	struct inet_sock *inet;
+	/* We may need to bind the socket. */
+	lock_sock(sk);
+	inet = inet_sk(sk);
+	if (!inet->num) {
+		if (sk->sk_prot->get_port(sk, 0)) {
+			release_sock(sk);
+			return -EAGAIN;
+		}
+		inet->sport = htons(inet->num);
+	}
+	release_sock(sk);
+	return 0;
+}
+```
 
 ## udp_v4_get_port
 
-# AF_INET + SOCK_DGRAM = UDP
+```
+int udp_v4_get_port(struct sock *sk, unsigned short snum)
+{
+	return udp_lib_get_port(sk, snum, ipv4_rcv_saddr_equal);
+}
+```
+
+
+ここまでが BSDソケット層? これ以降はプロトコルによって実装がことなる
+
+# struct proto udp_proto
 
 UDP の struct proto は以下の通りに定義されている
 
