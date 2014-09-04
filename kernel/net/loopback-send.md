@@ -201,9 +201,13 @@ static inline int __sock_sendmsg_nosec(struct kiocb *iocb, struct socket *sock,
 }
 ```
 
+ここまでが BSDソケット層? これ以降はプロトコルによって実装がことなる
+
 ----
 
 # struct proto_ops inet_dgram_ops
+
+inet 層?
 
 ## inet_sendmsg
 
@@ -345,12 +349,9 @@ fail:
 EXPORT_SYMBOL(udp_lib_get_port);
 ```
 
-
-ここまでが BSDソケット層? これ以降はプロトコルによって実装がことなる
-
 # struct proto udp_proto
 
-UDP の struct proto は以下の通りに定義されている
+UDP層。 struct proto は以下の通りに定義されている
 
 ```c
 struct proto udp_prot = {
