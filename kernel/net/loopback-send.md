@@ -9,6 +9,11 @@ sock_sendmsg
 __sock_sendmsg
 __sock_sendmsg_nosec
 
+# AF_INET = struct proto_ops inet_dgram_ops
+inet_sendmsg
+  inet_autobind
+  udp_v4_get_port
+
 # UDP 層 = struct udp_proto
 udp_sendmsg
   # IPルーティング
@@ -197,6 +202,12 @@ static inline int __sock_sendmsg_nosec(struct kiocb *iocb, struct socket *sock,
 ```
 
 ここまでが BSDソケット層? これ以降はプロトコルによって実装がことなる
+
+## inet_sendmsg
+
+## inet_autobind
+
+## udp_v4_get_port
 
 # AF_INET + SOCK_DGRAM = UDP
 
