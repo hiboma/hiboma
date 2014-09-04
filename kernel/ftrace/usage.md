@@ -71,7 +71,11 @@ cpus=2
 
 ## -l オプション
 
-
+ * `0` ... CPU番号
+ * `d` ... interrupts disabled
+ * `h` ... called insed an interrupt handler
+ *  1  ... preemption disabled
+ * `s  ... need_resched 
 
 ```
     sshd-4371    0.....  1401.282250: funcgraph_entry:                   |  set_fd_set() {
