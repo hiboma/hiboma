@@ -23,6 +23,8 @@ acpi_pm
 
 ## acpi_pm_read
 
+`ACPI PM based clocksource.` の実装だそうです
+
 ```c
 static cycle_t acpi_pm_read(struct clocksource *cs)
 {
@@ -116,4 +118,26 @@ static inline s64 timekeeping_get_ns(void)
 	return clocksource_cyc2ns(cycle_delta, timekeeper.mult,
 				  timekeeper.shift);
 }
+```
+
+## do_gettimeofday
+
+getnstimeofday の精度をマイクロ秒まで落として、 gettimeofday に返す
+
+```c
+/**
+ * do_gettimeofday - Returns the time of day in a timeval
+ * @tv:		pointer to the timeval to be set
+ *
+ * NOTE: Users should be converted to using getnstimeofday()
+ */
+void do_gettimeofday(struct timeval *tv)
+{
+	struct timespec now;
+
+	getnstimeofday(&now);
+	tv->tv_sec = now.tv_sec;
+	tv->tv_usec = now.tv_nsec/1000;
+}
+EXPORT_SYMBOL(do_gettimeofday);
 ```
