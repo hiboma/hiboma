@@ -1,0 +1,1 @@
+# /usr/bin/trace-cmd record -P 2564 -p function_graph -g sys_open
