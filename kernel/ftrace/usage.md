@@ -68,3 +68,29 @@ cpus=2
             ruby-2564  [001] 107227.461041: funcgraph_exit:       + 12.334 us  |                    }
             ....
 ```
+
+## -l オプション
+
+
+
+```
+    sshd-4371    0.....  1401.282250: funcgraph_entry:                   |  set_fd_set() {
+    sshd-4371    0.....  1401.282254: funcgraph_entry:        4.097 us   |    _cond_resched();
+    sshd-4371    0.....  1401.282262: funcgraph_entry:        4.715 us   |    copy_user_generic();
+    sshd-4371    0.....  1401.282271: funcgraph_exit:       + 21.469 us  |  }
+    sshd-4371    0.....  1401.282275: funcgraph_entry:                   |  set_fd_set() {
+    sshd-4371    0.....  1401.282280: funcgraph_entry:                   |    _cond_resched() {
+    sshd-4371    0d....  1401.282293: funcgraph_entry:                   |      smp_apic_timer_interrupt() {
+    sshd-4371    0d....  1401.282297: funcgraph_entry:      + 13.599 us  |        native_apic_mem_write();
+    sshd-4371    0d....  1401.282315: funcgraph_entry:        4.203 us   |        exit_idle();
+    sshd-4371    0d....  1401.282323: funcgraph_entry:                   |        irq_enter() {
+    sshd-4371    0d....  1401.282327: funcgraph_entry:        3.820 us   |          rcu_irq_enter();
+    sshd-4371    0d....  1401.282334: funcgraph_entry:        3.314 us   |          idle_cpu();
+    sshd-4371    0d.h..  1401.282341: funcgraph_exit:       + 17.747 us  |        }
+    sshd-4371    0d.h..  1401.282344: funcgraph_entry:                   |        local_apic_timer_interrupt() {
+    sshd-4371    0d.h..  1401.282347: funcgraph_entry:                   |          hrtimer_interrupt() {
+    sshd-4371    0d.h..  1401.282351: funcgraph_entry:        3.268 us   |            _spin_lock();
+    sshd-4371    0d.h..  1401.282357: funcgraph_entry:                   |            ktime_get_update_offsets() {
+    sshd-4371    0d.h..  1401.282361: funcgraph_entry:        5.432 us   |              acpi_pm_read();
+    sshd-4371    0d.h..  1401.282369: funcgraph_exit:       + 12.089 us  |            }
+```
