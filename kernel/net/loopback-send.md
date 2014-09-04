@@ -264,6 +264,87 @@ int udp_v4_get_port(struct sock *sk, unsigned short snum)
 }
 ```
 
+## udp_lib_get_port
+
+エファメラルポートの割り当て
+
+```c
+/**
+ *  udp_lib_get_port  -  UDP/-Lite port lookup for IPv4 and IPv6
+ *
+ *  @sk:          socket struct in question
+ *  @snum:        port number to look up
+ *  @saddr_comp:  AF-dependent comparison of bound local IP addresses
+ */
+int udp_lib_get_port(struct sock *sk, unsigned short snum,
+		       int (*saddr_comp)(const struct sock *sk1,
+					 const struct sock *sk2))
+{
+	struct udp_hslot *hslot;
+	struct udp_table *udptable = sk->sk_prot->h.udp_table;
+	int    error = 1;
+	struct net *net = sock_net(sk);
+
+	if (!snum) {
+		int low, high, remaining;
+		unsigned rand;
+		unsigned short first, last;
+		DECLARE_BITMAP(bitmap, PORTS_PER_CHAIN);
+
+		inet_get_local_port_range(&low, &high);
+		remaining = (high - low) + 1;
+
+		rand = net_random();
+		first = (((u64)rand * remaining) >> 32) + low;
+		/*
+		 * force rand to be an odd multiple of UDP_HTABLE_SIZE
+		 */
+		rand = (rand | 1) * UDP_HTABLE_SIZE;
+		for (last = first + UDP_HTABLE_SIZE; first != last; first++) {
+			hslot = &udptable->hash[udp_hashfn(net, first)];
+			bitmap_zero(bitmap, PORTS_PER_CHAIN);
+			spin_lock_bh(&hslot->lock);
+			udp_lib_lport_inuse(net, snum, hslot, bitmap, sk,
+					    saddr_comp);
+
+			snum = first;
+			/*
+			 * Iterate on all possible values of snum for this hash.
+			 * Using steps of an odd multiple of UDP_HTABLE_SIZE
+			 * give us randomization and full range coverage.
+			 */
+			do {
+				if (low <= snum && snum <= high &&
+				    !test_bit(snum / UDP_HTABLE_SIZE, bitmap) &&
+				    !inet_is_reserved_local_port(snum))
+					goto found;
+				snum += rand;
+			} while (snum != first);
+			spin_unlock_bh(&hslot->lock);
+		}
+		goto fail;
+	} else {
+		hslot = &udptable->hash[udp_hashfn(net, snum)];
+		spin_lock_bh(&hslot->lock);
+		if (udp_lib_lport_inuse(net, snum, hslot, NULL, sk, saddr_comp))
+			goto fail_unlock;
+	}
+found:
+	inet_sk(sk)->num = snum;
+	sk->sk_hash = snum;
+	if (sk_unhashed(sk)) {
+		sk_nulls_add_node_rcu(sk, &hslot->head);
+		sock_prot_inuse_add(sock_net(sk), sk->sk_prot, 1);
+	}
+	error = 0;
+fail_unlock:
+	spin_unlock_bh(&hslot->lock);
+fail:
+	return error;
+}
+EXPORT_SYMBOL(udp_lib_get_port);
+```
+
 
 ここまでが BSDソケット層? これ以降はプロトコルによって実装がことなる
 
