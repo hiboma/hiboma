@@ -4,6 +4,8 @@ fork との違いを確認しよう
 
 ## sys_vfork
 
+arch/x86/kernel/process.c で定義されているよ
+
 ```c
 /*
  * This is trivial, and on the face of it looks like it
@@ -22,12 +24,7 @@ int sys_vfork(struct pt_regs *regs)
 }
 ```
 
-clone を呼び出しているのは fork(2) と同じになる。
-
- * CLONE_VFORK
- * CLONE_VM
-
-フラグが違う
+sys_fork も arch/x86/kernel/process.c で定義されているよ
 
 ```c
 /* arch/x86/kernel/process.c */
@@ -37,7 +34,16 @@ int sys_fork(struct pt_regs *regs)
 }
 ```
 
+## vfork(2) と fork(2) の clone(2) フラグの違い
 
+clone を呼び出しているのは fork(2) と同じになるが
+
+ * CLONE_VFORK
+ * CLONE_VM
+
+フラグをたてっているのが違う
+
+## CLONE_VFORK の参照可所
 
 ```c
 /*
@@ -79,6 +85,8 @@ static struct task_struct *copy_process(unsigned long clone_flags,
 			tracehook_report_vfork_done(p, nr);
 		}
 ```
+
+## CLONE_VM の参照可所
 
 CLONE_VM が立っていると mm_struct を親と共有したままにする
 
