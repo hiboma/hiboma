@@ -202,7 +202,10 @@ fail_nocontext:
 
 dup_mmap で vm_area_struct をコピりまくる
 
- * vm_area_struct をイテレートするので、 vm_area_struct の数に O(n) ?
+ * vm_area_struct をイテレートするので、 vm_area_struct の数に対して線形にコストが上がる
+ * copy_page_range も重厚
+   * PGD, PMD, PUD, PTE をコピーする
+   * 仮想アドレス空間のサイズに対して線形にコストが高いはず
 
 ```c
 #ifdef CONFIG_MMU
