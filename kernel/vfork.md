@@ -88,12 +88,12 @@ static struct task_struct *copy_process(unsigned long clone_flags,
 
 ## CLONE_VM の参照可所
 
-CLONE_VM が立っていると mm_struct を親と共有したままにする
+CLONE_VM が立っていると mm_struct を親と共有したままにする。
 
- * dup_mm を省略する
+ * つまり vfork は dup_mm を省略する
    * コストが省かれるのはこれかな?
- * 仮想アドレスの構成によってコストの変動率が左右されてそう
-   * vm_area_struct の数、ページの状態
+   * 仮想アドレスの構成によってコストの変動率が左右されてそう
+     * vm_area_struct の数、ページの状態、 etc ...
 
 ```c
 static int copy_mm(unsigned long clone_flags, struct task_struct * tsk)
@@ -110,6 +110,7 @@ static int copy_mm(unsigned long clone_flags, struct task_struct * tsk)
 	}
 
 	retval = -ENOMEM;
+    /* vfork はここを実行しない */
 	mm = dup_mm(tsk);
 	if (!mm)
 		goto fail_nomem;
@@ -132,7 +133,7 @@ fail_nomem:
 
 ## dup_mm の中身
 
-mm_struct をコピーする君
+mm_struct をコピーする君であった
 
 ```c
 /*
@@ -202,10 +203,11 @@ fail_nocontext:
 
 dup_mmap で vm_area_struct をコピりまくる
 
- * vm_area_struct をイテレートするので、 vm_area_struct の数に対して線形にコストが上がる
+ * vm_area_struct をイテレートしてコピーので、 vm_area_struct の数に対して線形にコストが上がる
  * copy_page_range も重厚
    * PGD, PMD, PUD, PTE をコピーする
    * 仮想アドレス空間のサイズに対して線形にコストが高いはず
+   * ここが一番のボトルネックな気がする
 
 ```c
 #ifdef CONFIG_MMU
