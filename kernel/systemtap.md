@@ -1,7 +1,5 @@
 
-
-
-probe ポイント多過ぎてカーネルごと死ぬ例
+## probe ポイント多過ぎてカーネルごと死ぬ例
 
 ```c
 probe kernel.function("*").call
