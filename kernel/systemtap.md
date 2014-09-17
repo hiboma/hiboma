@@ -8,7 +8,7 @@ probe kernel.function("*").call
      printf ("%s -> %s\n", thread_indent(1), probefunc())
 }
 
-probe kernel.function("*@fs/*.c").call
+probe kernel.function("*").call
 {
  if (pid() == target())
      printf ("%s <- %s\n", thread_indent(-1), probefunc())
@@ -81,7 +81,7 @@ probe kernel.function("*@fs/*.c").call
 
 ## プロセスの関数呼び出しをトレースする
 
-```
+```c
 probe process("/bin/ls").function("*").call
 {
     printf ("%s -> %s\n", thread_indent(1), probefunc())
