@@ -136,6 +136,11 @@ probe process("/bin/ls").function("*").return
    390 ls(3495):      -> xmalloc
 ```
 
+```
+[vagrant@vagrant-centos65 ~]$ sudo stap -L 'kernel.function("unix_listen")'
+kernel.function("unix_listen@net/unix/af_unix.c:467") $sock:struct socket* $backlog:int $old_pid:struct pid* $old_cred:struct cred const*
+```
+
 ## 参考リンク
  
  * http://d.hatena.ne.jp/mmitou/20120721/1342879187
