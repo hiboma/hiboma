@@ -150,12 +150,12 @@ kernel.function("unix_listen@net/unix/af_unix.c:467") $sock:struct socket* $back
 ```c
 probe kernel.function("unix_listen").call
 {
-  printf ("[%s] %ld\n", probefunc(), $sock->sk->sk_max_ack_backlog)
+  printf ("[%s] %d %ld\n", probefunc(), $backlog, $sock->sk->sk_max_ack_backlog)
 }
 
 probe kernel.function("unix_listen").return
 {
-  printf ("[%s] %ld\n", probefunc(), $sock->sk->sk_max_ack_backlog)
+  printf ("[%s] %d %ld\n", probefunc(), $backlog, $sock->sk->sk_max_ack_backlog)
 }
 ```
 
@@ -168,13 +168,13 @@ nc -l -U /tmp/socket
 サーバをたてると sk_max_ack_backlog のサイズが確認できる!
 
 ```
-[unix_listen] 10
-[sys_listen] 10
+[unix_listen] 5 10
+[sys_listen] 5 10
 
 # sudo sysctl -w net.unix.max_dgram_qlen=100 して引き上げた場合
 
-[unix_listen] 100
-[sys_listen] 100
+[unix_listen] 5 100
+[sys_listen] 5 100
 ```
 
 ## 参考リンク
