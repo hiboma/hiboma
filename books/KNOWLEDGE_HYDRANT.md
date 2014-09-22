@@ -1,14 +1,14 @@
-# KNOWLEDGE HYDRANT A PATTERN LANGUAGE FOR STUDY GROUPS
+# KNOWLEDGE HYDRANT - A PATTERN LANGUAGE FOR STUDY GROUPS
 
  * http://www.industriallogic.com/papers/khdraft.pdf
  * 21の勉強会/共同学習をいい感じにするパターンランゲージ集
- * 内容はいたって平易。気づかずに実践されているパターンも多々ある
+ * 内容はいたって平易。言語化されずに実践されているパターンも多々ある
  * 長期に渡って学習を続けるグループを対象としてモチベーションを維持するための心がけやtips として、皆に読まれるとよさそう
+   * ROLES のパターンを実践してもらうことで固定化・硬直化を防ぐ 
 
 ## SPIRIT
 
 > After identifying a great source of knowledge in a subject, work to create a rewarding, intellectually safe environment for the study of that subject.
-CUSTOMS
 
  * 1. KNOWLEDGE HYDRANT
  * 2. POOL OF INSIGHT
@@ -18,8 +18,11 @@ CUSTOMS
 
 ## ATMOSPHERE
 
+> Establish a home for the study group that is centrally located, comfortable, aesthetically pleasing, and conducive to dialogue
+
  * 6. COMMON GROUND
- * 7. PUBLIC LIVING ROOM 8. INTIMATE CIRCLE
+ * 7. PUBLIC LIVING ROOM
+ * 8. INTIMATE CIRCLE
  * 9. VIRTUAL SPACE
 
 ## ROLES
