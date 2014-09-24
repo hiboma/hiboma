@@ -1,4 +1,23 @@
 
+## /proc を open(2) するプロセスをトレース
+
+```c
+// [vagrant@vagrant-centos65 ~]$ sudo stap -L 'kernel.function("sys_open")'
+// kernel.function("sys_open@fs/open.c:917") $filename:char const* $flags:int $mode:int $ret:long int
+probe kernel.function("sys_open").call
+{
+    try { 
+        path = user_string($filename)
+        if (path =~ "^/proc") { 
+          printf ("[%d] %s -> %s\n", pid(), execname(), path)
+      }
+    } catch (e) {
+          /* just ignore */
+          /* https://www.sourceware.org/ml/systemtap/2013-q3/msg00068.html */
+    }
+}
+```
+
 ## probe ポイント多過ぎてカーネルごと死ぬ例
 
 ```c
