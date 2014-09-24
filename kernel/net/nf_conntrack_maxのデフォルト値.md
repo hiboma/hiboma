@@ -42,22 +42,29 @@ static int nf_conntrack_init_init_net(void)
 
 #### 初期値生成のロジック
 
-**nf_conntrack_max** のサイズは
+**nf_conntrack_max** のサイズを決める式は下記の通り
 
 ```
-nf_conntrack_max = 係数(4か8) * ハッシュテーブルのサイズ
+nf_conntrack_max = 係数(4 or 8) * ハッシュテーブルのサイズ
 ```
 
-で計算される。ハッシュテーブルのサイズ ( nf_conntrack_htable_size ) は、
+ハッシュテーブルのサイズ ( nf_conntrack_htable_size ) は、
 
  * カーネルモジュールのロード時のパラメータで指定することができる
- * 指定がない場合は、RAM のサイズを元に決定する
+   * `sudo modprobe nf_conntrack hashsize=100000`
+   * 係数が 8 になる
+ * パラメータの指定がない場合は、RAM のサイズを元に決定する
+   * 係数が 4 になる
 
- 1. ハッシュテーブルのサイズを決める
-   * RAM が 1GB 以上 だとデフォルトは 16384
- 2. ハッシュテーブのサイズと max_factor の値を乗算して `nf_conntrack_max` を決定する
-   * 16384 * 4 => 65536
+となっている。以上を元に 
 
+ 1. ハッシュテーブルのサイズは RAM が 1GB 以上 だとデフォルトは **16384***
+ 2. ハッシュテーブのサイズと係数(4) の値を乗算して `nf_conntrack_max` を決定する
+    * 16384 * 4 => ***65536***
+
+と導き出せる
+
+#### その他
 
 なお、ツチノコブログで 1/8 で計算をしているのは nf_conntrack hashsize を指定した場合は max_factor = 8 になるから
 
