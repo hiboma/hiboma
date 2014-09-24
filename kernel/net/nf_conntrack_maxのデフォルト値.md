@@ -1,8 +1,8 @@
 # nf_conntrack_max のデフォルト値
 
-どうやって決定されてるの?
+どうやって決定されてるのか? コードを読めば分かる!!!
 
-## see also
+## SEE ALSO
 
  * http://tsuchinoko.dmmlabs.com/?p=1016
 
@@ -48,7 +48,7 @@ static int nf_conntrack_init_init_net(void)
 nf_conntrack_max = 係数(4 or 8) * ハッシュテーブルのサイズ
 ```
 
-ハッシュテーブルのサイズ ( nf_conntrack_htable_size ) は、
+係数とハッシュテーブルのサイズは (= **nf_conntrack_htable_size** ) は下記のロジックで決まる
 
  * カーネルモジュールのロード時のパラメータで指定することができる
    * `sudo modprobe nf_conntrack hashsize=100000`
@@ -56,17 +56,18 @@ nf_conntrack_max = 係数(4 or 8) * ハッシュテーブルのサイズ
  * パラメータの指定がない場合は、RAM のサイズを元に決定する
    * 係数が 4 になる
 
-となっている。以上を元に 
+以上を元にして、 nf_conntrack_max のデフォルト値は
 
- 1. ハッシュテーブルのサイズは RAM が 1GB 以上 だとデフォルトは **16384***
- 2. ハッシュテーブのサイズと係数(4) の値を乗算して `nf_conntrack_max` を決定する
-    * 16384 * 4 => ***65536***
+ 1. ハッシュテーブルのサイズは RAM が 1GB 以上 だとデフォルトは ***16384***
+ 1. 係数は ***4***
+ 1. ハッシュテーブのサイズと係数 の値を乗算して `nf_conntrack_max` が決まる
+   * 16384 * 4 => ***65536***
 
 と導き出せる
 
 #### その他
 
-なお、ツチノコブログで 1/8 で計算をしているのは nf_conntrack hashsize を指定した場合は max_factor = 8 になるから
+なお、ツチノコブログで 1/8 で計算をしているのは、 modprobe 等で ***nf_conntrack hashsize*** を指定した場合は 係数(max_factor) が 8 になるからである
 
 > ちなみにnf_conntrack_maxの値を200000にする場合は
 > hashsizeで8分の1の値(25000)を設定しておけば20万となります。
