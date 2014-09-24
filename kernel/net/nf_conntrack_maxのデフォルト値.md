@@ -48,6 +48,8 @@ static int nf_conntrack_init_init_net(void)
 nf_conntrack_max = 係数(4 or 8) * ハッシュテーブルのサイズ
 ```
 
+#### 係数とハッシュテーブルのサイズは可変
+
 係数とハッシュテーブルのサイズは (= **nf_conntrack_htable_size** ) は下記のロジックで決める
 
  * カーネルモジュールのロード時のパラメータで指定された場合
@@ -57,7 +59,9 @@ nf_conntrack_max = 係数(4 or 8) * ハッシュテーブルのサイズ
    * 1GB以上だと 16384 に固定
    * 係数が 4 になる
 
-以上を元にして、 nf_conntrack_max のデフォルト値は
+#### まとめ
+
+ということで nf_conntrack_max のデフォルト値は
 
  1. ハッシュテーブルのサイズは RAM が 1GB 以上 で ***16384***
  1. 係数は ***4***
