@@ -6,20 +6,9 @@
 
  * http://tsuchinoko.dmmlabs.com/?p=1016
 
-## nf_conntrack_max の初期値
+## 初期値を決めるコード
 
-nf_conntrack_init_init_net で初期化される。nf_conntrack_max のサイズは
-
-```
-nf_conntrack_max = 係数(4か8) * ハッシュテーブルのサイズ
-```
-
-で計算される。
-
- 1. ハッシュテーブルのサイズを決める
-   * RAM が 1GB 以上 だとデフォルトは 16384
- 2. ハッシュテーブのサイズと max_factor の値を乗算して `nf_conntrack_max` を決定する
-   * 16384 * 4 => 65536
+**nf_conntrack_init_init_net** で初期化される。
 
 ```c
 static int nf_conntrack_init_init_net(void)
@@ -50,6 +39,25 @@ static int nf_conntrack_init_init_net(void)
 	       NF_CONNTRACK_VERSION, nf_conntrack_htable_size,
 	       nf_conntrack_max);
 ```
+
+#### 初期値生成のロジック
+
+**nf_conntrack_max** のサイズは
+
+```
+nf_conntrack_max = 係数(4か8) * ハッシュテーブルのサイズ
+```
+
+で計算される。ハッシュテーブルのサイズ ( nf_conntrack_htable_size ) は、
+
+ * カーネルモジュールのロード時のパラメータで指定することができる
+ * 指定がない場合は、RAM のサイズを元に決定する
+
+ 1. ハッシュテーブルのサイズを決める
+   * RAM が 1GB 以上 だとデフォルトは 16384
+ 2. ハッシュテーブのサイズと max_factor の値を乗算して `nf_conntrack_max` を決定する
+   * 16384 * 4 => 65536
+
 
 なお、ツチノコブログで 1/8 で計算をしているのは nf_conntrack hashsize を指定した場合は max_factor = 8 になるから
 
