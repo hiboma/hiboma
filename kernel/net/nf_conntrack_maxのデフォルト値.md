@@ -51,6 +51,11 @@ static int nf_conntrack_init_init_net(void)
 	       nf_conntrack_max);
 ```
 
+なお、ツチノコブログで 1/8 で計算をしているのは nf_conntrack hashsize を指定した場合は max_factor = 8 になるから
+
+> ちなみにnf_conntrack_maxの値を200000にする場合は
+> hashsizeで8分の1の値(25000)を設定しておけば20万となります。
+
 ## nf_conntrack_max の sysctl インタフェース
 
 ```c
