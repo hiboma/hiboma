@@ -4,22 +4,21 @@ http://nginx.org/en/docs/http/ngx_http_flv_module.html
 
 ## DESCRIPTION
 
-```
-The ngx_http_flv_module module provides pseudo-streaming server-side support for Flash Video (FLV) files.
-
-It handles requests with the start argument in the request URI’s query string specially, by sending back the contents of a file starting from the requested byte offset and with the prepended FLV header.
-
-This module is not built by default, it should be enabled with the --with-http_flv_module configuration parameter.
-```
+>The ngx_http_flv_module module provides pseudo-streaming server-side support for Flash Video (FLV) files.
+>
+> It handles requests with the start argument in the request URI’s query string specially, by sending back the contents of a file starting from the requested byte offset and with the prepended FLV header.
+>
+> This module is not built by default, it should be enabled with the --with-http_flv_module configuration parameter.
 
 ## 何やってるモジュール?
 
  * FLV の疑似ストリーミングを実現するモジュール
- * Nginx がクエリパラメータに `?start=****` が入ったリクエストを受けると、バイト数のオフセットとして解釈して、オフセット以降のコンテンツを返す
-   * FLV クライアントから見ると「動画を途中から再生する」挙動となる
-   * Range ヘッダの入ったリクエストと等価の扱い、なはず
- * FLV ファイルの中身を見て、あれこれするような凝ったことはしていない
- * コアモジュール
+ * クエリパラメータに `?start=****` が入ったリクエストを受けると ...
+   * バイト数のオフセットとして解釈して、オフセット以降のコンテンツを返してくれる
+   * FLV クライアントから見ると **「FLV動画を途中から再生できる」** 挙動になる
+   * HTTP 的には Range ヘッダの入ったリクエストと等価の扱い、なはず
+ * FLV ファイルの中身を見て、パースしたりとか、あれこれするような凝ったことはしていない。ムズカシクナイヨ
+ * コアモジュールなのである
  
 ### 要注意 
  
@@ -208,7 +207,7 @@ ngx_http_flv_handler(ngx_http_request_t *r)
     len = of.size;
     i = 1;
 
-    /* ?start= で指定した位置から再生できるようにする */
+    /* ?start= で指定した位置から再生できるようにするよう開始地点とオフセットの計算 */
     if (r->args.len) {
 
         if (ngx_http_arg(r, (u_char *) "start", 5, &value) == NGX_OK) {
