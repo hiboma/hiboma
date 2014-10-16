@@ -12,21 +12,23 @@ http://nginx.org/en/docs/http/ngx_http_flv_module.html
 
 ## 何やってるモジュール?
 
- * FLV の疑似ストリーミングを実現するモジュール
- * FLV ファイルの中身を見て、パースしたりとか、あれこれするような凝ったことはしていない。ムズカシクナイヨ
+ * Nginx で、FLV の疑似ストリーミングを実現するモジュール
+ * FLV ファイルの中身を見て、パースしたりとか、小難しいフォーマットを解析するような凝ったことはしていない。ムズカシクナイヨ
  * コアモジュールなのである
 
 #### クエリパラメータに `?start=****` が入ったリクエストを受けると ...
 
   * バイト数のオフセットとして解釈して、オフセット以降のコンテンツを返してくれる
   * FLV クライアントから見ると **「FLV動画を途中から再生できる」** 挙動になる
-  * `range bytes=***-` ヘッダ付きのリクエストに置き換えることができる
+  * `?start=****` パラメータは `range bytes=***-` ヘッダ付きのリクエストに置き換えることができる
     * Perlbal のプラグイン実装 http://cpansearch.perl.org/src/DORMANDO/Perlbal-1.80/lib/Perlbal/Plugin/FlvStreaming.pm
  
 #### 要注意挙動
  
- * ローカルのファイルシステムだけに対応していて proxy_pass を無視する
-   * rewrite を使っている方法があるが、 `?start=` が動かないような
+ * ローカルのファイルシステムだけに対応している。
+   * リバースプロキシでは使えない
+   * location 内に `flv` を書いておくと、 `proxy_pass` を無視してしまう
+ * rewrite を使っている方法があるが、 `?start=` が動かないような
    * http://dogmap.jp/2014/03/07/nginx-reverse-proxy-for-streaming/
  
 ## ソース
