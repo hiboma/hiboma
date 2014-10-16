@@ -20,7 +20,8 @@ http://nginx.org/en/docs/http/ngx_http_flv_module.html
 
   * バイト数のオフセットとして解釈して、オフセット以降のコンテンツを返してくれる
   * FLV クライアントから見ると **「FLV動画を途中から再生できる」** 挙動になる
-  * HTTP 的には Range ヘッダの入ったリクエストと等価の扱い、なはず
+  * `range bytes=***-` ヘッダ付きのリクエストに置き換えることができる
+    * Perlbal のプラグイン実装 http://cpansearch.perl.org/src/DORMANDO/Perlbal-1.80/lib/Perlbal/Plugin/FlvStreaming.pm
  
 #### 要注意挙動
  
