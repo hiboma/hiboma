@@ -15,6 +15,8 @@ static ngx_command_t  ngx_event_core_commands[] = {
       NULL },
 ```
 
+ngx_event_connections で設定値をパースして、 `ngx_event_conf_t` の `connections` と `ngx_command_t` の `cycle->connections` に保持する
+
 ```c
 static char *
 ngx_event_connections(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
