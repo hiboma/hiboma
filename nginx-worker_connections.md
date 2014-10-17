@@ -84,3 +84,81 @@ ngx_event_connections(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 2014/10/17 12:55:08 [warn] 60511#0: 1024 worker_connections exceed open file resource limit: 256
 nginx: [warn] 1024 worker_connections exceed open file resource limit: 256
 ```
+
+```c
+struct ngx_connection_s {
+    void               *data;
+    ngx_event_t        *read;
+    ngx_event_t        *write;
+
+    ngx_socket_t        fd;
+
+    ngx_recv_pt         recv;
+    ngx_send_pt         send;
+    ngx_recv_chain_pt   recv_chain;
+    ngx_send_chain_pt   send_chain;
+
+    ngx_listening_t    *listening;
+
+    off_t               sent;
+
+    ngx_log_t          *log;
+
+    ngx_pool_t         *pool;
+
+    struct sockaddr    *sockaddr;
+    socklen_t           socklen;
+    ngx_str_t           addr_text;
+
+    ngx_str_t           proxy_protocol_addr;
+
+#if (NGX_SSL)
+    ngx_ssl_connection_t  *ssl;
+#endif
+
+    struct sockaddr    *local_sockaddr;
+    socklen_t           local_socklen;
+
+    ngx_buf_t          *buffer;
+
+    ngx_queue_t         queue;
+
+    ngx_atomic_uint_t   number;
+
+    ngx_uint_t          requests;
+
+    unsigned            buffered:8;
+
+    unsigned            log_error:3;     /* ngx_connection_log_error_e */
+
+    unsigned            unexpected_eof:1;
+    unsigned            timedout:1;
+    unsigned            error:1;
+    unsigned            destroyed:1;
+
+    unsigned            idle:1;
+    unsigned            reusable:1;
+    unsigned            close:1;
+
+    unsigned            sendfile:1;
+    unsigned            sndlowat:1;
+    unsigned            tcp_nodelay:2;   /* ngx_connection_tcp_nodelay_e */
+    unsigned            tcp_nopush:2;    /* ngx_connection_tcp_nopush_e */
+
+    unsigned            need_last_buf:1;
+
+#if (NGX_HAVE_IOCP)
+    unsigned            accept_context_updated:1;
+#endif
+
+#if (NGX_HAVE_AIO_SENDFILE)
+    unsigned            aio_sendfile:1;
+    unsigned            busy_count:2;
+    ngx_buf_t          *busy_sendfile;
+#endif
+
+#if (NGX_THREADS)
+    ngx_atomic_t        lock;
+#endif
+};
+```
