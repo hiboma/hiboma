@@ -1,13 +1,23 @@
 # ngx_http_ssl_module, ngx_event_openssl
 
+## ssl_protocols がどのようにセットされるか
+
+ssl_protocols ディレクティブの定義は、下記の通り
+
 ```c
+
     { ngx_string("ssl_protocols"),
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_CONF_1MORE,
       ngx_conf_set_bitmask_slot,
       NGX_HTTP_SRV_CONF_OFFSET,
       offsetof(ngx_http_ssl_srv_conf_t, protocols),
       &ngx_http_ssl_protocols },
+```
 
+ssl_protocols に指定したオプションが、 `ngx_http_ssl_srv_conf_t` の `protocols` にビットマスクでセットされる。 Apache のように `-` をつけて無効にするシンタックスは無い。
+ビットマスクの一覧は下記の通り
+
+```c
 static ngx_conf_bitmask_t  ngx_http_ssl_protocols[] = {
     { ngx_string("SSLv2"), NGX_SSL_SSLv2 },
     { ngx_string("SSLv3"), NGX_SSL_SSLv3 },
@@ -17,6 +27,11 @@ static ngx_conf_bitmask_t  ngx_http_ssl_protocols[] = {
     { ngx_null_string, 0 }
 };
 ```
+
+SSL_CTX_set_options でオプションを設定するコード
+
+ * フラグが立っていなければ、オプションを無効にする
+ * なんかややこしいな
 
 ```c
 ngx_int_t
