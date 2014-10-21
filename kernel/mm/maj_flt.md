@@ -115,6 +115,9 @@ static inline void __do_page_fault(struct pt_regs *regs, unsigned long address, 
 
 ## VM_FAULT_MAJOR がセットされるコード
 
+ * do_sync_mmap_readahead で読む際に、 VM_FAULT_MAJOR となる
+ * mmap だよね?
+
 ```c
 int filemap_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
 {
@@ -153,6 +156,8 @@ retry_find:
 			goto no_cached_page;
 	}
 ```
+
+do_swap_page ( swap in )
 
 ```c
 /*
