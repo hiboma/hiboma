@@ -53,7 +53,39 @@ MCL_FUTURE
 将来、プロセスのアドレス空間にマップされる全てのページをロックする。 例えば、ヒープ (heap) やスタックの成長により新しく必要になったページだけで なく、新しくメモリマップされたファイルや共有メモリ領域もロックされる。
 ```
 
-mlock/mlockall しておくと、カーネルがスワップアウトするページを探す際に mlock されたページを対象外とする、てな挙動だった気がします。がちゃぴん先生案件
+mlock/mlockall しておくと、カーネルがスワップアウトするページを探す際に mlock されたページを対象外とする ( VM_LOCKED ) 、てな挙動
+
+#### do_mlockall
+
+ * vm_area_struct をイテレートして、 VM_LOCKED を立てている
+ * mlock_fixup がとちょっと複雑
+
+```c
+static int do_mlockall(int flags)
+{
+	struct vm_area_struct * vma, * prev = NULL;
+	unsigned int def_flags = 0;
+
+	if (flags & MCL_FUTURE)
+		def_flags = VM_LOCKED;
+	current->mm->def_flags = def_flags;
+	if (flags == MCL_FUTURE)
+		goto out;
+
+	for (vma = current->mm->mmap; vma ; vma = prev->vm_next) {
+		unsigned int newflags;
+
+		newflags = vma->vm_flags | VM_LOCKED;
+		if (!(flags & MCL_CURRENT))
+			newflags &= ~VM_LOCKED;
+
+		/* Ignore errors */
+		mlock_fixup(vma, &prev, vma->vm_start, vma->vm_end, newflags);
+	}
+out:
+	return 0;
+}
+```
 
 ## somewhat dangerous option
 
