@@ -107,8 +107,106 @@ static inline void __do_page_fault(struct pt_regs *regs, unsigned long address, 
 	}
 ```
 
-## VM_FAULT_MAJOR
+# VM_FAULT_MAJOR
 
  * sleep を伴う fault
    * I/O の input 待ち
  * swap か、 mmap か、は問わないぽい
+
+## VM_FAULT_MAJOR がセットされるコード
+
+```c
+int filemap_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
+{
+	int error;
+	struct file *file = vma->vm_file;
+	struct address_space *mapping = file->f_mapping;
+	struct file_ra_state *ra = &file->f_ra;
+	struct inode *inode = mapping->host;
+	pgoff_t offset = vmf->pgoff;
+	struct page *page;
+	pgoff_t size;
+	int ret = 0;
+
+	size = (i_size_read(inode) + PAGE_CACHE_SIZE - 1) >> PAGE_CACHE_SHIFT;
+	if (offset >= size)
+		return VM_FAULT_SIGBUS;
+
+	/*
+	 * Do we have something in the page cache already?
+	 */
+	page = find_get_page(mapping, offset);
+	if (likely(page)) {
+		/*
+		 * We found the page, so try async readahead before
+		 * waiting for the lock.
+		 */
+		do_async_mmap_readahead(vma, ra, file, page, offset);
+	} else {
+		/* No page in the page cache at all */
+		do_sync_mmap_readahead(vma, ra, file, offset);
+		count_vm_event(PGMAJFAULT);
+		ret = VM_FAULT_MAJOR;
+retry_find:
+		page = find_get_page(mapping, offset);
+		if (!page)
+			goto no_cached_page;
+	}
+```
+
+```c
+/*
+ * We enter with non-exclusive mmap_sem (to exclude vma changes,
+ * but allow concurrent faults), and pte mapped but not yet locked.
+ * We return with mmap_sem still held, but pte unmapped and unlocked.
+ */
+static int do_swap_page(struct mm_struct *mm, struct vm_area_struct *vma,
+		unsigned long address, pte_t *page_table, pmd_t *pmd,
+		unsigned int flags, pte_t orig_pte)
+{
+	spinlock_t *ptl;
+	struct page *page = NULL, *swapcache = NULL;
+	swp_entry_t entry;
+	pte_t pte;
+	int locked;
+	struct mem_cgroup *ptr = NULL;
+	int exclusive = 0;
+	int ret = 0;
+
+	if (!pte_unmap_same(mm, pmd, page_table, orig_pte))
+		goto out;
+
+	entry = pte_to_swp_entry(orig_pte);
+	if (unlikely(non_swap_entry(entry))) {
+		if (is_migration_entry(entry)) {
+			migration_entry_wait(mm, pmd, address);
+		} else if (is_hwpoison_entry(entry)) {
+			ret = VM_FAULT_HWPOISON;
+		} else {
+			print_bad_pte(vma, address, orig_pte, NULL);
+			ret = VM_FAULT_SIGBUS;
+		}
+		goto out;
+	}
+	delayacct_set_flag(DELAYACCT_PF_SWAPIN);
+	page = lookup_swap_cache(entry);
+	if (!page) {
+		grab_swap_token(mm); /* Contend for token _before_ read-in */
+		page = swapin_readahead(entry,
+					GFP_HIGHUSER_MOVABLE, vma, address);
+		if (!page) {
+			/*
+			 * Back out if somebody else faulted in this pte
+			 * while we released the pte lock.
+			 */
+			page_table = pte_offset_map_lock(mm, pmd, address, &ptl);
+			if (likely(pte_same(*page_table, orig_pte)))
+				ret = VM_FAULT_OOM;
+			delayacct_clear_flag(DELAYACCT_PF_SWAPIN);
+			goto unlock;
+		}
+
+		/* Had to read the page from swap area: Major fault */
+		ret = VM_FAULT_MAJOR;
+		count_vm_event(PGMAJFAULT);
+```
