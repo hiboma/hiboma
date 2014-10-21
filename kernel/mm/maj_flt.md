@@ -106,3 +106,9 @@ static inline void __do_page_fault(struct pt_regs *regs, unsigned long address, 
 		}
 	}
 ```
+
+## VM_FAULT_MAJOR
+
+ * sleep を伴う fault
+   * I/O の input 待ち
+ * swap か、 mmap か、は問わないぽい
