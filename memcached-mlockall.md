@@ -41,7 +41,10 @@ memcached は `-k` オプションをつけて起動すると、ページをロ�
 
 http://linuxjm.sourceforge.jp/html/LDP_man-pages/man2/mlock.2.html
 
-> mlock() と mlockall() はそれぞれ、呼び出し元プロセスの仮想アドレス空間の一部または全部を RAM 上にロックし、メモリがスワップエリアにページングされるのを防ぐ
+```
+mlock() と mlockall() はそれぞれ、呼び出し元プロセスの仮想アドレス空間の一部または全部を RAM 上にロックし、
+メモリがスワップエリアにページングされるのを防ぐ
+````
 
 ```
 MCL_CURRENT
