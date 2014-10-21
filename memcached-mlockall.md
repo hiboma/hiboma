@@ -2,7 +2,7 @@
 
 memcached は `-k` オプションをつけて起動すると、ページをロックする
 
->      -k     Lock down all paged memory. This is a somewhat dangerous option with large caches, so consult the README and memcached homepage for configuration suggestions.
+> -k     Lock down all paged memory. This is a somewhat dangerous option with large caches, so consult the README and memcached homepage for configuration suggestions.
 
 すなわち、memcached がスワップしない君
 
