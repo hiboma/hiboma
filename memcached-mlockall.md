@@ -55,7 +55,7 @@ MCL_FUTURE
 
 mlock/mlockall しておくと、カーネルがスワップアウトするページを探す際に mlock されたページを対象外とする ( VM_LOCKED ) 、てな挙動
 
-#### do_mlockall
+#### sys_mlockall -> do_mlockall
 
  * vm_area_struct をイテレートして、 VM_LOCKED を立てている
  * mlock_fixup がとちょっと複雑
