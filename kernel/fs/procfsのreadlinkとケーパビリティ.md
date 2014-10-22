@@ -1,6 +1,65 @@
 # procfsのreadlinkとケーパビリティ.md
 
-まさかの CAP_SYS_PTACE が必要なのである
+/proc/$pid/exe の symlink を readlink するには、まさかの CAP_SYS_PTACE が必要なのである
+
+## ポイント
+
+ * readlink は、ファイルシステム固有の実装を取る
+ * procfs は、 readlink を proc_pid_readlink で実装している
+ * proc_pid_readlink は、実行タスクに CAP_SYS_PTACE が無い場合に EPERM を返す
+
+## procfs の readlink
+
+readlink は proc_pid_readlink で実装されている
+
+```c
+static const struct inode_operations proc_pid_link_inode_operations = {
+	.readlink	= proc_pid_readlink,
+	.follow_link	= proc_pid_follow_link,
+	.setattr	= proc_setattr,
+};
+```
+
+```c
+static int proc_pid_readlink(struct dentry * dentry, char __user * buffer, int buflen)
+{
+	int error = -EACCES;
+	struct inode *inode = dentry->d_inode;
+	struct path path;
+
+	/* Are we allowed to snoop on the tasks file descriptors? */
+	if (!proc_fd_access_allowed(inode))
+		goto out;
+
+	error = PROC_I(inode)->op.proc_get_link(inode, &path);
+	if (error)
+		goto out;
+
+	error = do_proc_readlink(&path, buffer, buflen);
+	path_put(&path);
+out:
+	return error;
+}
+```
+
+```c
+/* permission checks */
+static int proc_fd_access_allowed(struct inode *inode)
+{
+	struct task_struct *task;
+	int allowed = 0;
+	/* Allow access to a task's file descriptors if it is us or we
+	 * may use ptrace attach to the process and find out that
+	 * information.
+	 */
+	task = get_proc_task(inode);
+	if (task) {
+		allowed = ptrace_may_access(task, PTRACE_MODE_READ);
+		put_task_struct(task);
+	}
+	return allowed;
+}
+```
 
 ```c
 bool ptrace_may_access(struct task_struct *task, unsigned int mode)
