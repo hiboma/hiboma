@@ -112,3 +112,4 @@ int __ptrace_may_access(struct task_struct *task, unsigned int mode)
 }
 ```
 
+CAP_SYS_PTRACE なのが意外だった ...
