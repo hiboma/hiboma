@@ -1,5 +1,7 @@
 # Unable to allocate memory for pool.
 
+## メッセージを出しているソース
+
 apc_main.php
 
 ```c
@@ -60,6 +62,8 @@ void* apc_sma_malloc(size_t n)
 }
 /* }}} */
 ```
+
+sma = shared memory ?
 
 ```c
 /* {{{ apc_sma_malloc_ex */
