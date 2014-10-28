@@ -80,6 +80,7 @@ static void ftrace_run_update_code(int command)
 	if (ret)
 		return;
 
+    /* ftrace できるように、コードを書き換えている、はず */
 	stop_machine(__ftrace_modify_code, &command, NULL);
 
     /* set_kernel_text_ro(); を呼ぶ */
