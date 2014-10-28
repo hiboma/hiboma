@@ -90,6 +90,8 @@ static void ftrace_run_update_code(int command)
 }
 ```
 
+ここ以降、コード書き換えのコード。
+
 ```c
 static int __ftrace_modify_code(void *data)
 {
