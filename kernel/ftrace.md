@@ -66,3 +66,24 @@ ftrace_enable_sysctl(struct ctl_table *table, int write,
 
 #ifdef CONFIG_FUNCTION_GRAPH_TRACER
 ```
+
+```c
+static void ftrace_run_update_code(int command)
+{
+	int ret;
+
+    /* set_kernel_text_rw(); を呼ぶ
+     * カーネルのテキストセグメントのページを書き込み可能にする!
+    */
+	ret = ftrace_arch_code_modify_prepare();
+	FTRACE_WARN_ON(ret);
+	if (ret)
+		return;
+
+	stop_machine(__ftrace_modify_code, &command, NULL);
+
+    /* set_kernel_text_ro(); を呼ぶ */
+	ret = ftrace_arch_code_modify_post_process();
+	FTRACE_WARN_ON(ret);
+}
+```
