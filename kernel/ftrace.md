@@ -15,7 +15,7 @@
 #endif
 ```
 
-ftrace_enable_sysctl
+ftrace_enable_sysctl がエントリポイントのハンドラ
 
 ```c
 int
@@ -39,6 +39,7 @@ ftrace_enable_sysctl(struct ctl_table *table, int write,
 
 	if (ftrace_enabled) {
 
+        /* ftrace はじめるよー */
 		ftrace_startup_sysctl();
 
 		/* we are starting ftrace again */
@@ -51,6 +52,8 @@ ftrace_enable_sysctl(struct ctl_table *table, int write,
 
 	} else {
 		/* stopping ftrace calls (just send to ftrace_stub) */
+        /* スタブをいれることで無効化するらしい */
+        /* mcount - arch/x86/kernel/entry_64.S で呼び出されている */
 		ftrace_trace_function = ftrace_stub;
 
 		ftrace_shutdown_sysctl();
