@@ -81,10 +81,171 @@ static void ftrace_run_update_code(int command)
 		return;
 
     /* ftrace できるように、コードを書き換えている、はず */
+    /* 全てのCPUが「停止状態」? */
 	stop_machine(__ftrace_modify_code, &command, NULL);
 
     /* set_kernel_text_ro(); を呼ぶ */
 	ret = ftrace_arch_code_modify_post_process();
 	FTRACE_WARN_ON(ret);
+}
+```
+
+```c
+static int __ftrace_modify_code(void *data)
+{
+	int *command = data;
+
+	/*
+	 * Do not call function tracer while we update the code.
+	 * We are in stop machine, no worrying about races.
+	 */
+	function_trace_stop++;
+
+	if (*command & FTRACE_ENABLE_CALLS)
+		ftrace_replace_code(1);
+	else if (*command & FTRACE_DISABLE_CALLS)
+		ftrace_replace_code(0);
+
+	if (*command & FTRACE_UPDATE_TRACE_FUNC)
+		ftrace_update_ftrace_func(ftrace_trace_function);
+
+	if (*command & FTRACE_START_FUNC_RET)
+		ftrace_enable_ftrace_graph_caller();
+	else if (*command & FTRACE_STOP_FUNC_RET)
+		ftrace_disable_ftrace_graph_caller();
+
+#ifndef CONFIG_HAVE_FUNCTION_TRACE_MCOUNT_TEST
+	/*
+	 * For archs that call ftrace_test_stop_func(), we must
+	 * wait till after we update all the function callers
+	 * before we update the callback. This keeps different
+	 * ops that record different functions from corrupting
+	 * each other.
+	 */
+	__ftrace_trace_function = __ftrace_trace_function_delay;
+#endif
+	function_trace_stop--;
+
+	return 0;
+}
+```
+
+```c
+static void ftrace_replace_code(int enable)
+{
+	struct dyn_ftrace *rec;
+	struct ftrace_page *pg;
+	int failed;
+
+	if (unlikely(ftrace_disabled))
+		return;
+
+	do_for_each_ftrace_rec(pg, rec) {
+		/* Skip over free records */
+		if (rec->flags & FTRACE_FL_FREE)
+			continue;
+
+		/* ignore updates to this record's mcount site */
+		if (get_kprobe((void *)rec->ip)) {
+			freeze_record(rec);
+			continue;
+		} else {
+			unfreeze_record(rec);
+		}
+
+		failed = __ftrace_replace_code(rec, enable);
+		if (failed) {
+			ftrace_bug(failed, rec->ip);
+			/* Stop processing */
+			return;
+		}
+	} while_for_each_ftrace_rec();
+}
+```
+
+__ftrace_replace_code で
+
+```c
+static int
+__ftrace_replace_code(struct dyn_ftrace *rec, int enable)
+{
+	unsigned long ftrace_addr;
+	unsigned long flag = 0UL;
+
+	ftrace_addr = (unsigned long)FTRACE_ADDR;
+
+	/*
+	 * If we are enabling tracing:
+	 *
+	 *   If the record has a ref count, then we need to enable it
+	 *   because someone is using it.
+	 *
+	 *   Otherwise we make sure its disabled.
+	 *
+	 * If we are disabling tracing, then disable all records that
+	 * are enabled.
+	 */
+	if (enable && (rec->flags & ~FTRACE_FL_MASK))
+		flag = FTRACE_FL_ENABLED;
+
+	/* If the state of this record hasn't changed, then do nothing */
+	if ((rec->flags & FTRACE_FL_ENABLED) == flag)
+		return 0;
+
+	if (flag) {
+		rec->flags |= FTRACE_FL_ENABLED;
+		return ftrace_make_call(rec, ftrace_addr);
+	}
+
+	rec->flags &= ~FTRACE_FL_ENABLED;
+	return ftrace_make_nop(NULL, rec, ftrace_addr);
+}
+```
+
+```c
+int ftrace_make_call(struct dyn_ftrace *rec, unsigned long addr)
+{
+	unsigned char *new, *old;
+	unsigned long ip = rec->ip;
+
+	old = ftrace_nop_replace();
+	new = ftrace_call_replace(ip, addr);
+
+	return ftrace_modify_code(rec->ip, old, new);
+}
+```
+
+```c
+static int
+ftrace_modify_code(unsigned long ip, unsigned char *old_code,
+		   unsigned char *new_code)
+{
+	unsigned char replaced[MCOUNT_INSN_SIZE];
+
+	/*
+	 * Note: Due to modules and __init, code can
+	 *  disappear and change, we need to protect against faulting
+	 *  as well as code changing. We do this by using the
+	 *  probe_kernel_* functions.
+	 *
+	 * No real locking needed, this code is run through
+	 * kstop_machine, or before SMP starts.
+	 */
+
+	/* read the text we want to modify */
+	if (probe_kernel_read(replaced, (void *)ip, MCOUNT_INSN_SIZE))
+		return -EFAULT;
+
+	/* Make sure it is what we expect it to be */
+	if (memcmp(replaced, old_code, MCOUNT_INSN_SIZE) != 0)
+		return -EINVAL;
+
+	/* replace the text with the new text */
+	if (do_ftrace_mod_code(ip, new_code))
+		return -EPERM;
+
+	sync_core();
+
+	return 0;
 }
 ```
