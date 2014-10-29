@@ -1,4 +1,35 @@
-# sysctl kernel.ftrace_enabled 
+# sysctl kernel.ftrace_enabled
+
+## mcmount
+
+ * gcc -pg
+
+```ams
+#ifdef CONFIG_FUNCTION_GRAPH_TRACER
+GLOBAL(ftrace_graph_call)
+	jmp ftrace_stub
+#endif
+
+GLOBAL(ftrace_stub)
+	retq
+END(ftrace_caller)
+
+#else /* ! CONFIG_DYNAMIC_FTRACE */
+ENTRY(mcount)
+	cmpl $0, function_trace_stop
+	jne  ftrace_stub
+
+	cmpq $ftrace_stub, ftrace_trace_function
+	jnz trace
+
+#ifdef CONFIG_FUNCTION_GRAPH_TRACER
+	cmpq $ftrace_stub, ftrace_graph_return
+	jnz ftrace_graph_caller
+
+	cmpq $ftrace_graph_entry_stub, ftrace_graph_entry
+	jnz ftrace_graph_caller
+#endif
+```
 
 ## sysctl インタフェース
 
