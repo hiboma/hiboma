@@ -1,5 +1,10 @@
 # sysctl kernel.ftrace_enabled
 
+## API
+
+ * ftrace_trace_function ( ftrace_stub ) 
+ * ftrace_graph_entry ( ftrace_graph_entry_stub )
+
 ## mcmount
 
  * gcc -pg
