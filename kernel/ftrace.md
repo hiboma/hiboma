@@ -50,6 +50,8 @@ ENTRY(mcount)
 
 ### tracing_on
 
+リングバッファの状態を取れる
+
 ```c
 static __init int rb_init_debugfs(void)
 {
@@ -62,6 +64,67 @@ static __init int rb_init_debugfs(void)
 
 	return 0;
 }
+```
+
+ring_buffer_flags に状態を保持している。
+
+ * ftrace が実行されていても、リングバッファが書き込み可能でないと、何も記録されない
+ * かな?
+
+```c
+#ifdef CONFIG_TRACING
+static ssize_t
+rb_simple_read(struct file *filp, char __user *ubuf,
+	       size_t cnt, loff_t *ppos)
+{
+	unsigned long *p = filp->private_data;
+	char buf[64];
+	int r;
+
+	if (test_bit(RB_BUFFERS_DISABLED_BIT, p))
+		r = sprintf(buf, "permanently disabled\n");
+	else
+		r = sprintf(buf, "%d\n", test_bit(RB_BUFFERS_ON_BIT, p));
+
+	return simple_read_from_buffer(ubuf, cnt, ppos, buf, r);
+}
+
+static ssize_t
+rb_simple_write(struct file *filp, const char __user *ubuf,
+		size_t cnt, loff_t *ppos)
+{
+	unsigned long *p = filp->private_data;
+	char buf[64];
+	unsigned long val;
+	int ret;
+
+	if (cnt >= sizeof(buf))
+		return -EINVAL;
+
+	if (copy_from_user(&buf, ubuf, cnt))
+		return -EFAULT;
+
+	buf[cnt] = 0;
+
+	ret = strict_strtoul(buf, 10, &val);
+	if (ret < 0)
+		return ret;
+
+	if (val)
+		set_bit(RB_BUFFERS_ON_BIT, p);
+	else
+		clear_bit(RB_BUFFERS_ON_BIT, p);
+
+	(*ppos)++;
+
+	return cnt;
+}
+
+static const struct file_operations rb_simple_fops = {
+	.open		= tracing_open_generic,
+	.read		= rb_simple_read,
+	.write		= rb_simple_write,
+};
 ```
 
 ### ftrace_enabled
