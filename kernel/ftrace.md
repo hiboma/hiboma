@@ -1,5 +1,12 @@
 # sysctl kernel.ftrace_enabled
 
+## CONFIG
+
+ * CONFIG_FUNCTION_TRACER
+ * CONFIG_FUNCTION_GRAPH_TRACER
+ * CONFIG_STACK_TRACER
+ * CONFIG_DYNAMIC_FTRACE
+
 ## API
 
  * ftrace_trace_function ( ftrace_stub ) 
