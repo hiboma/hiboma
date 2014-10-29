@@ -14,7 +14,10 @@
 
 ## mcmount
 
+ * http://lwn.net/Articles/365835/
  * gcc -pg
+ * アセンブリ。C ABI では駄目
+ * ブート時は NOP
 
 ```ams
 #ifdef CONFIG_FUNCTION_GRAPH_TRACER
