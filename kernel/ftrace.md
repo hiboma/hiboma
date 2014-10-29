@@ -48,6 +48,24 @@ ENTRY(mcount)
 
 ## sysctl インタフェース
 
+### tracing_on
+
+```c
+static __init int rb_init_debugfs(void)
+{
+	struct dentry *d_tracer;
+
+	d_tracer = tracing_init_dentry();
+
+	trace_create_file("tracing_on", 0644, d_tracer,
+			    &ring_buffer_flags, &rb_simple_fops);
+
+	return 0;
+}
+```
+
+### ftrace_enabled
+
 ```c
 #ifdef CONFIG_FUNCTION_TRACER
 	{
