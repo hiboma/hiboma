@@ -1,10 +1,19 @@
 # procfs の /proc/$pid/cmdline
 
 ```c
+static const struct pid_entry tgid_base_stuff[] = {
+//...
+	INF("cmdline",    S_IRUGO, proc_pid_cmdline),
+```
+
+proc_pid_cmdline がハンドラとして動く
+
+```c
 static int proc_pid_cmdline(struct task_struct *task, char * buffer)
 {
 	int res = 0;
 	unsigned int len;
+    /* get_task_mm は spinlock 取る */
 	struct mm_struct *mm = get_task_mm(task);
 	if (!mm)
 		goto out;
@@ -15,7 +24,8 @@ static int proc_pid_cmdline(struct task_struct *task, char * buffer)
  
 	if (len > PAGE_SIZE)
 		len = PAGE_SIZE;
- 
+
+    /* spinlock, down_read */
 	res = access_process_vm(task, mm->arg_start, buffer, len, 0);
 
 	// If the nul at the end of args has been overwritten, then
