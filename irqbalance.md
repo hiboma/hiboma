@@ -90,6 +90,50 @@ https://www.kernel.org/doc/Documentation/ABI/testing/sysfs-devices-system-cpu
 		threads within the same core as cpu#
 ```
 
+とあるホストの irqbalance 見ると、 Cache domain と thread_siblings が一致している様子
+
+```
+IRQBALANCE_DEBUG=true irqbalance 
+Package 0:  cpu mask is 0003f03f (workload 0)
+        Cache domain 0: cpu mask is 00001001  (workload 0) 
+                CPU number 0  (workload 0)
+                CPU number 12  (workload 0)
+        Cache domain 1: cpu mask is 00002002  (workload 0) 
+                CPU number 1  (workload 0)
+                CPU number 13  (workload 0)
+        Cache domain 2: cpu mask is 00004004  (workload 0) 
+                CPU number 2  (workload 0)
+                CPU number 14  (workload 0)
+        Cache domain 3: cpu mask is 00008008  (workload 0) 
+                CPU number 3  (workload 0)
+                CPU number 15  (workload 0)
+        Cache domain 4: cpu mask is 00010010  (workload 0) 
+                CPU number 4  (workload 0)
+                CPU number 16  (workload 0)
+        Cache domain 5: cpu mask is 00020020  (workload 0) 
+                CPU number 5  (workload 0)
+                CPU number 17  (workload 0)
+Package 6:  cpu mask is 00fc0fc0 (workload 0)
+        Cache domain 6: cpu mask is 00040040  (workload 0) 
+                CPU number 6  (workload 0)
+                CPU number 18  (workload 0)
+        Cache domain 7: cpu mask is 00080080  (workload 0) 
+                CPU number 7  (workload 0)
+                CPU number 19  (workload 0)
+        Cache domain 8: cpu mask is 00100100  (workload 0) 
+                CPU number 8  (workload 0)
+                CPU number 20  (workload 0)
+        Cache domain 9: cpu mask is 00200200  (workload 0) 
+                CPU number 9  (workload 0)
+                CPU number 21  (workload 0)
+        Cache domain 10: cpu mask is 00400400  (workload 0) 
+                CPU number 10  (workload 0)
+                CPU number 22  (workload 0)
+        Cache domain 11: cpu mask is 00800800  (workload 0) 
+                CPU number 11  (workload 0)
+                CPU number 23  (workload 0)
+```
+
 ## see also
 
  * http://tester7.hatenablog.com/entry/2014/05/22/IvyBridge_%26%26_ESXi_%26%26_CentOS環境でirqbalanceが起動後数秒で終了する問題 
