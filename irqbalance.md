@@ -160,6 +160,33 @@ Package 6:  cpu mask is 00fc0fc0 (workload 0)
                 CPU number 23  (workload 0)
 ```
 
+だが、Vagrant だと違う。ので、他のパラメータもみないと駄目なのだろうか
+
+```
+[vagrant@ ~]$ cat /sys/devices/system/cpu/cpu*/topology/thread_siblings_list
+0
+1
+2
+3
+[vagrant@ ~]$ IRQBALANCE_DEBUG=true irqbalance 
+Package 0:  numa_node is 0 cpu mask is 0000000f (load 0)
+        Cache domain 0:  numa_node is 0 cpu mask is 0000000f  (load 0) 
+                CPU number 0  numa_node is 0 (load 0)
+                CPU number 1  numa_node is 0 (load 0)
+                CPU number 2  numa_node is 0 (load 0)
+                CPU number 3  numa_node is 0 (load 0)
+Adding IRQ 11 to database
+Adding IRQ 19 to database
+Adding IRQ 20 to database
+Adding IRQ 9 to database
+Adding IRQ 16 to database
+NUMA NODE NUMBER: -1
+LOCAL CPU MASK: ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff,ffffffff
+
+NUMA NODE NUMBER: 0
+LOCAL CPU MASK: 0000000f
+```
+
 ## see also
 
  * http://tester7.hatenablog.com/entry/2014/05/22/IvyBridge_%26%26_ESXi_%26%26_CentOS環境でirqbalanceが起動後数秒で終了する問題 
