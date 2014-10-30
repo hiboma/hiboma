@@ -51,7 +51,19 @@ static struct topo_obj* add_cpu_to_cache_domain(struct topo_obj *cpu,
 		cache_domains = g_list_append(cache_domains, cache);
 		cache_domain_count++;
 	}
-``` 
+```
+
+## core_siblings
+
+https://www.kernel.org/doc/Documentation/ABI/testing/sysfs-devices-system-cpu
+
+```
+		core_siblings: internal kernel map of cpu#'s hardware threads
+		within the same physical_package_id.
+
+		core_siblings_list: human-readable list of the logical CPU
+		numbers within the same physical_package_id as cpu#.
+```
 
 ## see also
 
