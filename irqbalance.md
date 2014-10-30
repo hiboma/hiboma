@@ -187,6 +187,119 @@ NUMA NODE NUMBER: 0
 LOCAL CPU MASK: 0000000f
 ```
 
+shared_cpu_map も見ているので、こっちを見るのが正しそう
+
+```c
+	/* try to read the package mask; if it doesn't exist assume solitary */
+	snprintf(new_path, PATH_MAX, "%s/topology/core_siblings", path);
+	file = fopen(new_path, "r");
+	cpu_set(cpu->number, package_mask);
+	if (file) {
+		char *line = NULL;
+		size_t size = 0;
+		if (getline(&line, &size, file)) 
+			cpumask_parse_user(line, strlen(line), package_mask);
+		fclose(file);
+		free(line);
+	}
+
+	/* try to read the cache mask; if it doesn't exist assume solitary */
+	/* We want the deepest cache level available so try index1 first, then index2 */
+	cpu_set(cpu->number, cache_mask);
+	snprintf(new_path, PATH_MAX, "%s/cache/index1/shared_cpu_map", path);
+	file = fopen(new_path, "r");
+	if (file) {
+		char *line = NULL;
+		size_t size = 0;
+		if (getline(&line, &size, file)) 
+			cpumask_parse_user(line, strlen(line), cache_mask);
+		fclose(file);
+		free(line);
+	}
+	snprintf(new_path, PATH_MAX, "%s/cache/index2/shared_cpu_map", path);
+	file = fopen(new_path, "r");
+	if (file) {
+		char *line = NULL;
+		size_t size = 0;
+		if (getline(&line, &size, file)) 
+			cpumask_parse_user(line, strlen(line), cache_mask);
+		fclose(file);
+		free(line);
+	}
+```
+
+
+```
+[vagrant@ ~]$ cat /sys/devices/system/cpu/cpu*/topology/thread_siblings_list
+0
+1
+2
+3
+[vagrant@ ~]$ cat /sys/devices/system/cpu/cpu*/cache/index1/shared_cpu_map | sort -ru
+8
+4
+2
+1
+[vagrant@ ~]$ cat /sys/devices/system/cpu/cpu*/cache/index2/shared_cpu_map | sort -ru
+f
+```
+
+```
+# cat /sys/devices/system/cpu/cpu*/topology/thread_siblings_list | sort -n
+0,12
+0,12
+1,13
+1,13
+2,14
+2,14
+3,15
+3,15
+4,16
+4,16
+5,17
+5,17
+6,18
+6,18
+7,19
+7,19
+8,20
+8,20
+9,21
+9,21
+10,22
+10,22
+11,23
+11,23
+# cat /sys/devices/system/cpu/cpu*/cache/index1/shared_cpu_map | sort -nu
+001001
+002002
+004004
+008008
+010010
+020020
+040040
+080080
+100100
+200200
+400400
+800800
+# cat /sys/devices/system/cpu/cpu*/cache/index2/shared_cpu_map | sort -nu
+001001
+002002
+004004
+008008
+010010
+020020
+040040
+080080
+100100
+200200
+400400
+800800
+```
+
+index の番号 = N次キャッシュ となる。 2次キャッシュ 
+
 ## see also
 
  * http://tester7.hatenablog.com/entry/2014/05/22/IvyBridge_%26%26_ESXi_%26%26_CentOS環境でirqbalanceが起動後数秒で終了する問題 
