@@ -189,7 +189,54 @@ LOCAL CPU MASK: 0000000f
 
 shared_cpu_map も見ているので、こっちを見るのが正しそう
 
+ * online
+ * core_siblings (1コアにいる論理CPUの数)
+ * index1/shared_cpu_map (1次キャッシュ)
+ * index2/shared_cpu_map (2次キャッシュ)
+
 ```c
+	/* skip offline cpus */
+	snprintf(new_path, PATH_MAX, "%s/online", path);
+	file = fopen(new_path, "r");
+	if (file) {
+		char *line = NULL;
+		size_t size = 0;
+		if (getline(&line, &size, file)==0)
+			return;
+		fclose(file);
+		if (line && line[0]=='0') {
+			free(line);
+			return;
+		}
+		free(line);
+	}
+
+	cpu = calloc(sizeof(struct topo_obj), 1);
+	if (!cpu)
+		return;
+
+	cpu->obj_type = OBJ_TYPE_CPU;
+
+	cpu->number = strtoul(&path[27], NULL, 10);
+
+	cpu_set(cpu->number, cpu_possible_map);
+	
+	cpu_set(cpu->number, cpu->mask);
+
+	/*
+ 	 * Default the cache_domain mask to be equal to the cpu
+ 	 */
+	cpus_clear(cache_mask);
+	cpu_set(cpu->number, cache_mask);
+
+	/* if the cpu is on the banned list, just don't add it */
+	if (cpus_intersects(cpu->mask, banned_cpus)) {
+		free(cpu);
+		/* even though we don't use the cpu we do need to count it */
+		core_count++;
+		return;
+	}
+
 	/* try to read the package mask; if it doesn't exist assume solitary */
 	snprintf(new_path, PATH_MAX, "%s/topology/core_siblings", path);
 	file = fopen(new_path, "r");
