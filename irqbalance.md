@@ -53,7 +53,7 @@ static struct topo_obj* add_cpu_to_cache_domain(struct topo_obj *cpu,
 	}
 ```
 
-## core_siblings
+## core_siblings, thread_siblings
 
 ```
 /sys/devices/system/cpu/cpu0/topology
@@ -93,7 +93,33 @@ https://www.kernel.org/doc/Documentation/ABI/testing/sysfs-devices-system-cpu
 とあるホストの irqbalance 見ると、 Cache domain と thread_siblings が一致している様子
 
 ```
-IRQBALANCE_DEBUG=true irqbalance 
+# cat /sys/devices/system/cpu/cpu*/topology/thread_siblings_list
+0,12
+1,13
+10,22
+11,23
+0,12
+1,13
+2,14
+3,15
+4,16
+5,17
+6,18
+7,19
+2,14
+8,20
+9,21
+10,22
+11,23
+3,15
+4,16
+5,17
+6,18
+7,19
+8,20
+9,21
+
+# IRQBALANCE_DEBUG=true irqbalance 
 Package 0:  cpu mask is 0003f03f (workload 0)
         Cache domain 0: cpu mask is 00001001  (workload 0) 
                 CPU number 0  (workload 0)
