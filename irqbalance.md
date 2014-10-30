@@ -20,6 +20,8 @@
 
 CPU を cache domain に追加するコード
 
+ * cache->mask の違い = cache domain の違い
+
 ```c
 static struct topo_obj* add_cpu_to_cache_domain(struct topo_obj *cpu,
 						    cpumask_t cache_mask)
