@@ -63,6 +63,14 @@ https://www.kernel.org/doc/Documentation/ABI/testing/sysfs-devices-system-cpu
 
 		core_siblings_list: human-readable list of the logical CPU
 		numbers within the same physical_package_id as cpu#.
+
+//...        
+
+		thread_siblings: internel kernel map of cpu#'s hardware
+		threads within the same core as cpu#
+
+		thread_siblings_list: human-readable list of cpu#'s hardware
+		threads within the same core as cpu#
 ```
 
 ## see also
