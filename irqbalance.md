@@ -55,6 +55,23 @@ static struct topo_obj* add_cpu_to_cache_domain(struct topo_obj *cpu,
 
 ## core_siblings
 
+```
+/sys/devices/system/cpu/cpu0/topology
+/sys/devices/system/cpu/cpu0/topology/physical_package_id
+/sys/devices/system/cpu/cpu0/topology/core_id
+/sys/devices/system/cpu/cpu0/topology/thread_siblings
+/sys/devices/system/cpu/cpu0/topology/thread_siblings_list
+/sys/devices/system/cpu/cpu0/topology/core_siblings
+/sys/devices/system/cpu/cpu0/topology/core_siblings_list
+/sys/devices/system/cpu/cpu1/topology
+/sys/devices/system/cpu/cpu1/topology/physical_package_id
+/sys/devices/system/cpu/cpu1/topology/core_id
+/sys/devices/system/cpu/cpu1/topology/thread_siblings
+/sys/devices/system/cpu/cpu1/topology/thread_siblings_list
+/sys/devices/system/cpu/cpu1/topology/core_siblings
+/sys/devices/system/cpu/cpu1/topology/core_siblings_list
+```
+
 https://www.kernel.org/doc/Documentation/ABI/testing/sysfs-devices-system-cpu
 
 ```
