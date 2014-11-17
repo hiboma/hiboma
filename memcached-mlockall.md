@@ -6,6 +6,8 @@ memcached は `-k` オプションをつけて起動すると、ページをロ�
 
 すなわち、memcached がスワップしない君
 
+![memcached](https://cloud.githubusercontent.com/assets/172456/5065830/f5e5d0fc-6e6b-11e4-9975-2a97b4dcfa3d.gif)
+
 ## 実装
 
 #### memcached.c
