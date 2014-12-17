@@ -1,6 +1,5 @@
 # /proc/net/soft_net と net.core.netdev_budget
 
-
  * http://www.tldp.org/HOWTO/KernelAnalysis-HOWTO-5.html
  * https://github.com/ryran/xsos/issues/108
  * http://takyaku.com/?p=629
