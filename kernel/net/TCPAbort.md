@@ -43,6 +43,8 @@ void tcp_close(struct sock *sk, long timeout)
  * SO_LINGER が true で、sk_lingertime を使い切った時
  * 切断する
 
+キューイングされたメッセージを送り切らないまんま、接続断 てこと?
+
 ```c
 void tcp_close(struct sock *sk, long timeout)
 {
