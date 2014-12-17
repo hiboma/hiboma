@@ -6,6 +6,13 @@ cpu	 total    dropped   squeezed  collision
   1 2139571893          0   20723966	   4610
 ```
 
+ * dropped が増えたら?
+   * `queue->input_pkt_queue.qlen <= netdev_max_backlog` な状態
+   * netdev_max_backlog が足らない
+ * squeezed が増えたら?
+   * `budget <= 0 || time_after(jiffies, time_limit)`
+   * softirq が netdev_budget を使い切っている
+
 ## 実装
 
 ```c
