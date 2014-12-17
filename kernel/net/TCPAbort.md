@@ -37,3 +37,33 @@ void tcp_close(struct sock *sk, long timeout)
 		tcp_set_state(sk, TCP_CLOSE);
 		tcp_send_active_reset(sk, sk->sk_allocation);
 ```
+
+## TCPAbortOnData
+
+ * SO_LINGER が true で、sk_lingertime を使い切った時
+ * 切断する
+
+```c
+void tcp_close(struct sock *sk, long timeout)
+{
+	struct sk_buff *skb;
+	int data_was_unread = 0;
+	int state;
+
+//...    
+
+	if (data_was_unread) {
+        // ...
+	} else if (sock_flag(sk, SOCK_LINGER) && !sk->sk_lingertime) {
+		/* Check zero linger _after_ checking for unread data. */
+		sk->sk_prot->disconnect(sk, 0);
+		NET_INC_STATS_USER(sock_net(sk), LINUX_MIB_TCPABORTONDATA);
+```
+
+SO_LINGER の説明
+
+```
+有効になっていると、 close(2) や shutdown(2) は、そのソケットにキューイングされたメッセージがすべて送信完了するか、 linger (居残り) タイムアウトになるまで返らない。無効になっていると、 これらのコールはただちに戻り、クローズ動作はバックグラウンドで行われる。 ソケットのクローズを exit(2) の一部として行った場合には、残っているソケットの クローズ動作は必ずバックグラウンドに送られる。
+```
+
+close, shutdown の際にブロックするか否か
