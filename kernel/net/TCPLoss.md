@@ -7,6 +7,8 @@ $ netstat -st | grep loss
     365040 timeouts in loss state
 ```
 
+munin だと **Data loss events** で数値でてる
+
 ## カーネル
 
 ```c
