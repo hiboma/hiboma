@@ -1,5 +1,7 @@
 # ListenOverflows
 
+accept queue 溢れするとインクリメントされるカウンタ
+
 ```
 # via https://github.com/BrightcoveOS/Diamond/wiki/collectors-TCPCollector
 We completed a 3WHS but couldn't put the socket on the accept queue, so we had to discard the connection.
