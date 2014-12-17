@@ -6,14 +6,16 @@ cpu	 total    dropped   squeezed  collision
   1 2139571893          0   20723966	   4610
 ```
 
+https://www.redhat.com/archives/rhl-list/2007-September/msg03735.html で整形表示できる
+
  * dropped が増えたら?
    * `queue->input_pkt_queue.qlen <= netdev_max_backlog` な状態
-   * netdev_max_backlog が足らない
+   * netdev_max_backlog が足りない
  * squeezed が増えたら?
    * `budget <= 0 || time_after(jiffies, time_limit)`
    * softirq が netdev_budget を使い切っている
 
-## 実装
+## softnet_stat の実装
 
 ```c
 static void __net_exit dev_proc_net_exit(struct net *net)
