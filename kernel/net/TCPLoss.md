@@ -7,14 +7,52 @@ $ netstat -st | grep loss
     365040 timeouts in loss state
 ```
 
+netstat のソースでは下記の通りに対応づけされている
+
+```
+204:     { "TCPLossFailures",  N_("%llu timeouts in loss state"), opt_number },
+225:     { "TCPLoss", N_("%llu TCP data loss events") },
+```
+
 munin だと **Data loss events** で数値でてる
 
-## カーネル
+## カーネルの定義
 
 ```c
     SNMP_MIB_ITEM("TCPLossUndo", LINUX_MIB_TCPLOSSUNDO),
 	SNMP_MIB_ITEM("TCPLoss", LINUX_MIB_TCPLOSS),
 	SNMP_MIB_ITEM("TCPLossFailures", LINUX_MIB_TCPLOSSFAILURES),
+```
+
+## TCPLoss
+
+```c
+/* Process an event, which can update packets-in-flight not trivially.
+ * Main goal of this function is to calculate new estimate for left_out,
+ * taking into account both packets sitting in receiver's buffer and
+ * packets lost by network.
+ *
+ * Besides that it does CWND reduction, when packet loss is detected
+ * and changes state of machine.
+ *
+ * It does _not_ decide what to send, it is made in function
+ * tcp_xmit_retransmit_queue().
+ */
+static void tcp_fastretrans_alert(struct sock *sk, int pkts_acked,
+				  int newly_acked_sacked, bool is_dupack,
+				  int flag)
+
+
+//...                  
+
+	/* C. Process data loss notification, provided it is valid. */
+	if (tcp_is_fack(tp) && (flag & FLAG_DATA_LOST) &&
+	    before(tp->snd_una, tp->high_seq) &&
+	    icsk->icsk_ca_state != TCP_CA_Open &&
+	    tp->fackets_out > tp->reordering) {
+		tcp_mark_head_lost(sk, tp->fackets_out - tp->reordering);
+		NET_INC_STATS_BH(sock_net(sk), LINUX_MIB_TCPLOSS);
+	}
 ```
 
 ## TCPLossFailures
