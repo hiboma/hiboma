@@ -102,6 +102,8 @@ static int softnet_seq_show(struct seq_file *seq, void *v)
 }
 ```
 
+netif_rx_stats の定義。CPU変数から数値をかき集める用
+
 ```c
 struct netif_rx_stats
 {
