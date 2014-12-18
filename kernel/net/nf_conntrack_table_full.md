@@ -1,5 +1,12 @@
 # nf_conntrack: table full, dropping packet
 
+## see also
+
+ * http://blog.chinaunix.net/attachment/201304/24/23412956_13667782204Ar7.jpg
+ * http://blog.chinaunix.net/attachment/201204/12/23069658_1334247268R7nn.png
+
+## kernel の実装 
+
 KERN_WARNING でメッセージを出すコードは下記の箇所
 
 ```c
