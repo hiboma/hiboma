@@ -64,6 +64,9 @@ knowles P.303
      * 関心の拡大
      * 情意の教科?
      * 感情
+     * 視野、パースペクティブ
+     * 価値体系
+     * 新年
  * 形成的評価, 総括的評価
  * カーク パトリックの レベル4フレームワーク
    * http://www.rosei.jp/readers/web_limited_edition/110913_中川氏⑥_pict2.png
