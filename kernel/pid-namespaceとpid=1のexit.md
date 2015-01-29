@@ -1,13 +1,17 @@
-# docker というか pid namespace を切っている時に pid = 1 なプロセスが exit した際の挙動
+# docker/コンテナ というか、pid namespace を pid = 1 なプロセスが exit した際の挙動
 
-まずは、検証用の状況を作るため。 docker で bash 起動した後に、 setsid で、端末を切り離したプロセスを作る
+ * pid namespace を切っている際に、pid = 1 のプロセスが exit すると、同じ namespace に属するプロセスに SIGKILL が飛ぶ
+ * docker の挙動ではなくて、カーネルの仕様
 
+## 再現する
+
+再現用の状況を作るため。 docker で bash 起動した後に、 setsid で、端末を切り離したプロセスを作る
 
 ```
 # setsid sleep 1000
 ```
 
-ps で見るとこんな感じ。 bash と sleep は親子関係に無い。
+ps で見るとこんな感じ。 
 
 ```
 USER       PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
@@ -15,8 +19,9 @@ root         1  0.0  0.1  18116  2000 ?        Ss   13:57   0:00 bash
 root        20  0.0  0.0   4292   564 ?        Ss   13:57   0:00 sleep 10000
 ```
 
- * 次に、外部のコンテナから、 sleep プロセスを strace する
- * strace したら、コンテナの bash を exit する
+bash と sleep は親子関係に無い。
+
+次に、外部のコンテナから、 sleep プロセスを strace する。strace が成功したら、コンテナの bash を exit する
 
 ```
 $ sudo strace -p $( pgrep sleep )
@@ -30,9 +35,9 @@ restart_syscall(<... resuming interrupted call ...> <unfinished ...>
 
 sleep プロセスに SIGKILL が飛んできていることが確認できる
 
-## SIGKILL はどこから?
+## SIGKILL はどこから飛んでくるか?
 
-exit(2) から追っていくと、たどり着ける
+カーネルが飛ばす。exit(2) から追っていくと、たどり着ける
 
 ```c
 SYSCALL_DEFINE1(exit, int, error_code)
@@ -45,6 +50,8 @@ SYSCALL_DEFINE1(exit, int, error_code)
  * => static void exit_notify(struct task_struct *tsk, int group_dead)
  * => static void forget_original_parent(struct task_struct *father)
  * => static struct task_struct *find_new_reaper(struct task_struct *father)
+
+と潜っていく
 
 #### static struct task_struct *find_new_reaper(struct task_struct *father)
 
