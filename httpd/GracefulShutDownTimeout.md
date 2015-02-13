@@ -1,5 +1,12 @@
 # GracefulShutDownTimeout
 
+http://httpd.apache.org/docs/2.2/ja/mod/mpm_common.html
+
+```
+ GracefulShutdownTimeout には サーバーが "graceful-stop" シグナルを受け取ってから現在の リクエストの処理を最大で何秒間続けるかを指定します。
+この値をゼロに設定すると、処理中として残っているリクエストが 全て完了するまでサーバーは終了しません。
+```
+
 ## httpd.2.2
 
 server/mpm/worker/worker.c
