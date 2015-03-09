@@ -11,11 +11,13 @@
 
 ## サンプル出力
 
+カーネルが 3.19.1 なのです
+
 ```
-[vagrant@vagrant-centos65 ~]$ uname -a
+$ uname -a
 Linux vagrant-centos65.vagrantup.com 3.19.1 #1 SMP Sun Mar 8 14:51:58 UTC 2015 x86_64 x86_64 x86_64 GNU/Linux
 
-[vagrant@vagrant-centos65 ~]$ cat /proc/meminfo 
+$ cat /proc/meminfo 
 MemTotal:        2006864 kB
 MemFree:         1931512 kB
 MemAvailable:    1890008 kB // ★
