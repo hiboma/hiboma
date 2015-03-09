@@ -1,13 +1,13 @@
 # /proc/meminfo の MemAvailable
 
-プロセスから見ての「空きメモリの量」を出してくれる
+ユーザスペースから見ての「利用可能な空きメモリの量」を出してくれる、とな
 
- * **free** と **cached** から算出するのは、今日では間違いである
-   * **Cacehd** には、解放できないページキャッシュ(共有メモリセグメント、 tmpfs, ramfs ) を含む
+ * **free** と **cached** から算出するのは 10年前には正しかったけど、今日では間違いである
+   * **Cacehd** には、解放できないページキャッシュ(共有メモリセグメント?, tmpfs, ramfs ) を含む
    * **Cached** には、再利用可能(reclaimable) な slab を含まない
- * スワップしないようにするメモリ量は、MemFree、Active(file), Inactive(file), SReclaimable と /proc/zoneinfo の **low** から算出できるけど ...
-   * ただし、将来的に仕様が変わるかもしれないので、ここから数値を見積もれると期待すべきでない
- * ということで MemAvailable てな便利なのを追加する
+ * スワップをせずに使えるメモリ量は、MemFree、Active(file), Inactive(file), SReclaimable と /proc/zoneinfo の **low** から算出できるけど ...
+   * ただし、将来的に仕様が変わるかもしれない。ここから数値を見積もれると期待すべきでない
+ * ということで MemAvailable てな便利なのを追加するのだ
 
 ## サンプル出力
 
