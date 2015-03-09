@@ -104,9 +104,15 @@ DirectMap2M:     2023424 kB
 		"MemTotal:       %8lu kB\n"
 		"MemFree:        %8lu kB\n"
 		"MemAvailable:   %8lu kB\n"
+
+//...
+
+		K(i.totalram),
+		K(i.freeram),
+		K(available), // ★
 ```
 
-コミットは http://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/commit/?id=34e431b0ae398fc54ea69ff85ec700722c9da773 である。ここの解説を読んでもらうのが一番正しいのである。
+コミットは http://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/commit/?id=34e431b0ae398fc54ea69ff85ec700722c9da773 である。冒頭に３行まとめを書いたけど、ここの解説を読んでもらうのが一番正しいのである。
 
 ```
 $ git show 34e431b0ae398fc54ea69ff85ec700722c9da773 | head -n 34
