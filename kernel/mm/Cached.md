@@ -1,6 +1,16 @@
 # /proc/meminfo の Cached
 
-/proc/meminfo の **Cached** は free コマンドの **cached** の数値としても使われている
+```
+$ cat /proc/meminfo 
+MemTotal:       32828144 kB
+MemFree:         7946436 kB
+Buffers:         4520132 kB
+Cached:         14997108 kB # ★
+SwapCached:        55932 kB
+Active:         12755820 kB
+```
+
+/proc/meminfo の **Cached** は、 free コマンドの **cached** の数値としても使われている
 
 ```n
 $ free             
@@ -10,9 +20,17 @@ Mem:      32828144   31563012    1265132          0    4732700   15230408
 Swap:      2097148      98652    1998496
 ```
 
-で、この数値は何? となる。
-↓ の実装を読めば明らかになるが、 **Cacehd** では slabキャッシュ が換算されていない。
+で、この数値は、いったい何? となる。
 
+## 実態
+
+```c
+global_page_state(NR_FILE_PAGES) - total_swapcache_pages - i.bufferram;
+```
+
+これが Cached の実態。ソースを読んでください
+
+さらに ↓ の実装を読めば明らかになるが、 **Cacehd** では slabキャッシュ が換算されていない。
 slab キャッシュを浪費する環境では free コマンドで正確に「利用可能なメモリ」を出すことはできない [refs MemAvailable](./MemAvailable.md)
 
 ## 実装
@@ -52,8 +70,8 @@ global_page_state(NR_FILE_PAGES) - total_swapcache_pages - i.bufferram;
 
 > The size of the pagecache is the number of file backed
 > pages in a zone which is available through NR_FILE_PAGES.
-
-http://lwn.net/Articles/218890/
+>
+> http://lwn.net/Articles/218890/
 
  * file bached な ページキャッシュの数
  * tmpfs, ramfs は含まない
