@@ -48,3 +48,12 @@ out:
 	return res;
 }
 ```
+
+cmdline のページは、以下の範囲に収まっている. pmap / smaps で見た場合の stack に収まっているはず
+
+ * argv[] の始端アドレス 〜 argv[] の終端アドレス
+
+```
+ 	len = mm->arg_end - mm->arg_start;
+```
+
