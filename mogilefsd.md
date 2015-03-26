@@ -6,7 +6,7 @@
 sudo kill -STOP `pgrep -f queryworker`
 ```
 
-すると mogilefsd がこんなログを出して、 queryworker を SIGKILL で止める
+すると 親 mogilefsd がこんなログを出して、 子 queryworker を SIGKILL で止める
 
 ```
 [Fri Mar 27 00:03:14 2015] Watchdog killing worker 13929 (queryworker)
