@@ -38,7 +38,9 @@ select(16, [14], NULL, NULL, {5, 0}^C <unfinished ...>
 Process 14311 detached
 ```
 
-この heartbeart での応答がち円してしまうと Watchdog = 親 mogilefsd が殺しに来る。下記は Watchdog 発火のタイミングを strace したものである
+この heartbeart での応答が遅延してしまうと Watchdog = 親 mogilefsd が殺しに来るのだ
+
+下記は 親mogilefsd の Watchdog 発火を strace したものである
 
 ```
 write(1, "[Fri Mar 27 00:21:11 2015] Watchdog killing worker 15210 (queryworker)\n", 71) = 71
