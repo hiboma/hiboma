@@ -51,7 +51,7 @@ mogile   13932  0.0  2.1 205960 21648 ?        S    Mar26   0:00      \_ mogilef
 mogile   14386  0.0  2.1 206092 21552 ?        S    00:06   0:00      \_ mogilefsd [queryworker]
 ```
 
-とある、不具合の原因もこれで分かる
+とある、不具合の原因もこれで分かる。 nice 値に注目
 
 ```
 F   UID   PID  PPID PRI  NI    VSZ   RSS WCHAN  STAT TTY        TIME COMMAND
