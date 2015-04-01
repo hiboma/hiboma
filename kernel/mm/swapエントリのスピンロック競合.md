@@ -1,6 +1,6 @@
 # swapエントリのスピンロック競合
 
-自称
+事象
 
  * CoW な複数プロセスがいて、fork と exec する
  * swap out されたページが、 fork と exec するプロセスで共有されている ( CoW ???)
@@ -108,7 +108,7 @@ fork -> dup_mm で mm_struct 複製 -> swap エントリの参照カウントを
 
 ### copy_one_pte
 
-``c
+```c
 /*
  * copy one vm_area from one task to the other. Assumes the page tables
  * already present in the new task to be cleared in the whole range
