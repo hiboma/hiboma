@@ -59,7 +59,7 @@ src/http/modules/ngx_http_proxy_module.c に下記のような実装がある
 
 `ngx_http_proxy_headers` と `ngx_http_proxy_cache_headers` は以下の通り
 
-```
+```c
 static ngx_str_t  ngx_http_proxy_hide_headers[] = {
     ngx_string("Date"),
     ngx_string("Server"),
