@@ -14,7 +14,7 @@ args       COMMAND  command with all its arguments as a string. Modifications to
 
 #### 再現コード
 
-unix.stackexchange.com の[再現コード](http://unix.stackexchange.com/questions/110595/why-do-forked-processes-sometimes-appear-with-brackets-around-their-name-in-p?answertab=active#tab-top) を実行してみよう
+unix.stackexchange.com にも [同種の質問](http://unix.stackexchange.com/questions/110595/)がなげられている。 また[再現コード](http://unix.stackexchange.com/questions/110595/why-do-forked-processes-sometimes-appear-with-brackets-around-their-name-in-p?answertab=active#tab-top) が投稿されているので実行してみよう
 
 ```c
 int main(int argc, char *argv[]) {
@@ -46,7 +46,7 @@ vagrant   9660  9149  0 14:57 pts/0    00:00:00 [exe]
 #define ESC_BRACKETS 0x2  // if using cmd, put '[' and ']' around it
 ```
 
-`ESC_BRACKETS` を追いかけていくと `escape_command` にたどり着く
+`ESC_BRACKETS` を追いかけていくと `escape_command` にたどり着く。ここで `[ ]` が付く
 
 
 ```c
@@ -94,9 +94,3 @@ int escape_command(char *restrict const outbuf, const proc_t *restrict const pp,
   return end;  // bytes, not including the NUL
 }
 ```
-
-```c
-output.c:  endp += escape_command(endp, pp, OUTBUF_SIZE, &rightward, flags);
-output.c:  endp += escape_command(endp, pp, OUTBUF_SIZE, &rightward, flags);
-```
-
