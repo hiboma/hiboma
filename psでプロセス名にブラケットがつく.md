@@ -1,6 +1,12 @@
 
 ## どゆこと?
 
+```
+[vagrant@vagrant-centos6 ~]$ ./a.out 
+UID        PID  PPID  C STIME TTY          TIME CMD
+vagrant   9660  9149  0 14:57 pts/0    00:00:00 [exe]
+```
+
 ps は `/proc/$pid/cmdline` から値をとれない状態の際に、 cmd, command の値を `[ ]` でくくった値を返す
 
 #### man に記載されている
@@ -23,7 +29,7 @@ int main(int argc, char *argv[]) {
 }
 ```
 
-##### 実行結果
+#### 実行結果
 
 ```
 [vagrant@vagrant-centos6 ~]$ ./a.out 
