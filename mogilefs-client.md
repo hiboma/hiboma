@@ -106,11 +106,15 @@ hoge.rb:22:in `<main>'
 
 ## MogileFS::Backend#sleep から実装を追う
 
-mogilefs クライアントから mogilefsd に何かデータを送るのは `command` と命名されている。`sleep` コマンドは `add_idempotent_command` によって、メタプログラミングなやり方で追加されている
+mogilefs クライアントから mogilefsd に何かデータを送るのは `command` と命名されている。
 
 ```ruby
   add_idempotent_command :sleep
-  
+```
+
+`sleep` コマンドは `add_idempotent_command` によって、メタプログラミングなやり方で追加されている  
+
+```
   # ...  
 
   # adds idempotent MogileFS commands +names+, these commands may be retried
@@ -128,11 +132,11 @@ mogilefs クライアントから mogilefsd に何かデータを送るのは `c
 
 ## MogileFS::Backend#do_request
 
-結構複雑。がんばって解読して。ポイントは
+ここから結構複雑。がんばって解読して。ポイントは
 
  * mogilefs クライアント は mogilefsd に command を送る
  * mogilefs クライアント は mogilefsd が command に応答するのを待つ
- * ここでタイムアウトする
+   * ここでタイムアウトすると raise する
 
 という点である 
 
@@ -182,7 +186,7 @@ mogilefs クライアントから mogilefsd に何かデータを送るのは `c
 
 ## MogileFS::SocketCommon#timed_gets
 
-timed_read で mogilefsd の応答を待つ
+`timed_read` で mogilefsd の応答を待つ
 
 ```ruby
   SEP_RE = /\A(.*?#{Regexp.escape("\n")})/
@@ -208,8 +212,8 @@ timed_read で mogilefsd の応答を待つ
 
 ## MogileFS::Socket < Kgio::Socket
 
-timed_read は kgio::Socket によって実装されている。
-kgio_wait_readable でタイムアウトすると、 unreadable_socket = MogileFS::UnreadableSocketError を raise する
+`timed_read` は `kgio::Socket` によって実装されている。
+`kgio_wait_readable` でタイムアウトすると、 `unreadable_socket = MogileFS::UnreadableSocketError` を raise する
 
 ```ruby
 class MogileFS::Socket < Kgio::Socket
