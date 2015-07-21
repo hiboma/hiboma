@@ -2,15 +2,15 @@
 
 ここに README.md がある git リポジトリがあるじゃろ
 
-```
-[vagrant@vagrant-centos65 vagrant-inspect-vm.overcommit]$ ls -hald . README.md 
+```sh
+$ ls -hald . README.md 
 drwxr-xr-x 3 vagrant vagrant 4.0K Jul 21 10:41 .
 -rw-rw-r-- 1 vagrant vagrant 2.1K Jul 21 10:27 README.md
 ```
 
 ここで README.md を書き換えるじゃろ
 
-```
+```sh
 $ echo 'file changed' > README.md 
 $ git status
 # On branch master
@@ -25,13 +25,13 @@ no changes added to commit (use "git add" and/or "git commit -a")
 
 ここで `sudo git checkout .` するじゃろ ( 何故 sudo しているのかは問わないで!!!1 )
 
-```
+```sh
 $ sudo git checkout .
 ```
 
 README.md のオーナーが root:root になる
 
-```
+```sh
 $ ls -hald . README.md
 drwxr-xr-x 3 vagrant vagrant 4.0K Jul 21 10:42 .
 -rw-r--r-- 1 root    root    2.1K Jul 21 10:42 README.md
@@ -41,7 +41,7 @@ drwxr-xr-x 3 vagrant vagrant 4.0K Jul 21 10:42 .
 
 strace で探る
 
-```
+```sh
 $ sudo strace -v git checkout .
 
 # 略 ...
