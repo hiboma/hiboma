@@ -1,11 +1,13 @@
 # strace -enetwork でトレースされるシステムコールは?
 
+man を読むと
+
 > -e trace=network
 > Trace all the network related system calls.
 
-とあるが、具体的にどのシステムコールが対象となるのか man には書かれていない
+と説明があるが、具体的にどのシステムコールが対象となるのかについては man には書かれていない
 
-## ソース
+## strace のソース
 
 http://sourceforge.net/projects/strace/
 
