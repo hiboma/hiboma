@@ -1,0 +1,250 @@
+# /proc/vmstat
+
+```
+[vagrant@vagrant-centos65 ~]$ cat /proc/vmstat
+nr_free_pages 92478
+nr_inactive_anon 114
+nr_active_anon 2281
+nr_inactive_file 8938
+nr_active_file 8721
+nr_unevictable 0
+nr_mlock 0
+nr_anon_pages 2317
+nr_mapped 1686
+nr_file_pages 17775
+nr_dirty 1
+nr_writeback 0
+nr_slab_reclaimable 2134
+nr_slab_unreclaimable 5604
+nr_page_table_pages 466
+nr_kernel_stack 125
+nr_unstable 0
+nr_bounce 0
+nr_vmscan_write 0
+nr_writeback_temp 0
+nr_isolated_anon 0
+nr_isolated_file 0
+nr_shmem 118
+numa_hit 281640
+numa_miss 0
+numa_foreign 0
+numa_interleave 13016
+numa_local 281640
+numa_other 0
+nr_anon_transparent_hugepages 0
+pgpgin 74291
+pgpgout 6152
+pswpin 0
+pswpout 0
+pgalloc_dma 0
+pgalloc_dma32 288041
+pgalloc_normal 0
+pgalloc_movable 0
+pgfree 380981
+pgactivate 10994
+pgdeactivate 0
+pgfault 772586
+pgmajfault 390
+pgrefill_dma 0
+pgrefill_dma32 0
+pgrefill_normal 0
+pgrefill_movable 0
+pgsteal_dma 0
+pgsteal_dma32 0
+pgsteal_normal 0
+pgsteal_movable 0
+pgscan_kswapd_dma 0
+pgscan_kswapd_dma32 0
+pgscan_kswapd_normal 0
+pgscan_kswapd_movable 0
+pgscan_direct_dma 0
+pgscan_direct_dma32 0
+pgscan_direct_normal 0
+pgscan_direct_movable 0
+zone_reclaim_failed 0
+pginodesteal 0
+slabs_scanned 0
+kswapd_steal 0
+kswapd_inodesteal 0
+kswapd_low_wmark_hit_quickly 0
+kswapd_high_wmark_hit_quickly 0
+kswapd_skip_congestion_wait 0
+pageoutrun 0
+allocstall 0
+pgrotated 0
+compact_blocks_moved 0
+compact_pages_moved 0
+compact_pagemigrate_failed 0
+compact_stall 0
+compact_fail 0
+compact_success 0
+htlb_buddy_alloc_success 0
+htlb_buddy_alloc_fail 0
+unevictable_pgs_culled 4470
+unevictable_pgs_scanned 0
+unevictable_pgs_rescued 3901
+unevictable_pgs_mlocked 5459
+unevictable_pgs_munlocked 5458
+unevictable_pgs_cleared 1
+unevictable_pgs_stranded 0
+unevictable_pgs_mlockfreed 0
+thp_fault_alloc 0
+thp_fault_fallback 0
+thp_collapse_alloc 0
+thp_collapse_alloc_failed 0
+thp_split 0
+```
+
+## mm/vmstat.c
+
+```
+	proc_create("vmstat", S_IRUGO, NULL, &proc_vmstat_file_operations);
+```
+
+```c
+static const struct seq_operations vmstat_op = {
+	.start	= vmstat_start,
+	.next	= vmstat_next,
+	.stop	= vmstat_stop,
+	.show	= vmstat_show,
+};
+
+static int vmstat_open(struct inode *inode, struct file *file)
+{
+	return seq_open(file, &vmstat_op);
+}
+
+static const struct file_operations proc_vmstat_file_operations = {
+	.open		= vmstat_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= seq_release,
+};
+```
+
+#### static void *vmstat_start(struct seq_file *m, loff_t *pos)
+
+`struct vm_event_state` に値を保持しているのかな?
+
+```c
+static void *vmstat_start(struct seq_file *m, loff_t *pos)
+{
+	unsigned long *v;
+#ifdef CONFIG_VM_EVENT_COUNTERS
+	unsigned long *e;
+#endif
+	int i;
+
+	if (*pos >= ARRAY_SIZE(vmstat_text))
+		return NULL;
+
+#ifdef CONFIG_VM_EVENT_COUNTERS
+	v = kmalloc(NR_VM_ZONE_STAT_ITEMS * sizeof(unsigned long)
+			+ sizeof(struct vm_event_state), GFP_KERNEL);
+#else
+	v = kmalloc(NR_VM_ZONE_STAT_ITEMS * sizeof(unsigned long),
+			GFP_KERNEL);
+#endif
+	m->private = v;
+	if (!v)
+		return ERR_PTR(-ENOMEM);
+	for (i = 0; i < NR_VM_ZONE_STAT_ITEMS; i++)
+		v[i] = global_page_state(i);
+#ifdef CONFIG_VM_EVENT_COUNTERS
+	e = v + NR_VM_ZONE_STAT_ITEMS;
+	all_vm_events(e);
+	e[PGPGIN] /= 2;		/* sectors -> kbytes */
+	e[PGPGOUT] /= 2;
+#endif
+	return v + *pos;
+}
+```
+
+## struct vm_event_state
+
+```c
+#ifdef CONFIG_VM_EVENT_COUNTERS
+/*
+ * Light weight per cpu counter implementation.
+ *
+ * Counters should only be incremented and no critical kernel component
+ * should rely on the counter values.
+ *
+ * Counters are handled completely inline. On many platforms the code
+ * generated will simply be the increment of a global address.
+ */
+
+struct vm_event_state {
+	unsigned long event[NR_VM_EVENT_ITEMS];
+};
+```
+
+NR_VM_EVENT_ITEMS は下記の通り
+
+```c
+enum vm_event_item { PGPGIN, PGPGOUT, PSWPIN, PSWPOUT,
+		FOR_ALL_ZONES(PGALLOC),
+		PGFREE, PGACTIVATE, PGDEACTIVATE,
+		PGFAULT, PGMAJFAULT,
+		FOR_ALL_ZONES(PGREFILL),
+		FOR_ALL_ZONES(PGSTEAL),
+		FOR_ALL_ZONES(PGSCAN_KSWAPD),
+		FOR_ALL_ZONES(PGSCAN_DIRECT),
+#ifdef CONFIG_NUMA
+		PGSCAN_ZONE_RECLAIM_FAILED,
+#endif
+		PGINODESTEAL, SLABS_SCANNED, KSWAPD_STEAL, KSWAPD_INODESTEAL,
+		KSWAPD_LOW_WMARK_HIT_QUICKLY, KSWAPD_HIGH_WMARK_HIT_QUICKLY,
+		KSWAPD_SKIP_CONGESTION_WAIT,
+		PAGEOUTRUN, ALLOCSTALL, PGROTATED,
+#ifdef CONFIG_COMPACTION
+		COMPACTBLOCKS, COMPACTPAGES, COMPACTPAGEFAILED,
+		COMPACTSTALL, COMPACTFAIL, COMPACTSUCCESS,
+#endif
+#ifdef CONFIG_HUGETLB_PAGE
+		HTLB_BUDDY_PGALLOC, HTLB_BUDDY_PGALLOC_FAIL,
+#endif
+		UNEVICTABLE_PGCULLED,	/* culled to noreclaim list */
+		UNEVICTABLE_PGSCANNED,	/* scanned for reclaimability */
+		UNEVICTABLE_PGRESCUED,	/* rescued from noreclaim list */
+		UNEVICTABLE_PGMLOCKED,
+		UNEVICTABLE_PGMUNLOCKED,
+		UNEVICTABLE_PGCLEARED,	/* on COW, page truncate */
+		UNEVICTABLE_PGSTRANDED,	/* unable to isolate on unlock */
+		UNEVICTABLE_MLOCKFREED,
+#ifdef CONFIG_TRANSPARENT_HUGEPAGE
+	        THP_FAULT_ALLOC,
+		THP_FAULT_FALLBACK,
+		THP_COLLAPSE_ALLOC,
+		THP_COLLAPSE_ALLOC_FAILED,
+		THP_SPLIT,
+#endif
+		NR_VM_EVENT_ITEMS
+};
+```
+
+カウンタは以下の関数群で上げる
+
+```c
+static inline void __count_vm_event(enum vm_event_item item)
+{
+	__get_cpu_var(vm_event_states).event[item]++;
+}
+
+static inline void count_vm_event(enum vm_event_item item)
+{
+	get_cpu_var(vm_event_states).event[item]++;
+	put_cpu();
+}
+
+static inline void __count_vm_events(enum vm_event_item item, long delta)
+{
+	__get_cpu_var(vm_event_states).event[item] += delta;
+}
+
+static inline void count_vm_events(enum vm_event_item item, long delta)
+{
+	get_cpu_var(vm_event_states).event[item] += delta;
+	put_cpu();
+}
+```
