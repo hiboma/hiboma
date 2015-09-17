@@ -8,7 +8,15 @@ open("./hello.txt", O_RDWR|O_CREAT|O_TRUNC, 0666) = 3
 
 どのように処理されているのか、一部追ってみます。 strace のバージョンは 4.10 です
 
-( strace 自体の仕組みは説明しません。ptrace(2) を使って実現していると思われますが、複雑なのでここで解説は無理です ) 
+( strace 自体の仕組みは説明しません。ptrace(2) を使って実現していると思われますが、複雑なのでここで解説は無理です )
+
+## open(2)
+
+インタフェースを確認しておきましょう
+
+```
+int open(const char *pathname, int flags, mode_t mode);
+```
 
 ## あたりをつけて読み始める
 
