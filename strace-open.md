@@ -364,7 +364,7 @@ umovestr(struct tcb *tcp, long addr, unsigned int len, char *laddr)
  * QUOTE_0_TERMINATED が指定されていると `str を NULL終端の文字列または size-1 バイトの文字列として扱う` と関数のコメント欄に書かれています
  * 文字列出力関数は `tprints` を使います
 
-open(2) に渡されたパスの扱い方がはっきりしてきました
+open(2) に渡されたパスを、 strace がどのように扱うかがはっきりしてきました
 
 ```c
 /*
@@ -421,6 +421,8 @@ print_quoted_string(const char *str, unsigned int size,
 	return rc;
 }
 ```
+
+string_quote でクォートを足して、tprints で出力します
 
 #### tprints
 
