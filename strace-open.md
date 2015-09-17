@@ -426,7 +426,7 @@ print_quoted_string(const char *str, unsigned int size,
 
 tprints の実態は [fputs_unlocked](http://linux.die.net/man/3/fgets_unlocked) のようです
 
-```
+```c
 void
 tprints(const char *str)
 {
