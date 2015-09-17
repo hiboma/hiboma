@@ -2,7 +2,7 @@
 
 open(2) を呼ぶプロセスを strace を実行すると、下記のように人間に読みやすい表示で出力されます
 
-```
+```c
 open("./hello.txt", O_RDWR|O_CREAT|O_TRUNC, 0666) = 3
 ```
 
@@ -14,7 +14,7 @@ open("./hello.txt", O_RDWR|O_CREAT|O_TRUNC, 0666) = 3
 
 インタフェースを確認しておきましょう
 
-```
+```c
 int open(const char *pathname, int flags, mode_t mode);
 ```
 
@@ -58,7 +58,7 @@ sys_open(struct tcb *tcp)
 
 `struct tcb` はシステムコールを呼び出した時の引数やコンテキストを保持した構造体のようです。
 
-```
+```c
 /* Trace Control Block */
 struct tcb {
 	int flags;		/* See below for TCB_ values */
@@ -366,7 +366,7 @@ umovestr(struct tcb *tcp, long addr, unsigned int len, char *laddr)
 
 open(2) に渡されたパスの扱い方がはっきりしてきました
 
-```
+```c
 /*
  * Quote string `str' of length `size' and print the result.
  *
