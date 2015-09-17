@@ -178,7 +178,8 @@ printpathn(struct tcb *tcp, long addr, unsigned int n)
 
 umovestr` で文字列をコピーします
 
-umovestr は ptrace(2) を使っていたりと複雑なので実装はおいかけませんが、下記のようなコードがあるので NULL が出るとコピーを終えるんだろうと推測できます
+umovestr は process_vm_readv(2), ptrace(2) を使っていたりと複雑なので実装はおいかけません。
+下記のようなコードがあるので NULL が出るとコピーを終えるんだろうとなんとなく推測できます
 
 ```c
 				if (memchr(local[0].iov_base, '\0', r))
