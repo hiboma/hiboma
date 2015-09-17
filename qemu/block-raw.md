@@ -8,7 +8,7 @@ block/raw-posix.c というのがそれぽいです
 
 ## BlockDriver
 
-ディスクの形式ごとに BlockDriver てな構造体が定義されて、 bdrv_register で使えるようになるようです。 BlockDriver が抽象化のインタフェースとなり raw や qcow2 などの実装を隠蔽するのですね (カーネルの VFS なんかと同じやり方 )
+ディスクの形式ごとに BlockDriver てな構造体が定義されて、 bdrv_register でドライバとして使えるようになるようです。
 
 ```c
 static BlockDriver bdrv_raw = {
@@ -33,7 +33,12 @@ static BlockDriver bdrv_raw = {
 };
 ```
 
-BlockDriver は下記で登録するようです。呼び出しのタイミングなどは謎
+BlockDriver が抽象化のインタフェースとなり raw や qcow2 などの実装を隠蔽するのですね (カーネルの VFS なんかと同じやり方 )
+ここに列挙されている関数ポインタを辿ることで、 raw 形式のディスクがどのようにデータを扱うのかが追うことができそうです
+
+## bdrv_raw_init
+ 
+BlockDriver は下記のタイミングで登録するようです。呼び出しのタイミングなどは謎
 
 ```c
 static void bdrv_raw_init(void)
@@ -56,7 +61,8 @@ static void bdrv_raw_init(void)
 
 ## block/raw-posix.c raw_open
 
-ディスク?ブロックデバイスの open ? をするようです。 raw_open_common に続きます
+ * まずは open するところから追っていきます
+ * ディスク?ブロックデバイスの open ? をするようです。 raw_open_common に続きます
 
 ```
 static int raw_open(BlockDriverState *bs, const char *filename, int flags)
@@ -305,7 +311,7 @@ static int raw_pwrite(BlockDriverState *bs, int64_t offset,
  * lseek でオフセットまで進む
  * write(2) を呼んでデータを書き込む
 
-で、非常にシンプルな実装です。 
+で、非常にシンプルな実装ですね。 システムコールのお手本のようなシンプルさです
 
 ```c
 /*
