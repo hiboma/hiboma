@@ -1,6 +1,6 @@
 # 突然のホストダウンで /proc/meminfo の Dirty ページがディスクに同期されず揮発するかどうかの検証
 
-#### Dirty の書き出しを抑えるめちゃくちゃ設定をする
+#### Dirty ページの書き出しを抑えるめちゃくちゃ設定をする
 
 ````sh
 sudo sysctl -w vm.dirty_writeback_centisecs=1000000 # 単位は ms
@@ -8,6 +8,19 @@ sudo sysctl -w    vm.dirty_expire_centisecs=1000000 # 単位は ms
 sudo sysctl -w    vm.dirty_background_ratio=99
 sudo sysctl -w               vm.dirty_ratio=99
 ```
+
+#### Dirty ページを書き出して置く
+
+```
+$ sync; sync; sync;  # 3回やるの意味あるんだっけ?
+```
+
+```
+$ grep Dirty /proc/meminfo
+Dirty:                 0 kB
+```
+
+Dirty ページが全てディスクに書きだされている
 
 #### 100MB のテストデータを write する
 
@@ -35,10 +48,10 @@ close(3)                                = 0
 
 ```
 $ grep Dirty /proc/meminfo
-Dirty:            102448 kB
+Dirty:            102400 kB
 ```
 
-#### ファイルの stat もとっておく
+#### ついでにファイルの stat もとっておく
 
 ```
 $ stat /tmp/100mb.txt
@@ -46,9 +59,9 @@ $ stat /tmp/100mb.txt
   Size: 104857600       Blocks: 204800     IO Block: 4096   regular file
 Device: fd00h/64768d    Inode: 1572876     Links: 1
 Access: (0664/-rw-rw-r--)  Uid: (  500/ vagrant)   Gid: (  500/ vagrant)
-Access: 2016-02-03 09:22:03.439382901 +0000
-Modify: 2016-02-03 09:22:03.466399833 +0000
-Change: 2016-02-03 09:22:03.466399833 +0000
+Access: 2016-02-03 09:32:27.432272573 +0000
+Modify: 2016-02-03 09:32:27.522329016 +0000
+Change: 2016-02-03 09:32:27.522329016 +0000
 ```
 
 #### Dirty が溜まっている状態で電源断や突然のホストダウンした状態を模擬的に再現する
@@ -62,27 +75,28 @@ vagrant halt --force
 #### vagrant up 後にファイルの中身を見る
 
 ```
-$ cat /tmp/100mb.txt
-$
-```
-
-```
 $ stat /tmp/100mb.txt
   File: `/tmp/100mb.txt'
   Size: 0               Blocks: 0          IO Block: 4096   regular empty file
 Device: fd00h/64768d    Inode: 1572876     Links: 1
 Access: (0664/-rw-rw-r--)  Uid: (  500/ vagrant)   Gid: (  500/ vagrant)
-Access: 2016-02-03 09:26:21.357851070 +0000
-Modify: 2016-02-03 09:22:03.466399833 +0000
-Change: 2016-02-03 09:22:03.466399833 +0000
+Access: 2016-02-03 09:32:27.432272573 +0000
+Modify: 2016-02-03 09:32:27.522329016 +0000
+Change: 2016-02-03 09:32:27.522329016 +0000
+```
+
+```
+$ cat /tmp/100mb.txt
+$
 ```
 
 #### 結果
 
- * データが無くなった
+ * データ、無くなった
  * inode の size / Blocks も 0
 
 ----
 
  * VM での検証なので、何か見落としている点は?
  * RAID が入ると挙動変わるかな?
+ 
