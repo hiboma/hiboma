@@ -23,7 +23,7 @@ static BlockDriver bdrv_raw = {
     .bdrv_read = raw_read,
     .bdrv_write = raw_write,
     .bdrv_close = raw_close,
-    .bdrv_create = raw_create,
+    .bdrv_create = raw_create, 
     .bdrv_flush = raw_flush,
 
     .bdrv_aio_readv = raw_aio_readv,

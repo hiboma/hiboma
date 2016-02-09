@@ -1,5 +1,22 @@
 # 突然のホストダウンで /proc/meminfo の Dirty ページがディスクに同期されず揮発するかどうかの検証
 
+## 検証環境
+
+Vagrant 
+
+```
+[vagrant@localhost ~]$ uname -a
+Linux localhost.localdomain 2.6.32-573.el6.x86_64 #1 SMP Thu Jul 23 15:44:03 UTC 2015 x86_64 x86_64 x86_64 GNU/Linux
+[vagrant@localhost ~]$ cat /etc/redhat-release 
+CentOS release 6.7 (Final)
+```
+
+ext4 で `data=ordered`
+
+```
+/dev/sda1 /boot ext4 rw,seclabel,relatime,barrier=1,data=ordered 0 0
+```
+
 #### Dirty ページの書き出しを抑えるめちゃくちゃ設定をする
 
 ````sh
@@ -99,4 +116,4 @@ $
 
  * VM での検証なので、何か見落としている点は?
  * RAID が入ると挙動変わるかな?
- 
+ * data=journal をみてみないと
