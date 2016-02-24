@@ -47,7 +47,7 @@ __libc_start_main(0x400818, 2, 0x7fffb4bad048, 0x400850 <unfinished ...>
 memset(0x7fffb4bacf00, '\0', 48)                                                 = 0x7fffb4bacf00
 getaddrinfo("example.com", nil, 0x7fffb4bacf00, 0x7fffb4bacef8
 ```
-y
+
 #### gstack
 
 ```
