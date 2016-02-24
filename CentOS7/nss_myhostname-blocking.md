@@ -1,17 +1,19 @@
-# nss-myhostname がブロックする
+# nss-myhostname が ブロックする
 
 ## 現象
 
  * CentOS7 で IPv6 インタフェースを無効にしている
  * systemd-libs が最新(systemd-219.el7_2.5) になっている
 
-条件の元で
+という条件の元で
 
- * libnss_myhostname が、マシンのホスト名を名前解決する際に 20数秒の間ブロックする
+ * `libnss_myhostname` が、マシンのホスト名を名前解決する際に 20数秒の間ブロックする
 
 ということが起こる。実装に即して書くと
 
- * getaddrinfo(3) + IPv6 で名前解決をする際に、PF_NETLINK + RTM_GETADDR で自ホストの IPv6 IP を取得しようとするが、ここで ppoll(3) がブロックする
+ * `getaddrinfo(3)` + IPv6 で名前解決をする際に、`PF_NETLINK` + `RTM_GETADDR` で自ホストの IPv6 IP を取得しようとするが、ここで `ppoll(3)` がブロックする
+
+ということが起こる
 
 ## Vagrant CentOS7 で再現の手順
 
@@ -76,7 +78,7 @@ ppoll([{fd=4, events=POLLIN}], 1, {24, 999956000}, NULL, 8 ★ ここでブロ�
 
 ##### ブロックしない場合 (systemd-208) の strace
 
- * socket(2) のオプションが違う SOCK_NONBLOCK が指定されてない
+ * socket(2) のオプションが違う `SOCK_NONBLOCK` が指定されてない
  * ノンブロッキングソケットでないので、ppoll(2) は呼ばないのかな?
 
 ````
@@ -95,7 +97,7 @@ close(4)                                = 0
 この [コミット](https://github.com/systemd/systemd/commit/d1ca51b153d7854d49400289ddedc7d493458f71) が原因かな?
 
  * nss-myhostname の ソケットハンドリングを `sd-rtnl` というやり方に変えたのが原因ぽい
- * CentOS7 の場合は、systemd-libs-208 から systemd-libs-219 にバージョンがジャンプする際に上記のコミットが取り込まれている
+ * CentOS7 の場合は、`systemd-libs-208` から `systemd-libs-219` にバージョンがジャンプする際に上記のコミットが取り込まれている
 
 #### 実装の詳細
 
