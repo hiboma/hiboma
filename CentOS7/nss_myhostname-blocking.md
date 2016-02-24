@@ -17,7 +17,7 @@
 
 ## Vagrant CentOS7 で再現の手順
 
-```
+```sh
 # systemd-libs を最新 (systemd-219.el7_2.5) にする
 sudo yum update systemd-libs
 
