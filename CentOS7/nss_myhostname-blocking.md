@@ -7,11 +7,11 @@
 
 という条件の元で
 
- * `libnss_myhostname` が、マシンのホスト名を名前解決する際に 20数秒の間ブロックする
+ * `nss-myhostname` が、マシンのホスト名を名前解決する際に 20数秒の間ブロックする
 
 ということが起こる。実装に即して書くと
 
- * `getaddrinfo(3)` + IPv6 で名前解決をする際に、`PF_NETLINK` + `RTM_GETADDR` で自ホストの IPv6 IP を取得しようとするが、ここで `ppoll(3)` がブロックする
+ * `getaddrinfo(3)` + IPv6 で名前解決をする際に、nss-myhostname が `PF_NETLINK` + `RTM_GETADDR` で自ホストの IPv6 IP を取得しようとするが、ここで `ppoll(3)` がブロックする
 
 ということが起こる
 
