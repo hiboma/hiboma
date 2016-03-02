@@ -232,6 +232,11 @@ static void background_writeout(unsigned long _min_pages)
    * `vm.max_writeback_pages = 1024` デフォルトは 1024?
    * balance, kupdate, bdflush モード
 
+##### wakeup_pdflush
+
+ * pdflush を起床させる
+ * background_writeout と writeback したいページ数を指定
+
 ```c
 /*
  * Start writeback of `nr_pages' pages.  If `nr_pages' is zero, write back
@@ -257,7 +262,10 @@ __alloc_pages
    shrink_zone
     throttle_vm_writeout
      blk_congestion_wait
-```    
+```
+
+ * blk_congestion_wait で IOキューはけ待ちする
+ * dirty_thresh が 1/10 で判定されている。
 
 ```c
 void throttle_vm_writeout(void)
@@ -286,6 +294,9 @@ void throttle_vm_writeout(void)
 
 ##### blk_congestion_wait
 
+ * queue が uncongested になるのを待つ。I/O キューの完了待ち
+ * STATE D
+
 ```c
 /**
  * blk_congestion_wait - wait for a queue to become uncongested
@@ -302,9 +313,133 @@ long blk_congestion_wait(int rw, long timeout)
 	DEFINE_WAIT(wait);
 	wait_queue_head_t *wqh = &congestion_wqh[rw];
 
+    // iowait になるよ
 	prepare_to_wait(wqh, &wait, TASK_UNINTERRUPTIBLE);
 	ret = io_schedule_timeout(timeout);
 	finish_wait(wqh, &wait);
 	return ret;
+}
+```
+
+## write のパス
+
+ * Dirty の閾値を超えたプロセスが呼び出して writeback する
+ * throttle dirty とよぶらしい
+
+```c
+// generic_perform_write
+// balance_dirty_pages_ratelimited
+// balance_dirty_pages_ratelimited
+
+/*
+ * balance_dirty_pages() must be called by processes which are generating dirty
+ * data.  It looks at the number of dirty pages in the machine and will force
+ * the caller to perform writeback if the system is over `vm_dirty_ratio'.
+ * If we're over `background_thresh' then pdflush is woken to perform some
+ * writeout.
+ */
+static void balance_dirty_pages(struct address_space *mapping)
+{
+	long nr_reclaimable;
+	long nr_writeback;
+	long background_thresh;
+	long dirty_thresh;
+	unsigned long pages_written = 0;
+	unsigned long write_chunk = sync_writeback_pages();
+
+	struct backing_dev_info *bdi = mapping->backing_dev_info;
+
+	for (;;) {
+		struct writeback_control wbc = {
+			.bdi		= bdi,
+			.sync_mode	= WB_SYNC_NONE,
+			.older_than_this = NULL,
+			.nr_to_write	= write_chunk,
+			.range_cyclic	= 1,
+		};
+
+        // 閾値取るぞう
+		get_dirty_limits(&background_thresh, &dirty_thresh, mapping);
+
+        // Dirty なページ
+        // nr_reclaimable = NR_FILE_DIRTY
+		nr_reclaimable = global_page_state(NR_FILE_DIRTY) +
+					global_page_state(NR_UNSTABLE_NFS);
+
+        // Writeback なページ
+		nr_writeback = global_page_state(NR_WRITEBACK);
+
+        // Dirty + Writeback と閾値で比較
+		if (nr_reclaimable + nr_writeback <= dirty_thresh) {
+
+            // throttle dirty できる BDI か?
+            // write congested = BDI_write_congested write のキューがいっぱいか?
+            // (background_thresh + dirty_thresh) / 2 より多いか?
+			if (bdi_cap_throttle_dirty(bdi) &&
+			    bdi_write_congested(bdi) &&
+			    nr_reclaimable + nr_writeback >=
+					(background_thresh + dirty_thresh) / 2)
+
+                // キューが uncongested になるのを STATE D で待つ
+                // いわゆる I/O wait な状態
+				blk_congestion_wait(WRITE, HZ/10);
+			break;
+		}
+
+		if (!dirty_exceeded)
+			dirty_exceeded = 1;
+
+		/* Note: nr_reclaimable denotes nr_dirty + nr_unstable.
+		 * Unstable writes are a feature of certain networked
+		 * filesystems (i.e. NFS) in which data may have been
+		 * written to the server's write cache, but has not yet
+		 * been flushed to permanent storage.
+		 */
+		if (nr_reclaimable) {
+            // superblock の dirty な inode 探して同期
+			writeback_inodes(&wbc);
+			get_dirty_limits(&background_thresh,
+					 	&dirty_thresh, mapping);
+
+            // もういっぺんに閾値と比較
+			nr_reclaimable = global_page_state(NR_FILE_DIRTY) +
+					global_page_state(NR_UNSTABLE_NFS);
+
+            // dirty_thresh 以下なので終わり
+			if (nr_reclaimable +
+				global_page_state(NR_WRITEBACK)
+					<= dirty_thresh)
+						break;
+			pages_written += write_chunk - wbc.nr_to_write;
+			if (pages_written >= write_chunk)
+				break;		/* We've done our duty */
+		}
+
+        // iowait する。 throttle dirty 状態
+		blk_congestion_wait(WRITE, HZ/10);
+
+		if (fatal_signal_pending(current))
+			break;
+	}
+
+	if (nr_reclaimable + global_page_state(NR_WRITEBACK)
+		<= dirty_thresh && dirty_exceeded)
+			dirty_exceeded = 0;
+
+	if (writeback_in_progress(bdi))
+		return;		/* pdflush is already working this queue */
+
+	/*
+	 * In laptop mode, we wait until hitting the higher threshold before
+	 * starting background writeout, and then write out all the way down
+	 * to the lower threshold.  So slow writers cause minimal disk activity.
+	 *
+	 * In normal mode, we start background writeout at the lower
+	 * background_thresh, to keep the amount of dirty memory low.
+	 */
+    // pdfush 呼び出し
+	if ((laptop_mode && pages_written) ||
+	     (!laptop_mode && (nr_reclaimable > background_thresh)))
+		pdflush_operation(background_writeout, 0);
 }
 ```
