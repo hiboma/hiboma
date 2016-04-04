@@ -98,6 +98,12 @@ probe kernel.function("*@fs/*.c").call
     41 ls(2274):    -> fput
 ```
 
+## main で hello
+
+```
+sudo stap -e 'probe process("/bin/ls").function("main") { printf("hello\n"); }'
+```
+
 ## プロセスの関数呼び出しをトレースする
 
 ```c
