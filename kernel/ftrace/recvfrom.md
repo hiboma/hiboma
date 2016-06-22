@@ -1,23 +1,28 @@
-## recvfrom を ftrace で追う
+## ftrace recvfrom(2) 
 
-とある VM + VPN を経由する mysql クライアントの recvfrom(2) が遅い。で `SELECT 1` なクエリを ftrace して取ってみよう
+とある VPN を経由する mysql クライアントの recvfrom(2) が遅い。で `SELECT 1` なクエリを ftrace して取ってみよう
 
-#### 手順
+recvfrom(2) of a certain mysql client on VPN is slow. So, let's ftrace a query `SELECT 1`
 
-```
+#### 手順 procedure
+
+```sh
 cd /sys/kernel/debug/tracing
 reecho <mysql の pid> > set_ftrace_pid
 echo function_graph > current_tracer
 
 # 別のセッションで `mysql > SELECT 1;` を実行 する
+# In an another terminal session, execute `mysql >SELECT 1`
 
 cat trace
 ```
 
 今回ブロックしている時間が長いのは recvfrom(2) なので、 SYS_recvfrom の部分だけ抜き出す
 
- * schedule_timeout でコンテキストスイッチした後に、パケットが届いている
-   * パケットが届くまでの経過時間が 6ms ほど ( VM + VPN のオーバーヘッド ) 
+IN this time  recvfrom(2) was the system call blocked longest, so pick up SYS_recvfrom.
+
+ * schedule_timeout でコンテキストスイッチした後に、パケットが届いている  Kernel was received a packet after context switch with schedule_timeout() 
+   * パケットが届くまでの経過時間が 6ms ほど ( VPN のオーバーヘッドが大きそ ) 6msec was elapsed while kernel recevied packet. ( It's seems to be VPN overhead )
 
 ```
  1)               |  SyS_recvfrom() {
@@ -84,8 +89,8 @@ cat trace
  1)   0.087 us    |                    clear_buddies();
  1)   0.297 us    |                    __dequeue_entity();
  1)   2.000 us    |                  }
- 1)   0.120 us    |                  finish_task_switch();                # ここでコンテキストスイッチしている
-                                                                          # パケットが到着するまで待つ
+ 1)   0.120 us    |                  finish_task_switch();                # ここでコンテキストスイッチしている ( context switch, task switch )
+                                                                          # パケットが到着するまで待つ ( wait for packets )
                                                                           # パケットが届くまでで 6025.261 us = 6ms ほど経過している
  1) ! 6025.261 us |                }
  1) ! 6025.865 us |              }
