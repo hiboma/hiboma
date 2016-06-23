@@ -206,4 +206,14 @@ nc -l -U /tmp/socket
  
  * http://d.hatena.ne.jp/mmitou/20120721/1342879187
 
+
+## probe XFS function 
+
+`module("xfs")` 
  
+```c
+probe module("xfs").function("xfs_iget") { 
+     printf ("%s %s %s\n",  ctime(gettimeofday_s()), probefunc(), execname())
+     print_backtrace();
+}
+```
