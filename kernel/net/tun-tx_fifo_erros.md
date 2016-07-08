@@ -138,7 +138,7 @@ static inline int netif_tx_queue_stopped(const struct netdev_queue *dev_queue)
 {
 	return test_bit(__QUEUE_STATE_XOFF, &dev_queue->state);
 }
-``
+```
 
 ## What will happen if __QUEUE_STATE_XOFF bit on ?
 
