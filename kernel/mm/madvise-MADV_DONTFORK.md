@@ -42,8 +42,8 @@ int main()
         if(pid < 0) 
         	err(1, "fork"); 
 
-        if(pid < 0) { 
-          	/* child */
+        if(pid > 0) { 
+          	/* parent */
           	int status;
           	wait(&status);
           	exit(0);
