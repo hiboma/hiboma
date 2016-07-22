@@ -217,3 +217,60 @@ probe module("xfs").function("xfs_iget") {
      print_backtrace();
 }
 ```
+
+## sk_ack_backlog, sk_max_ack_backlog 
+
+```
+global syn_qlen_stats
+global acc_qlen_stats
+global max_syn_qlen
+global max_acc_qlen
+
+probe kernel.function("tcp_v4_conn_request") {
+    tcphdr = __get_skb_tcphdr($skb);
+    dport = __tcp_skb_dport(tcphdr);
+    if (dport != $1) next;
+    // First time: compute maximum queue lengths
+    if (max_syn_qlen == 0) {
+      max_qlen_log = @cast($sk,
+         "struct inet_connection_sock")->icsk_accept_queue->listen_opt->max_qlen_log;
+      max_syn_qlen = (1 << max_qlen_log);
+    }
+    if (max_acc_qlen == 0) {
+      max_acc_qlen = $sk->sk_max_ack_backlog;
+    }
+    syn_qlen = @cast($sk, "struct inet_connection_sock")->icsk_accept_queue->listen_opt->qlen;
+    syn_qlen_stats <<< syn_qlen;
+    acc_qlen_stats <<< $sk->sk_ack_backlog;
+}
+
+probe timer.ms(1000) {
+    if (max_syn_qlen == 0) {
+      printf("No new connection on port %d, yet.\n", $1);
+      next;
+    }
+    ansi_clear_screen();
+    ansi_set_color2(30, 46);
+    printf(" ♦ Syn queue \n");
+    ansi_reset_color();
+    print(@hist_log(syn_qlen_stats))
+    printf(" — min:%d avg:%d max:%d count:%d\n",
+                     @min(syn_qlen_stats),
+                     @avg(syn_qlen_stats),
+                     @max(syn_qlen_stats),
+                     @count(syn_qlen_stats));
+    printf(" — allowed maximum: %d\n\n", max_syn_qlen);
+    ansi_set_color2(30, 46);
+    printf(" ♦ Accept queue \n");
+    ansi_reset_color();
+    print(@hist_log(acc_qlen_stats))
+    printf(" — min:%d avg:%d max:%d count:%d\n",
+                     @min(acc_qlen_stats),
+                     @avg(acc_qlen_stats),
+                     @max(acc_qlen_stats),
+                     @count(acc_qlen_stats));
+    printf(" — allowed maximum: %d\n\n", max_acc_qlen);
+}
+```
+
+refs https://github.com/vincentbernat/systemtap-cookbook/blob/master/tcp
