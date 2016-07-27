@@ -1,5 +1,7 @@
 # WQ_MEM_RECLAIM
 
+## definition
+
 https://www.kernel.org/doc/Documentation/workqueue.txt
 
 ```
@@ -38,7 +40,7 @@ pressure.  Else it is possible that the worker-pool deadlocks waiting
 for execution contexts to free up.
 ```
 
-#### where WQ_MEM_RECLAIM is
+## Where WQ_MEM_RECLAIM is used?
 
 ```c
 struct workqueue_struct *__alloc_workqueue_key(const char *fmt,
@@ -80,9 +82,7 @@ struct workqueue_struct *__alloc_workqueue_key(const char *fmt,
 	}
 ```
 
-## what is rescuer_thread?
-
-#### why deadlock?
+## What is rescuer_thread? How deadlock occur?
 
 ```
  * Regular work processing on a pool may block trying to create a new
@@ -141,6 +141,7 @@ repeat:
 
    // mayday => SOS
 	while (!list_empty(&wq->maydays)) {
+        // 救済したい workqueue のプール?
 		struct pool_workqueue *pwq = list_first_entry(&wq->maydays,
 					struct pool_workqueue, mayday_node);
 		struct worker_pool *pool = pwq->pool;
