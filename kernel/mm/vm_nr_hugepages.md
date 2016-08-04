@@ -1,5 +1,7 @@
 # vm.nr_hugepages
 
+kernel 4.3.3
+
 ## sysctl definition
 
 ```
