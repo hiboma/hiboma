@@ -8,14 +8,16 @@
 The effect is as though a shmctl(2) IPC_RMID is performed on all existing segments as well as all segments created in the future (until this file is reset to 0). Note that existing segments that are attached to no process will be immediately destroyed when this file is set to 1. Setting this option will also destroy segments that were created, but never attached, upon termination of the process that created the segment with shmget(2).
 Setting this file to 1 provides a way of ensuring that all System V shared memory segments are counted against the resource usage and resource limits (see the description of RLIMIT_AS in getrlimit(2)) of at least one process.
 Because setting this file to 1 produces behavior that is nonstandard and could also break existing applications, the default value in this file is 0. Only set this file to 1 if you have a good understanding of the semantics of the applications using System V shared memory on your system.
-```
+>
+> https://linuxjm.osdn.jp/html/LDP_man-pages/man5/proc.5.html
 
- * shmctl(2) で IPC_RMID しているのと同じことをやってくれる
+ * **shmctl(2)** で **IPC_RMID** しているのと同じことをやってくれる
+ * `echo 1 > /proc/sys/kernel/shm_rmid_forced` すると `nattach 0` のセグメントを同期的にに消せる
  * システムワイドに作用するので、見知らぬところで既存のアプリに副作用を及ぼす可能性がある
 
-https://linuxjm.osdn.jp/html/LDP_man-pages/man5/proc.5.html
+## definition
 
-## implementation
+linux-3.10.0-327.el7.centos.x86_64
 
 ```c
 static struct ctl_table ipc_kern_table[] = {
