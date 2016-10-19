@@ -15,6 +15,10 @@ Because setting this file to 1 produces behavior that is nonstandard and could a
  * `echo 1 > /proc/sys/kernel/shm_rmid_forced` すると `nattach 0` のセグメントを同期的にに消せる
  * システムワイドに作用するので、見知らぬところで既存のアプリに副作用を及ぼす可能性がある
 
+## commits
+
+ * https://github.com/torvalds/linux/commit/b34a6b1d
+
 ## definition
 
 linux-3.10.0-327.el7.centos.x86_64
