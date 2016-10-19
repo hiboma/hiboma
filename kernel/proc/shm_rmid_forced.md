@@ -59,6 +59,8 @@ static int proc_ipc_dointvec_minmax_orphans(ctl_table *table, int write,
 }
 ```
 
+namespace が区切られているので、write したプロセスの namespace 内のセグメントのみを対象にする のだろう
+
 ## shm_destroy_orphaned
 
 現在の namespace 内の共有メモリセグメントをイテレートして `shm_try_destroy_orphaned` を呼び出す
@@ -75,6 +77,8 @@ void shm_destroy_orphaned(struct ipc_namespace *ns)
 
 ## shm_try_destroy_orphaned
 
+ * shm_creator は何だろ?
+   * `struct task_struct *` なのでセグメントの参照を持っているタスクかな?
  * shm_may_destroy でセグメントが破棄できるかどうかを評価する
 
 ```c
@@ -104,10 +108,12 @@ static int shm_try_destroy_orphaned(int id, void *p, void *data)
 
 ## shm_may_destroy
 
+セグメントを破棄するかいなかの評価をする
+
  * shm_nattch が 0 (タスク? からの参照カウントが0) 
-   * shm_rmdi_forced が 1 かどうか
-   * shmctl(2) で IPC_RMID を呼び出して、SHM_DEST がたっているかどうか
-     * DEST = destroy の略称
+ * shm_rmdi_forced が 1 かどうか
+ * shmctl(2) で IPC_RMID を呼び出して、SHM_DEST がたっているかどうか
+   * DEST = destroy の略称。 `ipcs -m` の **state** 欄に **dest** が表示されているかどうかで判定できる
 
 ```
 #define	SHM_DEST	01000	/* segment will be destroyed on last detach */
