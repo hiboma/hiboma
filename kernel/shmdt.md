@@ -18,6 +18,49 @@ int shmdt(const void *shmaddr);
 >
 > https://linuxjm.osdn.jp/html/LDP_man-pages/man2/shmat.2.html
 
+## sample
+
+```c
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/shm.h>
+#include <sys/types.h>
+#include <sys/shm.h>
+
+int main()
+{
+	int id;
+	void *p;
+
+	id = shmget(IPC_PRIVATE, sizeof(void *), 0644);
+	if (id == -1) {
+		perror("shmget");
+		exit(EXIT_FAILURE);
+	}
+
+	p = shmat(id, NULL, 0);
+	if (p == (void *)-1) {
+		perror("shmat");
+		exit(EXIT_FAILURE);
+	}
+
+	if (shmctl(id, IPC_RMID, NULL) == -1) {
+		perror("shmctl");
+		exit(EXIT_FAILURE);
+	}
+
+	/* p をあれこれ */
+
+	if (shmdt(p) == -1) {
+		perror("shmdt");
+		exit(EXIT_FAILURE);
+	}
+
+	exit(EXIT_SUCCESS);
+}
+```
+
 ## Implementation
 
 linux-3.10.0-327.el7.centos.x86_64
