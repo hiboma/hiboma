@@ -1,8 +1,19 @@
-# pthread_mutex_lock returns EINVAL after mutex pthread_mutex_destroy
+# pthread_mutex_lock returns EINVAL after mutex pthread_mutex_destroy-ed
 
 **NPTL** で、pthread_mutex_destroy した後に pthread_mutex_lock を呼び出すと EINVAL を返す実装を追う
 
-## sample
+## API 
+
+```c
+#include <pthread.h>
+
+int pthread_mutex_destroy(pthread_mutex_t *mutex);
+int pthread_mutex_init(pthread_mutex_t *restrict mutex,
+       const pthread_mutexattr_t *restrict attr);
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+```
+
+## sample code
 
 ```c
 #include <stdlib.h>
@@ -35,7 +46,11 @@ int main()
 ```sh
 $ ./return-EINVAL 
 return-EINVAL: pthread_mutex_lock Invalid argument
+```
 
+#### ltrace
+
+```
 $ ltrace ./return-EINVAL 
 __libc_start_main(0x400790, 1, 0x7fffc4df1748, 0x400850 <unfinished ...>
 pthread_mutex_init(0x601080, 0, 0x7fffc4df1758, 0x400850)                                                                         = 0
@@ -47,23 +62,14 @@ errx(22, 0x40090f, 0x7f686ea1311d, 0lock-return-EINVAL: pthread_mutex_lock Inval
 +++ exited (status 22) +++
 ```
 
+#### errno 22 ?
+
 ```sh
 $ grep -R EINVAL /usr/include/
 /usr/include/asm-generic/errno-base.h:#define   EINVAL          22      /* Invalid argument */
 ```
 
-**invalid** とあるけど、実際のところ何がどう **invalid** なのか曖昧だよな
-
-## API 
-
-```c
-#include <pthread.h>
-
-int pthread_mutex_destroy(pthread_mutex_t *mutex);
-int pthread_mutex_init(pthread_mutex_t *restrict mutex,
-       const pthread_mutexattr_t *restrict attr);
-pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-```
+**Invalid Argument** とあるけど、実際のところ Argument の何がどういう状態で **Invalid** なのか曖昧でわからない。こういうのは実装を覗いてみるしか無い
 
 ## pthread_mutex_lock
 
