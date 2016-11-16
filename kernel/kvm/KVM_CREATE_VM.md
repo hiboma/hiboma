@@ -114,7 +114,7 @@ static struct miscdevice kvm_dev = {
 	"kvm",
 	&kvm_chardev_ops,
 };
-``
+```
 
 マイナー番号は `#define KVM_MINOR		232` として定義されている
 
