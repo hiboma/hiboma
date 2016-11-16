@@ -44,7 +44,7 @@ You most certainly want to use 0 as machine type.
 In order to create user controlled virtual machines on S390, check
 KVM_CAP_S390_UCONTROL and use the flag KVM_VM_S390_UCONTROL as
 privileged user (CAP_SYS_ADMIN).
-``
+```
 
  * KVM_CREATE_VM で作った 「VM」は CPUもメモリも持たない
  * VM fd に mmap(2) すると 「VM の物理アドレス」にアクセスする
