@@ -41,6 +41,10 @@ static long kvm_dev_ioctl(struct file *filp,
 		break;
 
 ...
+
+out:
+	return r;
+}
 ```
 
 **KVM_API_VERSION = 12** を返しているだけ。非常にシンプルな API 
