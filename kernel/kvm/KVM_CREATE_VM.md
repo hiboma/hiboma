@@ -546,4 +546,3 @@ static int hardware_enable(void)
 	return 0;
 }
 ```
-
