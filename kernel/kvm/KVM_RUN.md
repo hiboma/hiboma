@@ -20,13 +20,19 @@ KVM_GET_VCPU_MMAP_SIZE.  The parameter block is formatted as a 'struct
 kvm_run' (see below).
 ```
 
-細かい仕様を網羅するのは大変なので、ホストOS からゲストOS にどうやって遷移していくかまでを追いかける
+ * ioctl で ゲストの vCPU を run する
+ * 明示的なパラメータは無いが、 vCPU をオフセット0 + KVM_GET_VCPU_MMAP_SIZE で mmap したブロックが暗黙的なパラメータとなる ( `struct kvm_run` )
+   * kvm_run はでかいので別途とりあげよう
+
+細かい仕様を網羅するのは大変なので、ホストOS からゲストOS にどうやって遷移していくかまでを追いかける。
 
 ## memo
 
  * KVM プロセスが ioctl(2) + KVM_RUN 呼び出し
  * VM root operation
- * host state の退避、 guest state の復帰 
+ * inject
+   * NMI, 割り込み、例外 etc を VMCS に書く
+ * host state の退避、 guest state の復帰
  * VMLAUNCH/VMRESUME
  * VM non-root operation 
  * VM exit
@@ -35,7 +41,9 @@ kvm_run' (see below).
 
 途中、steal 時間の accounting や 例外や割り込みの injection など面白い箇所がころがっている
 
-## ioctl(2) + vCPU 
+## ioctl(2) + vCPU
+
+ホストの qemu-kvm スレッドが呼び出す
 
 ```c
 static long kvm_vcpu_ioctl(struct file *filp,
@@ -54,7 +62,7 @@ static long kvm_vcpu_ioctl(struct file *filp,
 		if (arg)
 			goto out;
 
-        // vCPU のスレッドが変わってる場合
+        // vCPU のスレッドが変わってる場合,  struct pid を交換する
 		if (unlikely(vcpu->pid != current->pids[PIDTYPE_PID].pid)) {
 			/* The thread running this VCPU changed. */
 			struct pid *oldpid = vcpu->pid;
@@ -72,8 +80,10 @@ static long kvm_vcpu_ioctl(struct file *filp,
 
 ## kvm_arch_vcpu_ioctl_run
 
+APIC の扱い周りはすっ飛ばして読む
+
 ```c
-int kvm_arch_vcpu_ioctl_run(struct kvm_vcpu *vcpu, struct kvm_run *kvm_run)
+int kvm_arch_vcpxu_ioctl_run(struct kvm_vcpu *vcpu, struct kvm_run *kvm_run)
 {
 	int r;
 	sigset_t sigsaved;
@@ -140,9 +150,16 @@ static int __vcpu_run(struct kvm_vcpu *vcpu)
 		    !vcpu->arch.apf.halted)
 			r = vcpu_enter_guest(vcpu); ★
 		else {
+             // KVM_MP_STATE_RUNNABLE でない
 			srcu_read_unlock(&kvm->srcu, vcpu->srcu_idx);
+
+            // prepare_to_wait でブロックしうる
+            // KVM_REQ_UNHALT ???
 			kvm_vcpu_block(vcpu);
+
 			vcpu->srcu_idx = srcu_read_lock(&kvm->srcu);
+
+            // ???
 			if (kvm_check_request(KVM_REQ_UNHALT, vcpu)) {
 				kvm_apic_accept_events(vcpu);
 				switch(vcpu->arch.mp_state) {
@@ -166,6 +183,14 @@ static int __vcpu_run(struct kvm_vcpu *vcpu)
 			break;
 
 		clear_bit(KVM_REQ_PENDING_TIMER, &vcpu->requests);
+
+        // タイマ割り込み?
+        // -> kvm_inject_apic_timer_irqs
+        // -> kvm_apic_local_deliver + APIC_LVTT
+        //  * LVTT Local Vector Table Timer
+        // -> __apic_accept_irq
+        // -> apic_update_lvtt
+        // APIC が in-kernel で仮想化されているなら、ホストで完結する??
 		if (kvm_cpu_has_pending_timer(vcpu))
 			kvm_inject_pending_timer_irqs(vcpu);
 
@@ -234,6 +259,8 @@ static int vcpu_enter_guest(struct kvm_vcpu *vcpu)
 			r = 0;
 			goto out;
 		}
+
+        // トリプルフォールトしたら強制終了?
 		if (kvm_check_request(KVM_REQ_TRIPLE_FAULT, vcpu)) {
 			vcpu->run->exit_reason = KVM_EXIT_SHUTDOWN;
 			r = 0;
@@ -250,11 +277,14 @@ static int vcpu_enter_guest(struct kvm_vcpu *vcpu)
 			goto out;
 		}
 
-		// steal のアップデート。 VM entry の前なのだな
+		// steal 時間のアップデート。 VM entry の前
 		if (kvm_check_request(KVM_REQ_STEAL_UPDATE, vcpu))
 			record_steal_time(vcpu);
+         
 		if (kvm_check_request(KVM_REQ_SMI, vcpu))
 			process_smi(vcpu);
+
+        // vcpu->arch.nmi_pending > 0 になる
 		if (kvm_check_request(KVM_REQ_NMI, vcpu))
 			process_nmi(vcpu);
 		if (kvm_check_request(KVM_REQ_PMU, vcpu))
@@ -269,12 +299,15 @@ static int vcpu_enter_guest(struct kvm_vcpu *vcpu)
 
 	// EVENT is ... ? 
 	if (kvm_check_request(KVM_REQ_EVENT, vcpu) || req_int_win) {
+        // 
 		kvm_apic_accept_events(vcpu);
 		if (vcpu->arch.mp_state == KVM_MP_STATE_INIT_RECEIVED) {
 			r = 1;
 			goto out;
 		}
 
+        // exception ( vmx_queue_exception ) , nmi (vmx_inject_nmi) , interrupt (vmx_inject_irq ) で inject.
+        // inject = VMCS の VM_ENTRY_INTR_INFO_FIELD に例外や割り込みの情報をいれておいて、 VM Entry した後に CPU に処理を委譲する 
 		if (inject_pending_event(vcpu, req_int_win) != 0)
 			req_immediate_exit = true;
 		/* enable NMI/IRQ window open exits if needed */
@@ -309,23 +342,23 @@ static int vcpu_enter_guest(struct kvm_vcpu *vcpu)
 	if (vcpu->fpu_active)
 		kvm_load_guest_fpu(vcpu);
 
-// static void kvm_load_guest_xcr0(struct kvm_vcpu *vcpu)
-// {
-// 	if (kvm_read_cr4_bits(vcpu, X86_CR4_OSXSAVE) &&
-// 			!vcpu->guest_xcr0_loaded) {
-// 		/* kvm_set_xcr() also depends on this */
-// 		xsetbv(XCR_XFEATURE_ENABLED_MASK, vcpu->arch.xcr0);
-// 		vcpu->guest_xcr0_loaded = 1;
-// 	}
-// }
-// static inline ulong kvm_read_cr4_bits(struct kvm_vcpu *vcpu, ulong mask)
-// {
-// 	ulong tmask = mask & KVM_POSSIBLE_CR4_GUEST_BITS;
-// 	if (tmask & vcpu->arch.cr4_guest_owned_bits)
-// 		kvm_x86_ops->decache_cr4_guest_bits(vcpu);
-// 	return vcpu->arch.cr4 & mask;
-// }
-//
+    // static void kvm_load_guest_xcr0(struct kvm_vcpu *vcpu)
+    // {
+    // 	if (kvm_read_cr4_bits(vcpu, X86_CR4_OSXSAVE) &&
+    // 			!vcpu->guest_xcr0_loaded) {
+    // 		/* kvm_set_xcr() also depends on this */
+    // 		xsetbv(XCR_XFEATURE_ENABLED_MASK, vcpu->arch.xcr0);
+    // 		vcpu->guest_xcr0_loaded = 1;
+    // 	}
+    // }
+    // static inline ulong kvm_read_cr4_bits(struct kvm_vcpu *vcpu, ulong mask)
+    // {
+    // 	ulong tmask = mask & KVM_POSSIBLE_CR4_GUEST_BITS;
+    // 	if (tmask & vcpu->arch.cr4_guest_owned_bits)
+    // 		kvm_x86_ops->decache_cr4_guest_bits(vcpu);
+    // 	return vcpu->arch.cr4 & mask;
+    // }
+
 	// CR4 レジスタをあれこれ
  	kvm_load_guest_xcr0(vcpu);
 
@@ -753,8 +786,12 @@ int kvm_cpu_exec(CPUState *cpu)
             kvm_arch_put_registers(cpu, KVM_PUT_RUNTIME_STATE);
             cpu->kvm_vcpu_dirty = false;
         }
-
+        
+        // NMI, SMI, ハードウェア割り込みを扱う
+        // KVM_NMI, KVM_SMI, KVM_INTERRUPT
         kvm_arch_pre_run(cpu, run);
+
+        // pthread_kill でスレッド終了
         if (cpu->exit_request) {
             DPRINTF("interrupt exit requested\n");
             /*
@@ -769,7 +806,8 @@ int kvm_cpu_exec(CPUState *cpu)
               ホストのユーザモード
            -> ioctl(2) + KVM_RUN
            ->   ホストのカーネルモード
-           ->     VM entry { VMLAUNCH/VMRESUME } 
+           ->     VM entry { VMLAUNCH/VMRESUME }
+           ->       VMCS Guest State を元にあれこれ
            ->       ゲストのカーネルモード or ユーザモード
            ->     VM exit
            ->   ホストのカーネルモード
@@ -804,7 +842,7 @@ int kvm_cpu_exec(CPUState *cpu)
         switch (run->exit_reason) {
         case KVM_EXIT_IO:
             DPRINTF("handle_io\n");
-            /* Called outside BQL */
+            /* Called outside BQL */ = Big Qemu Lock
             kvm_handle_io(run->io.port, attrs,
                           (uint8_t *)run + run->io.data_offset,
                           run->io.direction,
@@ -915,6 +953,8 @@ static void *qemu_kvm_cpu_thread_fn(void *arg)
                 cpu_handle_guest_debug(cpu);
             }
         }
+        // pthread_cond_wait でブロックする
+　　　　　// 別のスレッドに IO を委譲している???
         qemu_kvm_wait_io_event(cpu);
     } while (!cpu->unplug || cpu_can_run(cpu));
 
