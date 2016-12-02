@@ -4,7 +4,14 @@
  * https://rwmj.wordpress.com/2010/07/17/virtio-balloon/
  * http://d.hatena.ne.jp/kvm/20081016/1224171825
 
-**balloon** の実態
+ballon inflate/deflate がどんな風に抽象化されているかを追っていく
+
+ * struct address_space
+ * struct list_head
+ * virtio API
+ * madvise(2)
+
+# **balloon** の実態
 
 ```c
 /*
@@ -53,7 +60,11 @@ struct balloon_dev_info {
 +----------------------------------------------------------------------------+
 ```
 
-# ゲストで動く **vballoon** カーネルスレッド
+----
+
+# Guest
+
+# ゲストカーネルで動く **vballoon** カーネルスレッド
 
 ```c
 static int balloon(void *_vballoon)
@@ -82,11 +93,9 @@ static int balloon(void *_vballoon)
 }
 ```
 
-diff の数値分、 inflate / deflate される
+wait_event_interruptible でイベントを待つ
 
-# 風船を膨張
-
-膨張 = inflate
+# inflate: 風船を凸
 
  * ゲストの RAM を未使用に指定
  * ホストでは RAM が解放されたように見える?
@@ -111,7 +120,7 @@ fill_balloon
 
 バルーンに溜め込む page の gfp フラグは下記の通り
 
-```
+```c
 #define GFP_HIGHUSER_MOVABLE	(__GFP_WAIT | __GFP_IO | __GFP_FS | \
 				 __GFP_HARDWALL | __GFP_HIGHMEM | \
 				 __GFP_MOVABLE)
@@ -123,7 +132,21 @@ fill_balloon
 #define __GFP_NORETRY	((__force gfp_t)___GFP_NORETRY) /* See above */                 
 ```
 
-# 風船を縮小
+GFP_HIGHUSER_MOVABLE は 以下の論理和
+
+```
+#define __GFP_WAIT	((__force gfp_t)___GFP_WAIT)	/* Can wait and reschedule? */
+#define __GFP_IO	((__force gfp_t)___GFP_IO)	/* Can start physical IO? */
+#define __GFP_FS	((__force gfp_t)___GFP_FS)	/* Can call down to low-level FS? */
+#define __GFP_HARDWALL   ((__force gfp_t)___GFP_HARDWALL) /* Enforce hardwall cpuset memory allocs */
+#define __GFP_HIGHMEM	((__force gfp_t)___GFP_HIGHMEM)
+#define __GFP_MOVABLE	((__force gfp_t)___GFP_MOVABLE)  /* Page is movable */
+```
+
+ * b_dev_info->pages に繋いだページは、qemu から madvise(2) + MADV_DONTNEED されて zap され、ホストから再利用可能になる
+ * b_dev_info->pages に繋いだページは、qemu から madvise(2) + MADV_WILLNEED されて ゲスト用に予約される???
+
+# deflate: 風船を凹
 
 縮小 = deflate 
 
@@ -153,9 +176,9 @@ leak_balloon
 
 ##### 実装
 
-ゲスト内で si_meminfo() で統計をとっている ( /proc/meminfo と同等のデータを取れる )
+ゲスト内で si_meminfo() を使ってメモリの統計をとっている ( /proc/meminfo と同等のデータを取れる )
 
-```
+```c
 static void update_balloon_stats(struct virtio_balloon *vb)
 {
 	unsigned long events[NR_VM_EVENT_ITEMS];
@@ -178,6 +201,8 @@ static void update_balloon_stats(struct virtio_balloon *vb)
 }
 ```
 
+----
+
 # qemu
 
 > a. There is no host balloon driver, at least no special host kernel code for virtio-balloon. virtio-balloon is implemented in QEMU userspace, see hw/virtio/virtio-balloon.c.
@@ -187,17 +212,19 @@ static void update_balloon_stats(struct virtio_balloon *vb)
  * ホストカーネルでのドライバ実装は無くて QEMU プロセスだけで実装されている ( madvise(2) の利用 )
  * hw/virtio/virtio-balloon を読むとよい
 
-##### balloon で確保したページを MADV_DONTNEED
+## balloon で確保したページをどう扱うのか?
 
-ballon の inflate
+##### ballon の inflate
 
  * madvise(2) もしくは posix_madsive(2) で MADV_DONTNEED して zap する
  * ballon のページはゲスト(プロセス)が確保しているページなので zap すると、結果、空きメモリが増える = ホストに返却されるということ
 
-ballon の deflate
+##### ballon の deflate
 
  * madvise(2) もしくは posix_madsive(2) で MADV_WILLNEED
  * mapping->a_ops->readpage, mapping->a_ops->readpages が無いようだけど?
+
+# 実装
 
 ```c
 static void balloon_page(void *addr, int deflate)
@@ -213,6 +240,12 @@ static void balloon_page(void *addr, int deflate)
 ```
 
 # virtio-device の実装
+
+virtqueue はホストからゲストへコマンドを送り込むためのインタフェース
+
+ * inflate
+ * deflate
+ * stats
 
 ```c
 static void virtio_balloon_device_realize(DeviceState *dev, Error **errp)
@@ -292,13 +325,9 @@ static void virtio_balloon_handle_output(VirtIODevice *vdev, VirtQueue *vq)
 }
 ```
 
-# 
-
 # kernel の CONFIG
 
 ##### CONFIG_BALLOON_COMPACTION
 
  * http://cateee.net/lkddb/web-lkddb/BALLOON_COMPACTION.html
  * ballon によってメモリのフラグメンテーションが起きて THP の性能劣化を招くのを防ぐた目に compaction 可能にする?
-
-

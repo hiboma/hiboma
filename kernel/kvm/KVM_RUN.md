@@ -20,13 +20,17 @@ KVM_GET_VCPU_MMAP_SIZE.  The parameter block is formatted as a 'struct
 kvm_run' (see below).
 ```
 
- * ioctl で ゲストの vCPU を run する
- * 明示的なパラメータは無いが、 vCPU をオフセット0 + KVM_GET_VCPU_MMAP_SIZE で mmap したブロックが暗黙的なパラメータとなる ( `struct kvm_run` )
+ioctl で ゲストの vCPU を run する
+
+ * 明示的なパラメータは無いが、暗黙的なパラメータがある
+   * vCPU をオフセット0 + KVM_GET_VCPU_MMAP_SIZE で mmap したブロックが暗黙的なパラメータとなる ( `struct kvm_run` )
    * kvm_run はでかいので別途とりあげよう
 
-細かい仕様を網羅するのは大変なので、ホストOS からゲストOS にどうやって遷移していくかまでを追いかける。
+KVM_RUN 前後の枝葉の処理や仕様を網羅するのは大変なので、ホストOS からゲストOS にどうやって遷移していくかまでを追いかける。
 
 ## memo
+
+オーバービュー
 
  * KVM プロセスが ioctl(2) + KVM_RUN 呼び出し
  * VM root operation
@@ -34,16 +38,16 @@ kvm_run' (see below).
    * NMI, 割り込み、例外 etc を VMCS に書く
  * host state の退避、 guest state の復帰
  * VMLAUNCH/VMRESUME
- * VM non-root operation 
+ * VM non-root operation
  * VM exit
  * guest state の退避、 host state の復帰
- * KVM プロセスに戻る ( ioctl(2) の結果は何を返すんだろ? ) 
+ * KVM プロセスに戻る ( ioctl(2) の結果は何を返すんだろ? )
 
 途中、steal 時間の accounting や 例外や割り込みの injection など面白い箇所がころがっている
 
 ## ioctl(2) + vCPU
 
-ホストの qemu-kvm スレッドが呼び出す
+ホストの qemu-kvm スレッドが呼び出して vCPU を走らせる
 
 ```c
 static long kvm_vcpu_ioctl(struct file *filp,
@@ -80,7 +84,12 @@ static long kvm_vcpu_ioctl(struct file *filp,
 
 ## kvm_arch_vcpu_ioctl_run
 
-APIC の扱い周りはすっ飛ばして読む
+わからない部分はすっとばしてよむ
+
+ * APIC
+ * userspace_io
+
+のあたりを把握しないと読めない部分がある
 
 ```c
 int kvm_arch_vcpxu_ioctl_run(struct kvm_vcpu *vcpu, struct kvm_run *kvm_run)
@@ -146,8 +155,7 @@ static int __vcpu_run(struct kvm_vcpu *vcpu)
 	r = 1;
 	while (r > 0) {
         // MP は何の略称?
-		if (vcpu->arch.mp_state == KVM_MP_STATE_RUNNABLE &&
-		    !vcpu->arch.apf.halted)
+		if (vcpu->arch.mp_state == KVM_MP_STATE_RUNNABLE && !vcpu->arch.apf.halted)
 			r = vcpu_enter_guest(vcpu); ★
 		else {
              // KVM_MP_STATE_RUNNABLE でない
@@ -159,14 +167,12 @@ static int __vcpu_run(struct kvm_vcpu *vcpu)
 
 			vcpu->srcu_idx = srcu_read_lock(&kvm->srcu);
 
-            // ???
 			if (kvm_check_request(KVM_REQ_UNHALT, vcpu)) {
 				kvm_apic_accept_events(vcpu);
 				switch(vcpu->arch.mp_state) {
 				case KVM_MP_STATE_HALTED:
 					vcpu->arch.pv.pv_unhalted = false;
-					vcpu->arch.mp_state =
-						KVM_MP_STATE_RUNNABLE;
+					vcpu->arch.mp_state = KVM_MP_STATE_RUNNABLE;
 				case KVM_MP_STATE_RUNNABLE:
 					vcpu->arch.apf.halted = false;
 					break;
@@ -237,8 +243,11 @@ static int vcpu_enter_guest(struct kvm_vcpu *vcpu)
 
 	// VM enter する前に リクエストが溜まっていないかを逐一確認
 	if (vcpu->requests) {
+        // Memory Management Unit  ???
 		if (kvm_check_request(KVM_REQ_MMU_RELOAD, vcpu))
 			kvm_mmu_unload(vcpu);
+
+        // クロック、タイマーのあれこれ
 		if (kvm_check_request(KVM_REQ_MIGRATE_TIMER, vcpu))
 			__kvm_migrate_timers(vcpu);
 		if (kvm_check_request(KVM_REQ_MASTERCLOCK_UPDATE, vcpu))
@@ -252,8 +261,15 @@ static int vcpu_enter_guest(struct kvm_vcpu *vcpu)
 		}
 		if (kvm_check_request(KVM_REQ_MMU_SYNC, vcpu))
 			kvm_mmu_sync_roots(vcpu);
+
+        // TLB の破棄
+        // INVVPID 命令, VPID
+        // https://www.tptp.cc/mirrors/siyobik.info/instruction/INVVPID.html
+        // https://syuu1228.github.io/howto_implement_hypervisor/part2.html
+        // EPT = Extentended Page Tables が on か否かで処理が分かれてている
+        // 
 		if (kvm_check_request(KVM_REQ_TLB_FLUSH, vcpu))
-			kvm_vcpu_flush_tlb(vcpu);
+			kvm_vcpu_flush_tlb(vcpu); // -> vmx_flush_tlb
 		if (kvm_check_request(KVM_REQ_REPORT_TPR_ACCESS, vcpu)) {
 			vcpu->run->exit_reason = KVM_EXIT_TPR_ACCESS;
 			r = 0;
@@ -321,6 +337,7 @@ static int vcpu_enter_guest(struct kvm_vcpu *vcpu)
 			 * Update architecture specific hints for APIC
 			 * virtual interrupt delivery.
 			 */
+             // irr = Interrupt Request Register
 			if (kvm_x86_ops->hwapic_irr_update)
 				kvm_x86_ops->hwapic_irr_update(vcpu,
 					kvm_lapic_find_highest_irr(vcpu));
@@ -525,6 +542,9 @@ static inline void guest_enter(void)
 	 * to flush.
 	 */
 	vtime_account_system(current);
+
+    // #define PF_VCPU		0x00000010	/* I'm a virtual CPU */
+    // CPU 時間が geust 時間として扱われるフラグ
 	current->flags |= PF_VCPU;
 }
 ```
@@ -547,11 +567,9 @@ void vtime_guest_enter(struct task_struct *tsk)
 EXPORT_SYMBOL_GPL(vtime_guest_enter);
 ```
 
-```c
-#define PF_VCPU		0x00000010	/* I'm a virtual CPU */
-```
-
 ## kvm_x86_ops->run: vmx_vcpu_run
+
+x86 アーキテクチャ依存のコード
 
 ```c
 static void __noclone vmx_vcpu_run(struct kvm_vcpu *vcpu)
@@ -762,7 +780,11 @@ static void __noclone vmx_vcpu_run(struct kvm_vcpu *vcpu)
 }
 ```
 
-## qemu
+----
+
+# qemu
+
+qemu-kvm が KVM_RUN を呼び出す周辺のコードをみてみる
 
 ```c
 int kvm_cpu_exec(CPUState *cpu)
@@ -839,17 +861,23 @@ int kvm_cpu_exec(CPUState *cpu)
         }
 
         trace_kvm_run_exit(cpu->cpu_index, run->exit_reason);
+
+        // VM Exit した原因別にハンドリング
         switch (run->exit_reason) {
+        // http://syuu1228.github.io/howto_implement_hypervisor/part3.html
+        // IO マップド I/O のエミュレート
         case KVM_EXIT_IO:
             DPRINTF("handle_io\n");
             /* Called outside BQL */ = Big Qemu Lock
-            kvm_handle_io(run->io.port, attrs,
-                          (uint8_t *)run + run->io.data_offset,
-                          run->io.direction,
+            kvm_handle_io(run->io.port, attrs, // ポート
+                          (uint8_t *)run + run->io.data_offset, // 位置
+                          run->io.direction, // I/O の方向
                           run->io.size,
                           run->io.count);
             ret = 0;
             break;
+        // http://syuu1228.github.io/howto_implement_hypervisor/part3.html
+        // メモリマップド I/O のエミュレート?
         case KVM_EXIT_MMIO:
             DPRINTF("handle_mmio\n");
             /* Called outside BQL */
