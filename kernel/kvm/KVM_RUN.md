@@ -86,11 +86,6 @@ static long kvm_vcpu_ioctl(struct file *filp,
 
 わからない部分はすっとばしてよむ
 
- * APIC
- * userspace_io
-
-のあたりを把握しないと読めない部分がある
-
 ```c
 int kvm_arch_vcpxu_ioctl_run(struct kvm_vcpu *vcpu, struct kvm_run *kvm_run)
 {
@@ -142,7 +137,7 @@ out:
 
 ## __vcpu_run
 
- * KVM_MP_FOO_BAR の MP は何の略称?
+ * KVM_MP_FOO_BAR の **MP** は何の略称?
 
 ```c
 static int __vcpu_run(struct kvm_vcpu *vcpu)

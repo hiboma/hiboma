@@ -14,6 +14,43 @@ ballon inflate/deflate がどんな風に抽象化されているかを追って
 # **balloon** の実態
 
 ```c
+struct virtio_balloon {
+	struct virtio_device *vdev;
+	struct virtqueue *inflate_vq, *deflate_vq, *stats_vq;
+
+	/* Where the ballooning thread waits for config to change. */
+	wait_queue_head_t config_change;
+
+	/* The thread servicing the balloon. */
+	struct task_struct *thread;
+
+	/* Waiting for host to ack the pages we released. */
+	wait_queue_head_t acked;
+
+	/* Number of balloon pages we've told the Host we're not using. */
+	unsigned int num_pages;
+	/*
+	 * The pages we've told the Host we're not using are enqueued
+	 * at vb_dev_info->pages list.
+	 * Each page on this list adds VIRTIO_BALLOON_PAGES_PER_PAGE
+	 * to num_pages above.
+	 */
+	struct balloon_dev_info *vb_dev_info;
+
+	/* Synchronize access/update to this struct virtio_balloon elements */
+	struct mutex balloon_lock;
+
+	/* The array of pfns we tell the Host about. */
+	unsigned int num_pfns;
+	u32 pfns[VIRTIO_BALLOON_ARRAY_PFNS_MAX];
+
+	/* Memory statistics */
+	int need_stats_update;
+	struct virtio_balloon_stat stats[VIRTIO_BALLOON_S_NR];
+};
+```
+
+```
 /*
  * Balloon device information descriptor.
  * This struct is used to allow the common balloon compaction interface
@@ -29,38 +66,6 @@ struct balloon_dev_info {
 	struct list_head pages;		/* Pages enqueued & handled to Host */
 };
 ```
-
-```
-+----------------------------------------------------------------------------+
-|                                                                            |
-|                                                                            |
-|                                                                            |
-|            +-----------------------------------------------------+         |
-|            |                                                     |         |
-|            |  G U E S T                                          |         |
-|            |   U S E R L A N D                                   |         |
-|            |                                                     |         |
-|            +-----------------------------------------------------+         |
-|            |                                                     |         | 
-|            |   G U E S T           b_dev_info->pages             |         |
-|            |  K E R N E L                 \->[]<->[]<->[]<->[]   |         |
-|            |                                                     |         |
-|            +------------------------------------| driver |-------+         |
-|                                                    | | |                   |
-|                                                    | | |  virtqueue vqs[3] |
-|                                                    | | |    * inflate      |
-|                                                    | | |    * deflate      |
-|                                                    | | |    * stats        |
-|                                                    | | |                   |
-+-------------------------------------------------| device |-----------------+
-|                                                                            |
-|  H O S T                                                                   |
-| K E R N E L                                                                |
-|                                                                            |
-+----------------------------------------------------------------------------+
-```
-
-----
 
 # Guest
 
@@ -97,12 +102,14 @@ wait_event_interruptible でイベントを待つ
 
 # inflate: 風船を凸
 
+fill_balloon から処理をはじめる
+
  * ゲストの RAM を未使用に指定
  * ホストでは RAM が解放されたように見える?
 
 ##### 実装 overview
 
-ゲストで ページを b_dev_info->pages に list_add する
+ゲストで alloc_page して、ページを b_dev_info->pages に list_add する
 
 ```
 fill_balloon
@@ -143,12 +150,14 @@ GFP_HIGHUSER_MOVABLE は 以下の論理和
 #define __GFP_MOVABLE	((__force gfp_t)___GFP_MOVABLE)  /* Page is movable */
 ```
 
+ページをどのように扱うか?
+
  * b_dev_info->pages に繋いだページは、qemu から madvise(2) + MADV_DONTNEED されて zap され、ホストから再利用可能になる
  * b_dev_info->pages に繋いだページは、qemu から madvise(2) + MADV_WILLNEED されて ゲスト用に予約される???
 
 # deflate: 風船を凹
 
-縮小 = deflate 
+leak_balloon から処理をはじめる
 
  * ゲストで 未使用に指定していた RAM を減らす
 
@@ -158,7 +167,7 @@ GFP_HIGHUSER_MOVABLE は 以下の論理和
 leak_balloon
 -> balloon_page_dequeue
   -> balloon_page_delete
-    * b_dev_info->pages (LRU) から page を list_dev する
+    * b_dev_info->pages (LRU) から page を list_del する
     -> page->mapping = NULL;
     -> list_del(&page->lru);
  -> balloon_page_free
@@ -170,6 +179,8 @@ leak_balloon
 ```
 
 # stats
+
+ホストからゲストのメモリの統計をとれる
 
  * https://github.com/01org/KVMGT-qemu/blob/master/docs/virtio-balloon-stats.txt
  * virDomainMemoryStats
@@ -241,7 +252,7 @@ static void balloon_page(void *addr, int deflate)
 
 # virtio-device の実装
 
-virtqueue はホストからゲストへコマンドを送り込むためのインタフェース
+virtqueue はホストからゲストへコマンドを送り込むためのインタフェースとして使われている
 
  * inflate
  * deflate
