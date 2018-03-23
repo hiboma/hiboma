@@ -30,7 +30,7 @@ global_page_state(NR_FILE_PAGES) - total_swapcache_pages - i.bufferram;
 
 これが Cached の実態。ソースを読んでください
 
-さらに ↓ の実装を読めば明らかになるが、 **Cacehd** では slabキャッシュ が換算されていない。
+さらに ↓ の実装を読めば明らかになるが、 **Cached** では slabキャッシュ が換算されていない。
 slab キャッシュを浪費する環境では free コマンドで正確に「利用可能なメモリ」を出すことはできない [refs MemAvailable](./MemAvailable.md)
 
 ## 実装
