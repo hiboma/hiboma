@@ -31,20 +31,19 @@ int __sk_mem_raise_allocated(struct sock *sk, int size, int amt, int kind)
 
 この関数は 
 
- * 1 を返す場合、 ...
- * 0 を返す場合、 ...
+ * 0 を返す場合、 TCP のメモリ割り当てが行われる。
+ * 1 を返す場合、 TCP のメモリ割り当ては行われず、呼び出し元の関数はエラーハンドリングを行う
+
+戦略は以下の通り
 
  * 1. TCP 全体のページ数と net.ipv4.tcp_mem の比較して余地があるかどうか
  * 2. ソケット単体のメモリ使用量 (sk->rmem_alloc あるいは sk->wmem_alloc) と net.ipv4.tcp_rmem, wmem の比較してメモリ割り当ての余地があるかどうか
 
-の ステップに分けてメモリの割り当てが可能かどうかを見ていきます
+の ステップに分けてメモリの割り当てが可能かどうかを見ている。
 
-max の場合は 1 で ... ならば早々に諦めて ... するというハードリミットとして作用します.
-pressure の場合は  1 -> 2 -> 3 と見ていきメモリの割り当てが可能かどうかをするソフトリミットとして作用します.
+3️⃣ で max = ハードリミットを超えていた場合は、goto でジャンプし、suppress_allocation: の処理に続く。
 
-1️⃣ と 2️⃣ の意味は先に記した通りなので割愛します.
-
-3️⃣ で max を超えていた場合は、goto でジャンプします
+#### suppress_allocation:
 
 もし、扱っているバッファが 送信バッファの場合は、4️⃣ で 送信バッファサイズ (sk->sk_sndbuf) を減らして空きが確保できるかを試み、それでもなら最終的に 5️⃣ で 0 を返します
 
@@ -66,23 +65,24 @@ suppress_allocation:
 	return 0; 5️⃣
 ```
 
-さらに __sk_mem_raise_allocated の呼び出し元をたどると
+__sk_mem_raise_allocated の呼び出し元をたどると
 
  * sk_rmem_schedule
  * sk_wmem_schedule
 
-「max を超えた場合 -> __sk_mem_raise_allocated が 0 を返した場合 -> sk_*_schedule が 0 を返した場合」を見て行くと、
-どのような箇所に影響を及ぼすかを辿っていくことができます
+「max = ハードリミットを超えた場合 -> __sk_mem_raise_allocated が 0 を返した場合 -> sk_*_schedule が 0 を返した場合」を見て行くと、どのような箇所に影響を及ぼすかを辿っていくことができる
 
-## 7-1. ハードリミットを超えた時の影響
+## ハードリミットを超えた時の影響
 
 TCP メモリクォータがハードリミットを超えた場合、送信処理と受信処理でどのような影響がでるかをソースを併記して見ていきます。
 
-## 7-2. ハードリミットを超えた時の送信処理への影響
+### 送信処理への影響
 
 ハードリミットを超えた時、TCP ソケットの送信処理にどのような影響がでるかを見ていきます。
 
 ### 送信ソケットのクォータ獲得 - sk_wmem_schedule
+
+![](sk_wmem_schedule.png)
 
 sk_wmem_schedule は、TCP ソケットプールあるいはTCP メモリプール に空きがあるかを確認して、空きがあればソケットクォータを増やす関数です。
 
@@ -207,10 +207,6 @@ sk_stream_alloc_skb は、送信処理では以下の関数で呼び出されま
 * tcp_send_syn_data
 * tcp_connect
 
-さらに、これらの関数は様々なパス ( システムコールやタイマー割り込みの処理)  で呼びだされ、sk_stream_alloc_skb がエラー( NULL ) が各所に伝播していきます。エラーがどのように広がっていくかをテキストで把握するのは大変なので、 sk_stream_alloc_skb をルートとしたツリー状のモデル図を書きました。
-
-![](./7-sk_stream_alloc_skb.png)
- 
 これらの関数で sk_stream_alloc_skb が失敗した場合、送信処理にどのような影響が出るかをソースと併記してみていきます。
 
 ## sk_stream_alloc_skb と connect(2) 実行のパス
@@ -385,6 +381,8 @@ tcp_write_xmit
 
 ### 受信ソケットのクォータ獲得 - sk_rmem_schedule
 
+![](sk_rmem_schedule.png)
+
 sk_rmem_schedule  自体は TCP 以外のプロトコルでも利用する汎用的な関数です。TCP では、後述する tcp_try_rmem_schedule 一箇所のみで呼び出されます。
 
 ### ハードリミットの確認 - tcp_try_rmem_schedule
@@ -496,7 +494,7 @@ static void tcp_data_queue_ofo(struct sock *sk, struct sk_buff *skb)
 
 Linux Kernel は TCP の受信処理で メモリの割り当てができない場合は キューのデータを削除する、もしくは、新規に受信したデータを DROP することで メモリの不足している状況を回復しようとします. いずれの操作も送信側のサーバーにセグメントの再送を促すことになるため、スループットの低下を招くでしょう。
 
-## 7-3. 関連するメトリクス
+### 関連するメトリクス
 
 ### /proc/net/netstat: PruneCalled, RcvPruned
 
@@ -613,6 +611,8 @@ tcp_memory_allocated > net.ipv4.tcp_mem[2]
 `max: TCP memory_allocated > net.ipv4.tcp_mem[2]` であり、 これまでに説明を書いてきたので割愛します。
 
 ## tcp_check_oom() が呼び出される場所は?
+
+![](./tcp_check_oom.png)
 
 tcp_check_oom が呼び出されるのは以下の二箇所だけです
 
