@@ -1,3 +1,218 @@
+# memory pressure モード
+
+Linux カーネル は、 TCP メモリクォータ ( tcp_memory_allocated ) が ソフトリミット ( `net.ipv4.tcp_mem[2]` )  を超過し、TCP memory pressure モードに入ると以下の処理を行います。
+
+ * TCP ソケットの送信バッファのサイズを制限する
+ * TCP ソケットの受信バッファ大サイズを制限する
+ * TCP ソケットの受信ウィンドウサイズを拡張しない (ウィンドウをオープンしない)
+ * 受信キュー ( シーケンス番号順に受信した ACK を返したセグメント保持し、ユーザ空間へのコピーを待つキュー) から重複したシーケンス番号をマージして、空きメモリを確保する。 ( collapse 処理 )
+ * Ouf of Order キュー ( シーケンス番号順に受信しなかったセグメントを保持するキュー ) に入ったセグメントを破棄 (DROP) する
+ * 受信スロースタート閾値を制限する
+
+memory pressure モードを抜けると、これらの処理は止まります。
+
+## memory pressure モードの範囲
+
+memory pressure モードは、システム全体に作用するモードです。つまり、namespace を問わず、全てのプロセスの、全ての TCP ソケットに対して作用します。TCP ソケットを扱うユーザが、一般ユーザか、特権ユーザかも問いません。
+
+memory pressure モードは cgroup でも実装されています。 😔
+
+## memory pressure モードと送受信のスループット
+
+memory pressure モードは、TCP のデータ送信・受信のパフォーマンス低下を招きます。
+
+先に記したように、TCP ソケットの送信バッファ・受信バッファのサイズが制限されるこため、送信できるセグメント数と受信できるセグメント数(ウィンドウサイズ) に制限がかかり、スループットの低下を招くでしょう。 
+
+また、受信キューや Ouf of Order キューに入ったセグメントを破棄 (DROP) すると、送信側ホストのセグメント再送処理を待つことになり、受信処理のスループットが低下するでしょう。
+
+受信キューや Ouf of Order キューに入ったセグメントをマージして、空きメモリを確保する処理 ( collapse 処理 ) は、キュー内のセグメントを走査し、シーケンス番号を比較する処理をするため、セグメントの受信 = SoftIRQ コンテキストでの CPU 時間の増加が考えれます。
+
+以上から、memory pressure モードは一時的にシステム全体の TCP の送信・受信のパフォーマンスを犠牲にすることで、メモリが逼迫した状況を回復しようとする仕組みと、私は理解しています。
+
+## memory pressure モードに関わる処理
+
+memory pressure モードに関わるソースを列挙します。Linux カーネルのソースを追うことに興味がない場合は読み飛ばしていただいて構いません。
+
+### memory pressure モードに入る関数
+
+[sk_enter_memory_pressure](https://elixir.bootlin.com/linux/v5.0.21/source/net/core/sock.c#L2173) を呼び出し、TCP ソケットの場合は [tcp_enter_memory_pressure](https://elixir.bootlin.com/linux/v5.0.21/source/net/ipv4/tcp.c#L324) を呼び出します。
+ 
+### memory pressure モードを脱ける関数
+
+[sk_leave_memory_pressure](https://elixir.bootlin.com/linux/v5.0.21/source/net/core/sock.c#L2181) を呼び出し、TCP ソケットの場合は [tcp_leave_memory_pressure](https://elixir.bootlin.com/linux/v5.0.21/source/net/ipv4/tcp.c#L339) を呼び出します。
+
+### memory pressure モードを判定する関数
+
+以下の２つの関数で行います。
+
+* [sk_under_memory_pressure](https://elixir.bootlin.com/linux/v4.15/source/include/net/sock.h#L1194)
+* [tcp_under_memory_pressure](https://elixir.bootlin.com/linux/v4.15/source/include/net/tcp.h#L254)
+
+### 📝 cgroup の memory  pressure モード
+
+cgroup でも memory pressure モードが存在します。
+
+sk_under_memory_pressure では cgroup ごとの memory pressure モードの判定も行っています。
+
+mem_cgroup_charge_skmem で チャージできなかった場合に memory pressure モードに入ります。
+
+ * sk_forced_mem_schedule
+ *  __sk_mem_raise_allocated
+
+TCP クォータとソフトリミット・ハードリミットを比較するのでなく、cgroup 内のメモリ使用量 ( charge ) に応じて判定を下すようです。詳しくは mem_cgroup_charge_skmem の実装を見ていただくのがyいかと思います。
+
+##  memory pressure モードでの TCP 送信処理
+
+Linux カーネルは、 memory pressure モードの時、セグメントを送信する際に以下の処理を行います。
+
+ * 送信バッファのサイズを制限する
+ * メモリクォータを回収する
+
+memory pressure モードでふるまいを変える関数を説明していきます。
+
+### [sk_stream_moderate_sndbuf](https://elixir.bootlin.com/linux/v4.15/source/include/net/sock.h#L2122)
+
+sk_stream_moderate_sndbuf は、TCP ソケットの送信バッファの最大サイズ ( sk->sk_sndbuf ) を減らす関数です。最大サイズは、関数呼び出し時の送信バッファのメモリ使用量 ( sk->sk_wmem_queued ) か 、 SOCK_MIN_SNDBUF 定数 ( 実験環境では 4608 bytes ) の小さい方に切り詰められます。 
+
+もし、setsockopt(2) + SO_SNDBUF で送信バッファの最大サイズを設定している場合は何も処理をしません。
+
+TCP は、送信したデータが受信側に届き、受信側からの ACK 受けてから、送信バッファのセグメンを解放します。送信バッファサイズが制限されている場合、
+
+### [sk_stream_alloc_skb -> sk_mem_reclaim_partial](https://elixir.bootlin.com/linux/v5.0.21/source/net/ipv4/tcp.c#L863)
+
+[sk_stream_alloc_skb](https://elixir.bootlin.com/linux/v5.0.21/source/net/ipv4/tcp.c#L863)  は セグメント送信の際に [struct sk_buff](https://elixir.bootlin.com/linux/v5.0.21/source/include/linux/skbuff.h#L672) を割り当てる関数です。 
+
+struct sk_buff は、 Linux カーネルのネットワークスタックでの送信・受信データを扱う構造体で、 **ソケットバッファ** と呼ばれています。ソケットバッファは、利用するプロトコルを問わず汎用的にデータを扱えるように設計されています。TCP の場合は、TCP ヘッダとTCP ペイロード、IP ヘッダ、Ethernet ヘッダを保持する構造体となります。抽象的な見方では、Linux のネットワークレイヤを上下に往来する「パケット」を表現している構造体とみなせます。 
+
+Linux カーネルは、 memory pressure モードで、sk_stream_alloc_skb の中で [sk_mem_reclaim_partial](https://elixir.bootlin.com/linux/v5.0.21/source/include/net/sock.h#L1431) を呼び出します。 sk_mem_reclaim_partial は、ソケットメモリクォータを減らし、TCP メモリクォータに返却します。ソケットメモリクォータを減らすと、TCP ソケットが送信バッファ・受信バッファに割り当るメモリを減らす制限となります。
+
+### [tcp_send_fin](https://elixir.bootlin.com/linux/v5.0.21/source/net/ipv4/tcp_output.c#L3090)
+
+tcp_send_fin は、パッシブクローズ、あるいは、アクティブクローズで FIN を送信する関数です。
+
+memory pressure モードの時、カーネルは FIN を送る際に 再送信キュー ( sk->tcp_rtx_queue) ) の末尾からセグメントを取り出し FIN フラグのセットを試みます。新たに  alloc_skb_fclone での struct sk_buff の割り当てを控えて、セグメントの送信数を減らすための最適化と思われます。
+
+## memory pressure モードでの TCP 受信処理
+
+カーネルは、 memory pressure モードでセグメントを受信する際に、以下の処理を行います。
+
+* ウィンドウサイズの制限
+* Out of Order キューに入ったセグメントの破棄 (DROP)
+* 受信スロースタート閾値の調整
+
+memory pressure モードで処理を変える関数を説明していきます。Linux カーネルのソースを追うことに興味がない場合は読み飛ばしていただいて構いません。
+
+### [tcp_grow_window](https://elixir.bootlin.com/linux/v4.15/source/net/ipv4/tcp_input.c#L369)
+
+tcp_grow_window は、データを受信したタイミングで、受信スロースタート閾値 (tp->rcv_ssthresh) を増やす関数です。memory pressure モードでは、受信スロースタート閾値を増やしません。
+
+#### 📝 受信スロースタート閾値 について
+
+*スロースタート閾値* は、 **送信側** が輻輳回避をする際に閾値であると、TCP を解説するドキュメントや書籍で説明されています。Linux カーネルのソースでは **tp->snd_ssthresh** ( tp は struct tcp_sock ) として定義されています。
+
+ここに記ししている  *受信スロースタート閾値* ( tp->rcv_ssthresh) は、受信側でスロースタートをコントロールするために Linux カーネルが導入した閾値です。
+
+Buffer Bloat なセグメント = ヘッダに対してデータサイズが小さい (128バイト以下) のセグメントを大量に受信して ... な事態を避けるための閾値として作用します。
+
+### [tcp_clamp_window](https://elixir.bootlin.com/linux/v4.15/source/net/ipv4/tcp_input.c#L456)
+
+tcp_clamp_window は、受信バッファのサイズ ( sk->sk_rcvbuf ) と受信スロースタート閾値 ( tp->rcv_ssthresh ) を調整する関数です。
+
+Linux カーネルは、以下の条件が満たされていた場合に受信バッファのサイズを最大で net.ipv4.sysctl_tcp_rmem[2] まで増やします。
+
+ * 該当のソケットの受信バッファのサイズが net.ipv4.sysctl_tcp_**r**mem[2] より小さいこと 
+ * 該当のソケットの受信バッファのサイズが setsockopt(2) + SO_RCVBUF で設定(固定)されていないこと
+ *  **memory pressure モードでないこと**
+ * `tcp_memory_allocated < net.ipv4.tcp_mem[0]` であること
+
+memory pressure モードの時、カーネルは 受信バッファのサイズを増やしません。
+
+### [tcp_prune_ofo_queue](https://elixir.bootlin.com/linux/v5.0.21/source/net/ipv4/tcp_input.c#L5035)
+
+tcp_prune_ofo_queue は、 **Out of Order キュー** に入ったセグメントを破棄する処理です。
+
+Ouf of Order キューは、シーケンス番号順に受信できなかったセグメントを保持しておくキューです。 ( [赤黒木](https://lwn.net/Articles/184495/) で実装されています) 。処理中の TCP コネクションが、SACK オプションをサポートしている場合、キューに入ったセグメントで SACK / DSACK ?
+
+tcp_prune_ofo_queue は、シーケンス番号の大きい順に Ouf of Order キューのセグメントを [破棄 (tcp_drop)](https://elixir.bootlin.com/linux/v5.0.21/source/net/ipv4/tcp_input.c#L5031) するループを回します。同時に、sk_mem_reclaim を呼び出しソケットメモリプールから TCP メモリプールにクォータを返却します。以上の処理は、memory pressure モードを脱するか、Ouf of Order キューが空になるまでパケットの破棄を続きます。
+
+SACK するセグメントが受信側(サーバ) で破棄されるため、送信側(クライアント) でセグメント再送処理が必要となります。送受信のスループット低下や、再送セグメントによる帯域増加が考えられます。
+
+#### 📝 SACK Regene について
+
+SACK 済みの受信セグメントを破棄 (DROP) する処理は、RFC 2018 TCP Selecive Acknowledgment Options に記載された [8. Data Receiver Reneging](https://tools.ietf.org/html/rfc2018#section-8) に該当する処理です。 Linuxカーネル2.6 解読室 では **SACK regene** と表記されています。
+
+### [tcp_should_expand_sndbuf]()
+
+TCP ソケットの送信バッファのサイズ (sk->sk_sndbuf) を、増やせるかどうかを判定する関数です。memory pressure モードでは、サイズを増やせません。
+
+この関数は、同時に以下の条件もテストします。
+
+ * 該当ソケットの送信バッファのサイズが、 setsockopt(2) + SO_SNDBUF で固定されているか
+ * `tcp_memory_allocated >= net.ipv4.tcp_mem[0]` かどうか 
+ * 送信済みのパケット( `in_flight` ) が輻輳ウィンドウサイズを超えているか
+    * [tcp_packets_in_flight ](https://elixir.bootlin.com/linux/v5.0.21/ident/tcp_packets_in_flight) を参照してください。
+
+tcp_shouldexpand_sndbuf は、セグメントや ACK の受信途中で呼び出されます。送信バッファが制限されていると、送信ウィンドウを拡大できず、送信スループットが頭打ちになる状態を招くと思われます。
+
+### [tcp_prune_queue](https://elixir.bootlin.com/linux/v4.15/source/net/ipv4/tcp_input.c#L4910)
+
+tcp_prune_queue は以下の処理を行います。
+
+ 1. Ouf of Order キューと受信キューの collapse 処理 を行う
+ 2.  1 で、空きメモリが確保できない場合は、tcp_prune_ofo_queue で Ouf of Order キューのセグメントを破棄する。
+
+memory pressure モードでは、受信スロースタート閾値 (tp->rcv_ssthresh) を、現在の閾値か、Advertised MSS の4倍かの小さい方の値にセットします。
+
+#### 📝 受信スロースタート閾値について
+
+TCP/IP を解説する本で、  **スロースタート閾値** は送信側の輻輳制御の閾値として説明されています。Linux Kernel では受信側でも制御できるスロースタートの仕組みを実装しています。
+
+**Bloated Segment** (ヘッダに対してペイロードが小さな TCP セグメント) を大量に受信してアプリケーションでのセグメント処理が追いつかない場合、受信バッファが TCP ペイロードよりも TCP ヘッダのサイズが大きな割合を占めて埋まってしまいます。受信バッファが埋まると、 tcp_prune_queue を実行する必要がでるため (?) ... 
+
+```c
+
+ * rcv_ssthresh is more strict window_clamp used at "slow start"
+ * phase to predict further behaviour of this connection.
+ * It is used for two goals:
+ * - to enforce header prediction at sender, even when application
+ *   requires some significant "application buffer". It is check #1.
+ * - to prevent pruning of receive queue because of misprediction
+ *   of receiver window. Check #2.
+ *
+
+ ...
+
+ static int __tcp_grow_window(const struct sock *sk, const struct sk_buff *skb)
+```
+
+それを避けるために rcv_ssthresh と window_clamp を設けているそうです。詳しい解説はこのエントリの範疇を超えてしまうので ... や ... を参照してください
+
+ sk->rcv_ssthresh が減ることで __tcp_grow_window で
+
+```c
+ 	//    free spece
+	//        |
+	//        v
+	// [---+--+++++++++++++][                 ]
+	//     ^               ^                  ^
+	//     |               |                  |
+	//   rcv_ssthresh   full space       tp->sk_rcvbuf
+```
+
+### [__tcp_select_window](https://elixir.bootlin.com/linux/v4.15/source/net/ipv4/tcp_output.c#L2612)
+
+__tcp_select_window は、送信側に 広告 (Advertise) するウィンドウサイズを計算する際に呼び出されます。
+
+memory pressure モードでは、 受信スロースタート閾値 (tp->rcv_ssthresh) を、現在の閾か MSS の4倍かの小さい値で再設定します。 (受信スロースタート閾値については tcp_prune_queue の項目を参照してください)
+
+### [tcp_delack_timer_handler](https://elixir.bootlin.com/linux/v5.0.21/source/net/ipv4/tcp_timer.c#L309)
+
+tcp_delack_timer_handler は、遅延 ACK (delayed ACK) のタイマー処理をする関数です。
+
+memory pressure モードの時は、タイマー処理の最後で [sk_mem_reclaim](https://elixir.bootlin.com/linux/v5.0.21/source/include/net/sock.h#L1423) を呼び出します。 sk_mem_reclaim は、ソケットのメモリプールの空き ( sk->sk_forward_alloc ) を全て TCP メモリプールへ返却します。
+
+ソケットメモリープルが減ることで、送信バッファ・受信バッファに割り当てられるメモリも減るため、送信・受信でバッファリングできるセグメントにも制限され、パフォーマンス低下を招くと考えられます。
+
 # ハードリミットの処理
 
 tcp_memory_allocated > net.ipv4.tcp_mem[2] を確認しているコードは以下の２つです
