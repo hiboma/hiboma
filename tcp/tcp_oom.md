@@ -1,3 +1,5 @@
+本文は https://tech.pepabo.com/2020/06/26/kernel-dive-tcp_mem/ の補助資料として書き出したものになります。一部、力尽きて調べきれなかったものもありますが、ご了承ください
+
 # memory pressure モード
 
 Linux カーネル は、 TCP メモリクォータ ( tcp_memory_allocated ) が ソフトリミット ( `net.ipv4.tcp_mem[2]` )  を超過し、TCP memory pressure モードに入ると以下の処理を行います。
@@ -708,35 +710,6 @@ static void tcp_data_queue_ofo(struct sock *sk, struct sk_buff *skb)
 ----
 
 Linux Kernel は TCP の受信処理で メモリの割り当てができない場合は キューのデータを削除する、もしくは、新規に受信したデータを DROP することで メモリの不足している状況を回復しようとします. いずれの操作も送信側のサーバーにセグメントの再送を促すことになるため、スループットの低下を招くでしょう。
-
-### 関連するメトリクス
-
-### /proc/net/netstat: PruneCalled, RcvPruned
-
-tcp_prune_queue を呼び出した際に **PruneCalled** が +1 加算されます。
-
-また、tcp_prune_queue で受信キューの collapse 処理と Ouf Of Order キューのセグメントを破棄(DROP) を行ってもなお、空きメモリが確保できない場合は **TCPRcvPrune** が +1 加算されます。
-
-以下の `netstat -s` は **PruneCalled** を示しています. ([ソース](https://github.com/ecki/net-tools/blob/115f1af2494ded1fcd21c8419d5e289bc4df380f/statistics.c#L220))
-
-```
-vagrant@proxy000:~$ netstat -s | grep pruned
-    515 packets pruned from receive queue because of socket buffer overrun
-```
-
-### /proc/net/netstat: TCPRcvQDrop
-
-[tcp_data_queue](https://elixir.bootlin.com/linux/v5.0.21/source/net/ipv4/tcp_input.c#L4730) で、パケットをドロップした際に **TCPRcvDrop** が +1 加算されます。
-
-`netstat -s` は、そのままのメトリクス名を表示するようです。
-
-```
-vagrant@proxy000:~$ netstat -s | grep TCPRcvQDrop
-    TCPRcvQDrop: 328
-```
-
-TCPRcvDrop は [v4.19-rc1](https://github.com/torvalds/linux/commit/ea5d0c32498e1a08ff5f3dbeafa4d74895851b0d) で登場しています。
-
 
 ## TCP: out of memory -- consider tuning tcp_mem を出す条件は?
 
