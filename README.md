@@ -37,8 +37,6 @@
 * [Linux Kernel: PSI - Pressure Stall Information /proc/pressure/io で IO 待ちを観察する](https://hiboma.hatenadiary.jp/entry/2019/11/13/111244)
 * [Linux Kernel: cgroup v1 の制限下で slab_out_of_memory を発生させて観察する](https://hiboma.hatenadiary.jp/entry/2019/11/12/121956)
 * [Linux Kernel: カーネルモードで CPU 掴んでるタスクのバックトレースをとりたい](https://hiboma.hatenadiary.jp/entry/2019/11/08/125148)
-* [Linux Kernel: カーネルモードで CPU 掴んでるタスクのバックトレースをとりたい](https://hiboma.hatenadiary.jp/entry/2019/11/08/125148)
-* [Linux Kernel: カーネルモードで CPU 掴んでるタスクのバックトレースをとりたい](https://hiboma.hatenadiary.jp/entry/2019/11/08/125148)
 * [strace 5.2 で追加された -z -Z オプション](https://hiboma.hatenadiary.jp/entry/2019/10/29/141344)
 * [Linux Kernel: rtnl_mutex を長時間 ロックして刺さった状態を観察する](https://hiboma.hatenadiary.jp/entry/2019/10/29/123455)
 * [Proof of Concept: Linux カーネルモジュールで特定のディレクトリ以下の dentry キャッシュを破棄する (2)](https://hiboma.hatenadiary.jp/entry/2019/10/15/200254)
