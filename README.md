@@ -3,6 +3,8 @@
 ## speakerdeck.com/hiboma
 
 * [cgroup と sysfs ファイル トラブルシューティング事例から cgroup を深追いする](https://speakerdeck.com/hiboma/cgroup-and-sysfs-files)
+* [インシデントレスポンスを自動化で支援する  Slack Bot で人機一体なセキュリティ対策を実現する](https://speakerdeck.com/hiboma/cndt2021)
+* [インフラ技術者と私のキャリアドリフト](https://speakerdeck.com/hiboma/inhuraji-shu-zhe-tosi-falsekiyariadorihuto)
 
 ## tech.pepabo.com
 
