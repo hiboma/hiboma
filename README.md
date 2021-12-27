@@ -16,6 +16,18 @@
 
 ### 2021
 
+* [インシデントマネージメントについての覚書エントリ - Modern System Administration By Jennifer Davis - hibomaの日記](https://hiboma.hatenadiary.jp/entry/2021/12/06/114355)
+* [CloudNative Days Tokyo 2021 「インシデントレスポンスを自動化で支援する - Slack Bot で人機一体なセキュリティ対策を実現する」の発表を終えた - アーカイブ動画の宣伝とふりかえり - hibomaの日記](https://hiboma.hatenadiary.jp/entry/2021/11/10/120141)
+* [Infra Study 2nd #6 で 「インフラ技術者とキャリアドリフト」の発表をしたので まとめとふりかえり - hibomaの日記](https://hiboma.hatenadiary.jp/entry/2021/11/02/115811)
+* [CloudNative Days Tokyo 2021 の事前収録を終えた - 宣伝と収録方法のふりかえり - hibomaの日記](https://hiboma.hatenadiary.jp/entry/2021/10/27/112224)
+* [SREcon21: Brent Chapman さんの発表 『Evolution of Incident Management at Slack』でインシデントマネジメントを学ぶ - hibomaの日記](https://hiboma.hatenadiary.jp/entry/2021/10/19/102752)
+* [キャリアドリフトと IT エンジニア - hibomaの日記](https://hiboma.hatenadiary.jp/entry/2021/10/08/111923)
+* [評価制度での主張を図形的なモデル化で考える - hibomaの日記](https://hiboma.hatenadiary.jp/entry/2021/10/01/124004)
+* [バウンダリーレスキャリアと IT エンジニア - hibomaの日記](https://hiboma.hatenadiary.jp/entry/2021/09/30/222357)
+* [内的キャリアと自分の中で大切に思っている専門書 - hibomaの日記](https://hiboma.hatenadiary.jp/entry/2021/09/30/120324)
+* [github.com/hiboma/hiboma を更新: ブログや会社のテックブログのリンクをまとめた 〜 Infra Study 2nd #6 の宣伝 - hibomaの日記](https://hiboma.hatenadiary.jp/entry/2021/09/28/233226)
+* [『メンタリング 』- 会社の中の発達支援関係 - キャシークラム著 📚 - hibomaの日記](https://hiboma.hatenadiary.jp/entry/2021/09/28/121841)
+* [THE DESIGN OF THE UNIX OPERATING SYSTEM - Maurice J. Bach 📘 - hibomaの日記](https://hiboma.hatenadiary.jp/entry/2021/09/17/095129)
 * [Linux: mmap(2) したメモリに書き込みした際の Copy On Wirte を観察する](https://hiboma.hatenadiary.jp/entry/2021/09/01/123240)
 * [Linux: /usr/share/doc/cron/THANKS](https://hiboma.hatenadiary.jp/entry/2021/05/31/122637)
 
