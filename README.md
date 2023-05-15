@@ -2,17 +2,17 @@
 
 ## speakerdeck.com/hiboma
 
+* [インシデントレスポンスを自動化で支援する Slack Bot で人機一体なセキュリティ対策を実現する - SEASON2 - Speaker Deck](https://speakerdeck.com/hiboma/yapc-kyoto-2023)
 * [cgroup と sysfs ファイル トラブルシューティング事例から cgroup を深追いする](https://speakerdeck.com/hiboma/cgroup-and-sysfs-files)
 * [インシデントレスポンスを自動化で支援する  Slack Bot で人機一体なセキュリティ対策を実現する](https://speakerdeck.com/hiboma/cndt2021)
 * [インフラ技術者と私のキャリアドリフト](https://speakerdeck.com/hiboma/inhuraji-shu-zhe-tosi-falsekiyariadorihuto)
-* [インシデントレスポンスを自動化で支援する Slack Bot で人機一体なセキュリティ対策を実現する - SEASON2 - Speaker Deck](https://speakerdeck.com/hiboma/yapc-kyoto-2023)
 
 ## tech.pepabo.com
 
+* [YAPC::Kyoto 2023に登壇しました - Pepabo Tech Portal](https://tech.pepabo.com/2023/03/24/yapc-kyoto-2023/)
 * [ペパボ トラブルシュート伝 - 第12回 コンテナ技術の情報交換会@オンラインで「cgroup と sysfs ファイル トラブルシューティング事例から cgroup を深追いする」を発表しました - ペパボテックブログ](https://tech.pepabo.com/2020/10/29/cgroup-v1-internal/)
 * [ペパボ トラブルシュート伝 - TCP: out of memory -- consider tuning tcp_mem の dmesg から辿る 詳解 Linux net.ipv4.tcp_mem - ペパボテックブログ](https://tech.pepabo.com/2020/06/26/kernel-dive-tcp_mem/)
 * [ペパボ トラブルシュート伝 - node プロセスの general protection fault を追う - abort(3) の意外な実装 - ペパボテックブログ](https://tech.pepabo.com/2020/06/11/troubule-shooting-node-abort/)
-* [YAPC::Kyoto 2023に登壇しました - Pepabo Tech Portal](https://tech.pepabo.com/2023/03/24/yapc-kyoto-2023/)
 
 ## hiboma.hatenadiary.jp
 
