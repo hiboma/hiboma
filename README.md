@@ -5,14 +5,36 @@
 * [cgroup と sysfs ファイル トラブルシューティング事例から cgroup を深追いする](https://speakerdeck.com/hiboma/cgroup-and-sysfs-files)
 * [インシデントレスポンスを自動化で支援する  Slack Bot で人機一体なセキュリティ対策を実現する](https://speakerdeck.com/hiboma/cndt2021)
 * [インフラ技術者と私のキャリアドリフト](https://speakerdeck.com/hiboma/inhuraji-shu-zhe-tosi-falsekiyariadorihuto)
+* [インシデントレスポンスを自動化で支援する Slack Bot で人機一体なセキュリティ対策を実現する - SEASON2 - Speaker Deck](https://speakerdeck.com/hiboma/yapc-kyoto-2023)
 
 ## tech.pepabo.com
 
 * [ペパボ トラブルシュート伝 - 第12回 コンテナ技術の情報交換会@オンラインで「cgroup と sysfs ファイル トラブルシューティング事例から cgroup を深追いする」を発表しました - ペパボテックブログ](https://tech.pepabo.com/2020/10/29/cgroup-v1-internal/)
 * [ペパボ トラブルシュート伝 - TCP: out of memory -- consider tuning tcp_mem の dmesg から辿る 詳解 Linux net.ipv4.tcp_mem - ペパボテックブログ](https://tech.pepabo.com/2020/06/26/kernel-dive-tcp_mem/)
 * [ペパボ トラブルシュート伝 - node プロセスの general protection fault を追う - abort(3) の意外な実装 - ペパボテックブログ](https://tech.pepabo.com/2020/06/11/troubule-shooting-node-abort/)
+* [YAPC::Kyoto 2023に登壇しました - Pepabo Tech Portal](https://tech.pepabo.com/2023/03/24/yapc-kyoto-2023/)
 
 ## hiboma.hatenadiary.jp
+
+### 2023
+
+* [YAPC KYOTO 2023 Reject Con で登壇 / YAPC KYOTO 2023 本日程に参加しました - hibomaの日記](https://hiboma.hatenadiary.jp/entry/2023/03/24/121311)
+
+### 2022
+
+* [那須塩原に移り住んで 2年 - GMOペパボエンジニア Advent Calendar 2022 - hibomaの日記](https://hiboma.hatenadiary.jp/entry/2022/12/10/231327)
+* [雑記: Rails 7 + Hotwire + Tailwind CSS + Flowbite で Hotwire + Flowbite の相性が悪い問題を踏む - hibomaの日記](https://hiboma.hatenadiary.jp/entry/2022/12/08/121403)
+* [macOS: 構成プロファイルを CLI / Temirnal で確認する - hibomaの日記](https://hiboma.hatenadiary.jp/entry/2022/09/12/222531)
+* [slack: metadata で構造化されたデータを扱う - bot 間の連携に使う実装例 - hibomaの日記](https://hiboma.hatenadiary.jp/entry/2022/08/05/113854)
+* [lsof でファイルオープンのフラグを確認できる - hibomaの日記](https://hiboma.hatenadiary.jp/entry/2022/07/01/115851)
+* [tig で大きいリポジトリを扱う際、高速にする設定を知る - hibomaの日記](https://hiboma.hatenadiary.jp/entry/2022/06/30/125749)
+* [tig でコミットを読んでる際に、コミットメッセージを DeepL でピっと翻訳したい - hibomaの日記](https://hiboma.hatenadiary.jp/entry/2022/06/29/125324)
+* [sar -W の pswpin/s pswpout/s がどのファイルから読まれているか調べる - hibomaの日記](https://hiboma.hatenadiary.jp/entry/2022/06/20/123723)
+* [Linux の sysctl net.ipv4. icmp_echo_ignore_broadcasts / macOS (XNU) sysctl net.inet.icmp.bmcastecho の実装を読む - hibomaの日記](https://hiboma.hatenadiary.jp/entry/2022/04/14/121116)
+* [UNIX Domain Socket の SO_SNDBUF, SO_RCVBUF についての覚書 (2) - macOS XNU のnet.local.stream.sendspace 周辺のソースを読む - hibomaの日記](https://hiboma.hatenadiary.jp/entry/2022/04/01/111436)
+* [UNIX Domain Socket の SO_SNDBUF, SO_RCVBUF についての覚書 - hibomaの日記](https://hiboma.hatenadiary.jp/entry/2022/03/29/114148)
+* [Semantic Software Design - Chapter 2. The Production of Concepts - hibomaの日記](https://hiboma.hatenadiary.jp/entry/2022/01/13/105830)
+* [Semantic Software Design - Chapter 1. Origins of Software Architecture - hibomaの日記](https://hiboma.hatenadiary.jp/entry/2022/01/05/114829)
 
 ### 2021
 
