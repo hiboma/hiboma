@@ -2,6 +2,7 @@
 
 ## speakerdeck.com/hiboma
 
+* [トラブルシューティングから Linux カーネルに潜り込む - Speaker Deck](https://speakerdeck.com/hiboma/linux-kernel-trouble-shooting)
 * [インシデントレスポンスを自動化で支援する Slack Bot で人機一体なセキュリティ対策を実現する - SEASON2 - Speaker Deck](https://speakerdeck.com/hiboma/yapc-kyoto-2023)
 * [cgroup と sysfs ファイル トラブルシューティング事例から cgroup を深追いする](https://speakerdeck.com/hiboma/cgroup-and-sysfs-files)
 * [インシデントレスポンスを自動化で支援する  Slack Bot で人機一体なセキュリティ対策を実現する](https://speakerdeck.com/hiboma/cndt2021)
@@ -18,6 +19,7 @@
 
 ### 2023
 
+* [TechFeed Experts Night#19 に登壇します - hibomaの日記](https://hiboma.hatenadiary.jp/entry/2023/05/23/110020)
 * [YAPC KYOTO 2023 Reject Con で登壇 / YAPC KYOTO 2023 本日程に参加しました - hibomaの日記](https://hiboma.hatenadiary.jp/entry/2023/03/24/121311)
 
 ### 2022
