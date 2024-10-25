@@ -2,6 +2,7 @@
 
 ## speakerdeck.com/hiboma
 
+* [インシデントマネジメントとエンジニアリングのかけ算 - Speaker Deck](https://speakerdeck.com/hiboma/incident-management-and-engineering)
 * [トラブルシューティングから Linux カーネルに潜り込む - Speaker Deck](https://speakerdeck.com/hiboma/linux-kernel-trouble-shooting)
 * [インシデントレスポンスを自動化で支援する Slack Bot で人機一体なセキュリティ対策を実現する - SEASON2 - Speaker Deck](https://speakerdeck.com/hiboma/yapc-kyoto-2023)
 * [cgroup と sysfs ファイル トラブルシューティング事例から cgroup を深追いする](https://speakerdeck.com/hiboma/cgroup-and-sysfs-files)
@@ -10,12 +11,22 @@
 
 ## tech.pepabo.com
 
+* [Findy 主催 インシデントマネジメント 事態収拾のための取り組みに迫る Lunch LT に登壇しました - Pepabo Tech Portal](https://tech.pepabo.com/2024/03/01/findy-incident-management-lunch-lt/)
+* [TechFeed Experts Night#19 「トラブルシューティングから Linux カーネルに潜り込む」の発表をしました - Pepabo Tech Portal](https://tech.pepabo.com/2023/05/31/techfeed-experts-night-19/)
 * [YAPC::Kyoto 2023に登壇しました - Pepabo Tech Portal](https://tech.pepabo.com/2023/03/24/yapc-kyoto-2023/)
 * [ペパボ トラブルシュート伝 - 第12回 コンテナ技術の情報交換会@オンラインで「cgroup と sysfs ファイル トラブルシューティング事例から cgroup を深追いする」を発表しました - ペパボテックブログ](https://tech.pepabo.com/2020/10/29/cgroup-v1-internal/)
 * [ペパボ トラブルシュート伝 - TCP: out of memory -- consider tuning tcp_mem の dmesg から辿る 詳解 Linux net.ipv4.tcp_mem - ペパボテックブログ](https://tech.pepabo.com/2020/06/26/kernel-dive-tcp_mem/)
 * [ペパボ トラブルシュート伝 - node プロセスの general protection fault を追う - abort(3) の意外な実装 - ペパボテックブログ](https://tech.pepabo.com/2020/06/11/troubule-shooting-node-abort/)
 
 ## hiboma.hatenadiary.jp
+
+### 2024
+
+ * [Linux audit ログの調べ物 - libaudit を試す - hibomaの日記](https://hiboma.hatenadiary.jp/entry/2024/10/10/124607)
+ * [OOM キラーの "Memory cgroup out of memory: OOM victim *** (***) is already exiting. Skip killing the task" を調べた - hibomaの日記](https://hiboma.hatenadiary.jp/entry/2024/05/24/093858)
+ * [CrowdStrike/crimson-falcon に報告したバグが修正された - hibomaの日記](https://hiboma.hatenadiary.jp/entry/2024/02/22/144123)
+ * [2024/02/21 インシデントマネジメント 事態収拾のための取り組みに迫る Lunch LT にオンライン登壇しました - hibomaの日記](https://hiboma.hatenadiary.jp/entry/2024/02/21/220052)
+ * [2024/02/21 インシデントマネジメント 事態収拾のための取り組みに迫る Lunch LT にオンライン登壇します - hibomaの日記](https://hiboma.hatenadiary.jp/entry/2024/02/15/121303)
 
 ### 2023
 
