@@ -2,7 +2,7 @@
 
 ## speakerdeck.com/hiboma
 
-- [セキュリティを 「ふつう」にやっていく 技術、体制、文化の追求 / YAPC::Fukuoka 2025 - Speaker Deck](https://speakerdeck.com/hiboma/yapc-fukuoka-2025)
+* [セキュリティを 「ふつう」にやっていく 技術、体制、文化の追求 / YAPC::Fukuoka 2025 - Speaker Deck](https://speakerdeck.com/hiboma/yapc-fukuoka-2025)
 * [インシデントマネジメントとエンジニアリングのかけ算 - Speaker Deck](https://speakerdeck.com/hiboma/incident-management-and-engineering)
 * [トラブルシューティングから Linux カーネルに潜り込む - Speaker Deck](https://speakerdeck.com/hiboma/linux-kernel-trouble-shooting)
 * [インシデントレスポンスを自動化で支援する Slack Bot で人機一体なセキュリティ対策を実現する - SEASON2 - Speaker Deck](https://speakerdeck.com/hiboma/yapc-kyoto-2023)
