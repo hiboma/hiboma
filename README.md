@@ -2,6 +2,7 @@
 
 ## speakerdeck.com/hiboma
 
+- [セキュリティを 「ふつう」にやっていく 技術、体制、文化の追求 / YAPC::Fukuoka 2025 - Speaker Deck](https://speakerdeck.com/hiboma/yapc-fukuoka-2025)
 * [インシデントマネジメントとエンジニアリングのかけ算 - Speaker Deck](https://speakerdeck.com/hiboma/incident-management-and-engineering)
 * [トラブルシューティングから Linux カーネルに潜り込む - Speaker Deck](https://speakerdeck.com/hiboma/linux-kernel-trouble-shooting)
 * [インシデントレスポンスを自動化で支援する Slack Bot で人機一体なセキュリティ対策を実現する - SEASON2 - Speaker Deck](https://speakerdeck.com/hiboma/yapc-kyoto-2023)
@@ -11,6 +12,7 @@
 
 ## tech.pepabo.com
 
+* [YAPC::Fukuoka 2025 で 『セキュリティを 「ふつう」にやっていく 技術、体制、文化の追求』を発表しました - Pepabo Tech Portal](https://tech.pepabo.com/2025/12/01/yapc-fukuoka-2025/)
 * [Findy 主催 インシデントマネジメント 事態収拾のための取り組みに迫る Lunch LT に登壇しました - Pepabo Tech Portal](https://tech.pepabo.com/2024/03/01/findy-incident-management-lunch-lt/)
 * [TechFeed Experts Night#19 「トラブルシューティングから Linux カーネルに潜り込む」の発表をしました - Pepabo Tech Portal](https://tech.pepabo.com/2023/05/31/techfeed-experts-night-19/)
 * [YAPC::Kyoto 2023に登壇しました - Pepabo Tech Portal](https://tech.pepabo.com/2023/03/24/yapc-kyoto-2023/)
@@ -19,6 +21,15 @@
 * [ペパボ トラブルシュート伝 - node プロセスの general protection fault を追う - abort(3) の意外な実装 - ペパボテックブログ](https://tech.pepabo.com/2020/06/11/troubule-shooting-node-abort/)
 
 ## hiboma.hatenadiary.jp
+
+### 2025
+
+* [YAPC::Fukuoka 2025 に登壇しました - 『セキュリティを 「ふつう」にやっていく 技術、体制、文化の追求』 - hibomaの日記](https://hiboma.hatenadiary.jp/entry/2025/11/25/112959)
+* [while (1) は GCC を happy にする - "The loop is added only to keep gcc happy" - hibomaの日記](https://hiboma.hatenadiary.jp/entry/2025/10/07/220727)
+* [toruby 221th に参加しました - hibomaの日記](https://hiboma.hatenadiary.jp/entry/2025/10/02/122244)
+* [YAPC::Fukuoka 2025 に登壇します - ressy 次の打席に立とう - hibomaの日記](https://hiboma.hatenadiary.jp/entry/2025/09/12/121848)
+* [toruby 220th に参加しました - 「あそび」がたりない - hibomaの日記](https://hiboma.hatenadiary.jp/entry/2025/09/04/105924)
+* [GMOペパボ株式会社に勤めて18年目に突入 - シニアプリンシパル エンジニアに昇格しました - hibomaの日記](https://hiboma.hatenadiary.jp/entry/2025/04/01/122120)
 
 ### 2024
 
