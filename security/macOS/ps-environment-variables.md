@@ -62,13 +62,98 @@ macOS で `ps -E` と入力した場合、BSD スタイルのオプション解�
 
 ### macOS における `ps` の実装
 
-- macOS の `ps` は `/proc` ファイルシステムではなく、`sysctl` の `kern.procargs2` 経由でプロセス情報を取得します
+- macOS の `ps` は `/proc` ファイルシステムではなく、`sysctl` の `KERN_PROCARGS2` 経由でプロセス情報を取得します
 - Linux の `/proc/<pid>/environ` のようにファイルパーミッションで制御する仕組みが macOS には存在しません
 - root および同一ユーザーのプロセスの環境変数が閲覧可能です
 
+`ps` コマンドのソースコード（`adv_cmds/ps/print.c` の `getproclline()` 関数）は、`sysctl()` を `{ CTL_KERN, KERN_PROCARGS2, pid }` で呼び出してプロセスの引数と環境変数を取得しています。
+
+- ps コマンドのソース: https://github.com/apple-oss-distributions/adv_cmds/tree/main/ps
+
+### SIP による環境変数の読み取り制限（CS_RESTRICT）
+
+macOS 11 Big Sur 以降、SIP (System Integrity Protection) が有効な環境では、**`CS_RESTRICT` フラグが設定されたプロセスの環境変数はカーネルレベルで非表示になります**。
+
+#### 観察: `ps eww` で環境変数が見えるプロセスと見えないプロセス
+
+```bash
+# /usr/bin/perl — SIP 保護パス配下。環境変数は表示されない
+$ /usr/bin/perl -e 'sleep 1000' &
+$ ps eww -p $!
+  PID   TT  STAT      TIME COMMAND
+12345 s014  S+     0:00.01 perl -e sleep 1000
+
+# ~/.rbenv/ 配下の ruby — SIP 保護対象外。環境変数が全て表示される
+$ ~/.rbenv/versions/3.4.8/bin/ruby -e 'sleep 100' &
+$ ps eww -p $!
+  PID   TT  STAT      TIME COMMAND
+12346 s014  S+     0:00.04 /Users/hito/.rbenv/versions/3.4.8/bin/ruby -e sleep 100 TERM=xterm-256color HOME=/Users/hito ...
+```
+
+| バイナリのパス | 環境変数の表示 | 理由 |
+|---|---|---|
+| `/usr/bin/perl` | 表示されない | SIP 保護パス配下のバイナリ。`CS_RESTRICT` フラグが設定されています |
+| `~/.local/bin/claude` | 表示される | SIP 保護対象外のパスです |
+| `~/.rbenv/versions/3.4.8/bin/ruby` | 表示される | SIP 保護対象外のパスです |
+
+SIP の保護対象パス（`/usr/bin/`, `/bin/`, `/usr/sbin/`, `/sbin/`）にある Apple 署名済みバイナリには `CS_RESTRICT` フラグが設定されています。
+
+#### XNU カーネルソースにおける実装
+
+環境変数の読み取り制限は、XNU カーネルの `bsd/kern/kern_sysctl.c` にある `sysctl_procargsx()` 関数で実装されています。
+
+```c
+// bsd/kern/kern_sysctl.c — sysctl_procargsx()
+
+#define SYSCTL_PROCARGS_READ_ENVVARS_ENTITLEMENT \
+    "com.apple.private.read-environment-variables"
+
+bool omit_env_vars = true;
+
+#if DEVELOPMENT || DEBUG
+    omit_env_vars = false;
+#endif
+
+if (p == current_proc() ||
+    !cs_restricted(p) ||
+#if CONFIG_CSR
+    csr_check(CSR_ALLOW_UNRESTRICTED_DTRACE) == 0 ||
+#endif
+    IOCurrentTaskHasEntitlement(SYSCTL_PROCARGS_READ_ENVVARS_ENTITLEMENT))
+{
+    omit_env_vars = false;
+}
+```
+
+環境変数が**表示される**（`omit_env_vars = false`）条件は以下のいずれかを満たす場合です:
+
+1. DEVELOPMENT または DEBUG ビルドのカーネルである
+2. 呼び出し元が対象プロセス自身である（`p == current_proc()`）
+3. 対象プロセスに `CS_RESTRICT` フラグが設定されていない（`!cs_restricted(p)`）
+4. SIP の `CSR_ALLOW_UNRESTRICTED_DTRACE` が許可されている
+5. 呼び出し元が `com.apple.private.read-environment-variables` エンタイトルメントを持つ
+
+逆に言えば、リリース版カーネル上で、SIP が有効かつ `CS_RESTRICT` フラグが付いたプロセスの環境変数を、別プロセスから `KERN_PROCARGS2` 経由で取得することはできません。
+
+#### 関連するソースコードと定数
+
+| ファイル | 関数・定数 | 役割 |
+|---|---|---|
+| `bsd/kern/kern_sysctl.c` | `sysctl_procargsx()` | 環境変数フィルタリングの本体です |
+| `bsd/kern/kern_sysctl.c` | `sysctl_doprocargs2()` | `KERN_PROCARGS2` のハンドラです |
+| `bsd/kern/kern_cs.c` | `cs_restricted()` | `CS_RESTRICT` フラグの確認を行います |
+| `osfmk/kern/cs_blobs.h` | `CS_RESTRICT = 0x00000800` | フラグの定数定義です |
+| `bsd/sys/csr.h` | `CSR_ALLOW_UNRESTRICTED_DTRACE` | SIP のフラグ定義です |
+
+XNU ソース: https://github.com/apple-oss-distributions/xnu/blob/main/bsd/kern/kern_sysctl.c
+
+#### 導入時期
+
+xnu-3247（El Capitan 10.11）の `sysctl_procargsx()` には `omit_env_vars` ロジックが存在しません。xnu-7195（macOS 11 Big Sur）で導入されたと推定されます。
+
 ### 結論
 
-macOS には、プロセスの環境変数を `ps -E` で閲覧することを完全に防ぐカーネルレベルの仕組みはありません。緩和策を組み合わせて対応する必要があります。
+macOS には `CS_RESTRICT` フラグと SIP による環境変数の読み取り制限がカーネルレベルで実装されています。ただし、この保護は `/usr/bin/` 等の SIP 保護パス配下にある Apple 署名済みバイナリに限定されます。サードパーティのバイナリやユーザーがインストールしたバイナリには `CS_RESTRICT` フラグが設定されないため、`ps -E` で閲覧することを防ぐことはできません。緩和策を組み合わせて対応する必要があります。
 
 ## 緩和策
 
@@ -403,3 +488,28 @@ security delete-generic-password \
 | Keychain / シークレットマネージャ | 高 | 中 |
 | 起動後に `unsetenv()` | 中（レースあり） | 低 |
 | `security.bsd.see_other_uids=0` | 限定的 | 低 |
+
+## 参考リソース
+
+### XNU カーネルソース
+
+- [kern_sysctl.c — sysctl_procargsx()](https://github.com/apple-oss-distributions/xnu/blob/main/bsd/kern/kern_sysctl.c) — 環境変数フィルタリングの実装箇所です
+- [kern_cs.c — cs_restricted()](https://github.com/apple/darwin-xnu/blob/main/bsd/kern/kern_cs.c) — `CS_RESTRICT` フラグの判定を行います
+- [adv_cmds/ps](https://github.com/apple-oss-distributions/adv_cmds/tree/main/ps) — macOS の `ps` コマンドのソースコードです
+
+### Apple 公式ドキュメント
+
+- [About System Integrity Protection](https://support.apple.com/en-us/102149)
+
+### 技術記事
+
+- [macOS's System Integrity Protection sanitizes your environment](https://briandfoy.github.io/macos-s-system-integrity-protection-sanitizes-your-environment/) — SIP が環境変数に与える影響の解説です
+- [System Integrity Protection: The misunderstood setting](https://khronokernel.com/macos/2022/12/09/SIP.html) — SIP の各フラグの詳細な解説です
+- [DYLD_INSERT_LIBRARIES injection in macOS — CS_RESTRICT の解説](https://theevilbit.github.io/posts/dyld_insert_libraries_dylib_injection_in_macos_osx_deep_dive/) — `CS_RESTRICT` フラグと DYLD の制限について解説しています
+- [Endangered Technique: Using Environment Variables to Find Escaped Processes](https://medium.com/@captaindomestic/endangered-technique-using-environment-variables-to-find-escaped-processes-64eb7ff70602) — `KERN_PROCARGS2` の環境変数制限がセキュリティツールに与える影響を解説しています
+
+### 関連する Issue / バグレポート
+
+- [Emacs bug#48548](https://lists.gnu.org/archive/html/bug-gnu-emacs/2021-05/msg01652.html) — macOS でプロセス属性が取得できない問題の報告です
+- [psutil #2189](https://github.com/giampaolo/psutil/issues/2189) — macOS での `cmdline()` が `NoSuchProcess` を返す問題です
+- [Go #60047](https://github.com/golang/go/issues/60047) — `KERN_PROCARGS2` sysctl のバグ回避に関する議論です
