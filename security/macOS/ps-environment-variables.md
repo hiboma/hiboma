@@ -114,6 +114,28 @@ my-app --password-fd=3
 
 1Password CLI、HashiCorp Vault などのシークレットマネージャから実行時に取得します。
 
+### 1Password CLI `op run` の注意点
+
+`op run --env-file=.env` は `.env` ファイル中のシークレット参照（`op://vault/item/field`）を 1Password から解決し、子プロセスの環境変数として渡します。
+
+```bash
+# .env の内容
+# DB_PASSWORD=op://Private/database/password
+
+op run --env-file=.env -- my-app
+```
+
+`op run` が提供する価値は「`.env` ファイルにシークレットの平文を保存しない」ことです。しかし、**子プロセスの環境変数としてシークレットが渡される仕組みは変わらないため、`ps -E -ww` による露出リスクは残ります**。
+
+```bash
+# 別のターミナルから確認すると、解決済みのシークレットが見える
+ps -E -ww -p <子プロセスのPID>
+```
+
+`op run` 自体のプロセスにはシークレットがコマンドライン引数に現れないため、`ps` の引数欄（`COMMAND` 列）には露出しません。露出するのは子プロセスの環境変数です。
+
+`op run` を使う場合でも、アプリケーション側で起動直後に `unsetenv()` するなどの追加対策を併用することが望ましいです。
+
 ### 2. プロセス起動後に環境変数を消す
 
 アプリケーション側で起動直後に環境変数を読み取り、メモリ上に保持した後 `unsetenv()` で削除します。
