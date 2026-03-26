@@ -4,7 +4,7 @@
 
 ## 概要
 
-macOS では `ps` コマンドにより、同一ユーザーや root がプロセスの環境変数を閲覧できます。環境変数にシークレット（API キー、データベースパスワードなど）を格納している場合、意図しない情報漏洩のリスクがあります。
+macOS では `ps` コマンドにより、同一ユーザーの別プロセスからプロセスの環境変数を閲覧できます。root は全ユーザーのプロセス情報を取得できますが、これは通常の権限行使です。環境変数にシークレット（API キー、データベースパスワードなど）を格納している場合、同一ユーザーの別プロセスや侵害されたアカウントからシークレットが読み取られる可能性があります。
 
 本レポートでは、この問題の技術的背景と緩和策をまとめます。
 
@@ -64,7 +64,7 @@ macOS で `ps -E` と入力した場合、BSD スタイルのオプション解�
 
 - macOS の `ps` は `/proc` ファイルシステムではなく、`sysctl` の `KERN_PROCARGS2` 経由でプロセス情報を取得します
 - Linux の `/proc/<pid>/environ` のようにファイルパーミッションで制御する仕組みが macOS には存在しません
-- root および同一ユーザーのプロセスの環境変数が閲覧可能です
+- 同一ユーザーのプロセスの環境変数が閲覧可能です。root は全ユーザーのプロセス情報を取得できます
 
 `ps` コマンドのソースコード（`adv_cmds/ps/print.c` の `getproclline()` 関数）は、`sysctl()` を `{ CTL_KERN, KERN_PROCARGS2, pid }` で呼び出してプロセスの引数と環境変数を取得しています。
 
@@ -96,7 +96,7 @@ $ ps eww -p $!
 | `~/.local/bin/claude` | 表示される | SIP 保護対象外のパスです |
 | `~/.rbenv/versions/3.4.8/bin/ruby` | 表示される | SIP 保護対象外のパスです |
 
-SIP の保護対象パス（`/usr/bin/`, `/bin/`, `/usr/sbin/`, `/sbin/`）にある Apple 署名済みバイナリには `CS_RESTRICT` フラグが設定されています。
+SIP の保護対象パス（`/usr/bin/`, `/bin/`, `/usr/sbin/`, `/sbin/`）にある Apple 署名済みバイナリの多くには `CS_RESTRICT` フラグが設定されています。ただし、すべてではありません。`CS_RESTRICT` はバイナリのパスではなく、AMFI (Apple Mobile File Integrity) が exec 時にバイナリのコード署名属性を評価して動的に付与するフラグです。たとえば `/usr/bin/python3` は SIP 保護パス配下ですが `CS_RESTRICT` は設定されていません。
 
 #### XNU カーネルソースにおける実装
 
@@ -153,7 +153,7 @@ xnu-3247（El Capitan 10.11）の `sysctl_procargsx()` には `omit_env_vars` �
 
 ### 結論
 
-macOS には `CS_RESTRICT` フラグと SIP による環境変数の読み取り制限がカーネルレベルで実装されています。ただし、この保護は `/usr/bin/` 等の SIP 保護パス配下にある Apple 署名済みバイナリに限定されます。サードパーティのバイナリやユーザーがインストールしたバイナリには `CS_RESTRICT` フラグが設定されないため、`ps -E` で閲覧することを防ぐことはできません。緩和策を組み合わせて対応する必要があります。
+macOS には `CS_RESTRICT` フラグと SIP による環境変数の読み取り制限がカーネルレベルで実装されています。ただし、この保護は AMFI が `CS_RESTRICT` フラグを付与した一部の Apple 署名済みバイナリに限定されます。SIP 保護パス配下であっても `CS_RESTRICT` が設定されないバイナリ（`/usr/bin/python3` 等）が存在します。サードパーティのバイナリやユーザーがインストールしたバイナリには `CS_RESTRICT` フラグが設定されないため、`ps -E` で閲覧することを防ぐことはできません。緩和策を組み合わせて対応する必要があります。
 
 ## 緩和策
 
@@ -210,7 +210,7 @@ my-app --password-fd=3
 op run --env-file=.env -- my-app
 ```
 
-`op run` が提供する価値は「`.env` ファイルにシークレットの平文を保存しない」ことです。しかし、**子プロセスの環境変数としてシークレットが渡される仕組みは変わらないため、`ps -E -ww` による露出リスクは残ります**。
+`op run` が提供する価値は「`.env` ファイルにシークレットの平文を保存しない」ことです。しかし、**子プロセスの環境変数としてシークレットが渡される仕組みは変わらないため、同一ユーザーの別プロセスから `ps -E -ww` でシークレットを読み取ることができます**。
 
 ```bash
 # 別のターミナルから確認すると、解決済みのシークレットが見える
@@ -229,28 +229,40 @@ ps -E -ww -p <子プロセスのPID>
 #include <stdlib.h>
 #include <string.h>
 
-char *secret = strdup(getenv("SECRET_KEY"));
+const char *env = getenv("SECRET_KEY");
+if (env == NULL) {
+    // SECRET_KEY が設定されていない場合のエラーハンドリング
+}
+char *secret = strdup(env);
 unsetenv("SECRET_KEY");
 
 // 以降は secret 変数を使う
 // 使い終わったら明示的に消去する
-memset(secret, 0, strlen(secret));
+// memset ではなく memset_s を使う。memset は直後の free とともにコンパイラの
+// 最適化（デッドストア削除）で省略される可能性がある
+memset_s(secret, strlen(secret), 0, strlen(secret));
 free(secret);
 ```
 
-起動直後の短い時間帯には `ps -E` で閲覧可能なため、レースコンディションが残ります。完全な対策ではありません。
+#### `ps -E` に対する効果
 
-### 3. `security.bsd.see_other_uids` で他ユーザーのプロセスを非表示にする
+**`unsetenv()` は `ps -E` に対して無効です。** `ps -E` が参照する `KERN_PROCARGS2` は、カーネルがプロセスの exec 時に保存した引数・環境変数のスナップショットです。プロセスのユーザ空間で `unsetenv()` を呼んでも、カーネル側のスナップショットは変更されません。
 
-```bash
-sudo sysctl security.bsd.see_other_uids=0
-```
+man ps(1) にも以下の記述があります:
 
-一般ユーザーが **他ユーザー** のプロセス情報を閲覧できなくなります。ただし、**同一ユーザー** のプロセスや **root** からは引き続き閲覧可能です。
+> -E Display the environment as well. **This does not reflect changes in the environment after process launch.**
 
-### 4. Endpoint Security フレームワーク
+`unsetenv()` が有効なのは、アプリケーション自身が `getenv()` で自プロセスの環境変数を読む場合や、`fork`/`exec` で子プロセスに環境変数を引き継がせない場合に限られます。
 
-macOS の Endpoint Security フレームワークを使い `proc_info` 系のシステムコールを監視・制限することは理論上可能ですが、MDM 配布の System Extension として実装する必要があり、一般的な対策とは言えません。
+### ~~3. `security.bsd.see_other_uids` で他ユーザーのプロセスを非表示にする~~
+
+**`security.bsd.see_other_uids` は FreeBSD 固有の sysctl パラメータであり、macOS (XNU) には実装されていません。** macOS 15 Sequoia で `sysctl security.bsd.see_other_uids` を実行すると `unknown oid` エラーになります。macOS では `security.bsd` 名前空間自体が存在しません。
+
+### 3. Endpoint Security フレームワーク
+
+~~macOS の Endpoint Security フレームワークを使い `proc_info` 系のシステムコールを監視・制限することは理論上可能ですが、MDM 配布の System Extension として実装する必要があり、一般的な対策とは言えません。~~
+
+Endpoint Security フレームワークには `sysctl(KERN_PROCARGS2)` の呼び出しを監視・制限するイベントタイプ（`ES_EVENT_TYPE_AUTH_PROC_INFO` 等）は存在しません。exec, fork, open 等のイベントは監視できますが、任意の sysctl 呼び出しをフックする機能は提供されていないため、この方法では環境変数の読み取りを制限できません。
 
 ## Keychain Services API
 
@@ -277,17 +289,21 @@ OSStatus add_secret(const char *service, const char *account, const char *secret
     CFMutableDictionaryRef query = CFDictionaryCreateMutable(
         NULL, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
 
+    CFStringRef service_str = CFStringCreateWithCString(NULL, service, kCFStringEncodingUTF8);
+    CFStringRef account_str = CFStringCreateWithCString(NULL, account, kCFStringEncodingUTF8);
+    CFDataRef secret_data = CFDataCreate(NULL, (const UInt8 *)secret, strlen(secret));
+
     CFDictionarySetValue(query, kSecClass, kSecClassGenericPassword);
-    CFDictionarySetValue(query, kSecAttrService,
-        CFStringCreateWithCString(NULL, service, kCFStringEncodingUTF8));
-    CFDictionarySetValue(query, kSecAttrAccount,
-        CFStringCreateWithCString(NULL, account, kCFStringEncodingUTF8));
-    CFDictionarySetValue(query, kSecValueData,
-        CFDataCreate(NULL, (const UInt8 *)secret, strlen(secret)));
+    CFDictionarySetValue(query, kSecAttrService, service_str);
+    CFDictionarySetValue(query, kSecAttrAccount, account_str);
+    CFDictionarySetValue(query, kSecValueData, secret_data);
     CFDictionarySetValue(query, kSecAttrAccessible,
         kSecAttrAccessibleWhenUnlockedThisDeviceOnly);
 
     OSStatus status = SecItemAdd(query, NULL);
+    CFRelease(secret_data);
+    CFRelease(account_str);
+    CFRelease(service_str);
     CFRelease(query);
     return status;
 }
@@ -301,11 +317,12 @@ OSStatus get_secret(const char *service, const char *account,
     CFMutableDictionaryRef query = CFDictionaryCreateMutable(
         NULL, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
 
+    CFStringRef service_str = CFStringCreateWithCString(NULL, service, kCFStringEncodingUTF8);
+    CFStringRef account_str = CFStringCreateWithCString(NULL, account, kCFStringEncodingUTF8);
+
     CFDictionarySetValue(query, kSecClass, kSecClassGenericPassword);
-    CFDictionarySetValue(query, kSecAttrService,
-        CFStringCreateWithCString(NULL, service, kCFStringEncodingUTF8));
-    CFDictionarySetValue(query, kSecAttrAccount,
-        CFStringCreateWithCString(NULL, account, kCFStringEncodingUTF8));
+    CFDictionarySetValue(query, kSecAttrService, service_str);
+    CFDictionarySetValue(query, kSecAttrAccount, account_str);
     CFDictionarySetValue(query, kSecReturnData, kCFBooleanTrue);
     CFDictionarySetValue(query, kSecMatchLimit, kSecMatchLimitOne);
 
@@ -321,6 +338,8 @@ OSStatus get_secret(const char *service, const char *account,
         CFRelease(result);
     }
 
+    CFRelease(account_str);
+    CFRelease(service_str);
     CFRelease(query);
     return status;
 }
@@ -333,20 +352,25 @@ OSStatus update_secret(const char *service, const char *account,
                        const char *new_secret) {
     CFMutableDictionaryRef query = CFDictionaryCreateMutable(
         NULL, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
+
+    CFStringRef service_str = CFStringCreateWithCString(NULL, service, kCFStringEncodingUTF8);
+    CFStringRef account_str = CFStringCreateWithCString(NULL, account, kCFStringEncodingUTF8);
+
     CFDictionarySetValue(query, kSecClass, kSecClassGenericPassword);
-    CFDictionarySetValue(query, kSecAttrService,
-        CFStringCreateWithCString(NULL, service, kCFStringEncodingUTF8));
-    CFDictionarySetValue(query, kSecAttrAccount,
-        CFStringCreateWithCString(NULL, account, kCFStringEncodingUTF8));
+    CFDictionarySetValue(query, kSecAttrService, service_str);
+    CFDictionarySetValue(query, kSecAttrAccount, account_str);
 
     CFMutableDictionaryRef attrs = CFDictionaryCreateMutable(
         NULL, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
-    CFDictionarySetValue(attrs, kSecValueData,
-        CFDataCreate(NULL, (const UInt8 *)new_secret, strlen(new_secret)));
+    CFDataRef secret_data = CFDataCreate(NULL, (const UInt8 *)new_secret, strlen(new_secret));
+    CFDictionarySetValue(attrs, kSecValueData, secret_data);
 
     OSStatus status = SecItemUpdate(query, attrs);
-    CFRelease(query);
+    CFRelease(secret_data);
+    CFRelease(account_str);
+    CFRelease(service_str);
     CFRelease(attrs);
+    CFRelease(query);
     return status;
 }
 ```
@@ -357,13 +381,17 @@ OSStatus update_secret(const char *service, const char *account,
 OSStatus delete_secret(const char *service, const char *account) {
     CFMutableDictionaryRef query = CFDictionaryCreateMutable(
         NULL, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
+
+    CFStringRef service_str = CFStringCreateWithCString(NULL, service, kCFStringEncodingUTF8);
+    CFStringRef account_str = CFStringCreateWithCString(NULL, account, kCFStringEncodingUTF8);
+
     CFDictionarySetValue(query, kSecClass, kSecClassGenericPassword);
-    CFDictionarySetValue(query, kSecAttrService,
-        CFStringCreateWithCString(NULL, service, kCFStringEncodingUTF8));
-    CFDictionarySetValue(query, kSecAttrAccount,
-        CFStringCreateWithCString(NULL, account, kCFStringEncodingUTF8));
+    CFDictionarySetValue(query, kSecAttrService, service_str);
+    CFDictionarySetValue(query, kSecAttrAccount, account_str);
 
     OSStatus status = SecItemDelete(query);
+    CFRelease(account_str);
+    CFRelease(service_str);
     CFRelease(query);
     return status;
 }
@@ -481,13 +509,13 @@ security delete-generic-password \
 
 ## 緩和策のまとめ
 
-| 方法 | 効果 | 実装コスト |
+| 方法 | `ps -E` への効果 | 実装コスト |
 |---|---|---|
-| シークレットをファイル経由で渡す | 高 | 低 |
-| stdin 経由で渡す | 高 | 低 |
-| Keychain / シークレットマネージャ | 高 | 中 |
-| 起動後に `unsetenv()` | 中（レースあり） | 低 |
-| `security.bsd.see_other_uids=0` | 限定的 | 低 |
+| シークレットをファイル経由で渡す | 有効 | 低 |
+| stdin 経由で渡す | 有効 | 低 |
+| Keychain / シークレットマネージャ | 有効 | 中 |
+| 起動後に `unsetenv()` | **無効**（KERN_PROCARGS2 のスナップショットは変更されない） | 低 |
+| ~~`security.bsd.see_other_uids=0`~~ | **macOS には存在しない**（FreeBSD 固有） | — |
 
 ## 参考リソース
 
