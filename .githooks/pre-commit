@@ -1,0 +1,27 @@
+#!/bin/bash
+#
+# pre-commit hook — 秘匿情報スキャン
+#
+# インストール方法:
+#   git config core.hooksPath .githooks
+#
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+SCAN_SCRIPT="${SCRIPT_DIR}/scripts/scan-sensitive-data.sh"
+
+if [[ ! -x "$SCAN_SCRIPT" ]]; then
+    echo "WARNING: scan-sensitive-data.sh が見つかりません。スキップします。" >&2
+    exit 0
+fi
+
+echo "pre-commit: 秘匿情報スキャンを実行中..."
+
+if ! "$SCAN_SCRIPT" --staged; then
+    echo ""
+    echo "ERROR: 秘匿情報が検出されました。commit をブロックします。" >&2
+    echo "マスク処理を行ってから再度 commit してください。" >&2
+    echo "詳細: scripts/scan-sensitive-data.sh --staged" >&2
+    exit 1
+fi
