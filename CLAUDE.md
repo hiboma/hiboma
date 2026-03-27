@@ -26,3 +26,32 @@ Linux カーネル、システムプログラミング、インフラ技術に�
 - カーネルソースコードの引用と解説が多く含まれます
 - 実験手順と観察結果がセットで記録されています
 - CVE の PoC 検証やバグレポートの記録も含まれます
+
+## 秘匿情報スキャン
+
+コマンド実行の履歴や出力をマークダウンに記録する際、秘匿情報や個人を特定できるディレクトリパスの漏洩を防止する仕組みがあります。
+
+### 構成
+
+| ファイル | 役割 |
+|---|---|
+| `scripts/scan-sensitive-data.sh` | 共通スキャンスクリプト。差分・ファイルから秘匿情報を検出します |
+| `.claude/rules/sensitive-data-check.md` | Claude Code のルール。commit 前のスキャン実行を指示します |
+| `.claude/skills/sensitive-data-guard.md` | Claude Code のスキル。マスク対象パターンとマスク手順を定義します |
+| `.githooks/pre-commit` | git pre-commit hook。手動 commit でもスキャンを実行します |
+
+### git hooks の有効化
+
+```bash
+git config core.hooksPath .githooks
+```
+
+### 手動スキャン
+
+```bash
+# ステージ済みの差分をスキャン
+scripts/scan-sensitive-data.sh --staged
+
+# 特定ファイルをスキャン
+scripts/scan-sensitive-data.sh --file <path>
+```
