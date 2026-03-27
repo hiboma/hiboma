@@ -70,6 +70,65 @@ macOS で `ps -E` と入力した場合、BSD スタイルのオプション解�
 
 - ps コマンドのソース: https://github.com/apple-oss-distributions/adv_cmds/tree/main/ps
 
+#### `ps -E` で環境変数が表示されないケース
+
+`KERN_PROCARGS2` に環境変数が含まれていても、`ps -E -ww` で表示されない場合があります。これは `ps` のユーザランド実装（`getproclline()` のパーサー）に起因します。
+
+`getproclline()` の環境変数表示ループには「連続する2つの `\0` を検出したらパースを停止する」ロジックがあります。
+
+```c
+// adv_cmds/ps/print.c — getproclline() の環境変数ループ
+for (; cp < &procargs[size]; cp++) {
+    if (*cp == '\0') {
+        if (np != NULL) {
+            if (&np[1] == cp) {
+                // Two '\0' characters in a row → stop parsing
+                break;
+            }
+            *np = ' ';
+        }
+        np = cp;
+    }
+}
+```
+
+プロセスが起動後に `argv` 領域を書き換えて空文字列（NUL 1バイト）にした場合、argv の終端と NUL パディングが連続 NUL として検出され、環境変数に到達する前にパースが打ち切られます。
+
+##### 実例: ruby-lsp プロセス
+
+ruby-lsp は `argc=5` で起動した後に `argv[1]`〜`argv[4]` をクリアしています。`KERN_PROCARGS2` のデータ構造は以下の通りです。
+
+```
+argc=5
+exec_path: .../.rbenv/versions/x.x.x/bin/ruby\0
+argv[0]: .../.rbenv/versions/x.x.x/bin/ruby-lsp\0
+argv[1]: \0              ← 空文字列（起動後にクリアされた）
+argv[2]: \0
+argv[3]: \0
+argv[4]: \0
+\0\0\0...(NUL パディング)...\0
+RBENV_VERSION=x.x.x\0   ← 環境変数（ここに到達しない）
+```
+
+`ps -E -ww` では環境変数が表示されませんが、`sysctl(KERN_PROCARGS2)` を直接呼ぶプログラムでは環境変数が読み取れます。
+
+```bash
+# ps -E -ww では環境変数が表示されない
+$ ps -E -ww -p <PID>
+  PID TTY           TIME CMD
+12345 ttys011    0:03.91 /Users/&lt;USER&gt;/.rbenv/versions/x.x.x/bin/ruby-lsp
+
+# sysctl を直接呼ぶと環境変数が読める
+$ ./read_env <PID>
+argc: 5
+env[0]: RBENV_VERSION=x.x.x
+env[1]: MANWIDTH=80
+...
+Total env vars found: 75
+```
+
+`ps -E` で環境変数が見えないからといって、`KERN_PROCARGS2` 経由で環境変数が保護されているわけではありません。
+
 ### SIP による環境変数の読み取り制限（CS_RESTRICT）
 
 macOS 11 Big Sur 以降、SIP (System Integrity Protection) が有効な環境では、**`CS_RESTRICT` フラグが設定されたプロセスの環境変数はカーネルレベルで非表示になります**。
@@ -84,17 +143,17 @@ $ ps eww -p $!
 12345 s014  S+     0:00.01 perl -e sleep 1000
 
 # ~/.rbenv/ 配下の ruby — SIP 保護対象外。環境変数が全て表示される
-$ ~/.rbenv/versions/3.4.8/bin/ruby -e 'sleep 100' &
+$ ~/.rbenv/versions/x.x.x/bin/ruby -e 'sleep 100' &
 $ ps eww -p $!
   PID   TT  STAT      TIME COMMAND
-12346 s014  S+     0:00.04 /Users/hito/.rbenv/versions/3.4.8/bin/ruby -e sleep 100 TERM=xterm-256color HOME=/Users/hito ...
+12346 s014  S+     0:00.04 /Users/&lt;USER&gt;/.rbenv/versions/x.x.x/bin/ruby -e sleep 100 TERM=xterm-256color HOME=/Users/foo ...
 ```
 
 | バイナリのパス | 環境変数の表示 | 理由 |
 |---|---|---|
 | `/usr/bin/perl` | 表示されない | SIP 保護パス配下のバイナリ。`CS_RESTRICT` フラグが設定されています |
 | `~/.local/bin/claude` | 表示される | SIP 保護対象外のパスです |
-| `~/.rbenv/versions/3.4.8/bin/ruby` | 表示される | SIP 保護対象外のパスです |
+| `~/.rbenv/versions/x.x.x/bin/ruby` | 表示される | SIP 保護対象外のパスです |
 
 SIP の保護対象パス（`/usr/bin/`, `/bin/`, `/usr/sbin/`, `/sbin/`）にある Apple 署名済みバイナリの多くには `CS_RESTRICT` フラグが設定されています。ただし、すべてではありません。`CS_RESTRICT` はバイナリのパスではなく、AMFI (Apple Mobile File Integrity) が exec 時にバイナリのコード署名属性を評価して動的に付与するフラグです。たとえば `/usr/bin/python3` は SIP 保護パス配下ですが `CS_RESTRICT` は設定されていません。
 
@@ -263,6 +322,85 @@ man ps(1) にも以下の記述があります:
 ~~macOS の Endpoint Security フレームワークを使い `proc_info` 系のシステムコールを監視・制限することは理論上可能ですが、MDM 配布の System Extension として実装する必要があり、一般的な対策とは言えません。~~
 
 Endpoint Security フレームワークには `sysctl(KERN_PROCARGS2)` の呼び出しを監視・制限するイベントタイプ（`ES_EVENT_TYPE_AUTH_PROC_INFO` 等）は存在しません。exec, fork, open 等のイベントは監視できますが、任意の sysctl 呼び出しをフックする機能は提供されていないため、この方法では環境変数の読み取りを制限できません。
+
+### 4. sandbox (Seatbelt) による sysctl 読み取り制限
+
+sandbox profile で `KERN_PROCARGS2` の sysctl 呼び出しをブロックできます。ただし、これは**読み取る側**のプロセスを制限する仕組みであり、読み取られる側を保護する仕組みではありません。
+
+XNU カーネルの `sysctl_root()` (`bsd/kern/kern_newsysctl.c`) では、個別ハンドラ呼び出しの前に MACF (Mandatory Access Control Framework) 経由で sandbox のチェックが行われます。
+
+```c
+// bsd/kern/kern_newsysctl.c — sysctl_root()
+#if CONFIG_MACF
+if (!from_kernel) {
+    error = mac_system_check_sysctlbyname(kauth_cred_get(),
+        namestring, name, namelen,
+        req->oldptr, req->oldlen, req->newptr, req->newlen);
+    if (error) {
+        goto dropref;
+    }
+}
+#endif
+```
+
+sandbox profile では `sysctl-read` オペレーションで制御します。
+
+```scheme
+;; sysctl-read を deny すると KERN_PROCARGS2 の読み取りがブロックされる
+(version 1)
+(deny default)
+(allow sysctl-read (sysctl-name "kern.ostype"))  ;; 必要なもののみ許可
+```
+
+`sysctl(KERN_PROCARGS2)` と `proc_pidinfo()` は異なるチェックパスを通るため、制限するオペレーションが異なります。
+
+| アクセス方法 | MACF フック | sandbox オペレーション |
+|---|---|---|
+| `sysctl(KERN_PROCARGS2)` | `mac_system_check_sysctlbyname()` | `sysctl-read` |
+| `proc_pidinfo()` | `mac_proc_check_proc_info()` | `process-info-pidinfo` |
+
+`(deny process-info*)` のみでは sysctl 経由の `KERN_PROCARGS2` アクセスはブロックされません。`(deny sysctl-read)` が必要です。
+
+### 5. VM ベースのコンテナ (Docker / Colima) による分離
+
+macOS の Docker は Linux VM の中でコンテナを実行します。ホスト macOS の `KERN_PROCARGS2` は macOS カーネルのプロセステーブルのみを参照するため、VM 内のプロセス情報には一切アクセスできません。
+
+```
+ホスト macOS
+  └─ ps -E -ww → macOS カーネルの KERN_PROCARGS2 のみ参照
+  └─ com.docker.backend (VM プロセス。内部のコンテナ情報は見えない)
+      └─ Linux VM (別カーネル)
+          └─ コンテナプロセス (SECRET=xxx) ← ホストからは不可視
+```
+
+macOS には Linux の PID namespace のようなカーネルレベルのプロセス名前空間分離機構は存在しません。VM ベースのコンテナ実行環境が、macOS において環境変数の分離を実現する最も確実な方法です。
+
+### macOS 15 での検証
+
+macOS 15 (Sequoia) で、SIP 保護パス外の独自ビルドバイナリに対して `KERN_PROCARGS2` 経由の環境変数読み取りを検証しました。
+
+```bash
+# /tmp/claude/sleeper を MY_SECRET=... で起動し、別プロセスから読み取り
+$ /tmp/claude/read_env <sleeper の PID>
+env[76]: MY_SECRET=this_is_a_secret_value
+Total env vars found: 87
+```
+
+| 対象バイナリ | CS_RESTRICT | 環境変数の読み取り |
+|---|---|---|
+| `/tmp/claude/sleeper` (独自ビルド、`adhoc,linker-signed`) | なし | **87件すべて読み取り可能** |
+| `/bin/zsh` (SIP 保護パス内) | あり | **0件（カーネルが除外）** |
+
+macOS 15 でも `sysctl_procargsx()` の `omit_env_vars` ロジックに変更はなく、`CS_RESTRICT` フラグが設定されていないバイナリの環境変数は従来通り他プロセスから読み取り可能です。
+
+### Linux namespace との比較
+
+| 観点 | Linux PID namespace | macOS sandbox | macOS VM (Docker) |
+|---|---|---|---|
+| カーネルの分離 | 同一カーネル内の論理分離 | 同一カーネル内のポリシー制御 | 別カーネル（物理分離） |
+| 環境変数の遮断 | namespace 外からは不可視 | `sysctl-read` deny で制限可能 | ホストから完全に不可視 |
+| root による読み取り | namespace を越えてアクセス可能 | sandbox は root でも適用される | ホスト root でもアクセス不可 |
+| 保護の方向 | 被保護プロセスを隔離 | 読み取り側を制限 | 被保護プロセスを隔離 |
 
 ## Keychain Services API
 
@@ -514,6 +652,9 @@ security delete-generic-password \
 | シークレットをファイル経由で渡す | 有効 | 低 |
 | stdin 経由で渡す | 有効 | 低 |
 | Keychain / シークレットマネージャ | 有効 | 中 |
+| sandbox profile で `sysctl-read` を deny | 有効（読み取り側の制限） | 中 |
+| VM ベースのコンテナ (Docker / Colima) | 有効（完全な分離） | 中 |
+| SIP + CS_RESTRICT | 有効（`CS_RESTRICT` 付きバイナリのみ。独自バイナリには適用されない） | なし |
 | 起動後に `unsetenv()` | **無効**（KERN_PROCARGS2 のスナップショットは変更されない） | 低 |
 | ~~`security.bsd.see_other_uids=0`~~ | **macOS には存在しない**（FreeBSD 固有） | — |
 
