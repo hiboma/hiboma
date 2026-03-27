@@ -194,9 +194,87 @@ codesign -d --verbose=4 /path/to/binary 2>&1
 | App Store 配布 | 不可。Developer ID 署名 + Notarization が必要 |
 | MDM 経由の配布 | 構成プロファイルで許可すれば可能 |
 
+## Gatekeeper のログ確認方法
+
+ad hoc 署名のバイナリが Gatekeeper に検出・拒否された場合、以下の方法でログを確認できます。
+
+### spctl による事前評価
+
+`spctl` (SecAssessment system policy security) コマンドで、Gatekeeper がバイナリをどう評価するかを事前確認できます。
+
+```bash
+# バイナリの Gatekeeper 評価を確認する
+spctl --assess --verbose /path/to/binary
+
+# 出力例 (Apple 署名バイナリ)
+# /usr/bin/true: rejected (the code is valid but does not seem to be an app)
+
+# --raw オプションで XML plist 形式の詳細を表示する
+spctl --assess --verbose --raw /path/to/binary
+```
+
+`spctl --assess` は実行時の Gatekeeper チェックをシミュレーションします。`-t execute` (デフォルト) でコード実行、`-t install` でインストーラパッケージの評価を行います。
+
+### Unified Logging (log コマンド)
+
+Gatekeeper の実行時ログは `syspolicyd` デーモンが統合ログ (Unified Logging) に出力します。
+
+```bash
+# syspolicyd のログをリアルタイム監視する
+log stream --predicate 'subsystem == "com.apple.syspolicy.exec"' --info
+
+# 過去のログを検索する（直近 10 分）
+log show --predicate 'subsystem == "com.apple.syspolicy.exec"' --last 10m --info
+
+# より広い範囲で Gatekeeper 関連ログを検索する
+log show --predicate 'subsystem BEGINSWITH "com.apple.syspolicy"' --last 10m --info
+```
+
+主要なサブシステムは以下の通りです。
+
+| サブシステム | 説明 |
+|---|---|
+| `com.apple.syspolicy.exec` | プロセス実行時の Gatekeeper 評価ログです |
+| `com.apple.syspolicy` | syspolicyd の全般的なログです（Notarization チケットの検証など） |
+
+### ログに出現する主要なメッセージ
+
+| メッセージ | 意味 |
+|---|---|
+| `Found provenance data on process` | プロセスの出所（provenance）情報が検出されました |
+| `Process was already in provenance sandbox` | 既に出所追跡のサンドボックス内にあるプロセスです |
+| `Tracking process with attributes` | 新しいプロセスの属性を追跡します |
+| `Unable to initialize qtn_proc` | quarantine 属性の初期化に失敗しました。ローカルでビルドしたバイナリにはquarantine 属性がないため、このエラーは正常です |
+
+### quarantine 属性との関係
+
+Gatekeeper がバイナリを検査するのは、ファイルに **quarantine 拡張属性** (`com.apple.quarantine`) が付与されている場合です。ローカルでビルドした ad hoc 署名のバイナリには quarantine 属性がないため、Gatekeeper の検査対象にはなりません。
+
+```bash
+# ファイルの quarantine 属性を確認する
+xattr -p com.apple.quarantine /path/to/binary
+
+# quarantine 属性が付与されている場合の出力例
+# 0083;66123456;Safari;12345678-1234-1234-1234-123456789012
+
+# quarantine 属性を削除する (Gatekeeper の検査をスキップする)
+xattr -d com.apple.quarantine /path/to/binary
+```
+
+⚠️ **セキュリティ上の注意**: `xattr -d com.apple.quarantine` で quarantine 属性を削除すると、Gatekeeper の検査をバイパスできます。インターネットからダウンロードした出所不明のバイナリに対してこの操作を行うと、マルウェアの実行を許可するリスクがあります。
+
+### Console.app による確認
+
+GUI で確認する場合は、macOS 標準の Console.app を使用します。
+
+1. Console.app を起動します
+2. 検索フィールドに `syspolicy` と入力します
+3. 「カテゴリ」列で `com.apple.syspolicy.exec` をフィルタリングします
+
 ## 関連する macOS のセキュリティ機構
 
 - **Gatekeeper**: ダウンロードしたアプリの署名と Notarization を検証します
 - **XProtect**: マルウェアのシグネチャベースの検出を行います
 - **Sandbox.kext**: App Sandbox のカーネル側実装です。署名情報をもとにサンドボックスルールを適用します
 - **amfid (Apple Mobile File Integrity Daemon)**: コード署名の検証をカーネルから委譲されるデーモンです
+- **syspolicyd**: Gatekeeper のポリシー評価を行うデーモンです。`/var/db/SystemPolicyConfiguration/SystemPolicy` にポリシーデータベースを保持します
