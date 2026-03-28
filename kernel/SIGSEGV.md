@@ -619,6 +619,197 @@ good_area:
 
 ---
 
+## 最新カーネル (6.x) での変更点
+
+<!-- CC添削: 最新カーネルでの実装変更をまとめたセクションを追記しました -->
+
+### page fault ハンドラの再編
+
+2.6.32 の `__do_page_fault()` は 1 つの大きな関数でしたが、最新カーネルでは 4 つの関数に分割されています。
+
+```mermaid
+flowchart TD
+    A["exc_page_fault()
+    IDT/FRED エントリポイント"] --> B["handle_page_fault()
+    カーネル/ユーザ空間の振り分け"]
+    B --> C{"fault_in_kernel_space?"}
+    C -- Yes --> D["do_kern_addr_fault()
+    vmalloc fault, spurious fault"]
+    C -- No --> E["do_user_addr_fault()
+    VMA 検索, SIGSEGV 送信"]
+    E --> F{"per-VMA lock
+    lock_vma_under_rcu()"}
+    F -- "成功 (fast path)" --> G["handle_mm_fault()
+    mmap_lock 不要"]
+    F -- "失敗 (slow path)" --> H["lock_mm_and_find_vma()
+    mmap_lock 取得"]
+    H --> G
+```
+
+| 2.6.32 | 6.x | 変更内容 |
+|---|---|---|
+| `do_page_fault()` / `__do_page_fault()` | `exc_page_fault()` → `handle_page_fault()` → `do_user_addr_fault()` | 3段階に分離されました |
+| `bad_area()` | 削除 | `bad_area_nosemaphore()` を直接使用します |
+| `force_sig_info_fault()` | `force_sig_fault()` | siginfo を手動構築する必要がなくなりました |
+| `mmap_sem` | `mmap_lock` | `mmap_read_lock()` / `mmap_read_unlock()` に変更されました |
+| — | `lock_vma_under_rcu()` | per-VMA lock が追加されました（後述） |
+
+### per-VMA lock: mmap_lock のスケーラビリティ改善
+
+2.6.32 では VMA 検索時に必ず `mmap_sem` (読み取りロック) を取得していましたが、マルチスレッド環境では `mmap_sem` がボトルネックになります。最新カーネルでは **per-VMA lock** が導入され、`mmap_lock` を取得せずにページフォルトを処理できるようになりました。
+
+```mermaid
+flowchart LR
+    subgraph "2.6.32: mmap_sem"
+        A1["down_read(&mm->mmap_sem)"] --> B1["find_vma()"] --> C1["handle_mm_fault()"] --> D1["up_read(&mm->mmap_sem)"]
+    end
+    subgraph "6.x: per-VMA lock (fast path)"
+        A2["lock_vma_under_rcu()
+        RCU + maple tree"] --> B2["handle_mm_fault()"] --> C2["vma_end_read()"]
+    end
+```
+
+- `lock_vma_under_rcu()` は RCU 保護下で maple tree を走査し、VMA 単位のロックを取得します
+- fast path が成功すれば `mmap_lock` を取得しないため、スレッド間の競合が大幅に減少します
+- fast path が失敗した場合は従来通り `lock_mm_and_find_vma()` で `mmap_lock` を取得します (slow path)
+
+### `__bad_area_nosemaphore()` の変更
+
+```c
+/* 🤖 最新カーネル (6.x) の __bad_area_nosemaphore */
+static void
+__bad_area_nosemaphore(struct pt_regs *regs, unsigned long error_code,
+		       unsigned long address, u32 pkey, int si_code)
+{
+	struct task_struct *tsk = current;
+
+	/* 🤖 2.6.32 では error_code & PF_USER で判定していたが、
+	 * 最新では user_mode(regs) と error_code & X86_PF_USER を分離して判定します */
+	if (!user_mode(regs)) {
+		kernelmode_fixup_or_oops(regs, error_code, address,
+					 SIGSEGV, si_code, pkey);
+		return;
+	}
+
+	/* 🤖 カーネルモードで X86_PF_USER が立っていない場合は
+	 * 暗黙のユーザ空間アクセスとして OOPS にします */
+	if (!(error_code & X86_PF_USER)) {
+		page_fault_oops(regs, error_code, address);
+		return;
+	}
+
+	local_irq_enable();
+
+	if (is_prefetch(regs, error_code, address))
+		return;
+
+	if (is_errata100(regs, address))
+		return;
+
+	sanitize_error_code(address, &error_code);
+
+	/* 🤖 vDSO 内でのフォルトを fixup する処理が追加されています */
+	if (fixup_vdso_exception(regs, X86_TRAP_PF, error_code, address))
+		return;
+
+	if (likely(show_unhandled_signals))
+		show_signal_msg(regs, error_code, address, tsk);
+
+	set_signal_archinfo(address, error_code);
+
+	/* 🤖 Protection Keys 違反の場合は SEGV_PKUERR で通知します
+	 * それ以外は従来通り force_sig_fault で SIGSEGV を送信します */
+	if (si_code == SEGV_PKUERR)
+		force_sig_pkuerr((void __user *)address, pkey);
+	else
+		force_sig_fault(SIGSEGV, si_code, (void __user *)address);
+}
+```
+
+主な変更点:
+
+| 2.6.32 | 6.x | 変更内容 |
+|---|---|---|
+| `error_code & PF_USER` で判定 | `user_mode(regs)` と `error_code & X86_PF_USER` を分離 | カーネルモードでのフォルト処理が `kernelmode_fixup_or_oops()` に分離されました |
+| `no_context()` | `page_fault_oops()` | 関数名が変更されました |
+| `force_sig_info_fault()` | `force_sig_fault()` / `force_sig_pkuerr()` | siginfo の手動構築が不要になりました |
+| — | `sanitize_error_code()` | KASLR のアドレスリーク防止が追加されました |
+| — | `fixup_vdso_exception()` | vDSO 内のフォルト処理が追加されました |
+| — | `set_signal_archinfo()` | アーキテクチャ固有のシグナル情報設定が分離されました |
+
+### `show_signal_msg()` の変更
+
+```c
+/* 🤖 最新カーネル (6.x) の show_signal_msg */
+static inline void
+show_signal_msg(struct pt_regs *regs, unsigned long error_code,
+		unsigned long address, struct task_struct *tsk)
+{
+	const char *loglvl = task_pid_nr(tsk) > 1 ? KERN_INFO : KERN_EMERG;
+	int cpu = raw_smp_processor_id();  /* 🤖 CPU 番号を取得します */
+
+	if (!unhandled_signal(tsk, SIGSEGV))
+		return;
+
+	if (!printk_ratelimit())
+		return;
+
+	/* 🤖 %p → %px に変更されています（v4.15 のポインタハッシュ化対策） */
+	printk("%s%s[%d]: segfault at %lx ip %px sp %px error %lx",
+		loglvl, tsk->comm, task_pid_nr(tsk), address,
+		(void *)regs->ip, (void *)regs->sp, error_code);
+
+	print_vma_addr(KERN_CONT " in ", regs->ip);
+
+	/* 🤖 CPU 番号、コア番号、ソケット番号が追加されました
+	 * ハードウェア障害の特定に役立ちます */
+	printk(KERN_CONT " likely on CPU %d (core %d, socket %d)", cpu,
+	       topology_core_id(cpu), topology_physical_package_id(cpu));
+
+	printk(KERN_CONT "\n");
+
+	/* 🤖 フォルト地点前後の命令バイト列をダンプします
+	 * 42 バイト前方 + 1 バイト (フォルト地点) + 21 バイト後方 を出力します */
+	show_opcodes(regs, loglvl);
+}
+```
+
+最新カーネルでの segfault ログの出力例:
+
+```
+a.out[25311]: segfault at 0 ip 00005555555551a9 sp 00007ffd12345678 error 4 in a.out[555555555000+1000] likely on CPU 3 (core 1, socket 0)
+Code: 48 89 e5 48 83 ec 10 c7 45 fc 00 00 00 00 eb 1a ... <0f> b6 00 ...
+```
+
+### error コードの拡張
+
+最新カーネルでは `PF_*` が `X86_PF_*` にリネームされ、新しいビットが追加されています。
+
+```c
+/* arch/x86/include/asm/trap_pf.h */
+enum x86_pf_error_code {
+	X86_PF_PROT  = BIT(0),   /* 0: ページなし       1: 保護違反 */
+	X86_PF_WRITE = BIT(1),   /* 0: 読み取り         1: 書き込み */
+	X86_PF_USER  = BIT(2),   /* 0: カーネルモード   1: ユーザモード */
+	X86_PF_RSVD  = BIT(3),   /* 1: 予約ビット違反 */
+	X86_PF_INSTR = BIT(4),   /* 1: 命令フェッチ */
+	X86_PF_PK    = BIT(5),   /* 🤖 Protection Keys によるアクセスブロック (Intel PKU) */
+	X86_PF_SHSTK = BIT(6),   /* 🤖 Shadow Stack アクセスフォルト (Intel CET) */
+	X86_PF_SGX   = BIT(15),  /* 🤖 SGX MMU ページフォルト */
+	X86_PF_RMP   = BIT(31),  /* 🤖 RMP 違反 (AMD SEV-SNP) */
+};
+```
+
+### SIGSEGV の si_code の拡張
+
+| si_code | 導入時期 | 意味 |
+|---|---|---|
+| `SEGV_MAPERR` | 2.6.x 以前 | アドレスがどの VMA にもマッピングされていません |
+| `SEGV_ACCERR` | 2.6.x 以前 | VMA は存在するがアクセス権限がありません |
+| `SEGV_PKUERR` | 4.6+ | Protection Keys (PKRU) によるアクセス拒否です |
+
+---
+
 ## 参考ソース・参考資料
 
 <!-- CC添削: 参考ソース・参考資料セクションを追記しました -->
@@ -627,10 +818,12 @@ good_area:
 
 | ファイル | 関数・定義 | 内容 |
 |---|---|---|
-| [`arch/x86/mm/fault.c`](https://github.com/torvalds/linux/blob/master/arch/x86/mm/fault.c) | `exc_page_fault()`, `do_user_addr_fault()`, `show_signal_msg()`, `bad_area()` | x86 page fault ハンドラの実装です |
+| [`arch/x86/mm/fault.c`](https://github.com/torvalds/linux/blob/master/arch/x86/mm/fault.c) | `exc_page_fault()`, `do_user_addr_fault()`, `show_signal_msg()`, `__bad_area_nosemaphore()` | x86 page fault ハンドラの実装です |
 | [`arch/x86/include/asm/trap_pf.h`](https://github.com/torvalds/linux/blob/master/arch/x86/include/asm/trap_pf.h) | `enum x86_pf_error_code` | ページフォールトのエラーコードのビットフィールド定義です |
+| [`arch/x86/kernel/dumpstack.c`](https://github.com/torvalds/linux/blob/master/arch/x86/kernel/dumpstack.c) | `show_opcodes()` | フォルト地点の命令バイトダンプの実装です |
 | [`kernel/signal.c`](https://github.com/torvalds/linux/blob/master/kernel/signal.c) | `print_fatal_signal()`, `get_signal()` | `kernel.print-fatal-signals` の実装です |
 | [`include/linux/signal.h`](https://github.com/torvalds/linux/blob/master/include/linux/signal.h) | `sig_kernel_coredump()` | coredump 対象シグナルの判定マクロです |
+| [`mm/mmap_lock.c`](https://github.com/torvalds/linux/blob/master/mm/mmap_lock.c) | `lock_vma_under_rcu()` | per-VMA lock の実装です |
 
 ### 外部資料
 
