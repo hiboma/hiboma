@@ -1,6 +1,8 @@
 # ps コマンドで `[ ]` 付きのプロセス名が表示される仕組み (CentOS 6 / Linux 2.6.32 時代の調査)
 
 > **注意**: この文書は CentOS 6 (Linux 2.6.32 系) 環境で調査した内容を元にしています。Linux 5.18 以降ではカーネルの挙動が変わっている箇所があります。変更点については本文中で補足しています。
+>
+> 🤖 Originally written by hand, revised with AI assistance.
 
 ## 要約
 
