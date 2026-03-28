@@ -457,7 +457,29 @@ macOS の `open(2)` man page には以下の記述がありますが、実際の
 
 ### macOS の設計思想
 
-macOS は Mach VM サブシステムの copy-on-write セマンティクスに依存して実行中プロセスの整合性を保護する設計を採用していると考えられます。ファイルが書き換えられた場合でも、すでにメモリにマッピングされたページには影響しないため、カーネルレベルでの排他制御を不要と判断したものと推察されます。
+macOS は Mach VM サブシステムの copy-on-write セマンティクス [^mach-cow] に依存して実行中プロセスの整合性を保護する設計を採用していると考えられます。ファイルが書き換えられた場合でも、すでにメモリにマッピングされたページには影響しないため、カーネルレベルでの排他制御を不要と判断したものと推察されます。
+
+ただし、この設計には潜在的リスクがあります。まだ読み込まれていないページ（デマンドページング対象）については、ファイル書き換え後に vnode pager 経由で新しいデータが読まれる可能性があります [^demand-paging-risk]。Apple はコード署名 (`cs_validate_range()`)、SIP、Gatekeeper という多層防御でこのリスクを緩和しています。
+
+#### 🤖 Linux が ETXTBSY で保護する理由との対比
+
+Linux でも `execve(2)` 時にバイナリは `MAP_PRIVATE` で mmap されますが、テキストセグメント（`.text`）は `PROT_READ|PROT_EXEC` の読み取り専用であり、CoW コピーは発生しません [^linux-text-nocow]。プロセスが参照しているのは page cache 上のページそのものです。`write(2)` は page cache を直接更新するため、ETXTBSY がなければ実行中のバイナリのコードが書き換わり、クラッシュや未定義動作を引き起こします。これが Linux が ETXTBSY で保護する本質的な理由です。
+
+```mermaid
+flowchart LR
+    subgraph Linux
+        A["execve(2)"] --> B["MAP_PRIVATE + PROT_READ|PROT_EXEC"]
+        B --> C["page cache のページを直接参照\n(CoW コピーは発生しない)"]
+        C --> D["write(2) は page cache を更新\n→ 実行中コードが破壊される"]
+        D --> E["ETXTBSY で保護が必要"]
+    end
+    subgraph macOS
+        F["execve(2)"] --> G["vm_map_enter(copy=TRUE)"]
+        G --> H["shadow object を作成\n(初期状態では空)"]
+        H --> I["読み込み済みページは安全\n未読み込みページにリスクあり"]
+        I --> J["コード署名 + SIP で緩和"]
+    end
+```
 
 ## 🤖 パフォーマンス改善のまとめ
 
@@ -481,3 +503,14 @@ macOS は Mach VM サブシステムの copy-on-write セマンティクスに�
 - [GitHub: torvalds/linux fs/open.c](https://github.com/torvalds/linux/blob/master/fs/open.c)
 - [GitHub: torvalds/linux fs/exec.c](https://github.com/torvalds/linux/blob/master/fs/exec.c)
 - [GitHub: apple-oss-distributions/xnu bsd/kern/kern_exec.c](https://github.com/apple-oss-distributions/xnu/blob/main/bsd/kern/kern_exec.c)
+- [GitHub: apple-oss-distributions/xnu bsd/kern/mach_loader.c](https://github.com/apple-oss-distributions/xnu/blob/main/bsd/kern/mach_loader.c)
+- [Apple Kernel Programming Guide: Memory and Virtual Memory](https://developer.apple.com/library/archive/documentation/Darwin/Conceptual/KernelProgramming/vm/vm.html)
+- [Google Project Zero: Splitting atoms in XNU](https://projectzero.google/2019/04/splitting-atoms-in-xnu.html)
+
+---
+
+[^mach-cow]: Mach VM の copy-on-write セマンティクスとは、XNU カーネルが `execve(2)` で Mach-O バイナリをロードする際に `map_segment()` 内で `vm_map_enter_mem_object_control(..., copy=TRUE, ...)` を呼び出すことで実現される仕組みです。`copy=TRUE` により `vm_object_shadow()` がシャドウオブジェクト（初期状態では空）を作成し、元の VM オブジェクト（vnode pager 経由でディスクファイルに接続）の前段に配置します。読み取り時はシャドウチェーンを辿って元のオブジェクトからデータを取得し、書き込み時はページフォルトによりコピーがシャドウオブジェクトに作成されます。この仕組みにより、プロセスのメモリ空間と元のファイルが論理的に分離されます。関連ソースコード: `bsd/kern/mach_loader.c` (`map_segment`), `osfmk/vm/vm_object.c` (`vm_object_shadow`), `osfmk/vm/vm_fault.c` (`vm_fault_internal`)。
+
+[^demand-paging-risk]: シャドウオブジェクトは初期状態では空であるため、まだアクセスされていないページはページフォルト時に vnode pager 経由でディスクから読み込まれます。この時点でファイルが書き換えられていると、書き換え後のデータが読み込まれる可能性があります。macOS ではコード署名検証 (`vm_fault_validate_cs()` → `cs_validate_range()`) がページフォルト時に実行されるため、署名付きバイナリでは不整合データの実行が検出・拒否されます。署名なしバイナリについては SIP (System Integrity Protection) と Gatekeeper / Notarization が緩和策として機能します。CVE-2019-6208 は、この CoW セマンティクスが `ftruncate()` で破られるケースとして報告されています。
+
+[^linux-text-nocow]: Linux の `execve(2)` は ELF ローダー (`fs/binfmt_elf.c`) が各 PT_LOAD セグメントを `MAP_PRIVATE` で mmap します。しかし `.text` セグメントは `PROT_READ|PROT_EXEC` の読み取り専用であり、プロセスが書き込むことはないため CoW コピーは発生しません。`mm/memory.c` の `do_fault()` は読み取りフォルトで `do_read_fault` を呼び、page cache のページをコピーせず直接参照します。CoW コピーが作成されるのは `do_cow_fault` が呼ばれる書き込みフォルト時のみです。つまり、テキストセグメントについてはプロセスと page cache の間にコピーが存在せず、`write(2)` による page cache への変更が実行中のコードに直接影響します。Linus Torvalds は ETXTBSY を「purely a courtesy feature」と表現していますが、page cache を直接参照するテキストセグメントの保護として実質的に重要な役割を果たしています。
