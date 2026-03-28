@@ -1,16 +1,18 @@
 # open(2) の O_EXCL
 
+> 🤖 Originally written by hand, revised with AI assistance.
+
 O_CREAT|O_EXCL はどんな風に実装されているのか?
 
-## do_filp_open
+## 要約
 
-強過ぎる
-
- * EEXIST な場合に O_EXCL でエラるだけ
-   * ディレクトリ inode の mutex で排他するので、新規に作成するのが atomic になることが保証される様子
-   * O_EXCL を指定しなくても mutex で排他はなされていて、 EEXIST ならエラーとするように挙動が変わるだけ。シンプル
- * open の flags に O_EXCL がたっていると LOOKUP_EXCL
+ * EEXIST な場合に O_EXCL でエラーにするだけのシンプルな実装です
+   * ディレクトリ inode の mutex で排他するので、新規に作成する操作が atomic になることが保証されます
+   * O_EXCL を指定しなくても mutex で排他はなされていて、 EEXIST ならエラーとするように挙動が変わるだけです
+ * open の flags に O_EXCL がたっていると LOOKUP_EXCL が設定されます
    * LOOKUP_EXCL が使われている箇所が NFS くらいしかなくて用途が分からんぞ
+
+## do_filp_open
 
 ```c
 /*
@@ -39,7 +41,7 @@ struct file *do_filp_open(int dfd, struct filename *filename,
 	if (flag & O_TRUNC)
 		acc_mode |= MAY_WRITE;
 
-	/* Allow the LSM permission hook to distinguish append 
+	/* Allow the LSM permission hook to distinguish append
 	   access from general write access. */
 	if (flag & O_APPEND)
 		acc_mode |= MAY_APPEND;
@@ -108,7 +110,7 @@ struct file *do_filp_open(int dfd, struct filename *filename,
 
     //
     // LOOKUP_EXCL をたてる
-    // 
+    //
 	if (flag & O_EXCL)
 		nd.flags |= LOOKUP_EXCL;
 
@@ -125,7 +127,7 @@ struct file *do_filp_open(int dfd, struct filename *filename,
 
 	// -------------------------------------------------------------------------
 	// ここから クリティカルリージョン
-    // ディレクトリ inode で mutex 
+    // ディレクトリ inode で mutex
 	// -------------------------------------------------------------------------
 	mutex_lock(&dir->d_inode->i_mutex);
 	path.dentry = lookup_hash(&nd);
@@ -151,7 +153,7 @@ do_last:
 			error = -EROFS;
 			goto exit_mutex_unlock;
 		}
-        
+
         // vfs_create 呼び出し
         // ディレクトリの inode_operations .create を呼び出す
 		error = __open_namei_create(&nd, &path, open_flag, mode);
@@ -180,7 +182,7 @@ do_last:
 	 * It already exists.
 	 */
 	mutex_unlock(&dir->d_inode->i_mutex);
-    
+
 	if (got_write) {
 		mnt_drop_write(nd.path.mnt);
 		got_write = false;
@@ -200,7 +202,7 @@ do_last:
 	error = follow_managed(&path, nd.flags);
 	if (error < 0)
 		goto exit_dput;
- 
+
 
 	error = -ENOENT;
 	if (!path.dentry->d_inode)
@@ -336,3 +338,79 @@ do_link:
 	goto do_last;
 }
 ```
+
+## O_EXCL の処理フロー
+
+```mermaid
+flowchart TD
+    A["open(fd, O_CREAT|O_EXCL, mode)"] --> B["do_filp_open()"]
+    B --> C{"O_CREAT が<br>設定されている?"}
+    C -- No --> D["filename_lookup() で<br>通常の検索"]
+    C -- Yes --> E["path_init() + path_walk() で<br>親ディレクトリを解決"]
+    E --> F{"O_EXCL が<br>設定されている?"}
+    F -- Yes --> G["nd.flags |= LOOKUP_EXCL"]
+    F -- No --> H["LOOKUP_EXCL を設定しない"]
+    G --> I["mutex_lock(&dir->d_inode->i_mutex)<br>🔒 クリティカルリージョン開始"]
+    H --> I
+    I --> J["lookup_hash(&nd) で<br>dentry を検索"]
+    J --> K{"dentry->d_inode<br>が存在する?"}
+    K -- "No (negative dentry)" --> L["__open_namei_create() で<br>ファイルを新規作成"]
+    L --> M["mutex_unlock()<br>🔓 排他終了"]
+    M --> N["成功: filp を返す"]
+    K -- "Yes (ファイルが既に存在)" --> O["mutex_unlock()<br>🔓 排他終了"]
+    O --> P{"O_EXCL が<br>設定されている?"}
+    P -- Yes --> Q["❌ -EEXIST を返す"]
+    P -- No --> R["既存ファイルを開く"]
+```
+
+🤖 上記のフローチャートは、`do_filp_open()` 内の O_EXCL の処理を図解したものです。ポイントは、ディレクトリ inode の mutex で排他している区間内で「dentry の存在確認」と「ファイルの新規作成」が atomic に行われることです。
+
+## クリティカルリージョンの詳細
+
+O_EXCL の atomic 性を保証するのは、以下のクリティカルリージョンです。
+
+```
+mutex_lock(&dir->d_inode->i_mutex)     ← 🔒 ロック取得
+    └── lookup_hash(&nd)                ← dentry の検索
+        ├── dentry が存在しない場合
+        │   └── __open_namei_create()   ← ファイル作成
+        │       └── mutex_unlock()      ← 🔓 ロック解放
+        └── dentry が存在する場合
+            └── mutex_unlock()          ← 🔓 ロック解放
+                └── O_EXCL なら -EEXIST
+```
+
+ディレクトリ inode の `i_mutex` により「dentry の検索 → ファイルの作成」が不可分に実行されます。他のプロセスが同名のファイルを同時に作成しようとしても、mutex で待たされるため、先に mutex を取得したプロセスだけが作成に成功します。
+
+🤖 O_EXCL を指定しない場合でも、この mutex による排他制御は同様に行われます。違いは、ファイルが既に存在していた場合にエラーにするかどうかだけです。
+
+## 最新カーネル (v6.x) での改善点
+
+🤖 本文書のコードは 2.6.x 系カーネルのものです。最新カーネルでは以下の改善が行われています。
+
+### 関数構造のリファクタリング
+
+`do_filp_open()` は巨大な単一関数でしたが、最新カーネルでは役割ごとに分割されています。
+
+| 旧 (2.6.x) | 新 (v6.x) | 役割 |
+|---|---|---|
+| `do_filp_open()` 内の全処理 | `path_openat()` | open 処理の中核です |
+| 同上 | `open_last_lookups()` | パスの最終コンポーネントの解決を担当します |
+| 同上 | `do_open()` | 実際のファイルオープン処理です |
+
+### `i_mutex` から `i_rwsem` への移行
+
+古いカーネルではディレクトリ inode の排他制御に `i_mutex`（排他的ミューテックス）を使用していました。最新カーネルでは `i_rwsem`（読み書きセマフォ）に変更されています。
+
+この変更により、複数の **検索操作**（読み取り操作）を並列に実行できるようになりました。ファイルの作成・削除などの **変更操作** では引き続き排他ロックを取得するため、O_EXCL の atomic 性は維持されています [^1]。
+
+### `atomic_open()` の導入
+
+NFS などのネットワークファイルシステム向けに `atomic_open()` inode operation が導入されました。これにより、ファイルシステムは「パス解決 → ファイル作成 → オープン」を単一の操作で実行できるようになり、ネットワーク越しの O_EXCL の整合性が向上しています [^2]。
+
+### `LOOKUP_EXCL` の用途の変化
+
+古いカーネルでは `LOOKUP_EXCL` は VFS で直接参照されていましたが、最新カーネルでは主にファイルシステム側の `->d_revalidate()` メソッドで利用される情報に変わっています。
+
+[^1]: Al Viro による VFS 並列検索の取り組みについては LWN の記事が参考になります。https://lwn.net/Articles/685108/
+[^2]: `atomic_open()` の VFS ドキュメント https://docs.kernel.org/filesystems/vfs.html
