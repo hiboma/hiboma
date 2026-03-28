@@ -11,6 +11,7 @@ O_CREAT|O_EXCL はどんな風に実装されているのか?
    * O_EXCL を指定しなくても mutex で排他はなされていて、 EEXIST ならエラーとするように挙動が変わるだけです
  * open の flags に O_EXCL がたっていると LOOKUP_EXCL が設定されます
    * LOOKUP_EXCL が使われている箇所が NFS くらいしかなくて用途が分からんぞ
+   * 🤖 NFS では LOOKUP_EXCL を `nfs_open_revalidate()` 等で参照し、**dentry キャッシュの再検証をスキップ**する判断に使用していました。O_EXCL|O_CREAT ならファイルは必ず新規作成されるため、既存の dentry キャッシュを検証する RPC ラウンドトリップは不要と判断できます。さらに NFSv3 の EXCLUSIVE CREATE モード [^3] を選択するトリガーにもなり、サーバー側で 8 バイトの verifier を用いた atomic な作成を実現していました。この設計は後に `atomic_open()` インターフェースに発展しています
 
 ## do_filp_open
 
@@ -414,3 +415,4 @@ NFS などのネットワークファイルシステム向けに `atomic_open()`
 
 [^1]: Al Viro による VFS 並列検索の取り組みについては LWN の記事が参考になります。https://lwn.net/Articles/685108/
 [^2]: `atomic_open()` の VFS ドキュメント https://docs.kernel.org/filesystems/vfs.html
+[^3]: NFSv3 の CREATE procedure は UNCHECKED, GUARDED, EXCLUSIVE の三つのモードを持ちます。EXCLUSIVE モードでは 8 バイトの verifier によりサーバー側で冪等な作成を保証します。RFC 1813 Section 3.3.8 https://datatracker.ietf.org/doc/html/rfc1813#section-3.3.8
