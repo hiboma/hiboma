@@ -64,7 +64,7 @@ mutex_lock(&dir->d_inode->i_mutex)     ← 🔒 ロック取得
 コマンド実行の出力やソースコードに付けられた人間の注釈コメントは、なるべくそのまま残すこと。改変や追記が必要な場合は AI による変更であることを明示すること。
 
 - **ソースコード内のコメント**: `🤖` を使う
-- **マークダウン本文**: `(🤖)` を使う
+- **マークダウン本文**: `🤖` を使う
 
 例:
 
@@ -75,5 +75,5 @@ mutex_lock(&dir->d_inode->i_mutex)     ← 🔒 ロック取得
 
 ```markdown
 適当に grep して `ESC_BRACKETS` フラグを見つけた   <!-- 人間の記述。そのまま残す -->
-(🤖) `ESC_BRACKETS` は procps-ng の v3.x では `proc/escape.h` に定義されています <!-- AI が追記 -->
+🤖 `ESC_BRACKETS` は procps-ng の v3.x では `proc/escape.h` に定義されています <!-- AI が追記 -->
 ```
